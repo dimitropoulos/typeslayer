@@ -1,0 +1,8 @@
+{
+  "name": "as-simple-as-possible",
+  "main": "index.ts",
+  "type":"module",
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}
