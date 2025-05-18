@@ -7,7 +7,7 @@ import { DashboardLayout } from "@toolpad/core/DashboardLayout";
 import { useDemoRouter } from "@toolpad/core/internal";
 import { theme } from "./theme";
 import { Stack } from "@mui/material";
-import { LocalFireDepartment, PlayCircle, Search, Settings, Speed } from "@mui/icons-material";
+import { Biotech, LocalFireDepartment, PlayCircle, Search, Settings, Speed } from "@mui/icons-material";
 import { Generate } from "./pages/generate";
 import { Heatmap } from "./pages/heatmap";
 import { AnalyzeTrace } from "./pages/analyze-trace";
@@ -15,6 +15,8 @@ import { TraceJson } from "./pages/trace-json";
 import { TypesJson } from "./pages/types-json";
 import { Perfetto } from "./pages/perfetto";
 import { SearchTypes } from "./pages/search-types";
+import { CpuProfile } from "./pages/cpu-profile";
+import { SpeedScope } from "./pages/speedscope";
 
 const NAVIGATION: Navigation = [
   {
@@ -35,6 +37,11 @@ const NAVIGATION: Navigation = [
     segment: "perfetto",
     title: "Perfetto",
     icon: <Speed />,
+  },
+  {
+    segment: "speedscope",
+    title: "SpeedScope",
+    icon: <Biotech />,
   },
   {
     segment: "search-types",
@@ -61,6 +68,11 @@ const NAVIGATION: Navigation = [
   {
     segment: "types-json",
     title: "types.json",
+    icon: <DescriptionIcon />,
+  },
+  {
+    segment: "tsc-cpuprofile",
+    title: "tsc.cpuprofile",
     icon: <DescriptionIcon />,
   },
   {
@@ -96,6 +108,10 @@ function DemoPageContent({ pathname }: { pathname: string }) {
       return <TraceJson />
     case "/types-json":
       return <TypesJson />
+    case "/tsc-cpuprofile":
+      return <CpuProfile />
+    case "/speedscope":
+      return <SpeedScope />
     case "/search-types":
       return <SearchTypes />
     default:
@@ -114,7 +130,6 @@ function appTitle() {
 
 export function App() {
   const router = useDemoRouter("/generate");
-  console.log(router.pathname);
   return (
     <AppProvider navigation={NAVIGATION} router={router} theme={theme}>
       <DashboardLayout

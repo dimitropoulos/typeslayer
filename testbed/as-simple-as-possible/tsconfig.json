@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "outDir": "./dist",
-    "generateCpuProfile": "profile.cpuprofile",
+    "generateCpuProfile": "tsc.cpuprofile",
     "generateTrace": "/tmp/typeslayer",
     "strict": true,
   }

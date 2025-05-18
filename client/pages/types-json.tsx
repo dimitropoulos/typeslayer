@@ -1,8 +1,11 @@
+import { ShowFile } from "../components/show-file";
+
 export const TypesJson = () => {
   return (
-    <div>
-      <h1>TypesJson</h1>
-      <p>This is the typesJson component.</p>
-    </div>
+    <ShowFile
+      fileName="types.json"
+      title="types.json"
+      description="This is the types.json file created by the `--generateTrace` tsc option."
+    />
   );
-}
+};

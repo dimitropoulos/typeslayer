@@ -1,47 +1,14 @@
 import { initTRPC } from "@trpc/server";
-import { tmpdir } from "node:os";
 import { z } from "zod";
 import ts from "typescript";
 // import { System } from "typescript/lib/typescript.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { getAllFiles } from "./utils";
 import { typeRegistry, type TypesJson } from "./enhance-trace";
-import { position } from "./validation";
 import { exec } from "node:child_process";
+import { data } from "./data";
 
 const t = initTRPC.create();
-
-const serverOptions = {
-  /** Whether to make a new temp dir every time */
-  makeFresh: false
-}
-
-const createTempDir = () => `${tmpdir()}/typeslayer${serverOptions.makeFresh ? `-${Date.now()}` : ''}`;
-
-interface Data {
-	/** the current working directory for the trace */
-	cwd: string;
-
-	/** the path to the temporary storage */
-	tempDir: string;
-
-  /** all the files that were considered in the compilation */
-  sourceFiles: string[];
-
-  /** the files that were inputs to the compilation */
-  rootNames: string[];
-
-	/** a way to lookup types */
-	typeRegistry: Map<number, TypesJson>;
-}
-
-const data = {
-	cwd: `${process.cwd()}/testbed/as-simple-as-possible`, // process.cwd(),
-	tempDir: createTempDir(),
-  sourceFiles: [] as string[],
-  rootNames: [] as string[],
-	typeRegistry: new Map<number, TypesJson>(),
-} satisfies Data;
 
 export const appRouter = t.router({
 	getCWD: t.procedure.query(() => {
@@ -76,11 +43,11 @@ export const appRouter = t.router({
 			const { cwd, tempDir } = data;
 			console.log("generateTrace", { cwd, tempDir, incremental });
 
-      await mkdir(tempDir, { recursive: true });
+			await mkdir(tempDir, { recursive: true });
 
-      // resolve all files at the cwd and below
-      const rootNames = await getAllFiles(cwd);
-      data.rootNames = rootNames;
+			// resolve all files at the cwd and below
+			const rootNames = await getAllFiles(cwd);
+			data.rootNames = rootNames;
 
 			const program = ts.createProgram({
 				rootNames,
@@ -92,51 +59,84 @@ export const appRouter = t.router({
 			});
 
 			const result = program.emit();
-      // TODO: if there are any errors/diagnostics, we should fail
-      const instantiations = program.getInstantiationCount();
+			// TODO: if there are any errors/diagnostics, we should fail
+			const instantiations = program.getInstantiationCount();
 
-      const sourceFiles = program.getSourceFiles().map((file) => file.fileName);
-      data.sourceFiles = sourceFiles;
+			const sourceFiles = program.getSourceFiles().map((file) => file.fileName);
+			data.sourceFiles = sourceFiles;
 
 			console.log("result", { result, instantiations, sourceFiles });
 
-      await writeFile(`${tempDir}/typeslayer.json`, JSON.stringify({
-        completed: Date.now(),
-      }, null, 2));
+			await writeFile(
+				`${tempDir}/typeslayer.json`,
+				JSON.stringify(
+					{
+						completed: Date.now(),
+					},
+					null,
+					2,
+				),
+			);
 
 			console.log("creating type registry");
 			data.typeRegistry = await typeRegistry(tempDir);
-			console.log('done')
+			console.log("done");
 
 			return { result, sourceFiles, instantiations, cwd, tempDir, rootNames };
 		}),
 
-		searchType: t.procedure.input(z.number()).query(async ({ input }) => {
-			const { typeRegistry } = data;
-			const type = typeRegistry.get(input);
-			if (!type) {
-				throw new Error(`Type ${input} not found`);
-			}
-			console.log("searchType", { input, type });
-			return { type };
-		}),
+	searchType: t.procedure.input(z.number()).query(async ({ input }) => {
+		const { typeRegistry } = data;
+		const type = typeRegistry.get(input);
+		if (!type) {
+			throw new Error(`Type ${input} not found`);
+		}
+		console.log("searchType", { input, type });
+		return { type };
+	}),
 
-		getTypeRegistry: t.procedure.query(() => {
-			const { typeRegistry } = data;
-			const entries = Array.from<[number, TypesJson]>(typeRegistry.entries());
-			return entries;
-		}),
+	getTypeRegistry: t.procedure.query(() => {
+		const { typeRegistry } = data;
+		const entries = Array.from<[number, TypesJson]>(typeRegistry.entries());
+		return entries;
+	}),
 
-		openFile: t.procedure.input(z.object({
-			path: z.string(),
-			line: z.number().positive().optional(),
-			character: z.number().positive().optional(),
-		})).mutation(async ({ input }) => {
+	openFile: t.procedure
+		.input(
+			z.object({
+				path: z.string(),
+				line: z.number().positive().optional(),
+				character: z.number().positive().optional(),
+			}),
+		)
+		.mutation(async ({ input }) => {
 			const { path, line, character } = input;
-			exec(`code --goto ${path}:${line ?? 1}:${character ?? 1}`, (error, stdout, stderr) => {
-				
-			});
-		})
+			exec(
+				`code --goto ${path}:${line ?? 1}:${character ?? 1}`,
+				(error, stdout, stderr) => {},
+			);
+		}),
+
+	// TODO
+	analyzeTrace: t.procedure.mutation(async () => {
+		const analyzeTraceOptions = {
+			skipMillis: 100,
+			forceMillis: 500,
+			color: true,
+			expandTypes: true,
+			json: true,
+		};
+		
+		const { tempDir } = data;
+		console.log("analyzeTrace", { tempDir });
+		await mkdir(tempDir, { recursive: true });
+		exec(
+			`trace-processor analyze --out ${tempDir}/trace.pftrace ${tempDir}/trace.json`,
+			(error, stdout, stderr) => {
+				console.log({ error, stdout, stderr });
+			},
+		);
+	}),
 });
 
 export type AppRouter = typeof appRouter;

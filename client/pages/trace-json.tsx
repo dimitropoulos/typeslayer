@@ -1,8 +1,11 @@
+import { ShowFile } from "../components/show-file";
+
 export const TraceJson = () => {
   return (
-    <div>
-      <h1>TraceJson</h1>
-      <p>This is the traceJson component.</p>
-    </div>
+    <ShowFile
+      fileName="trace.json"
+      title="trace.json"
+      description="This is the trace.json file created by the `--generateTrace` tsc option."
+    />
   );
-}
+};
