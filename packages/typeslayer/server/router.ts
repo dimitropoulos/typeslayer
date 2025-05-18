@@ -1,13 +1,11 @@
-import { initTRPC } from "@trpc/server";
-import { z } from "zod";
-import ts from "typescript";
-// import { System } from "typescript/lib/typescript.js";
-import { mkdir, writeFile } from "node:fs/promises";
-import { getAllFiles } from "./utils";
-import { typeRegistry, type TypesJson } from "./enhance-trace";
 import { exec } from "node:child_process";
+import { mkdir, writeFile } from "node:fs/promises";
+import { initTRPC } from "@trpc/server";
+import { type ResolvedType, typeRegistry } from "@typeslayer/validate";
+import ts from "typescript";
+import { z } from "zod";
 import { data } from "./data";
-import { skip } from "node:test";
+import { getAllFiles } from "./utils";
 
 const t = initTRPC.create();
 
@@ -98,7 +96,7 @@ export const appRouter = t.router({
 
 	getTypeRegistry: t.procedure.query(() => {
 		const { typeRegistry } = data;
-		const entries = Array.from<[number, TypesJson]>(typeRegistry.entries());
+		const entries = Array.from<[number, ResolvedType]>(typeRegistry.entries());
 		return entries;
 	}),
 
@@ -119,8 +117,39 @@ export const appRouter = t.router({
 		}),
 
 	// TODO
-	cpuProfile: t.procedure.mutation(
-			async () => {
+	cpuProfile: t.procedure.mutation(async () => {
+		const { tempDir } = data;
+		console.log("analyzeTrace", { tempDir });
+		await mkdir(tempDir, { recursive: true });
+		exec(
+			`trace-processor analyze --out ${tempDir}/trace.pftrace ${tempDir}/trace.json`,
+			(error, stdout, stderr) => {
+				console.log({ error, stdout, stderr });
+			},
+		);
+	}),
+
+	// TODO
+	analyzeTrace: t.procedure
+		.input(
+			z.object({
+				skipMillis: z.number().optional(),
+				forceMillis: z.number().optional(),
+				color: z.boolean().optional(),
+				expandTypes: z.boolean().optional(),
+				json: z.boolean().optional(),
+			}),
+		)
+		.mutation(
+			async ({
+				input: {
+					skipMillis = 100,
+					forceMillis = 500,
+					color = true,
+					expandTypes = true,
+					json = true,
+				},
+			}) => {
 				const { tempDir } = data;
 				console.log("analyzeTrace", { tempDir });
 				await mkdir(tempDir, { recursive: true });
@@ -132,38 +161,6 @@ export const appRouter = t.router({
 				);
 			},
 		),
-
-	// TODO
-	analyzeTrace: t.procedure
-	.input(
-		z.object({
-			skipMillis: z.number().optional(),
-			forceMillis: z.number().optional(),
-			color: z.boolean().optional(),
-			expandTypes: z.boolean().optional(),
-			json: z.boolean().optional(),
-		}),
-	)
-	.mutation(
-		async ({
-			input: {
-				skipMillis = 100,
-				forceMillis = 500,
-				color = true,
-				expandTypes = true,
-				json = true,
-			},
-		}) => {
-		const { tempDir } = data;
-		console.log("analyzeTrace", { tempDir });
-		await mkdir(tempDir, { recursive: true });
-		exec(
-			`trace-processor analyze --out ${tempDir}/trace.pftrace ${tempDir}/trace.json`,
-			(error, stdout, stderr) => {
-				console.log({ error, stdout, stderr });
-			},
-		);
-	}),
 });
 
 export type AppRouter = typeof appRouter;

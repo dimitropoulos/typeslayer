@@ -1,8 +1,8 @@
 {
-  "compilerOptions": {
-    "outDir": "./dist",
-    "generateCpuProfile": "tsc.cpuprofile",
-    "generateTrace": "/tmp/typeslayer",
-    "strict": true,
-  }
+	"compilerOptions": {
+		"outDir": "dist",
+		"generateCpuProfile": "tsc.cpuprofile",
+		"generateTrace": "/tmp/typeslayer",
+		"strict": true
+	}
 }

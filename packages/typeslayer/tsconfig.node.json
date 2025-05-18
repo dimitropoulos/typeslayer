@@ -1,9 +1,9 @@
 {
-  "compilerOptions": {
-    "module": "CommonJS",
-    "target": "ES2020",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true
-  }
+	"compilerOptions": {
+		"module": "CommonJS",
+		"target": "ES2020",
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true
+	}
 }

@@ -1,15 +1,15 @@
+import { Stack, TextField } from "@mui/material";
 import Box from "@mui/material/Box";
-import Stepper from "@mui/material/Stepper";
-import Step from "@mui/material/Step";
-import StepLabel from "@mui/material/StepLabel";
-import StepContent from "@mui/material/StepContent";
 import Button from "@mui/material/Button";
 import Paper from "@mui/material/Paper";
+import Step from "@mui/material/Step";
+import StepContent from "@mui/material/StepContent";
+import StepLabel from "@mui/material/StepLabel";
+import Stepper from "@mui/material/Stepper";
 import Typography from "@mui/material/Typography";
-import { Stack, TextField } from "@mui/material";
-import { trpc } from "../trpc";
 import { useCallback, useEffect, useState } from "react";
 import BigAction from "../components/big-action";
+import { trpc } from "../trpc";
 
 export function Generate() {
 	const [activeStep, setActiveStep] = useState(1);
@@ -179,10 +179,15 @@ const TakeAction = ({
 			<StepLabel>Take Action</StepLabel>
 			<StepContent>
 				<Stack gap={1} maxWidth={500}>
-				<Typography variant="h5">Have Fun!</Typography>
-				<Typography>Now that you have the tools you need, dig in!</Typography>
-				<Typography>This tools's goal is to help you identify what types are slowing you down, but it's always a case-by-case-basis to slay those misbehaving types individually.</Typography>
-				<Typography>Good Luck!</Typography></Stack>
+					<Typography variant="h5">Have Fun!</Typography>
+					<Typography>Now that you have the tools you need, dig in!</Typography>
+					<Typography>
+						This tools's goal is to help you identify what types are slowing you
+						down, but it's always a case-by-case-basis to slay those misbehaving
+						types individually.
+					</Typography>
+					<Typography>Good Luck!</Typography>
+				</Stack>
 				<Stack direction="row" sx={{ mt: 2 }}>
 					<Button variant="contained" onClick={handleNext}>
 						Continue

@@ -1,7 +1,7 @@
-import { Stack, Button, Typography } from "@mui/material";
-import { useStaticFile } from "../components/utils";
-import { useCallback } from "react";
 import { Speed } from "@mui/icons-material";
+import { Button, Stack, Typography } from "@mui/material";
+import { useCallback } from "react";
+import { useStaticFile } from "../components/utils";
 
 export const Perfetto = () => {
 	const data = useStaticFile("trace.json");
@@ -42,7 +42,7 @@ export const Perfetto = () => {
 						title: "trace.json",
 					},
 				},
-				"*"
+				"*",
 			);
 		};
 
@@ -50,17 +50,19 @@ export const Perfetto = () => {
 	}, [data]);
 	return (
 		<Stack gap={2} sx={{ m: 4, alignItems: "center" }}>
-      <Typography variant="h4">Perfetto</Typography>
-      <Typography variant="body1">perfetto.dev is a system profiling, app tracing, and trace analysis tool</Typography>
-     
-		<Button
-			onClick={launchPerfetto}
-      variant="contained"
-      startIcon={<Speed />}
-			disabled={!data}
-		>
-			Open in Perfetto
-		</Button>
+			<Typography variant="h4">Perfetto</Typography>
+			<Typography variant="body1">
+				perfetto.dev is a system profiling, app tracing, and trace analysis tool
+			</Typography>
+
+			<Button
+				onClick={launchPerfetto}
+				variant="contained"
+				startIcon={<Speed />}
+				disabled={!data}
+			>
+				Open in Perfetto
+			</Button>
 		</Stack>
 	);
 };

@@ -1,15 +1,15 @@
 {
-  "name": "@typeslayer/root",
-  "private": true,
-  "version": "0.0.0",
-  "engines": {
-    "node": "^20.19.0 || ^22.12.0 || >=23"
-  },
-  "packageManager": "pnpm@10.6.5",
-  "scripts": {
-    "rip-and-tear": "echo \"did you?\""
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^1.9.4"
-  }
+	"name": "@typeslayer/root",
+	"private": true,
+	"version": "0.0.0",
+	"engines": {
+		"node": "^20.19.0 || ^22.12.0 || >=23"
+	},
+	"packageManager": "pnpm@10.6.5",
+	"scripts": {
+		"rip-and-tear": "echo \"did you?\""
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^1.9.4"
+	}
 }

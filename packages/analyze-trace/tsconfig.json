@@ -1,0 +1,12 @@
+{
+	"compilerOptions": {
+		"outDir": "dist",
+		"module": "ESNext",
+		"moduleResolution": "Node",
+		"target": "ES2024",
+		"strict": true,
+		"esModuleInterop": true,
+		"resolveJsonModule": true
+	},
+	"include": ["**/*.ts"]
+}

@@ -1,14 +1,14 @@
-import { useCallback, useState, type FC } from "react";
-import type { TypesJson } from "../../server/enhance-trace";
 import {
 	FindInPage,
 	KeyboardArrowDown,
 	KeyboardArrowRight,
 } from "@mui/icons-material";
 import { Box, Chip, IconButton, Stack, Typography } from "@mui/material";
+import { type FC, useCallback, useState } from "react";
+import type { TypesJson } from "../../server/enhance-trace";
+import { theme } from "../theme";
 import { trpc } from "../trpc";
 import { displayPath } from "./utils";
-import { theme } from "../theme";
 
 export const DisplayRecursiveType: FC<{
 	id: number;

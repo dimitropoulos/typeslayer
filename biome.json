@@ -1,13 +1,13 @@
 {
-  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "linter": {
-    "rules": {
-      "complexity": {
-        "noForEach": "off"
-      }
-    }
-  },
-  "files": {
-    "maxSize": 18446744073709551615
-  }
+	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+	"linter": {
+		"rules": {
+			"complexity": {
+				"noForEach": "off"
+			}
+		}
+	},
+	"files": {
+		"maxSize": 18446744073709551615
+	}
 }

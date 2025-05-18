@@ -1,0 +1,28 @@
+{
+	"name": "@typeslayer/validate",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"engines": {
+		"node": ">=20"
+	},
+	"packageManager": "pnpm@10.6.5",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"scripts": {
+		"build": "tsup",
+		"dev": "tsup --watch"
+	},
+	"dependencies": {
+		"tsup": "^8.5.0",
+		"@types/node": "^22.15.18",
+		"typescript": "^5.8.3",
+		"zod": "^3.24.4"
+	}
+}

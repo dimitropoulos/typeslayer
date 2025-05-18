@@ -20,7 +20,9 @@ export const SpeedScope = () => {
 				SpeedScope is a tool for visualizing the CPU profile for the type
 				checking run
 			</Typography>
-			<Button variant="contained" onClick={onClick} startIcon={<Biotech />}>Open in SpeedScope</Button>
+			<Button variant="contained" onClick={onClick} startIcon={<Biotech />}>
+				Open in SpeedScope
+			</Button>
 		</Stack>
 	);
 };
