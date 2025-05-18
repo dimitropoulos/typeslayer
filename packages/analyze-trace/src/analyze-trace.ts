@@ -16,7 +16,7 @@ import {
 	type AnalyzeTraceOptions,
 	throwIfNotDirectory,
 } from "./utils";
-import type { Result } from "./utils";
+import type { AnalyzeTraceResult } from "./utils";
 
 export function validateOptions(options: AnalyzeTraceOptions) {
 	if (options.forceMillis < options.skipMillis) {
@@ -60,7 +60,6 @@ export const defaultOptions: AnalyzeTraceOptions = {
 	forceMillis: 500,
 	skipMillis: 100,
 	expandTypes: true,
-	color: true,
 	minSpanParentPercentage: 0.6,
 	importExpressionThreshold: 10,
 };
@@ -83,7 +82,7 @@ export const analyzeTrace = async ({
 
 	const duplicatePackages = await getDuplicateNodeModules(nodeModulePaths);
 
-	const result: Result = {
+	const result: AnalyzeTraceResult = {
 		nodeModulePaths,
 		unterminatedEvents: spans.unclosedStack.reverse(),
 		hotSpots,

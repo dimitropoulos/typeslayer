@@ -15,6 +15,7 @@ import { SpeedScope } from "./pages/speedscope";
 import { TraceJson } from "./pages/trace-json";
 import { TypesJson } from "./pages/types-json";
 import { theme } from "./theme";
+import { TypeNetwork } from "./pages/type-network";
 
 function DemoPageContent({ pathname }: { pathname: string }) {
 	switch (pathname) {
@@ -22,6 +23,8 @@ function DemoPageContent({ pathname }: { pathname: string }) {
 			return <Generate />;
 		case "/heatmap":
 			return <Heatmap />;
+		case "/type-network":
+			return <TypeNetwork />;
 		case "/perfetto":
 			return <Perfetto />;
 		case "/analyze-trace":

@@ -2,13 +2,13 @@ import {
 	Biotech,
 	Dashboard,
 	Description,
+	Hub,
 	Layers,
 	PlayCircle,
 	Search,
 	Settings,
 	Speed,
 } from "@mui/icons-material";
-import type { Navigation } from "@toolpad/core/AppProvider";
 import { useEffect, useState } from "react";
 
 export const displayPath = (
@@ -60,6 +60,16 @@ export const NAVIGATION = [
 		icon: <PlayCircle />,
 	},
 	{
+		segment: "search-types",
+		title: "Search Types",
+		icon: <Search />,
+	},
+	{
+		segment: "type-network",
+		title: "Type Network",
+		icon: <Hub />,
+	},
+	{
 		segment: "heatmap",
 		title: "Heatmap",
 		icon: <Dashboard />,
@@ -73,11 +83,6 @@ export const NAVIGATION = [
 		segment: "speedscope",
 		title: "SpeedScope",
 		icon: <Biotech />,
-	},
-	{
-		segment: "search-types",
-		title: "Search Types",
-		icon: <Search />,
 	},
 	{
 		kind: "divider",

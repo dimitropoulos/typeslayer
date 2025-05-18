@@ -26,6 +26,9 @@ importers:
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
+      zod:
+        specifier: ^3.24.4
+        version: 3.24.4
 
   packages/typeslayer:
     dependencies:
@@ -80,6 +83,9 @@ importers:
       '@types/react-dom':
         specifier: ^19.1.5
         version: 19.1.5(@types/react@19.1.4)
+      '@typeslayer/analyze-trace':
+        specifier: workspace:*
+        version: link:../analyze-trace
       '@typeslayer/validate':
         specifier: workspace:*
         version: link:../validate

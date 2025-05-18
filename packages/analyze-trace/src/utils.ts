@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { stat } from "node:fs/promises";
-import type { TraceEvent } from "@typeslayer/validate";
+import { z } from "zod";
+import type { ResolvedType, TraceEvent } from "@typeslayer/validate";
 
 export interface Project {
 	configFilePath?: string;
@@ -16,10 +17,42 @@ export interface ProjectResult {
 	signal: NodeJS.Signals | undefined;
 }
 
-export interface Result {
+export interface HotType {
+	resolvedType: ResolvedType;
+	children: HotType[];
+}
+
+export interface HotFrame {
+	children: HotFrame[];
+	description: string;
+	timeMs: number;
+
+	path?: string;
+	types?: HotType[];
+
+	startLine?: number;
+	startChar?: number;
+	startOffset?: number;
+
+	endLine?: number;
+	endChar?: number;
+	endOffset?: number;
+}
+
+export interface DuplicatedPackage {
+	name: string;
+	instances: DuplicatedPackageInstance[];
+}
+
+export interface DuplicatedPackageInstance {
+	path: string;
+	version: string;
+}
+
+export interface AnalyzeTraceResult {
 	unterminatedEvents: TraceEvent[];
-	hotSpots: object[] | undefined;
-	duplicatePackages: object[] | undefined;
+	hotSpots: HotFrame[];
+	duplicatePackages: DuplicatedPackage[];
 	nodeModulePaths: NodeModulePaths;
 }
 
@@ -61,15 +94,21 @@ export type AnalyzeTraceOptions = {
 	/** Expand types when printing */
 	expandTypes: boolean;
 
-	/** Color the output to make it easier to read */
-	color: boolean;
-
 	/** force showing spans that are some percentage of their parent, independent of parent time */
 	minSpanParentPercentage: number;
 
 	/** the minimum number of emitted imports from a declaration file or bundle */
 	importExpressionThreshold: number;
 };
+
+/** A Zod for the schema */
+export const analyzeTraceOptions = z.object({
+	forceMillis: z.number().optional(),
+	skipMillis: z.number().optional(),
+	expandTypes: z.boolean().optional(),
+	minSpanParentPercentage: z.number().optional(),
+	importExpressionThreshold: z.number().optional(),
+})
 
 export type AbsolutePath = string;
 

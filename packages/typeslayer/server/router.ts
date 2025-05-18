@@ -1,11 +1,15 @@
 import { exec } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { initTRPC } from "@trpc/server";
-import { type ResolvedType, typeRegistry } from "@typeslayer/validate";
+import {
+	type ResolvedType,
+	createTypeRegistryFromDir,
+} from "@typeslayer/validate";
 import ts from "typescript";
 import { z } from "zod";
 import { data } from "./data";
-import { getAllFiles } from "./utils";
+import { getAllFiles, updateLogFile } from "./utils";
+import { analyzeTrace, analyzeTraceOptions } from "@typeslayer/analyze-trace";
 
 const t = initTRPC.create();
 
@@ -65,21 +69,10 @@ export const appRouter = t.router({
 			data.sourceFiles = sourceFiles;
 
 			console.log("result", { result, instantiations, sourceFiles });
-
-			await writeFile(
-				`${tempDir}/typeslayer.json`,
-				JSON.stringify(
-					{
-						completed: Date.now(),
-					},
-					null,
-					2,
-				),
-			);
+			updateLogFile(tempDir);
 
 			console.log("creating type registry");
-			data.typeRegistry = await typeRegistry(tempDir);
-			console.log("done");
+			data.typeRegistry = await createTypeRegistryFromDir(tempDir);
 
 			return { result, sourceFiles, instantiations, cwd, tempDir, rootNames };
 		}),
@@ -129,38 +122,24 @@ export const appRouter = t.router({
 		);
 	}),
 
-	// TODO
 	analyzeTrace: t.procedure
-		.input(
-			z.object({
-				skipMillis: z.number().optional(),
-				forceMillis: z.number().optional(),
-				color: z.boolean().optional(),
-				expandTypes: z.boolean().optional(),
-				json: z.boolean().optional(),
-			}),
-		)
-		.mutation(
-			async ({
-				input: {
-					skipMillis = 100,
-					forceMillis = 500,
-					color = true,
-					expandTypes = true,
-					json = true,
-				},
-			}) => {
-				const { tempDir } = data;
-				console.log("analyzeTrace", { tempDir });
-				await mkdir(tempDir, { recursive: true });
-				exec(
-					`trace-processor analyze --out ${tempDir}/trace.pftrace ${tempDir}/trace.json`,
-					(error, stdout, stderr) => {
-						console.log({ error, stdout, stderr });
-					},
-				);
-			},
-		),
+		.input(analyzeTraceOptions)
+		.mutation(async ({ input }) => {
+			const { tempDir } = data;
+			console.log("analyzeTrace", { tempDir });
+
+			const result = await analyzeTrace({
+				traceDir: tempDir,
+			});
+
+			await writeFile(
+				`${tempDir}/analyze-trace.json`,
+				JSON.stringify(result, null, 2),
+				"utf8",
+			);
+
+			return result;
+		}),
 });
 
 export type AppRouter = typeof appRouter;

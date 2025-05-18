@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import type { DuplicatedPackage, DuplicatedPackageInstance } from "./utils";
 
 export async function getPackageVersion(packagePath: string) {
 	const packageJsonPath = join(packagePath, "package.json");
@@ -16,15 +17,6 @@ export async function getPackageVersion(packagePath: string) {
 	return jsonObj.version;
 }
 
-interface DuplicatedPackage {
-	name: string;
-	instances: DuplicatedPackageInstance[];
-}
-
-interface DuplicatedPackageInstance {
-	path: string;
-	version: string;
-}
 
 export const getDuplicateNodeModules = async (
 	nodeModulePaths: Map<string, string[]>,

@@ -1,5 +1,6 @@
 import { tmpdir } from "node:os";
 import type { ResolvedType } from "@typeslayer/validate";
+import { resolve } from "node:path";
 
 export interface Data {
 	/** the current working directory for the trace */
@@ -27,7 +28,7 @@ const createTempDir = () =>
 	`${tmpdir()}/typeslayer${serverOptions.makeFresh ? `-${Date.now()}` : ""}`;
 
 export const data = {
-	cwd: `${process.cwd()}/testbed/as-simple-as-possible`, // process.cwd(),
+	cwd: resolve(`${process.cwd()}/../../testbed/as-simple-as-possible`), // process.cwd(),
 	tempDir: createTempDir(),
 	sourceFiles: [] as string[],
 	rootNames: [] as string[],

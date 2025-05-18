@@ -140,7 +140,7 @@ const RunDiagnostics = ({
 					<BigAction
 						title="Identify Types"
 						description="This makes TypeScript generate event traces and a list of types while it type checks your codebase.  This is critical information for individually identifying every type in your codebase."
-						unlocks={["Perfetto", "Search Types", "trace.json", "types.json"]}
+						unlocks={["Search Types", "Perfetto", "trace.json", "types.json"]}
 						onDoIt={onGenerateTrace}
 					/>
 					<BigAction
@@ -152,7 +152,7 @@ const RunDiagnostics = ({
 					<BigAction
 						title="Analyze Hot Spots"
 						description="Identify clear-cut hot-spots and provide enough context to extract a small repro. The repro can then be used as the basis of a bug report or a starting point for manual code inspection or profiling."
-						unlocks={["Heatmap", "Analyze Trace"]}
+						unlocks={['Type Network', "Heatmap", "Analyze Trace"]}
 						onDoIt={onAnalyzeTrace}
 					/>
 				</Stack>

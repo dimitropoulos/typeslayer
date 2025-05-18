@@ -8,8 +8,8 @@
 		"node": ">=24"
 	},
 	"packageManager": "pnpm@10.6.5",
-	"main": "./dist/src/index.js",
-	"typings": "./dist/src/index.d.ts",
+	"main": "./dist/index.js",
+	"typings": "./dist/index.d.ts",
 	"bin": {
 		"typeslayer-analyze-trace": "./bin/typeslayer-analyze-trace.mjs"
 	},
@@ -21,6 +21,7 @@
 		"@types/node": "^22.15.18",
 		"@typeslayer/validate": "workspace:*",
 		"tsup": "^8.5.0",
-		"typescript": "^5.8.3"
+		"typescript": "^5.8.3",
+		"zod": "^3.24.4"
 	}
 }

@@ -1,4 +1,4 @@
-import { readdir } from "node:fs/promises";
+import { readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 export const getAllFiles = async (dir: string): Promise<string[]> => {
@@ -14,3 +14,16 @@ export const getAllFiles = async (dir: string): Promise<string[]> => {
 	);
 	return files.flat();
 };
+
+export const updateLogFile = (tempDir: string) => {
+return 	writeFile(
+		`${tempDir}/typeslayer.json`,
+		JSON.stringify(
+			{
+				completed: Date.now(),
+			},
+			null,
+			2,
+		),
+	);
+}

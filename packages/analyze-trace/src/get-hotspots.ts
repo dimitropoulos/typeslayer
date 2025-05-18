@@ -6,29 +6,7 @@ import {
 	type TypeRegistry,
 	type TypesJsonFile,
 } from "@typeslayer/validate";
-import type { AnalyzeTraceOptions, EventSpan } from "./utils";
-
-interface HotType {
-	resolvedType: ResolvedType;
-	children: HotType[];
-}
-
-interface HotFrame {
-	children: HotFrame[];
-	description: string;
-	timeMs: number;
-
-	path?: string;
-	types?: HotType[];
-
-	startLine?: number;
-	startChar?: number;
-	startOffset?: number;
-
-	endLine?: number;
-	endChar?: number;
-	endOffset?: number;
-}
+import type { AnalyzeTraceOptions, EventSpan, HotFrame, HotType } from "./utils";
 
 export const getHotspots = async (
 	hotPathsTree: EventSpan,
