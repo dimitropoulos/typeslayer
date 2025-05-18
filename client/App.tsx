@@ -1,13 +1,10 @@
 import Typography from "@mui/material/Typography";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import DescriptionIcon from "@mui/icons-material/Description";
-import LayersIcon from "@mui/icons-material/Layers";
-import { AppProvider, type Navigation } from "@toolpad/core/AppProvider";
+import { AppProvider } from "@toolpad/core/AppProvider";
 import { DashboardLayout } from "@toolpad/core/DashboardLayout";
 import { useDemoRouter } from "@toolpad/core/internal";
 import { theme } from "./theme";
 import { Stack } from "@mui/material";
-import { Biotech, LocalFireDepartment, PlayCircle, Search, Settings, Speed } from "@mui/icons-material";
+import { LocalFireDepartment } from "@mui/icons-material";
 import { Generate } from "./pages/generate";
 import { Heatmap } from "./pages/heatmap";
 import { AnalyzeTrace } from "./pages/analyze-trace";
@@ -17,82 +14,7 @@ import { Perfetto } from "./pages/perfetto";
 import { SearchTypes } from "./pages/search-types";
 import { CpuProfile } from "./pages/cpu-profile";
 import { SpeedScope } from "./pages/speedscope";
-
-const NAVIGATION: Navigation = [
-  {
-    kind: "header",
-    title: "Explore",
-  },
-  {
-    segment: "generate",
-    title: "Generate",
-    icon: <PlayCircle />,
-  },
-  {
-    segment: "heatmap",
-    title: "Heatmap",
-    icon: <DashboardIcon />,
-  },
-  {
-    segment: "perfetto",
-    title: "Perfetto",
-    icon: <Speed />,
-  },
-  {
-    segment: "speedscope",
-    title: "SpeedScope",
-    icon: <Biotech />,
-  },
-  {
-    segment: "search-types",
-    title: "Search Types",
-    icon: <Search />,
-  },
-  {
-    kind: "divider",
-  },
-  {
-    kind: "header",
-    title: "Raw Data",
-  },
-  {
-    segment: "analyze-trace",
-    title: "Analyze Trace",
-    icon: <DescriptionIcon />,
-  },
-  {
-    segment: "trace-json",
-    title: "trace.json",
-    icon: <DescriptionIcon />,
-  },
-  {
-    segment: "types-json",
-    title: "types.json",
-    icon: <DescriptionIcon />,
-  },
-  {
-    segment: "tsc-cpuprofile",
-    title: "tsc.cpuprofile",
-    icon: <DescriptionIcon />,
-  },
-  {
-    kind: "divider",
-  },
-  {
-    kind: "header",
-    title: "Configuration",
-  },
-  {
-    segment: "integrations",
-    title: "Integrations",
-    icon: <LayersIcon />,
-  },
-  {
-    segment: "settings",
-    title: "Settings",
-    icon: <Settings />,
-  },
-];
+import { NAVIGATION } from "./components/utils";
 
 function DemoPageContent({ pathname }: { pathname: string }) {
   switch (pathname) {

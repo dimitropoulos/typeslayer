@@ -7,6 +7,7 @@ import { getAllFiles } from "./utils";
 import { typeRegistry, type TypesJson } from "./enhance-trace";
 import { exec } from "node:child_process";
 import { data } from "./data";
+import { skip } from "node:test";
 
 const t = initTRPC.create();
 
@@ -118,15 +119,41 @@ export const appRouter = t.router({
 		}),
 
 	// TODO
-	analyzeTrace: t.procedure.mutation(async () => {
-		const analyzeTraceOptions = {
-			skipMillis: 100,
-			forceMillis: 500,
-			color: true,
-			expandTypes: true,
-			json: true,
-		};
-		
+	cpuProfile: t.procedure.mutation(
+			async () => {
+				const { tempDir } = data;
+				console.log("analyzeTrace", { tempDir });
+				await mkdir(tempDir, { recursive: true });
+				exec(
+					`trace-processor analyze --out ${tempDir}/trace.pftrace ${tempDir}/trace.json`,
+					(error, stdout, stderr) => {
+						console.log({ error, stdout, stderr });
+					},
+				);
+			},
+		),
+
+	// TODO
+	analyzeTrace: t.procedure
+	.input(
+		z.object({
+			skipMillis: z.number().optional(),
+			forceMillis: z.number().optional(),
+			color: z.boolean().optional(),
+			expandTypes: z.boolean().optional(),
+			json: z.boolean().optional(),
+		}),
+	)
+	.mutation(
+		async ({
+			input: {
+				skipMillis = 100,
+				forceMillis = 500,
+				color = true,
+				expandTypes = true,
+				json = true,
+			},
+		}) => {
 		const { tempDir } = data;
 		console.log("analyzeTrace", { tempDir });
 		await mkdir(tempDir, { recursive: true });

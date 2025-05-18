@@ -9,9 +9,10 @@ import Typography from "@mui/material/Typography";
 import { Stack, TextField } from "@mui/material";
 import { trpc } from "../trpc";
 import { useCallback, useEffect, useState } from "react";
+import BigAction from "../components/big-action";
 
 export function Generate() {
-	const [activeStep, setActiveStep] = useState(0);
+	const [activeStep, setActiveStep] = useState(1);
 
 	const handleNext = () => {
 		setActiveStep((prevActiveStep) => prevActiveStep + 1);
@@ -86,7 +87,7 @@ const SelectCode = ({ handleNext }: { handleNext: () => void }) => {
 							<TextField
 								label="Path to code"
 								variant="outlined"
-								value={localCwd ?? ''}
+								value={localCwd ?? ""}
 								onChange={(e) => {
 									setLocalCwd(e.target.value);
 								}}
@@ -112,19 +113,49 @@ const RunDiagnostics = ({
 	handleNext: () => void;
 	handleBack: () => void;
 }) => {
-	const { mutateAsync } = trpc.generateTrace.useMutation();
+	const { mutateAsync: generateTrace } = trpc.generateTrace.useMutation();
+	const { mutateAsync: cpuProfile } = trpc.cpuProfile.useMutation();
+	const { mutateAsync: analyzeTrace } = trpc.analyzeTrace.useMutation();
 
-	const onGenerate = useCallback(async () => {
-		console.log("onGenerate");
-		const result = await mutateAsync({ incremental: false });
+	const onGenerateTrace = useCallback(async () => {
+		const result = await generateTrace({ incremental: false });
 		console.log("result", result);
-	}, [mutateAsync]);
+	}, [generateTrace]);
+
+	const onCpuProfile = useCallback(async () => {
+		const result = await cpuProfile();
+		console.log("result", result);
+	}, [cpuProfile]);
+
+	const onAnalyzeTrace = useCallback(async () => {
+		const result = await analyzeTrace({});
+		console.log("result", result);
+	}, [analyzeTrace]);
 
 	return (
 		<>
 			<StepLabel>Run Diagnostics</StepLabel>
 			<StepContent>
-				<Button onClick={onGenerate}>Generate</Button>
+				<Stack gap={3}>
+					<BigAction
+						title="Identify Types"
+						description="This makes TypeScript generate event traces and a list of types while it type checks your codebase.  This is critical information for individually identifying every type in your codebase."
+						unlocks={["Perfetto", "Search Types", "trace.json", "types.json"]}
+						onDoIt={onGenerateTrace}
+					/>
+					<BigAction
+						title="CPU Profile"
+						description="Have TypeScript emit a v8 CPU profile during the compiler run. The CPU profile can provide insight into why your builds may be slow."
+						unlocks={["SpeedScope", "tsc.cpuprofile"]}
+						onDoIt={onCpuProfile}
+					/>
+					<BigAction
+						title="Analyze Hot Spots"
+						description="Identify clear-cut hot-spots and provide enough context to extract a small repro. The repro can then be used as the basis of a bug report or a starting point for manual code inspection or profiling."
+						unlocks={["Heatmap", "Analyze Trace"]}
+						onDoIt={onAnalyzeTrace}
+					/>
+				</Stack>
 				<Stack direction="row" sx={{ mt: 2 }}>
 					<Button variant="contained" onClick={handleNext}>
 						Continue
@@ -147,7 +178,11 @@ const TakeAction = ({
 		<>
 			<StepLabel>Take Action</StepLabel>
 			<StepContent>
-				<Typography>some Description</Typography>
+				<Stack gap={1} maxWidth={500}>
+				<Typography variant="h5">Have Fun!</Typography>
+				<Typography>Now that you have the tools you need, dig in!</Typography>
+				<Typography>This tools's goal is to help you identify what types are slowing you down, but it's always a case-by-case-basis to slay those misbehaving types individually.</Typography>
+				<Typography>Good Luck!</Typography></Stack>
 				<Stack direction="row" sx={{ mt: 2 }}>
 					<Button variant="contained" onClick={handleNext}>
 						Continue

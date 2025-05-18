@@ -132,6 +132,7 @@ export const DisplayRecursiveType: FC<{
 										) {
 											return (
 												<OpenFile
+													key={key}
 													title={key}
 													absolutePath={value.path}
 													line={value.start.line}
@@ -188,7 +189,11 @@ export const DisplayRecursiveType: FC<{
 										);
 									}
 									if (value.length === 0) {
-										return <Stack direction="row" gap={1}>{key}: <em>none</em></Stack>
+										return (
+											<Stack key={key} direction="row" gap={1}>
+												{key}: <em>none</em>
+											</Stack>
+										);
 									}
 
 									const val = (
@@ -256,7 +261,9 @@ export function OpenFile({
 			<IconButton size="small" onClick={findInPage} sx={{ p: 0 }}>
 				<FindInPage />
 			</IconButton>
-			<Typography>{displayPath(absolutePath, cwd, simplifyPaths)}:{line}:{character}</Typography>
+			<Typography>
+				{displayPath(absolutePath, cwd, simplifyPaths)}:{line}:{character}
+			</Typography>
 		</Stack>
 	);
 }
