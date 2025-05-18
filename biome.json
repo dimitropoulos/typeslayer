@@ -6,5 +6,8 @@
         "noForEach": "off"
       }
     }
+  },
+  "files": {
+    "maxSize": 18446744073709551615
   }
 }

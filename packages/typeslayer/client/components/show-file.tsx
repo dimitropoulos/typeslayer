@@ -1,5 +1,5 @@
 import { Box, Button, Stack, Typography } from "@mui/material";
-import { useStaticFile } from "../components/utils";
+import { useStaticFile } from "./utils";
 
 export function ShowFile({
   fileName,
