@@ -105,7 +105,9 @@ export const resolvedType = z
 
 		firstDeclaration: location.optional(),
 		referenceLocation: location.optional(),
+		destructuringPattern: location.optional(),
 
+		// TODO, awards for all of these
 		typeArguments: z.array(typeId).optional(),
 		unionTypes: z.array(typeId).optional(),
 		intersectionTypes: z.array(typeId).optional(),
@@ -122,6 +124,11 @@ export const resolvedType = z
 		conditionalFalseType: typeId.optional(),
 		keyofType: typeId.optional(),
 		aliasType: typeId.optional(),
+		evolvingArrayElementType: typeId.optional(),
+		evolvingArrayFinalType: typeId.optional(),
+		reverseMappedSourceType: typeId.optional(),
+		reverseMappedMappedType: typeId.optional(),
+		reverseMappedConstraintType: typeId.optional(),
 
 		isTuple: z.literal(true).optional(),
 

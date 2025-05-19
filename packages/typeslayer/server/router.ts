@@ -1,15 +1,16 @@
 import { exec } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { initTRPC } from "@trpc/server";
+import { analyzeTrace, analyzeTraceOptions } from "@typeslayer/analyze-trace";
 import {
 	type ResolvedType,
+	type TypeId,
 	createTypeRegistryFromDir,
 } from "@typeslayer/validate";
 import ts from "typescript";
 import { z } from "zod";
 import { data } from "./data";
 import { getAllFiles, updateLogFile } from "./utils";
-import { analyzeTrace, analyzeTraceOptions } from "@typeslayer/analyze-trace";
 
 const t = initTRPC.create();
 
@@ -72,9 +73,22 @@ export const appRouter = t.router({
 			updateLogFile(tempDir);
 
 			console.log("creating type registry");
-			data.typeRegistry = await createTypeRegistryFromDir(tempDir);
+			const typeRegistry = await createTypeRegistryFromDir(tempDir);
+			data.typeRegistry = typeRegistry;
+			console.log("done");
 
-			return { result, sourceFiles, instantiations, cwd, tempDir, rootNames };
+			return {
+				result,
+				sourceFiles,
+				instantiations,
+				cwd,
+				tempDir,
+				rootNames,
+				typeRegistryEntries: typeRegistry.entries() as unknown as [
+					TypeId,
+					ResolvedType,
+				][],
+			};
 		}),
 
 	searchType: t.procedure.input(z.number()).query(async ({ input }) => {

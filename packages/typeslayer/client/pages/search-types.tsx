@@ -6,9 +6,10 @@ import {
 	Stack,
 	Switch,
 	TextField,
+	Typography,
 } from "@mui/material";
+import type { TypeRegistry } from "@typeslayer/validate";
 import { useState } from "react";
-import type { TypesJson } from "../../server/enhance-trace";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
 import { trpc } from "../trpc";
 
@@ -18,8 +19,7 @@ export const SearchTypes = () => {
 	const numberSearch = Number.parseInt(search, 10);
 
 	const { data: typeRegistryEntries } = trpc.getTypeRegistry.useQuery();
-
-	const typeRegistry = new Map<number, TypesJson>(typeRegistryEntries ?? []);
+	const typeRegistry: TypeRegistry = new Map(typeRegistryEntries ?? []);
 
 	const [simplifyPaths, setSimplifyPaths] = useState(true);
 	const handleSimplifyPaths = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -32,7 +32,12 @@ export const SearchTypes = () => {
 	return (
 		<Box sx={{ m: 4 }}>
 			<Stack direction="row" gap={5} alignItems="center">
-				<h1>Search</h1>
+				<Stack direction="row" alignItems="baseline" gap={1}>
+					<h1>Search</h1>
+					<Typography color="textDisabled">
+						{typeRegistry.size.toLocaleString()} types
+					</Typography>
+				</Stack>
 
 				<FormControl sx={{ align: "center" }}>
 					<FormLabel>Simplify Paths</FormLabel>

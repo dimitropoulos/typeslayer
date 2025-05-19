@@ -3,16 +3,17 @@ import {
 	KeyboardArrowDown,
 	KeyboardArrowRight,
 } from "@mui/icons-material";
-import { Box, Chip, IconButton, Stack, Typography } from "@mui/material";
+import { Box, IconButton, Stack, Typography } from "@mui/material";
+import type { ResolvedType, TypeRegistry } from "@typeslayer/validate";
 import { type FC, useCallback, useState } from "react";
-import type { TypesJson } from "../../server/enhance-trace";
 import { theme } from "../theme";
 import { trpc } from "../trpc";
 import { displayPath } from "./utils";
+import { TypeSummary } from "./type-summary";
 
 export const DisplayRecursiveType: FC<{
 	id: number;
-	typeRegistry: Map<number, TypesJson>;
+	typeRegistry: TypeRegistry;
 	depth?: number;
 	simplifyPaths: boolean;
 }> = ({ id, typeRegistry, depth = 0, simplifyPaths }) => {
@@ -20,40 +21,18 @@ export const DisplayRecursiveType: FC<{
 		return <div>[Missing Data]</div>;
 	}
 
-	const typesJson = typeRegistry.get(id);
+	const resolvedType = typeRegistry.get(id);
 	const [expanded, setExpanded] = useState(true);
 
 	const marginLeft = depth * 16;
 
-	if (!typesJson) {
+	if (!resolvedType) {
 		return <div style={{ marginLeft }}>[Missing Node {id}]</div>;
 	}
 
-	const { flags } = typesJson;
+	const { flags } = resolvedType;
 
 	const toggleExpanded = () => setExpanded((expanded) => !expanded);
-
-	let humanReadable = "<anonymous>";
-	if ("symbolName" in typesJson && typeof typesJson.symbolName === "string") {
-		humanReadable = typesJson.symbolName;
-	} else if (
-		"intrinsicName" in typesJson &&
-		typeof typesJson.intrinsicName === "string"
-	) {
-		humanReadable = typesJson.intrinsicName;
-	} else if (
-		flags.length === 1 &&
-		flags[0] === "StringLiteral" &&
-		typeof typesJson.display === "string"
-	) {
-		humanReadable = typesJson.display;
-	} else if (
-		flags.length === 1 &&
-		flags[0] === "NumberLiteral" &&
-		typeof typesJson.display === "string"
-	) {
-		humanReadable = typesJson.display;
-	}
 
 	const TwiddlyGuy = expanded ? KeyboardArrowDown : KeyboardArrowRight;
 
@@ -61,48 +40,44 @@ export const DisplayRecursiveType: FC<{
 		<Stack gap={1} direction="row">
 			<TwiddlyGuy onClick={toggleExpanded} sx={{ cursor: "pointer" }} />
 			<Stack>
-				<Stack
-					direction="row"
-					gap={1}
-					onClick={toggleExpanded}
-					sx={{ cursor: "pointer" }}
-				>
-					<Typography color="secondary" sx={{ fontFamily: "monospace" }}>
-						{humanReadable}
-					</Typography>
-					<Typography color="primary" sx={{ fontFamily: "monospace" }}>
-						{id}
-					</Typography>
-					{flags.map((flag) => (
-						<Chip variant="filled" key={flag} label={flag} size="small" />
-					))}
-				</Stack>
-
+				<TypeSummary showFlags onClick={toggleExpanded} resolvedType={resolvedType} />
 				{expanded && (
 					<Stack gap={1}>
-						{Object.entries(typesJson).map(([key, value]) => {
+						{(
+							Object.entries(resolvedType) as [
+								keyof ResolvedType,
+								ResolvedType[keyof ResolvedType],
+							][]
+						).map(([key, value]) => {
 							switch (key) {
+								//
+								//  Skip these
+								//
 								case "id":
 								case "flags":
 								case "recursionId":
 								case "symbolName":
 								case "intrinsicName":
 									return null;
-								case "display":
+
+								//
+								//  display
+								//
+								case "display": {
 									if (typeof value !== "string") {
 										throw new Error(
 											`Expected display to be a string, got ${typeof value}`,
 										);
 									}
-									if (
-										(
-											[
-												"BooleanLiteral",
-												"StringLiteral",
-												"NumberLiteral",
-											] as const
-										).some((flag) => flags.includes(flag))
-									) {
+
+									const skipThese = [
+										"BooleanLiteral",
+										"StringLiteral",
+										"BigIntLiteral",
+										"NumberLiteral",
+									] as const;
+
+									if (skipThese.some((flag) => flags.includes(flag))) {
 										return null;
 									}
 
@@ -119,8 +94,13 @@ export const DisplayRecursiveType: FC<{
 											<code>{value.replaceAll("\\", "")}</code>
 										</Box>
 									);
+								}
 
+								//
+								//  Locations
+								//
 								case "firstDeclaration":
+								case "destructuringPattern":
 								case "referenceLocation":
 									{
 										if (
@@ -146,11 +126,25 @@ export const DisplayRecursiveType: FC<{
 										`Expected firstDeclaration to be an object, got ${typeof value}`,
 									);
 
+								//
+								//  TypeId
+								//
 								case "instantiatedType":
+								case "substitutionBaseType":
+								case "constraintType":
 								case "indexedAccessObjectType":
 								case "indexedAccessIndexType":
 								case "conditionalCheckType":
 								case "conditionalExtendsType":
+								case "conditionalTrueType":
+								case "conditionalFalseType":
+								case "keyofType":
+								case "evolvingArrayElementType":
+								case "evolvingArrayFinalType":
+								case "reverseMappedSourceType":
+								case "reverseMappedMappedType":
+								case "reverseMappedConstraintType":
+								case "aliasType":
 									if (value === id) {
 										return null;
 									}
@@ -173,8 +167,12 @@ export const DisplayRecursiveType: FC<{
 										`Expected instantiatedType to be a number, got ${typeof value}`,
 									);
 
-								case "typeArguments":
+								//
+								//  TypeId[]
+								//
 								case "aliasTypeArguments":
+								case "intersectionTypes":
+								case "typeArguments":
 								case "unionTypes": {
 									if (!Array.isArray(value)) {
 										throw new Error(
@@ -196,9 +194,11 @@ export const DisplayRecursiveType: FC<{
 										);
 									}
 
+									const itsReallyFuckingBig = value.length > 2000;
+
 									const val = (
 										<Stack gap={1} key={key}>
-											{value.map((v) => (
+											{(value.slice(0, value.length > 2000 ? 2000 : value.length)).map((v) => (
 												<DisplayRecursiveType
 													key={v}
 													id={v as number}
@@ -207,6 +207,13 @@ export const DisplayRecursiveType: FC<{
 													simplifyPaths={simplifyPaths}
 												/>
 											))}
+											{itsReallyFuckingBig && (
+												<Stack>
+													<Typography variant="caption" color="text.secondary">
+														...and {value.length - 2000} more...
+													</Typography>
+												</Stack>
+											)}
 										</Stack>
 									);
 									return (
@@ -216,12 +223,13 @@ export const DisplayRecursiveType: FC<{
 									);
 								}
 
+								// really not sure what the best way to handle this and why it's not a flag like everything else
+								case "isTuple":
+									return null;
+
 								default:
-									return (
-										<Stack key={key}>
-											{key}: {JSON.stringify(value)}
-										</Stack>
-									);
+									key satisfies never;
+									throw new Error(`Unexpected property ${key} in type ${id}`);
 							}
 						})}
 					</Stack>

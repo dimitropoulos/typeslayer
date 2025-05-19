@@ -92,10 +92,11 @@ function getHotType({
 			const properties = Object.keys(resolvedType) as (keyof ResolvedType)[];
 			for (const property of properties) {
 				switch (property) {
+					case "aliasTypeArguments":
+					case "intersectionTypes":
 					case "typeArguments":
 					case "unionTypes":
-					case "intersectionTypes":
-					case "aliasTypeArguments": {
+						 {
 						const typeIds = resolvedType[property];
 						if (!Array.isArray(typeIds)) {
 							throw new Error(`Expected array for ${property}`);
@@ -109,17 +110,23 @@ function getHotType({
 						continue;
 					}
 
-					case "instantiatedType":
-					case "substitutionBaseType":
-					case "constraintType":
-					case "indexedAccessObjectType":
-					case "indexedAccessIndexType":
+					case "aliasType": 
 					case "conditionalCheckType":
 					case "conditionalExtendsType":
-					case "conditionalTrueType":
 					case "conditionalFalseType":
+					case "conditionalTrueType":
+					case "constraintType":
+					case "evolvingArrayElementType":
+					case "evolvingArrayFinalType":
+					case "indexedAccessIndexType":
+					case "indexedAccessObjectType":
+					case "instantiatedType":
 					case "keyofType":
-					case "aliasType": {
+					case "reverseMappedConstraintType":
+					case "reverseMappedMappedType":
+					case "reverseMappedSourceType":
+					case "substitutionBaseType":
+					{
 						const typeId = resolvedType[property] as TypeId;
 						const child = worker(typeId, ancestorIds);
 						if (child) {
@@ -128,15 +135,16 @@ function getHotType({
 						break;
 					}
 
-					case "id":
-					case "flags":
-					case "recursionId":
-					case "intrinsicName":
-					case "firstDeclaration":
-					case "referenceLocation":
-					case "isTuple":
-					case "symbolName":
+					case "destructuringPattern":
 					case "display":
+					case "firstDeclaration":
+					case "flags":
+					case "id":
+					case "intrinsicName":
+					case "isTuple":
+					case "recursionId":
+					case "referenceLocation":
+					case "symbolName":
 						break;
 
 					default:

@@ -16,7 +16,7 @@ export const getAllFiles = async (dir: string): Promise<string[]> => {
 };
 
 export const updateLogFile = (tempDir: string) => {
-return 	writeFile(
+	return writeFile(
 		`${tempDir}/typeslayer.json`,
 		JSON.stringify(
 			{
@@ -26,4 +26,4 @@ return 	writeFile(
 			2,
 		),
 	);
-}
+};

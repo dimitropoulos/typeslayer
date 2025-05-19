@@ -1,6 +1,6 @@
 import { tmpdir } from "node:os";
-import type { ResolvedType } from "@typeslayer/validate";
 import { resolve } from "node:path";
+import type { ResolvedType, TypeRegistry } from "@typeslayer/validate";
 
 export interface Data {
 	/** the current working directory for the trace */
@@ -16,7 +16,7 @@ export interface Data {
 	rootNames: string[];
 
 	/** a way to lookup types */
-	typeRegistry: Map<number, ResolvedType>;
+	typeRegistry: TypeRegistry;
 }
 
 const serverOptions = {

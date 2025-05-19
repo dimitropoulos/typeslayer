@@ -64,7 +64,11 @@ export default function BigAction({
 							{unlocks.length} Unlock{unlocks.length === 1 ? "" : "s"}
 						</Typography>
 
-						<Stack direction="column" spacing={1} sx={{ display: 'block', mt: 1 }}>
+						<Stack
+							direction="column"
+							spacing={1}
+							sx={{ display: "block", mt: 1 }}
+						>
 							{unlocks.map((unlock) => {
 								const icon = NAVIGATION.find(
 									(item) => "title" in item && item.title === unlock,

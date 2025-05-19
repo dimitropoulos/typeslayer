@@ -7,6 +7,7 @@ import StepContent from "@mui/material/StepContent";
 import StepLabel from "@mui/material/StepLabel";
 import Stepper from "@mui/material/Stepper";
 import Typography from "@mui/material/Typography";
+import type { TypeRegistry } from "@typeslayer/validate";
 import { useCallback, useEffect, useState } from "react";
 import BigAction from "../components/big-action";
 import { trpc } from "../trpc";
@@ -119,6 +120,7 @@ const RunDiagnostics = ({
 
 	const onGenerateTrace = useCallback(async () => {
 		const result = await generateTrace({ incremental: false });
+		window.typeRegistry = new Map(result.typeRegistryEntries) as TypeRegistry;
 		console.log("result", result);
 	}, [generateTrace]);
 
@@ -152,7 +154,12 @@ const RunDiagnostics = ({
 					<BigAction
 						title="Analyze Hot Spots"
 						description="Identify clear-cut hot-spots and provide enough context to extract a small repro. The repro can then be used as the basis of a bug report or a starting point for manual code inspection or profiling."
-						unlocks={['Type Network', "Heatmap", "Analyze Trace"]}
+						unlocks={[
+							"Type Network",
+							"Heatmap",
+							"Analyze Trace",
+							"Award Winners",
+						]}
 						onDoIt={onAnalyzeTrace}
 					/>
 				</Stack>

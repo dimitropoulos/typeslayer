@@ -2,6 +2,7 @@ import {
 	Biotech,
 	Dashboard,
 	Description,
+	EmojiEvents,
 	Hub,
 	Layers,
 	PlayCircle,
@@ -83,6 +84,11 @@ export const NAVIGATION = [
 		segment: "speedscope",
 		title: "SpeedScope",
 		icon: <Biotech />,
+	},
+	{
+		segment: "award-winners",
+		title: "Award Winners",
+		icon: <EmojiEvents />,
 	},
 	{
 		kind: "divider",
