@@ -1,10 +1,12 @@
 import { Info } from "@mui/icons-material";
-import { Stack } from "@mui/material";
+import { Stack, Typography } from "@mui/material";
 import { theme } from "../theme";
 
 export function Callout({
 	children,
+	title,
 }: {
+	title: string;
 	children: React.ReactNode;
 }) {
 	return (
@@ -12,7 +14,6 @@ export function Callout({
 			gap={2}
 			direction="row"
 			sx={{
-				fontSize: "0.8em",
 				background: theme.palette.background.paper,
 				my: 2,
 				maxWidth: 600,
@@ -21,8 +22,9 @@ export function Callout({
 				color: theme.palette.text.disabled,
 			}}
 		>
-			<Info sx={{ fontSize: "1.5em" }} />
-			<Stack spacing={2} alignItems="center" sx={{ opacity: 0.9 }}>
+			<Info sx={{ fontSize: "1.5em", mt: 0.5 }} />
+			<Stack spacing={2} sx={{ opacity: 0.9, alignItems: "flex-start" }}>
+				<Typography variant="h6">{title}</Typography>
 				{children}
 			</Stack>
 		</Stack>

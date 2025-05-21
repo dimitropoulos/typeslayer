@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { analyzeTrace, defaultOptions } from '../dist/index.js';
-import { statSync } from 'node:fs';
+import { statSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import process, { exit } from 'node:process';
 
@@ -34,5 +34,11 @@ try {
 console.log({ traceDir})
 
 analyzeTrace({ traceDir, options: defaultOptions }).then(result => {
+  const destination = resolve(traceDir, 'analyze-trace.json');
+  writeFileSync(
+    destination,
+    JSON.stringify(result, null, 2),
+    'utf-8'
+  );
   console.log("Analysis result:", result);
 });

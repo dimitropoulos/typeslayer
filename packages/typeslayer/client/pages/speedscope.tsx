@@ -15,13 +15,16 @@ export const SpeedScope = () => {
 
 	return (
 		<Stack gap={2} sx={{ m: 4, alignItems: "center" }}>
-			<Typography variant="h4">SpeedScope</Typography>
+			<Stack direction="row" gap={2} alignContent="center">
+				<Biotech fontSize="large" />
+				<Typography variant="h4">SpeedScope</Typography>
+			</Stack>
 			<Typography variant="body1">
-				SpeedScope is a tool for visualizing the CPU profile for the type
-				checking run
+				SpeedScope.app is a tool for visualizing the CPU profile for the type
+				checking run.
 			</Typography>
-			<Button variant="contained" onClick={onClick} startIcon={<Biotech />}>
-				Open in SpeedScope
+			<Button variant="contained" onClick={onClick}>
+				Open SpeedScope
 			</Button>
 		</Stack>
 	);

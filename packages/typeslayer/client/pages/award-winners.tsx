@@ -1,38 +1,30 @@
-import { EmojiEvents, FolderCopy, Info, JoinFull, JoinInner, SportsKabaddi } from "@mui/icons-material";
+import {
+	Diversity1,
+	FolderCopy,
+	JoinFull,
+	JoinInner,
+	Lightbulb,
+	SafetyDivider,
+	SportsKabaddi,
+	Whatshot,
+} from "@mui/icons-material";
 import {
 	Box,
 	Divider,
 	List,
-	ListItem,
 	ListItemButton,
-	ListSubheader,
-	Paper,
 	Stack,
 	Typography,
 } from "@mui/material";
+import type { ResolvedType, TypeRegistry } from "@typeslayer/validate";
+import { type ReactNode, useCallback, useState } from "react";
 import { AwardPlaque } from "../components/award-plaque";
 import { Callout } from "../components/callout";
-import { theme } from "../theme";
-import { type ReactNode, useCallback, useState } from "react";
-import { trpc } from "../trpc";
-import type { ResolvedType, TypeRegistry } from "@typeslayer/validate";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
-import { array } from "zod";
+import { InlineCode } from "../components/inline-code";
 import { TypeSummary } from "../components/type-summary";
-
-const InlineCode = ({
-	children,
-	secondary = false,
-}: {
-	children: React.ReactNode;
-	secondary?: boolean;
-}) => (
-	<code
-		style={{ color: theme.palette[secondary ? "secondary" : "primary"].dark }}
-	>
-		{children}
-	</code>
-);
+import { theme } from "../theme";
+import { trpc } from "../trpc";
 
 const arrayItems = {
 	unionTypes: {
@@ -65,10 +57,40 @@ const arrayItems = {
 	},
 } as const;
 
+const hotSpots = {
+	title: "Hot Spots",
+	property: "hotSpots",
+	description:
+		"Awarded for the most ruthless code simplification without breaking anything.",
+	icon: <Whatshot fontSize="large" />,
+};
+
+const limit_instantiateType = {
+	title: "Type Instantiation Limit",
+	property: "hotSpots",
+	description:
+		"Awarded for the most ruthless code simplification without breaking anything.",
+	icon: <Lightbulb fontSize="large" />,
+};
+
+const limit_recursiveTypeRelatedTo = {
+	title: "Recursive Relations Limit",
+	property: "hotSpots",
+	description:
+		"Awarded for the most ruthless code simplification without breaking anything.",
+	icon: <Diversity1 fontSize="large" />,
+};
+
+const limit_typeRelatedToDiscriminatedType = {
+	title: "Discrimination Limit",
+	property: "hotSpots",
+	description:
+		"Awarded for the most ruthless code simplification without breaking anything.",
+	icon: <SafetyDivider fontSize="large" />,
+};
+
 export const AwardWinners = () => {
-	const [activeAward, setActiveAward] = useState<string | null>(
-		arrayItems.typeArguments.title,
-	);
+	const [activeAward, setActiveAward] = useState<string | null>(null);
 	const isActive = useCallback(
 		(award: string) => activeAward === award,
 		[activeAward],
@@ -106,6 +128,12 @@ export const AwardWinners = () => {
 				/>
 			);
 			break;
+		case hotSpots.title:
+		case limit_instantiateType.title:
+		case limit_recursiveTypeRelatedTo.title:
+		case limit_typeRelatedToDiscriminatedType.title:
+			playground = <div>TODO</div>;
+			break;
 
 		default:
 			playground = <InfoBox />;
@@ -117,14 +145,43 @@ export const AwardWinners = () => {
 			direction="row"
 			sx={{ m: 4, minWidth: 500, minHeight: 500, alignItems: "flex-start" }}
 		>
-			<Stack sx={{ minWidth: 300 }}>
+			<Stack sx={{ minWidth: 250 }}>
 				<h1>Award Winners</h1>
 				<Typography>
-					Consider this your project's <br />
-					types-level Hall of Fame (Shame?).
+					Your project's types-level
+					<br />
+					Hall of Fame (Shame?).
 				</Typography>
 
 				<Stack sx={{ my: 2 }} gap={2}>
+					<AwardPlaque
+						title={hotSpots.title}
+						icon={hotSpots.icon}
+						description={hotSpots.description}
+						isActive={isActive}
+						activate={setActiveAward}
+					/>
+					<AwardPlaque
+						title={limit_instantiateType.title}
+						icon={limit_instantiateType.icon}
+						description={limit_instantiateType.description}
+						isActive={isActive}
+						activate={setActiveAward}
+					/>
+					<AwardPlaque
+						title={limit_recursiveTypeRelatedTo.title}
+						icon={limit_recursiveTypeRelatedTo.icon}
+						description={limit_recursiveTypeRelatedTo.description}
+						isActive={isActive}
+						activate={setActiveAward}
+					/>
+					<AwardPlaque
+						title={limit_typeRelatedToDiscriminatedType.title}
+						icon={limit_typeRelatedToDiscriminatedType.icon}
+						description={limit_typeRelatedToDiscriminatedType.description}
+						isActive={isActive}
+						activate={setActiveAward}
+					/>
 					{Object.values(arrayItems).map(({ title, icon, description }) => (
 						<AwardPlaque
 							key={title}
@@ -145,8 +202,8 @@ export const AwardWinners = () => {
 
 function InfoBox() {
 	return (
-		<Callout>
-			<Typography fontSize="inherit">
+		<Callout title={"Find new record-breakers!"}>
+			<Typography>
 				You'll also notice that in <InlineCode>window</InlineCode> object in
 				your console, there's a map called{" "}
 				<InlineCode>typesRegistry</InlineCode> that's a{" "}
@@ -156,10 +213,10 @@ function InfoBox() {
 				</InlineCode>
 				. Feel free to play with it to find more interesting record-breakers.
 			</Typography>
-			<Typography fontSize="inherit">
-				Also Ramda is available in the console as <InlineCode>R</InlineCode>,
-				and Ramda-Adjunct is available as <InlineCode>RA</InlineCode>. Long Live
-				Functional Programming!
+			<Typography>
+				Also, Ramda is available in the console as <InlineCode>R</InlineCode>,
+				and Ramda-Adjunct is available as <InlineCode>RA</InlineCode>.{" "}
+				<em>Long Live Functional Programming!</em>
 			</Typography>
 		</Callout>
 	);
@@ -178,7 +235,7 @@ function ArrayAward({
 	icon: ReactNode;
 	typeRegistry: TypeRegistry;
 }) {
-	const [selectedIndex, setSelectedIndex] = useState(3);
+	const [selectedIndex, setSelectedIndex] = useState(0);
 
 	const handleListItemClick = (
 		event: React.MouseEvent<HTMLDivElement, MouseEvent>,
@@ -200,7 +257,7 @@ function ArrayAward({
 
 	const maxValue = sorted[0]?.[property]?.length ?? 0;
 
-	const top = 20;
+	const top = 100;
 
 	return (
 		<Stack direction="row" gap={2} alignItems="flex-start">
@@ -212,7 +269,9 @@ function ArrayAward({
 				<Typography>{description}</Typography>
 
 				<Stack sx={{ my: 2 }}>
-					<Typography variant="h5" sx={{ pl: 2, mt: 2}}>Top {top}</Typography>
+					<Typography variant="h5" sx={{ pl: 2, mt: 2 }}>
+						Top {top}
+					</Typography>
 					<List>
 						{sorted.slice(0, top).map(({ id }, index) => {
 							const count = sorted[index][property]?.length;
@@ -225,18 +284,25 @@ function ArrayAward({
 										width: "100%",
 									}}
 								>
-										<Typography sx={{ mr: 2}}>{index + 1}.</Typography>
+									<Typography sx={{ mr: 2 }}>{index + 1}.</Typography>
 									<Stack sx={{ flexGrow: 1, py: 1 }}>
-											<TypeSummary resolvedType={sorted[index]} />
+										<TypeSummary resolvedType={sorted[index]} />
 										<Stack direction="row" alignItems="center">
 											<Box
 												sx={{
 													width: count ? `${(count / maxValue) * 100}%` : "0%",
 													height: 2,
-													backgroundColor: theme.palette.primary.dark
+													backgroundColor: theme.palette.primary.dark,
 												}}
 											/>
-											<Typography sx={{ ml: 1, opacity: 0.7, fontSize: "0.85rem", lineHeight: 1 }}>
+											<Typography
+												sx={{
+													ml: 1,
+													opacity: 0.7,
+													fontSize: "0.85rem",
+													lineHeight: 1,
+												}}
+											>
 												{count?.toLocaleString()}
 											</Typography>
 										</Stack>
@@ -249,6 +315,7 @@ function ArrayAward({
 			</Stack>
 
 			<Divider orientation="vertical" sx={{ mx: 2 }} />
+
 			<DisplayRecursiveType
 				id={sorted[selectedIndex]?.id ?? 0}
 				typeRegistry={typeRegistry}

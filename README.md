@@ -16,4 +16,11 @@ Raw Data
 
 ## TODO
 
-- allow for configuring default code editor
+- allow for configuring default code editor that files open in
+- protection for displaying a recursive type (check recursive relations limit award items)
+
+An example of the command to run in a project.
+
+```sh
+tsc --generateTrace trace --generateCpuProfile trace/tsc.cpuprofile --noErrorTruncation --incremental false
+```

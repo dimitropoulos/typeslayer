@@ -50,18 +50,17 @@ export const Perfetto = () => {
 	}, [data]);
 	return (
 		<Stack gap={2} sx={{ m: 4, alignItems: "center" }}>
-			<Typography variant="h4">Perfetto</Typography>
+			<Stack direction="row" gap={2} alignContent="center">
+				<Speed fontSize="large" />
+				<Typography variant="h4">Perfetto</Typography>
+			</Stack>
 			<Typography variant="body1">
-				perfetto.dev is a system profiling, app tracing, and trace analysis tool
+				perfetto.dev is a system profiling, app tracing, and trace analysis
+				tool.
 			</Typography>
 
-			<Button
-				onClick={launchPerfetto}
-				variant="contained"
-				startIcon={<Speed />}
-				disabled={!data}
-			>
-				Open in Perfetto
+			<Button onClick={launchPerfetto} variant="contained" disabled={!data}>
+				Open Perfetto
 			</Button>
 		</Stack>
 	);

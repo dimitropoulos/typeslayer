@@ -8,8 +8,8 @@ import type { ResolvedType, TypeRegistry } from "@typeslayer/validate";
 import { type FC, useCallback, useState } from "react";
 import { theme } from "../theme";
 import { trpc } from "../trpc";
-import { displayPath } from "./utils";
 import { TypeSummary } from "./type-summary";
+import { displayPath } from "./utils";
 
 export const DisplayRecursiveType: FC<{
 	id: number;
@@ -18,7 +18,11 @@ export const DisplayRecursiveType: FC<{
 	simplifyPaths: boolean;
 }> = ({ id, typeRegistry, depth = 0, simplifyPaths }) => {
 	if (!typeRegistry) {
-		return <div>[Missing Data]</div>;
+		return <Box>[Missing Data]</Box>;
+	}
+
+	if (Number.isNaN(id)) {
+		return null;
 	}
 
 	const resolvedType = typeRegistry.get(id);
@@ -27,7 +31,7 @@ export const DisplayRecursiveType: FC<{
 	const marginLeft = depth * 16;
 
 	if (!resolvedType) {
-		return <div style={{ marginLeft }}>[Missing Node {id}]</div>;
+		return <Box style={{ marginLeft }}>[Missing Node: {id}]</Box>;
 	}
 
 	const { flags } = resolvedType;
@@ -40,7 +44,11 @@ export const DisplayRecursiveType: FC<{
 		<Stack gap={1} direction="row">
 			<TwiddlyGuy onClick={toggleExpanded} sx={{ cursor: "pointer" }} />
 			<Stack>
-				<TypeSummary showFlags onClick={toggleExpanded} resolvedType={resolvedType} />
+				<TypeSummary
+					showFlags
+					onClick={toggleExpanded}
+					resolvedType={resolvedType}
+				/>
 				{expanded && (
 					<Stack gap={1}>
 						{(
@@ -86,8 +94,10 @@ export const DisplayRecursiveType: FC<{
 											sx={{
 												background: theme.palette.grey[900],
 												borderRadius: 1,
-												padding: 1,
+												px: 1,
+												py: 0.5,
 												border: `1px solid ${theme.palette.divider}`,
+												alignSelf: "flex-start",
 											}}
 											key={key}
 										>
@@ -194,31 +204,42 @@ export const DisplayRecursiveType: FC<{
 										);
 									}
 
-									const itsReallyFuckingBig = value.length > 2000;
+									const cutoff = 3000;
+									const itsReallyFuckingBig = value.length > cutoff;
 
 									const val = (
 										<Stack gap={1} key={key}>
-											{(value.slice(0, value.length > 2000 ? 2000 : value.length)).map((v) => (
-												<DisplayRecursiveType
-													key={v}
-													id={v as number}
-													typeRegistry={typeRegistry}
-													depth={depth + 2}
-													simplifyPaths={simplifyPaths}
-												/>
-											))}
+											{value
+												.slice(0, value.length > cutoff ? cutoff : value.length)
+												.map((v) => (
+													<DisplayRecursiveType
+														key={v}
+														id={v as number}
+														typeRegistry={typeRegistry}
+														depth={depth + 2}
+														simplifyPaths={simplifyPaths}
+													/>
+												))}
 											{itsReallyFuckingBig && (
-												<Stack>
-													<Typography variant="caption" color="text.secondary">
-														...and {value.length - 2000} more...
-													</Typography>
-												</Stack>
+												<Typography sx={{ px: 2, pl: 0, mb: 2 }}>
+													...and {(value.length - cutoff).toLocaleString()}{" "}
+													more...
+												</Typography>
 											)}
 										</Stack>
 									);
 									return (
 										<Stack key={key}>
-											{key}:{val}
+											<Typography>
+												{key}:{" "}
+												<Typography
+													sx={{ display: "inline", fontSize: "0.8em" }}
+													color="textDisabled"
+												>
+													{value.length.toLocaleString()}
+												</Typography>
+											</Typography>
+											{val}
 										</Stack>
 									);
 								}

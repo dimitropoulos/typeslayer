@@ -70,6 +70,15 @@ async function getHotspotsWorker({
 	return children;
 }
 
+const notFound = {
+	children: [],
+	resolvedType: {
+		id: -1,
+		display: "[Type Not Found]",
+		flags: [],
+	}
+} satisfies HotType;
+
 function getHotType({
 	id,
 	typeRegistry,
@@ -78,7 +87,12 @@ function getHotType({
 	typeRegistry: TypeRegistry;
 }): HotType {
 	function worker(id: TypeId, ancestorIds: TypeId[]): HotType {
+		if (id === -1) {
+			return notFound;
+		}
+
 		const resolvedType = typeRegistry.get(id);
+		
 		if (!resolvedType) {
 			throw new Error(`Type ${id} not found`);
 		}

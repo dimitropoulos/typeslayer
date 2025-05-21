@@ -66,6 +66,11 @@ export const NAVIGATION = [
 		icon: <Search />,
 	},
 	{
+		segment: "award-winners",
+		title: "Award Winners",
+		icon: <EmojiEvents />,
+	},
+	{
 		segment: "type-network",
 		title: "Type Network",
 		icon: <Hub />,
@@ -84,11 +89,6 @@ export const NAVIGATION = [
 		segment: "speedscope",
 		title: "SpeedScope",
 		icon: <Biotech />,
-	},
-	{
-		segment: "award-winners",
-		title: "Award Winners",
-		icon: <EmojiEvents />,
 	},
 	{
 		kind: "divider",
