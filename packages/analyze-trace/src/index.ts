@@ -1,5 +1,2 @@
-export {
-	analyzeTrace,
-	defaultOptions,
-} from "./analyze-trace";
-export { type AnalyzeTraceOptions, analyzeTraceOptions } from "./utils";
+export * from "./analyze-trace";
+export * from "./utils";

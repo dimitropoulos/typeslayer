@@ -6,13 +6,13 @@ import {
 	type TypeRegistry,
 	type TypesJsonFile,
 } from "@typeslayer/validate";
-import type { AnalyzeTraceOptions, EventSpan, HotFrame, HotType } from "./utils";
+import type { AnalyzeTraceOptions, EventSpan, HotSpot, HotType } from "./utils";
 
 export const getHotspots = async (
 	hotPathsTree: EventSpan,
 	typesFile: TypesJsonFile,
 	options: AnalyzeTraceOptions,
-): Promise<HotFrame[]> => {
+): Promise<HotSpot[]> => {
 	const typeRegistry = createTypeRegistry(typesFile);
 
 	return await getHotspotsWorker({
@@ -33,12 +33,12 @@ async function getHotspotsWorker({
 	currentFile: string | undefined;
 	typeRegistry: TypeRegistry;
 	options: AnalyzeTraceOptions;
-}): Promise<HotFrame[]> {
+}): Promise<HotSpot[]> {
 	if (span.event.cat === "check") {
 		currentFile = span.event.args.path;
 	}
 
-	const children: HotFrame[] = [];
+	const children: HotSpot[] = [];
 	if (span.children.length) {
 		// Sort slow to fast
 		const sortedChildren = span.children.sort(
@@ -184,9 +184,9 @@ async function makeHotFrame({
 	typeRegistry,
 }: {
 	span: EventSpan;
-	children: HotFrame[];
+	children: HotSpot[];
 	typeRegistry: TypeRegistry;
-}): Promise<HotFrame | undefined> {
+}): Promise<HotSpot | undefined> {
 	const { event, duration } = span;
 
 	const timeMs = Math.round(duration / 1000);
@@ -232,7 +232,7 @@ async function makeHotFrame({
 		case "checkExpression":
 		case "checkVariableDeclaration": {
 			const filePath = event.args.path;
-			const frame: HotFrame = {
+			const frame: HotSpot = {
 				description: event.name,
 				timeMs,
 				path: normalize(filePath),

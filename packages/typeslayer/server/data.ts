@@ -1,6 +1,7 @@
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import type { ResolvedType, TypeRegistry } from "@typeslayer/validate";
+import type { ResolvedType, TypeId, TypeRegistry } from "@typeslayer/validate";
+import type { AbsolutePath, DuplicatedPackage, HotSpot } from "@typeslayer/analyze-trace";
 
 export interface Data {
 	/** the current working directory for the trace */
@@ -17,6 +18,12 @@ export interface Data {
 
 	/** a way to lookup types */
 	typeRegistry: TypeRegistry;
+
+	/** the hot spots that were found */
+	hotSpots: HotSpot[]
+
+	/** get duplicate packages */
+	duplicatePackages: DuplicatedPackage[];
 }
 
 const serverOptions = {
@@ -30,7 +37,9 @@ const createTempDir = () =>
 export const data = {
 	cwd: resolve(`${process.cwd()}/../../testbed/as-simple-as-possible`), // process.cwd(),
 	tempDir: createTempDir(),
-	sourceFiles: [] as string[],
+	sourceFiles: [] as AbsolutePath[],
 	rootNames: [] as string[],
-	typeRegistry: new Map<number, ResolvedType>(),
+	typeRegistry: new Map<TypeId, ResolvedType>(),
+	hotSpots: [] as HotSpot[],
+	duplicatePackages: [] as DuplicatedPackage[],
 } satisfies Data;

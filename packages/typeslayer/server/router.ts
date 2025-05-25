@@ -1,7 +1,7 @@
 import { exec } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { initTRPC } from "@trpc/server";
-import { analyzeTrace, analyzeTraceOptions } from "@typeslayer/analyze-trace";
+import { analyzeTrace, analyzeTraceOptions, type AnalyzeTraceResult } from "@typeslayer/analyze-trace";
 import {
 	type ResolvedType,
 	type TypeId,
@@ -13,6 +13,17 @@ import { data } from "./data";
 import { getAllFiles, updateLogFile } from "./utils";
 
 const t = initTRPC.create();
+
+const populateFromAnalyzeTrace = async () => {
+	const { tempDir } = data;
+	const file = `${tempDir}/analyze-trace.json`;
+	const fileString = await readFile(file, "utf8");
+	const result = JSON.parse(fileString) as AnalyzeTraceResult; // TODO zod
+	const { hotSpots, duplicatePackages } = result;
+	data.hotSpots = hotSpots;
+	data.duplicatePackages = duplicatePackages;
+	console.log("populateFromAnalyzeTrace");
+}
 
 export const appRouter = t.router({
 	getCWD: t.procedure.query(() => {
@@ -119,7 +130,7 @@ export const appRouter = t.router({
 			const { path, line, character } = input;
 			exec(
 				`code --goto ${path}:${line ?? 1}:${character ?? 1}`,
-				(error, stdout, stderr) => {},
+				(error, stdout, stderr) => { },
 			);
 		}),
 
@@ -142,18 +153,38 @@ export const appRouter = t.router({
 			const { tempDir } = data;
 			console.log("analyzeTrace", { tempDir });
 
-			const result = await analyzeTrace({
-				traceDir: tempDir,
-			});
+			// const result = await analyzeTrace({
+			// 	traceDir: tempDir,
+			// });
 
-			await writeFile(
-				`${tempDir}/analyze-trace.json`,
-				JSON.stringify(result, null, 2),
-				"utf8",
-			);
+			// await writeFile(
+			// 	`${tempDir}/analyze-trace.json`,
+			// 	JSON.stringify(result, null, 2),
+			// 	"utf8",
+			// );
+
+			await populateFromAnalyzeTrace();
+			console.log("analyzeTrace done");
 
 			return result;
 		}),
+
+	setHotSpots: t.procedure.input(z.string()).mutation(async ({ input: tempDir }) => {
+		console.log("setHotSpots", { tempDir });
+		await mkdir(tempDir, { recursive: true });
+	}),
+
+	getHotSpots: t.procedure.query(() => {
+		const { hotSpots } = data;
+		console.log("getHotSpots");
+		return hotSpots;
+	}),
+
+	getDuplicatePackages: t.procedure.query(() => {
+		const { duplicatePackages } = data;
+		console.log("getDuplicatePackages");
+		return duplicatePackages;
+	}),
 });
 
 export type AppRouter = typeof appRouter;

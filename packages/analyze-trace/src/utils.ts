@@ -22,8 +22,8 @@ export interface HotType {
 	children: HotType[];
 }
 
-export interface HotFrame {
-	children: HotFrame[];
+export interface HotSpot {
+	children: HotSpot[];
 	description: string;
 	timeMs: number;
 
@@ -51,7 +51,7 @@ export interface DuplicatedPackageInstance {
 
 export interface AnalyzeTraceResult {
 	unterminatedEvents: TraceEvent[];
-	hotSpots: HotFrame[];
+	hotSpots: HotSpot[];
 	duplicatePackages: DuplicatedPackage[];
 	nodeModulePaths: NodeModulePaths;
 }

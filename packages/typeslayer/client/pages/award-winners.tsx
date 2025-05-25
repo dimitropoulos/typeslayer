@@ -1,6 +1,8 @@
 import {
+	CopyAll,
 	Diversity1,
-	FolderCopy,
+	EmojiEvents,
+	GroupAdd,
 	JoinFull,
 	JoinInner,
 	Lightbulb,
@@ -12,13 +14,15 @@ import {
 	Box,
 	Divider,
 	List,
+	ListItemIcon,
 	ListItemButton,
+	ListItemText,
 	Stack,
 	Typography,
+	ListSubheader,
 } from "@mui/material";
 import type { ResolvedType, TypeRegistry } from "@typeslayer/validate";
 import { type ReactNode, useCallback, useState } from "react";
-import { AwardPlaque } from "../components/award-plaque";
 import { Callout } from "../components/callout";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
 import { InlineCode } from "../components/inline-code";
@@ -26,23 +30,37 @@ import { TypeSummary } from "../components/type-summary";
 import { theme } from "../theme";
 import { trpc } from "../trpc";
 
-const arrayItems = {
+type AwardId = keyof typeof awards;
+
+const awards = {
+	hotSpots: {
+		title: "Hot Spot",
+		description:
+			"Awarded for the most ruthless code simplification without breaking anything.",
+		icon: <Whatshot fontSize="large" />,
+	},
 	unionTypes: {
-		title: "Union Types",
+		title: "Largest Union",
 		property: "unionTypes",
 		description:
 			"Awarded for the most ruthless code simplification without breaking anything.",
 		icon: <JoinFull fontSize="large" />,
 	},
+	duplicatePackages: {
+		title: "Duplicate Packages",
+		description:
+			"Awarded for the most ruthless code simplification without breaking anything.",
+		icon: <CopyAll fontSize="large" />,
+	},
 	typeArguments: {
-		title: "Type Arguments",
+		title: "Most Type Arguments",
 		property: "typeArguments",
 		description:
 			"Awarded for the most ruthless code simplification without breaking anything.",
 		icon: <SportsKabaddi fontSize="large" />,
 	},
 	intersectionTypes: {
-		title: "Intersection Types",
+		title: "Largest Intersection",
 		property: "intersectionTypes",
 		description:
 			"Awarded for the most ruthless code simplification without breaking anything.",
@@ -53,48 +71,55 @@ const arrayItems = {
 		property: "aliasTypeArguments",
 		description:
 			"Awarded for the most ruthless code simplification without breaking anything.",
-		icon: <FolderCopy fontSize="large" />,
+		icon: <GroupAdd fontSize="large" />,
+	},
+	limit_instantiateType: {
+		title: "Type Instantiation Limit",
+		property: "hotSpots",
+		description:
+			"Awarded for the most ruthless code simplification without breaking anything.",
+		icon: <Lightbulb fontSize="large" />,
+	},
+	limit_recursiveTypeRelatedTo: {
+		title: "Recursive Relations Limit",
+		property: "hotSpots",
+		description:
+			"Awarded for the most ruthless code simplification without breaking anything.",
+		icon: <Diversity1 fontSize="large" />,
+	},
+	limit_typeRelatedToDiscriminatedType: {
+		title: "Discrimination Limit",
+		property: "hotSpots",
+		description:
+			"Awarded for the most ruthless code simplification without breaking anything.",
+		icon: <SafetyDivider fontSize="large" />,
 	},
 } as const;
 
-const hotSpots = {
-	title: "Hot Spots",
-	property: "hotSpots",
-	description:
-		"Awarded for the most ruthless code simplification without breaking anything.",
-	icon: <Whatshot fontSize="large" />,
-};
-
-const limit_instantiateType = {
-	title: "Type Instantiation Limit",
-	property: "hotSpots",
-	description:
-		"Awarded for the most ruthless code simplification without breaking anything.",
-	icon: <Lightbulb fontSize="large" />,
-};
-
-const limit_recursiveTypeRelatedTo = {
-	title: "Recursive Relations Limit",
-	property: "hotSpots",
-	description:
-		"Awarded for the most ruthless code simplification without breaking anything.",
-	icon: <Diversity1 fontSize="large" />,
-};
-
-const limit_typeRelatedToDiscriminatedType = {
-	title: "Discrimination Limit",
-	property: "hotSpots",
-	description:
-		"Awarded for the most ruthless code simplification without breaking anything.",
-	icon: <SafetyDivider fontSize="large" />,
-};
+export const RenderAward =
+	({
+		activeAward,
+		setActiveAward,
+	}: {
+		activeAward: AwardId | null;
+		setActiveAward: (award: AwardId) => void;
+	}) =>
+	(awardId: AwardId) => {
+		const { title, icon } = awards[awardId];
+		return (
+			<ListItemButton
+				key={awardId}
+				selected={activeAward === awardId}
+				onClick={() => setActiveAward(awardId)}
+			>
+				<ListItemIcon>{icon}</ListItemIcon>
+				<ListItemText>{title}</ListItemText>
+			</ListItemButton>
+		);
+	};
 
 export const AwardWinners = () => {
-	const [activeAward, setActiveAward] = useState<string | null>(null);
-	const isActive = useCallback(
-		(award: string) => activeAward === award,
-		[activeAward],
-	);
+	const [activeAward, setActiveAward] = useState<AwardId | null>(null);
 
 	const { data: typeRegistryEntries } = trpc.getTypeRegistry.useQuery();
 	const typeRegistry: TypeRegistry = new Map(typeRegistryEntries ?? []);
@@ -102,36 +127,36 @@ export const AwardWinners = () => {
 
 	let playground: ReactNode = null;
 	switch (activeAward) {
-		case arrayItems.typeArguments.title:
+		case "typeArguments":
 			playground = (
-				<ArrayAward typeRegistry={typeRegistry} {...arrayItems.typeArguments} />
+				<ArrayAward typeRegistry={typeRegistry} {...awards.typeArguments} />
 			);
 			break;
-		case arrayItems.unionTypes.title:
+		case "unionTypes":
 			playground = (
-				<ArrayAward typeRegistry={typeRegistry} {...arrayItems.unionTypes} />
+				<ArrayAward typeRegistry={typeRegistry} {...awards.unionTypes} />
 			);
 			break;
-		case arrayItems.intersectionTypes.title:
+		case "intersectionTypes":
 			playground = (
-				<ArrayAward
-					typeRegistry={typeRegistry}
-					{...arrayItems.intersectionTypes}
-				/>
+				<ArrayAward typeRegistry={typeRegistry} {...awards.intersectionTypes} />
 			);
 			break;
-		case arrayItems.aliasTypeArguments.title:
+		case "aliasTypeArguments":
 			playground = (
 				<ArrayAward
 					typeRegistry={typeRegistry}
-					{...arrayItems.aliasTypeArguments}
+					{...awards.aliasTypeArguments}
 				/>
 			);
 			break;
-		case hotSpots.title:
-		case limit_instantiateType.title:
-		case limit_recursiveTypeRelatedTo.title:
-		case limit_typeRelatedToDiscriminatedType.title:
+			case "duplicatePackages":
+				playground = <DuplicatePackages />;
+				break;
+		case "hotSpots":
+		case "limit_instantiateType":
+		case "limit_recursiveTypeRelatedTo":
+		case "limit_typeRelatedToDiscriminatedType":
 			playground = <div>TODO</div>;
 			break;
 
@@ -140,61 +165,48 @@ export const AwardWinners = () => {
 			break;
 	}
 
+	const Award = RenderAward({ activeAward, setActiveAward });
+
 	return (
 		<Stack
 			direction="row"
 			sx={{ m: 4, minWidth: 500, minHeight: 500, alignItems: "flex-start" }}
 		>
 			<Stack sx={{ minWidth: 250 }}>
-				<h1>Award Winners</h1>
-				<Typography>
-					Your project's types-level
-					<br />
-					Hall of Fame (Shame?).
-				</Typography>
+				<TitleSubtitle
+					title="Award Winners"
+					subtitle="A types-level Hall of Shame"
+					icon={<EmojiEvents fontSize="large" />}
+				/>
 
-				<Stack sx={{ my: 2 }} gap={2}>
-					<AwardPlaque
-						title={hotSpots.title}
-						icon={hotSpots.icon}
-						description={hotSpots.description}
-						isActive={isActive}
-						activate={setActiveAward}
-					/>
-					<AwardPlaque
-						title={limit_instantiateType.title}
-						icon={limit_instantiateType.icon}
-						description={limit_instantiateType.description}
-						isActive={isActive}
-						activate={setActiveAward}
-					/>
-					<AwardPlaque
-						title={limit_recursiveTypeRelatedTo.title}
-						icon={limit_recursiveTypeRelatedTo.icon}
-						description={limit_recursiveTypeRelatedTo.description}
-						isActive={isActive}
-						activate={setActiveAward}
-					/>
-					<AwardPlaque
-						title={limit_typeRelatedToDiscriminatedType.title}
-						icon={limit_typeRelatedToDiscriminatedType.icon}
-						description={limit_typeRelatedToDiscriminatedType.description}
-						isActive={isActive}
-						activate={setActiveAward}
-					/>
-					{Object.values(arrayItems).map(({ title, icon, description }) => (
-						<AwardPlaque
-							key={title}
-							title={title}
-							icon={icon}
-							description={description}
-							isActive={isActive}
-							activate={setActiveAward}
-						/>
-					))}
-				</Stack>
+				<List>
+					<ListSubheader>Performance Metrics</ListSubheader>
+					{(
+						[
+							"hotSpots",
+							"limit_instantiateType",
+							"limit_recursiveTypeRelatedTo",
+							"limit_typeRelatedToDiscriminatedType",
+						] as const
+					).map(Award)}
+
+					<ListSubheader>Type-level Metrics</ListSubheader>
+					{(
+						[
+							"unionTypes",
+							"intersectionTypes",
+							"typeArguments",
+							"aliasTypeArguments",
+						] as const
+					).map(Award)}
+
+					<ListSubheader>Bundle Implications</ListSubheader>
+					{(["duplicatePackages"] as const).map(Award)}
+				</List>
 			</Stack>
+
 			<Divider orientation="vertical" sx={{ mx: 2 }} />
+
 			{playground}
 		</Stack>
 	);
@@ -222,6 +234,26 @@ function InfoBox() {
 	);
 }
 
+function TitleSubtitle({
+	title,
+	subtitle,
+	icon,
+}: {
+	title: string;
+	subtitle: string;
+	icon: ReactNode;
+}) {
+	return (
+		<Stack sx={{ mb: 2, mr: 1 }} gap={1}>
+				<Stack direction="row" gap={2} alignItems="center">
+					{icon}
+					<Typography variant="h4">{title}</Typography>
+				</Stack>
+					<Typography>{subtitle}</Typography>
+				</Stack>
+	);
+}
+
 function ArrayAward({
 	title,
 	description,
@@ -231,7 +263,11 @@ function ArrayAward({
 }: {
 	title: string;
 	description: string;
-	property: keyof typeof arrayItems;
+	property:
+		| typeof awards.unionTypes.property
+		| typeof awards.typeArguments.property
+		| typeof awards.intersectionTypes.property
+		| typeof awards.aliasTypeArguments.property;
 	icon: ReactNode;
 	typeRegistry: TypeRegistry;
 }) {
@@ -253,8 +289,6 @@ function ArrayAward({
 			return bAliasTypeArguments - aAliasTypeArguments;
 		});
 
-	console.log(`by ${title}`, sorted);
-
 	const maxValue = sorted[0]?.[property]?.length ?? 0;
 
 	const top = 100;
@@ -262,11 +296,12 @@ function ArrayAward({
 	return (
 		<Stack direction="row" gap={2} alignItems="flex-start">
 			<Stack sx={{ mx: 1 }}>
-				<Stack direction="row" gap={2} alignItems="center">
-					{icon}
-					<h1>{title}</h1>
-				</Stack>
-				<Typography>{description}</Typography>
+			<TitleSubtitle
+					title={title}
+					subtitle={description}
+					icon={icon}
+				/>
+
 
 				<Stack sx={{ my: 2 }}>
 					<Typography variant="h5" sx={{ pl: 2, mt: 2 }}>
@@ -322,5 +357,53 @@ function ArrayAward({
 				simplifyPaths={false}
 			/>
 		</Stack>
+	);
+}
+
+const DuplicatePackages = () => {
+	const { data: duplicatePackages = [] } = trpc.getDuplicatePackages.useQuery();
+	
+	return (
+		<Stack>
+			<TitleSubtitle
+				title="Duplicate Packages"
+				subtitle="packages that are duplicated in the bundle"
+				icon={<CopyAll fontSize="large"/>}
+			/>
+			{duplicatePackages.map(({ instances, name }) => (
+				<Stack key={name} direction="row" gap={2} alignItems="flex-start">
+					<Stack sx={{ mx: 1 }}>
+						<Typography variant="h5" sx={{ pl: 2, mt: 2 }}>
+							{name}
+						</Typography>
+						<List>
+							{instances.map(({ path, version}) => (
+								<ListItemButton
+									key={path}
+									sx={{
+										width: "100%",
+									}}
+								>
+									<Typography sx={{ mr: 2 }}>{path}</Typography>
+									<Stack sx={{ flexGrow: 1, py: 1 }}>
+										<Typography
+											sx={{
+												ml: 1,
+												opacity: 0.7,
+												fontSize: "0.85rem",
+												lineHeight: 1,
+											}}
+										>
+											v{version}
+										</Typography>
+									</Stack>
+								</ListItemButton>
+							))}
+						</List>
+						</Stack>
+					<Divider orientation="vertical" sx={{ mx: 2 }} />
+				</Stack> ))}
+		</Stack>
+
 	);
 }
