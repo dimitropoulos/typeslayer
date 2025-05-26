@@ -31,6 +31,14 @@ export const DisplayRecursiveType: FC<{
 		return null;
 	}
 
+	if (depth > 10) {
+		return (
+			<Box style={{ marginLeft: depth * 16 }}>
+				[TypeSlayer Recursion limit reached for type {id}]
+			</Box>
+		);
+	}
+
 	const resolvedType = typeRegistry.get(id);
 	const [expanded, setExpanded] = useState(true);
 

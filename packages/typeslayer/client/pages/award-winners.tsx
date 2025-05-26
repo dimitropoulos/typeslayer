@@ -24,7 +24,13 @@ import {
 	IconButton,
 	ListItem,
 } from "@mui/material";
-import type { ResolvedType, TypeRegistry } from "@typeslayer/validate";
+import type {
+	EventChecktypes__InstantiateType_DepthLimit,
+	EventChecktypes__RecursiveTypeRelatedTo_DepthLimit,
+	EventChecktypes__TypeRelatedToDiscriminatedType_DepthLimit,
+	ResolvedType,
+	TypeRegistry,
+} from "@typeslayer/validate";
 import { type ReactNode, useCallback, useState } from "react";
 import { Callout } from "../components/callout";
 import {
@@ -35,6 +41,9 @@ import { InlineCode } from "../components/inline-code";
 import { TypeSummary } from "../components/type-summary";
 import { theme } from "../theme";
 import { trpc } from "../trpc";
+import type { DecoratedQuery } from "@trpc/react-query/dist/createTRPCReact";
+
+import type { DefaultErrorShape } from "@trpc/server/unstable-core-do-not-import";
 
 type AwardId = keyof typeof awards;
 
@@ -51,6 +60,7 @@ const awards = {
 		description:
 			"Awarded for the most ruthless code simplification without breaking anything.",
 		icon: JoinFull,
+		unit: "union members",
 	},
 	duplicatePackages: {
 		title: "Duplicate Packages",
@@ -64,6 +74,7 @@ const awards = {
 		description:
 			"Awarded for the most ruthless code simplification without breaking anything.",
 		icon: SportsKabaddi,
+		unit: "type arguments",
 	},
 	intersectionTypes: {
 		title: "Largest Intersection",
@@ -71,6 +82,7 @@ const awards = {
 		description:
 			"Awarded for the most ruthless code simplification without breaking anything.",
 		icon: JoinInner,
+		unit: "intersections",
 	},
 	aliasTypeArguments: {
 		title: "Alias Type Arguments",
@@ -78,6 +90,7 @@ const awards = {
 		description:
 			"Awarded for the most ruthless code simplification without breaking anything.",
 		icon: GroupAdd,
+		unit: "aliased type arguments",
 	},
 	limit_instantiateType: {
 		title: "Type Instantiation Limit",
@@ -117,14 +130,14 @@ export const RenderAward =
 			[awardId, setActiveAward],
 		);
 		const selected = activeAward === awardId;
-		const color = (selected ? { color: theme.palette.primary.dark } : {});
+		const color = selected ? { color: theme.palette.primary.dark } : {};
 		return (
 			<ListItemButton
 				key={awardId}
 				selected={selected}
 				sx={{
 					borderRadius: 2,
-					...color
+					...color,
 				}}
 				onClick={onClick}
 			>
@@ -167,10 +180,89 @@ export const RenderPlayground = ({
 			return <ShowHotSpots />;
 
 		case "limit_instantiateType":
-			return <LimitInstantiateType typeRegistry={typeRegistry} />;
+			return (
+				<ShowTypeLimit<EventChecktypes__InstantiateType_DepthLimit>
+					key={awards.limit_instantiateType.title}
+					notFound={{
+						title: "No Type Instantiation Limits Found",
+						description:
+							"No type instantiation limits detected. Did you run analyze-trace?",
+					}}
+					title={awards.limit_instantiateType.title}
+					subtitle={(first) =>
+						`The most complex types that were limited by the type system.\nThe current limit is set to ${first.args.instantiationCount.toLocaleString()}, and every type shown below hit that limit.`
+					}
+					typeRegistry={typeRegistry}
+					rpc={trpc.getTypeInstantiationLimits}
+					icon={awards.limit_instantiateType.icon}
+					inlineBarGraph={(current, first) => (
+						<InlineBarGraph
+							label={`${current.args.instantiationDepth.toLocaleString()} depth`}
+							width={`${(current.args.instantiationDepth / first.args.instantiationDepth) * 100}%`}
+						/>
+					)}
+					getKey={(current) =>
+						`${current.args.typeId}-${current.args.instantiationCount}-${current.args.instantiationDepth}:${current.ts}`
+					}
+					getTypeId={(current) => current.args.typeId}
+				/>
+			);
 		case "limit_recursiveTypeRelatedTo":
+			return (
+				<ShowTypeLimit<EventChecktypes__RecursiveTypeRelatedTo_DepthLimit>
+					key={awards.limit_recursiveTypeRelatedTo.title}
+					notFound={{
+						title: "No Recursive Relations Limits Found",
+						description:
+							"No recursive relations limits detected. Did you run analyze-trace?",
+					}}
+					title={awards.limit_recursiveTypeRelatedTo.title}
+					subtitle={(first) =>
+						`The most complex types that were limited by the type system.\nThe current limit is set to ${first.args.targetDepth.toLocaleString()}, and every type shown below hit that limit.`
+					}
+					typeRegistry={typeRegistry}
+					rpc={trpc.getRecursiveTypeRelatedToLimits}
+					icon={awards.limit_recursiveTypeRelatedTo.icon}
+					inlineBarGraph={(current, first) => (
+						<InlineBarGraph
+							label={`${current.args.depth.toLocaleString()} depth`}
+							width={`${(current.args.depth / first.args.depth) * 100}%`}
+						/>
+					)}
+					getKey={(current) =>
+						`${current.args.sourceId}-${current.args.sourceId}:${current.ts}`
+					}
+					getTypeId={(current) => current.args.sourceId}
+				/>
+			);
+			
 		case "limit_typeRelatedToDiscriminatedType":
-			return <div>TODO</div>;
+				return (
+				<ShowTypeLimit<EventChecktypes__TypeRelatedToDiscriminatedType_DepthLimit>
+					key={awards.limit_typeRelatedToDiscriminatedType.title}
+					notFound={{
+						title: "No Discriminated Type Limits Found",
+						description: "No discriminated type limits detected. Did you run analyze-trace?",
+					}}
+					title={awards.limit_typeRelatedToDiscriminatedType.title}
+					subtitle={(first) =>
+						`The most complex types that were limited by the type system.\nThe current limit is set to ${first.args.numCombinations.toLocaleString()}, and every type shown below hit that limit.`
+					}
+					typeRegistry={typeRegistry}
+					rpc={trpc.getTypeRelatedToDiscriminatedTypeLimits}
+					icon={awards.limit_typeRelatedToDiscriminatedType.icon}
+					inlineBarGraph={(current, first) => (
+						<InlineBarGraph
+							label={`${current.args.numCombinations.toLocaleString()} depth`}
+							width={`${(current.args.numCombinations / first.args.numCombinations) * 100}%`}
+						/>
+					)}
+					getKey={(current) =>
+						`${current.args.sourceId}-${current.args.targetId}:${current.ts}`
+					}
+					getTypeId={(current) => current.args.sourceId}
+				/>
+			);
 
 		default:
 			return <InfoBox />;
@@ -178,7 +270,9 @@ export const RenderPlayground = ({
 };
 
 export const AwardWinners = () => {
-	const [activeAward, setActiveAward] = useState<AwardId | null>(null);
+	const [activeAward, setActiveAward] = useState<AwardId | null>(
+		"limit_instantiateType",
+	);
 	console.log({ activeAward });
 
 	const { data: typeRegistryEntries } = trpc.getTypeRegistry.useQuery();
@@ -199,7 +293,7 @@ export const AwardWinners = () => {
 		>
 			<Stack
 				sx={{
-					p: 1,
+					px: 1,
 					minWidth: 300,
 					minHeight: "100%",
 					backgroundColor: theme.palette.background.paper,
@@ -208,11 +302,7 @@ export const AwardWinners = () => {
 				<List
 					sx={{ width: "100%", maxWidth: 350 }}
 					component="nav"
-					subheader={
-						<ListSubheader sx={{ pl: 1, py: 0, my: 0}}>
-							Performance Metrics
-						</ListSubheader>
-					}
+					subheader={<ListSubheader>Performance Metrics</ListSubheader>}
 				>
 					{(
 						[
@@ -243,7 +333,15 @@ export const AwardWinners = () => {
 				</List>
 			</Stack>
 
-			<Box sx={{ p: 4 }}>
+			<Box
+				sx={{
+					p: 4,
+					flexGrow: 1,
+					maxWidth: "100%",
+					maxHeight: "100%",
+					overflow: "auto",
+				}}
+			>
 				<RenderPlayground
 					activeAward={activeAward}
 					typeRegistry={typeRegistry}
@@ -308,6 +406,7 @@ function ArrayAward({
 	property,
 	icon: Icon,
 	typeRegistry,
+	unit,
 }: {
 	title: string;
 	description: string;
@@ -318,6 +417,7 @@ function ArrayAward({
 		| typeof awards.aliasTypeArguments.property;
 	icon: (typeof awards)[keyof typeof awards]["icon"];
 	typeRegistry: TypeRegistry;
+	unit: string;
 }) {
 	const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -356,7 +456,7 @@ function ArrayAward({
 					</Typography>
 					<List>
 						{sorted.slice(0, top).map(({ id }, index) => {
-							const count = sorted[index][property]?.length;
+							const value = sorted[index][property]?.length ?? 0;
 							return (
 								<ListItemButton
 									selected={index === selectedIndex}
@@ -370,25 +470,9 @@ function ArrayAward({
 										<Stack sx={{ flexGrow: 1 }} gap={1}>
 											<TypeSummary resolvedType={sorted[index]} />
 											<Stack gap={0.5}>
-												<Typography
-													sx={{
-														opacity: 0.7,
-														fontSize: "0.85rem",
-														lineHeight: 1,
-													}}
-												>
-													{count?.toLocaleString()}
-												</Typography>
-
-												<Box
-													sx={{
-														width: count
-															? `${(count / maxValue) * 100}%`
-															: "0%",
-														height: 4,
-														borderRadius: 2,
-														backgroundColor: theme.palette.primary.main,
-													}}
+												<InlineBarGraph
+													label={`${value.toLocaleString()} ${unit}`}
+													width={`${(value / maxValue) * 100}%`}
 												/>
 											</Stack>
 										</Stack>
@@ -413,13 +497,13 @@ function ArrayAward({
 
 const DuplicatePackages = () => {
 	const { data: duplicatePackages = [] } = trpc.getDuplicatePackages.useQuery();
-
+	const Icon = awards.duplicatePackages.icon;
 	return (
 		<Stack>
 			<TitleSubtitle
 				title="Duplicate Packages"
 				subtitle="packages that are duplicated in the bundle"
-				icon={<CopyAll fontSize="large" />}
+				icon={<Icon fontSize="large" />}
 			/>
 
 			<Stack gap={3} sx={{ ml: 1 }}>
@@ -472,74 +556,100 @@ export const ShowHotSpots = () => {
 	console.log("hotSpots", { hotSpots });
 
 	const firstHotSpot = hotSpots[0];
+	const Icon = awards.hotSpots.icon;
+
+	const hasHotSpots = (
+		<List>
+			{hotSpots.map(({ path, timeMs }) => {
+				const relativeTime = timeMs / firstHotSpot.timeMs;
+				const fileName = path?.split("/").slice(-1)[0] ?? "<no file name>";
+				return (
+					<ListItemButton key={path} sx={{ width: "100%" }}>
+						<ListItemText>
+							<Typography variant="h6" justifyContent="center">
+								{fileName}
+								{path ? (
+									<IconButton
+										size="small"
+										onClick={() => findInPage(path)}
+										sx={{ ml: 1 }}
+									>
+										<FindInPage fontSize="small" />
+									</IconButton>
+								) : null}
+							</Typography>
+							<Stack>
+								<Typography variant="caption">{path}</Typography>
+							</Stack>
+							<InlineBarGraph
+								label={`${timeMs.toLocaleString()}ms`}
+								width={`${relativeTime * 100}%`}
+							/>
+						</ListItemText>
+					</ListItemButton>
+				);
+			})}
+		</List>
+	);
+
+	const noneFound = (
+		<Stack direction="row" gap={2} alignItems="flex-start">
+			<Callout title="No Hot Spots Found">
+				<Typography>
+					No hot spots detected. Did you run analyze-trace?
+				</Typography>
+			</Callout>
+		</Stack>
+	);
 
 	return (
 		<Stack>
 			<TitleSubtitle
 				title="Hot Spots"
 				subtitle="The most expensive code paths in your application"
-				icon={<Whatshot fontSize="large" />}
+				icon={<Icon fontSize="large" />}
 			/>
 
-			{firstHotSpot ? (
-				<List>
-					{hotSpots.map(({ path, timeMs }) => {
-						const relativeTime = timeMs / firstHotSpot.timeMs;
-						const fileName = path?.split("/").slice(-1)[0] ?? "<no file name>";
-						return (
-							<ListItemButton key={path} sx={{ width: "100%" }}>
-								<ListItemText>
-									<Typography variant="h6" justifyContent="center">
-										{fileName}
-										{path ? (
-											<IconButton
-												size="small"
-												onClick={() => findInPage(path)}
-												sx={{ ml: 1 }}
-											>
-												<FindInPage fontSize="small" />
-											</IconButton>
-										) : null}
-									</Typography>
-									<Stack>
-										<Typography variant="caption">{path}</Typography>
-										<Typography variant="caption">
-											{timeMs.toLocaleString()}ms
-										</Typography>
-									</Stack>
-									<Box
-										style={{
-											width: `${relativeTime * 100}%`,
-											height: "4px",
-											backgroundColor: theme.palette.primary.main,
-											borderRadius: "2px",
-											marginTop: "4px",
-										}}
-									/>
-								</ListItemText>
-							</ListItemButton>
-						);
-					})}
-				</List>
-			) : (
-				<Stack direction="row" gap={2} alignItems="flex-start">
-					<Callout title="No Hot Spots Found">
-						<Typography>
-							No hot spots detected. Did you run analyze-trace?
-						</Typography>
-					</Callout>
-				</Stack>
-			)}
+			{firstHotSpot ? hasHotSpots : noneFound}
 		</Stack>
 	);
 };
 
-const LimitInstantiateType = ({
+type LimitType =
+	| EventChecktypes__InstantiateType_DepthLimit
+	| EventChecktypes__RecursiveTypeRelatedTo_DepthLimit
+	| EventChecktypes__TypeRelatedToDiscriminatedType_DepthLimit;
+
+const ShowTypeLimit = <L extends LimitType>({
 	typeRegistry,
+	notFound,
+	title,
+	rpc,
+	icon: Icon,
+	subtitle,
+	inlineBarGraph,
+	getKey,
+	getTypeId,
 }: {
 	typeRegistry: TypeRegistry;
+	notFound: {
+		title: string;
+		description: string;
+	};
+	title: string;
+	rpc: DecoratedQuery<{
+		input: void;
+		output: L[];
+		transformer: false;
+		errorShape: DefaultErrorShape;
+	}>;
+	icon: (typeof awards)[keyof typeof awards]["icon"];
+	subtitle: (first: L) => string;
+	inlineBarGraph: (current: L, first: L) => ReactNode;
+	getKey: (current: L) => string;
+	getTypeId: (current: L) => number;
 }) => {
-	const { data = [] } = trpc.getTypeInstantiationLimits.useQuery();
+	const { data = [] } = rpc.useQuery();
 
 	const [selectedTypeId, setSelectedTypeId] = useState<number | null>(null);
 	const handleTypeClick = useCallback(
@@ -553,78 +663,55 @@ const LimitInstantiateType = ({
 		[selectedTypeId],
 	);
 
-	const fist = data[0];
+	const first = data[0];
 
-	if (!fist) {
+	if (!first) {
 		return (
-			<Callout title="No Type Instantiation Limits Found">
-				<Typography>
-					No type instantiation limits detected. Did you run analyze-trace?
-				</Typography>
+			<Callout title={notFound.title}>
+				<Typography>{notFound.description}</Typography>
 			</Callout>
 		);
 	}
 
-	const limit = data[0].args.instantiationDepth;
-
-	console.log("Type Instantiation Limits", { data });
+	console.log(title, { data });
 
 	return (
-		<Stack>
-			<TitleSubtitle
-				title="Type Instantiation Limits"
-				subtitle={`The most complex types that were limited by the type system.\nThe current limit is set to ${limit.toLocaleString()}.`}
-				icon={<Lightbulb fontSize="large" />}
-			/>
 			<Stack direction="row" gap={2} alignItems="flex-start">
+				<Stack sx={{ minWidth: 450, maxWidth: 450 }}>
+			<TitleSubtitle
+				title={title}
+				subtitle={subtitle(first)}
+				icon={<Icon fontSize="large" />}
+				/>
+
 				<List>
-					{data.map(
-						({
-							ts,
-							args: { instantiationCount, instantiationDepth, typeId },
-						}) => {
-							const resolvedType = typeRegistry.get(typeId);
-							const key = `${typeId}-${instantiationCount}-${instantiationDepth}:${ts}`;
+					{data.map((current) => {
+						const typeId = getTypeId(current);
+						const resolvedType = typeRegistry.get(typeId);
+						const key = getKey(current);
 
-							if (!resolvedType) {
-								return (
-									<ListItemText key={key}>
-										<Typography color="error">
-											Type {typeId} not found in type registry
-										</Typography>
-									</ListItemText>
-								);
-							}
-
-							const relativeDepth = instantiationDepth / limit;
-
+						if (!resolvedType) {
 							return (
-								<ListItemButton
-									key={key}
-									onClick={() => handleTypeClick(typeId)}
-								>
-									<ListItemText>
-										<TypeSummary resolvedType={resolvedType} />
-										<Typography variant="caption">
-											Depth: {instantiationDepth}
-										</Typography>
-
-										<Box
-											style={{
-												width: `${relativeDepth * 100}%`,
-												height: "4px",
-												backgroundColor: theme.palette.primary.main,
-												borderRadius: "2px",
-												marginTop: "4px",
-											}}
-										/>
-									</ListItemText>
-								</ListItemButton>
+								<ListItemText key={key}>
+									<Typography color="error">
+										Type {typeId} not found in type registry
+									</Typography>
+								</ListItemText>
 							);
-						},
-					)}
-				</List>
+						}
+						return (
+							<ListItemButton key={key} onClick={() => handleTypeClick(typeId)}>
+								<ListItemText>
+									<TypeSummary resolvedType={resolvedType} />
+									<Typography variant="caption" sx={{ mr: 2 }}>TODO/path</Typography>
+									{inlineBarGraph(current, first)}
+								</ListItemText>
+							</ListItemButton>
+						);
+					})}
+				</List></Stack>
 
+			
 				{selectedTypeId === null ? null : (
 					<>
 						<Divider orientation="vertical" sx={{ mx: 2 }} />
@@ -635,7 +722,37 @@ const LimitInstantiateType = ({
 						/>
 					</>
 				)}
-			</Stack>
+		
+		</Stack>
+	);
+};
+
+const InlineBarGraph = ({
+	width,
+	label,
+}: {
+	width: string;
+	label: string;
+}) => {
+	return (
+		<Stack>
+			<Typography
+				sx={{
+					color: theme.palette.text.disabled,
+					fontSize: "0.8rem",
+				}}
+			>
+				{label}
+			</Typography>
+			<Box
+				style={{
+					width,
+					height: "4px",
+					backgroundColor: theme.palette.primary.main,
+					borderRadius: "2px",
+					marginTop: "2px",
+				}}
+			/>
 		</Stack>
 	);
 };

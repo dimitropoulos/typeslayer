@@ -4,6 +4,9 @@
 		"rules": {
 			"complexity": {
 				"noForEach": "off"
+			},
+			"suspicious": {
+				"noConfusingVoidType": "off"
 			}
 		}
 	},
