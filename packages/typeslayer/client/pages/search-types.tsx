@@ -51,8 +51,8 @@ export const SearchTypes = () => {
 					alignItems="center"
 				>
 					<TextField
-						label="Search Types By Id"
-						placeholder="Enter type id"
+						label="Search by Type Id"
+						placeholder="type id"
 						variant="outlined"
 						type="number"
 						sx={{ input: { color: theme.palette.primary.main }, width: 600 }}

@@ -2,6 +2,7 @@ import {
 	CopyAll,
 	Diversity1,
 	EmojiEvents,
+	FindInPage,
 	GroupAdd,
 	JoinFull,
 	JoinInner,
@@ -20,11 +21,16 @@ import {
 	Stack,
 	Typography,
 	ListSubheader,
+	IconButton,
+	ListItem,
 } from "@mui/material";
 import type { ResolvedType, TypeRegistry } from "@typeslayer/validate";
 import { type ReactNode, useCallback, useState } from "react";
 import { Callout } from "../components/callout";
-import { DisplayRecursiveType } from "../components/display-recursive-type";
+import {
+	DisplayRecursiveType,
+	OpenFile,
+} from "../components/display-recursive-type";
 import { InlineCode } from "../components/inline-code";
 import { TypeSummary } from "../components/type-summary";
 import { theme } from "../theme";
@@ -34,65 +40,65 @@ type AwardId = keyof typeof awards;
 
 const awards = {
 	hotSpots: {
-		title: "Hot Spot",
+		title: "Hot Spots",
 		description:
 			"Awarded for the most ruthless code simplification without breaking anything.",
-		icon: <Whatshot fontSize="large" />,
+		icon: Whatshot,
 	},
 	unionTypes: {
 		title: "Largest Union",
 		property: "unionTypes",
 		description:
 			"Awarded for the most ruthless code simplification without breaking anything.",
-		icon: <JoinFull fontSize="large" />,
+		icon: JoinFull,
 	},
 	duplicatePackages: {
 		title: "Duplicate Packages",
 		description:
 			"Awarded for the most ruthless code simplification without breaking anything.",
-		icon: <CopyAll fontSize="large" />,
+		icon: CopyAll,
 	},
 	typeArguments: {
 		title: "Most Type Arguments",
 		property: "typeArguments",
 		description:
 			"Awarded for the most ruthless code simplification without breaking anything.",
-		icon: <SportsKabaddi fontSize="large" />,
+		icon: SportsKabaddi,
 	},
 	intersectionTypes: {
 		title: "Largest Intersection",
 		property: "intersectionTypes",
 		description:
 			"Awarded for the most ruthless code simplification without breaking anything.",
-		icon: <JoinInner fontSize="large" />,
+		icon: JoinInner,
 	},
 	aliasTypeArguments: {
 		title: "Alias Type Arguments",
 		property: "aliasTypeArguments",
 		description:
 			"Awarded for the most ruthless code simplification without breaking anything.",
-		icon: <GroupAdd fontSize="large" />,
+		icon: GroupAdd,
 	},
 	limit_instantiateType: {
 		title: "Type Instantiation Limit",
-		property: "hotSpots",
+		property: "limit_instantiateType",
 		description:
 			"Awarded for the most ruthless code simplification without breaking anything.",
-		icon: <Lightbulb fontSize="large" />,
+		icon: Lightbulb,
 	},
 	limit_recursiveTypeRelatedTo: {
 		title: "Recursive Relations Limit",
-		property: "hotSpots",
+		property: "limit_recursiveTypeRelatedTo",
 		description:
 			"Awarded for the most ruthless code simplification without breaking anything.",
-		icon: <Diversity1 fontSize="large" />,
+		icon: Diversity1,
 	},
 	limit_typeRelatedToDiscriminatedType: {
 		title: "Discrimination Limit",
-		property: "hotSpots",
+		property: "limit_typeRelatedToDiscriminatedType",
 		description:
 			"Awarded for the most ruthless code simplification without breaking anything.",
-		icon: <SafetyDivider fontSize="large" />,
+		icon: SafetyDivider,
 	},
 } as const;
 
@@ -105,82 +111,109 @@ export const RenderAward =
 		setActiveAward: (award: AwardId) => void;
 	}) =>
 	(awardId: AwardId) => {
-		const { title, icon } = awards[awardId];
+		const { title, icon: Icon } = awards[awardId];
+		const onClick = useCallback(
+			() => setActiveAward(awardId),
+			[awardId, setActiveAward],
+		);
+		const selected = activeAward === awardId;
+		const color = (selected ? { color: theme.palette.primary.dark } : {});
 		return (
 			<ListItemButton
 				key={awardId}
-				selected={activeAward === awardId}
-				onClick={() => setActiveAward(awardId)}
+				selected={selected}
+				sx={{
+					borderRadius: 2,
+					...color
+				}}
+				onClick={onClick}
 			>
-				<ListItemIcon>{icon}</ListItemIcon>
-				<ListItemText>{title}</ListItemText>
+				<ListItemIcon sx={{ minWidth: 38 }}>
+					<Icon sx={{ ...color }} />
+				</ListItemIcon>
+				<ListItemText primary={title} />
 			</ListItemButton>
 		);
 	};
 
-export const AwardWinners = () => {
-	const [activeAward, setActiveAward] = useState<AwardId | null>(null);
-
-	const { data: typeRegistryEntries } = trpc.getTypeRegistry.useQuery();
-	const typeRegistry: TypeRegistry = new Map(typeRegistryEntries ?? []);
-	window.typeRegistry = typeRegistry;
-
-	let playground: ReactNode = null;
+export const RenderPlayground = ({
+	activeAward,
+	typeRegistry,
+}: {
+	activeAward: AwardId | null;
+	typeRegistry: TypeRegistry;
+}) => {
 	switch (activeAward) {
 		case "typeArguments":
-			playground = (
+			return (
 				<ArrayAward typeRegistry={typeRegistry} {...awards.typeArguments} />
 			);
-			break;
 		case "unionTypes":
-			playground = (
-				<ArrayAward typeRegistry={typeRegistry} {...awards.unionTypes} />
-			);
-			break;
+			return <ArrayAward typeRegistry={typeRegistry} {...awards.unionTypes} />;
 		case "intersectionTypes":
-			playground = (
+			return (
 				<ArrayAward typeRegistry={typeRegistry} {...awards.intersectionTypes} />
 			);
-			break;
 		case "aliasTypeArguments":
-			playground = (
+			return (
 				<ArrayAward
 					typeRegistry={typeRegistry}
 					{...awards.aliasTypeArguments}
 				/>
 			);
-			break;
-			case "duplicatePackages":
-				playground = <DuplicatePackages />;
-				break;
+		case "duplicatePackages":
+			return <DuplicatePackages />;
 		case "hotSpots":
+			return <ShowHotSpots />;
+
 		case "limit_instantiateType":
+			return <LimitInstantiateType typeRegistry={typeRegistry} />;
 		case "limit_recursiveTypeRelatedTo":
 		case "limit_typeRelatedToDiscriminatedType":
-			playground = <div>TODO</div>;
-			break;
+			return <div>TODO</div>;
 
 		default:
-			playground = <InfoBox />;
-			break;
+			return <InfoBox />;
 	}
+};
+
+export const AwardWinners = () => {
+	const [activeAward, setActiveAward] = useState<AwardId | null>(null);
+	console.log({ activeAward });
+
+	const { data: typeRegistryEntries } = trpc.getTypeRegistry.useQuery();
+	const typeRegistry: TypeRegistry = new Map(typeRegistryEntries ?? []);
+	window.typeRegistry = typeRegistry;
 
 	const Award = RenderAward({ activeAward, setActiveAward });
 
 	return (
 		<Stack
 			direction="row"
-			sx={{ m: 4, minWidth: 500, minHeight: 500, alignItems: "flex-start" }}
+			sx={{
+				minWidth: 500,
+				minHeight: 500,
+				alignItems: "flex-start",
+				flexGrow: 1,
+			}}
 		>
-			<Stack sx={{ minWidth: 250 }}>
-				<TitleSubtitle
-					title="Award Winners"
-					subtitle="A types-level Hall of Shame"
-					icon={<EmojiEvents fontSize="large" />}
-				/>
-
-				<List>
-					<ListSubheader>Performance Metrics</ListSubheader>
+			<Stack
+				sx={{
+					p: 1,
+					minWidth: 300,
+					minHeight: "100%",
+					backgroundColor: theme.palette.background.paper,
+				}}
+			>
+				<List
+					sx={{ width: "100%", maxWidth: 350 }}
+					component="nav"
+					subheader={
+						<ListSubheader sx={{ pl: 1, py: 0, my: 0}}>
+							Performance Metrics
+						</ListSubheader>
+					}
+				>
 					{(
 						[
 							"hotSpots",
@@ -189,8 +222,11 @@ export const AwardWinners = () => {
 							"limit_typeRelatedToDiscriminatedType",
 						] as const
 					).map(Award)}
+				</List>
 
-					<ListSubheader>Type-level Metrics</ListSubheader>
+				<Divider />
+
+				<List subheader={<ListSubheader>Type-level Metrics</ListSubheader>}>
 					{(
 						[
 							"unionTypes",
@@ -199,38 +235,50 @@ export const AwardWinners = () => {
 							"aliasTypeArguments",
 						] as const
 					).map(Award)}
+				</List>
+				<Divider />
 
-					<ListSubheader>Bundle Implications</ListSubheader>
+				<List subheader={<ListSubheader>Bundle Implications</ListSubheader>}>
 					{(["duplicatePackages"] as const).map(Award)}
 				</List>
 			</Stack>
 
-			<Divider orientation="vertical" sx={{ mx: 2 }} />
-
-			{playground}
+			<Box sx={{ p: 4 }}>
+				<RenderPlayground
+					activeAward={activeAward}
+					typeRegistry={typeRegistry}
+				/>
+			</Box>
 		</Stack>
 	);
 };
 
 function InfoBox() {
 	return (
-		<Callout title={"Find new record-breakers!"}>
-			<Typography>
-				You'll also notice that in <InlineCode>window</InlineCode> object in
-				your console, there's a map called{" "}
-				<InlineCode>typesRegistry</InlineCode> that's a{" "}
-				<InlineCode>
-					Map&lt;<InlineCode secondary>TypeId</InlineCode>,{" "}
-					<InlineCode secondary>ResolvedType</InlineCode>&gt;
-				</InlineCode>
-				. Feel free to play with it to find more interesting record-breakers.
-			</Typography>
-			<Typography>
-				Also, Ramda is available in the console as <InlineCode>R</InlineCode>,
-				and Ramda-Adjunct is available as <InlineCode>RA</InlineCode>.{" "}
-				<em>Long Live Functional Programming!</em>
-			</Typography>
-		</Callout>
+		<Stack sx={{ minWidth: 500, minHeight: 500 }}>
+			<TitleSubtitle
+				title="Award Winners"
+				subtitle="A types-level Hall of Shame"
+				icon={<EmojiEvents fontSize="large" />}
+			/>
+			<Callout title={"Find new record-breakers!"}>
+				<Typography>
+					You'll also notice that in <InlineCode>window</InlineCode> object in
+					your console, there's a map called{" "}
+					<InlineCode>typesRegistry</InlineCode> that's a{" "}
+					<InlineCode>
+						Map&lt;<InlineCode secondary>TypeId</InlineCode>,{" "}
+						<InlineCode secondary>ResolvedType</InlineCode>&gt;
+					</InlineCode>
+					. Feel free to play with it to find more interesting record-breakers.
+				</Typography>
+				<Typography>
+					Also, Ramda is available in the console as <InlineCode>R</InlineCode>,
+					and Ramda-Adjunct is available as <InlineCode>RA</InlineCode>.{" "}
+					<em>Long Live Functional Programming!</em>
+				</Typography>
+			</Callout>
+		</Stack>
 	);
 }
 
@@ -245,12 +293,12 @@ function TitleSubtitle({
 }) {
 	return (
 		<Stack sx={{ mb: 2, mr: 1 }} gap={1}>
-				<Stack direction="row" gap={2} alignItems="center">
-					{icon}
-					<Typography variant="h4">{title}</Typography>
-				</Stack>
-					<Typography>{subtitle}</Typography>
-				</Stack>
+			<Stack direction="row" gap={2} alignItems="center">
+				{icon}
+				<Typography variant="h4">{title}</Typography>
+			</Stack>
+			<Typography>{subtitle}</Typography>
+		</Stack>
 	);
 }
 
@@ -258,7 +306,7 @@ function ArrayAward({
 	title,
 	description,
 	property,
-	icon,
+	icon: Icon,
 	typeRegistry,
 }: {
 	title: string;
@@ -268,7 +316,7 @@ function ArrayAward({
 		| typeof awards.typeArguments.property
 		| typeof awards.intersectionTypes.property
 		| typeof awards.aliasTypeArguments.property;
-	icon: ReactNode;
+	icon: (typeof awards)[keyof typeof awards]["icon"];
 	typeRegistry: TypeRegistry;
 }) {
 	const [selectedIndex, setSelectedIndex] = useState(0);
@@ -296,12 +344,11 @@ function ArrayAward({
 	return (
 		<Stack direction="row" gap={2} alignItems="flex-start">
 			<Stack sx={{ mx: 1 }}>
-			<TitleSubtitle
+				<TitleSubtitle
 					title={title}
 					subtitle={description}
-					icon={icon}
+					icon={<Icon fontSize="large" />}
 				/>
-
 
 				<Stack sx={{ my: 2 }}>
 					<Typography variant="h5" sx={{ pl: 2, mt: 2 }}>
@@ -319,29 +366,33 @@ function ArrayAward({
 										width: "100%",
 									}}
 								>
-									<Typography sx={{ mr: 2 }}>{index + 1}.</Typography>
-									<Stack sx={{ flexGrow: 1, py: 1 }}>
-										<TypeSummary resolvedType={sorted[index]} />
-										<Stack direction="row" alignItems="center">
-											<Box
-												sx={{
-													width: count ? `${(count / maxValue) * 100}%` : "0%",
-													height: 2,
-													backgroundColor: theme.palette.primary.dark,
-												}}
-											/>
-											<Typography
-												sx={{
-													ml: 1,
-													opacity: 0.7,
-													fontSize: "0.85rem",
-													lineHeight: 1,
-												}}
-											>
-												{count?.toLocaleString()}
-											</Typography>
+									<ListItemText>
+										<Stack sx={{ flexGrow: 1 }} gap={1}>
+											<TypeSummary resolvedType={sorted[index]} />
+											<Stack gap={0.5}>
+												<Typography
+													sx={{
+														opacity: 0.7,
+														fontSize: "0.85rem",
+														lineHeight: 1,
+													}}
+												>
+													{count?.toLocaleString()}
+												</Typography>
+
+												<Box
+													sx={{
+														width: count
+															? `${(count / maxValue) * 100}%`
+															: "0%",
+														height: 4,
+														borderRadius: 2,
+														backgroundColor: theme.palette.primary.main,
+													}}
+												/>
+											</Stack>
 										</Stack>
-									</Stack>
+									</ListItemText>
 								</ListItemButton>
 							);
 						})}
@@ -362,48 +413,229 @@ function ArrayAward({
 
 const DuplicatePackages = () => {
 	const { data: duplicatePackages = [] } = trpc.getDuplicatePackages.useQuery();
-	
+
 	return (
 		<Stack>
 			<TitleSubtitle
 				title="Duplicate Packages"
 				subtitle="packages that are duplicated in the bundle"
-				icon={<CopyAll fontSize="large"/>}
+				icon={<CopyAll fontSize="large" />}
 			/>
-			{duplicatePackages.map(({ instances, name }) => (
-				<Stack key={name} direction="row" gap={2} alignItems="flex-start">
-					<Stack sx={{ mx: 1 }}>
-						<Typography variant="h5" sx={{ pl: 2, mt: 2 }}>
+
+			<Stack gap={3} sx={{ ml: 1 }}>
+				{duplicatePackages.map(({ instances, name }) => (
+					<Stack key={name}>
+						<Typography variant="h6" color="primary">
 							{name}
 						</Typography>
-						<List>
-							{instances.map(({ path, version}) => (
+
+						<List sx={{ ml: 2 }}>
+							{instances.map(({ path, version }) => (
 								<ListItemButton
 									key={path}
 									sx={{
 										width: "100%",
 									}}
 								>
-									<Typography sx={{ mr: 2 }}>{path}</Typography>
-									<Stack sx={{ flexGrow: 1, py: 1 }}>
-										<Typography
-											sx={{
-												ml: 1,
-												opacity: 0.7,
-												fontSize: "0.85rem",
-												lineHeight: 1,
-											}}
-										>
-											v{version}
+									<Stack>
+										<Typography color="secondary">v{version}</Typography>
+										<Typography variant="caption" sx={{ mr: 2 }}>
+											{path}
 										</Typography>
 									</Stack>
 								</ListItemButton>
 							))}
 						</List>
-						</Stack>
-					<Divider orientation="vertical" sx={{ mx: 2 }} />
-				</Stack> ))}
+					</Stack>
+				))}
+			</Stack>
 		</Stack>
-
 	);
-}
+};
+
+export const ShowHotSpots = () => {
+	const { data: hotSpots = [] } = trpc.getHotSpots.useQuery();
+	const { mutateAsync: openFile } = trpc.openFile.useMutation();
+
+	const findInPage = useCallback(
+		async (path: string | undefined) => {
+			if (!path) {
+				throw new Error("Path is required to open file");
+			}
+
+			await openFile({
+				path,
+			});
+		},
+		[openFile],
+	);
+	console.log("hotSpots", { hotSpots });
+
+	const firstHotSpot = hotSpots[0];
+
+	return (
+		<Stack>
+			<TitleSubtitle
+				title="Hot Spots"
+				subtitle="The most expensive code paths in your application"
+				icon={<Whatshot fontSize="large" />}
+			/>
+
+			{firstHotSpot ? (
+				<List>
+					{hotSpots.map(({ path, timeMs }) => {
+						const relativeTime = timeMs / firstHotSpot.timeMs;
+						const fileName = path?.split("/").slice(-1)[0] ?? "<no file name>";
+						return (
+							<ListItemButton key={path} sx={{ width: "100%" }}>
+								<ListItemText>
+									<Typography variant="h6" justifyContent="center">
+										{fileName}
+										{path ? (
+											<IconButton
+												size="small"
+												onClick={() => findInPage(path)}
+												sx={{ ml: 1 }}
+											>
+												<FindInPage fontSize="small" />
+											</IconButton>
+										) : null}
+									</Typography>
+									<Stack>
+										<Typography variant="caption">{path}</Typography>
+										<Typography variant="caption">
+											{timeMs.toLocaleString()}ms
+										</Typography>
+									</Stack>
+									<Box
+										style={{
+											width: `${relativeTime * 100}%`,
+											height: "4px",
+											backgroundColor: theme.palette.primary.main,
+											borderRadius: "2px",
+											marginTop: "4px",
+										}}
+									/>
+								</ListItemText>
+							</ListItemButton>
+						);
+					})}
+				</List>
+			) : (
+				<Stack direction="row" gap={2} alignItems="flex-start">
+					<Callout title="No Hot Spots Found">
+						<Typography>
+							No hot spots detected. Did you run analyze-trace?
+						</Typography>
+					</Callout>
+				</Stack>
+			)}
+		</Stack>
+	);
+};
+
+const LimitInstantiateType = ({
+	typeRegistry,
+}: {
+	typeRegistry: TypeRegistry;
+}) => {
+	const { data = [] } = trpc.getTypeInstantiationLimits.useQuery();
+
+	const [selectedTypeId, setSelectedTypeId] = useState<number | null>(null);
+	const handleTypeClick = useCallback(
+		(typeId: number) => {
+			if (selectedTypeId === typeId) {
+				setSelectedTypeId(null);
+			} else {
+				setSelectedTypeId(typeId);
+			}
+		},
+		[selectedTypeId],
+	);
+
+	const fist = data[0];
+
+	if (!fist) {
+		return (
+			<Callout title="No Type Instantiation Limits Found">
+				<Typography>
+					No type instantiation limits detected. Did you run analyze-trace?
+				</Typography>
+			</Callout>
+		);
+	}
+
+	const limit = data[0].args.instantiationDepth;
+
+	console.log("Type Instantiation Limits", { data });
+
+	return (
+		<Stack>
+			<TitleSubtitle
+				title="Type Instantiation Limits"
+				subtitle={`The most complex types that were limited by the type system.\nThe current limit is set to ${limit.toLocaleString()}.`}
+				icon={<Lightbulb fontSize="large" />}
+			/>
+			<Stack direction="row" gap={2} alignItems="flex-start">
+				<List>
+					{data.map(
+						({
+							ts,
+							args: { instantiationCount, instantiationDepth, typeId },
+						}) => {
+							const resolvedType = typeRegistry.get(typeId);
+							const key = `${typeId}-${instantiationCount}-${instantiationDepth}:${ts}`;
+
+							if (!resolvedType) {
+								return (
+									<ListItemText key={key}>
+										<Typography color="error">
+											Type {typeId} not found in type registry
+										</Typography>
+									</ListItemText>
+								);
+							}
+
+							const relativeDepth = instantiationDepth / limit;
+
+							return (
+								<ListItemButton
+									key={key}
+									onClick={() => handleTypeClick(typeId)}
+								>
+									<ListItemText>
+										<TypeSummary resolvedType={resolvedType} />
+										<Typography variant="caption">
+											Depth: {instantiationDepth}
+										</Typography>
+
+										<Box
+											style={{
+												width: `${relativeDepth * 100}%`,
+												height: "4px",
+												backgroundColor: theme.palette.primary.main,
+												borderRadius: "2px",
+												marginTop: "4px",
+											}}
+										/>
+									</ListItemText>
+								</ListItemButton>
+							);
+						},
+					)}
+				</List>
+
+				{selectedTypeId === null ? null : (
+					<>
+						<Divider orientation="vertical" sx={{ mx: 2 }} />
+						<DisplayRecursiveType
+							id={selectedTypeId}
+							typeRegistry={typeRegistry}
+							simplifyPaths={false}
+						/>
+					</>
+				)}
+			</Stack>
+		</Stack>
+	);
+};

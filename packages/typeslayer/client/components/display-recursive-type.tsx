@@ -3,7 +3,13 @@ import {
 	KeyboardArrowDown,
 	KeyboardArrowRight,
 } from "@mui/icons-material";
-import { Box, IconButton, Stack, Typography } from "@mui/material";
+import {
+	Box,
+	IconButton,
+	Stack,
+	Typography,
+	type TypographyVariant,
+} from "@mui/material";
 import type { ResolvedType, TypeRegistry } from "@typeslayer/validate";
 import { type FC, useCallback, useState } from "react";
 import { theme } from "../theme";
@@ -123,7 +129,7 @@ export const DisplayRecursiveType: FC<{
 											return (
 												<OpenFile
 													key={key}
-													title={key}
+													title={`${key}:`}
 													absolutePath={value.path}
 													line={value.start.line}
 													character={value.start.character}
@@ -230,15 +236,16 @@ export const DisplayRecursiveType: FC<{
 									);
 									return (
 										<Stack key={key}>
-											<Typography>
-												{key}:{" "}
+											<Stack display="inline">
+												<Typography display="inline">{key}: </Typography>
 												<Typography
-													sx={{ display: "inline", fontSize: "0.8em" }}
+													display="inline"
+													fontSize="0.8em"
 													color="textDisabled"
 												>
 													{value.length.toLocaleString()}
 												</Typography>
-											</Typography>
+											</Stack>
 											{val}
 										</Stack>
 									);
@@ -264,14 +271,16 @@ export function OpenFile({
 	absolutePath,
 	line,
 	character,
-	simplifyPaths,
+	simplifyPaths = false,
 	title,
+	pathVariant = "body1",
 }: {
 	absolutePath: string;
-	simplifyPaths: boolean;
+	simplifyPaths?: boolean;
 	line?: number;
 	character?: number;
-	title: string;
+	title?: string;
+	pathVariant?: TypographyVariant;
 }) {
 	const { mutateAsync: openFile } = trpc.openFile.useMutation();
 
@@ -284,14 +293,20 @@ export function OpenFile({
 		});
 	}, [openFile, absolutePath, line, character]);
 
+	const lineChar =
+		line !== undefined && character !== undefined
+			? `:${line}:${character}`
+			: "";
+
 	return (
 		<Stack direction="row" alignItems={"center"} gap={1} key={absolutePath}>
-			<Typography>{title}:</Typography>
+			{title ? <Typography>{title}</Typography> : null}
 			<IconButton size="small" onClick={findInPage} sx={{ p: 0 }}>
 				<FindInPage />
 			</IconButton>
-			<Typography>
-				{displayPath(absolutePath, cwd, simplifyPaths)}:{line}:{character}
+			<Typography variant={pathVariant}>
+				{displayPath(absolutePath, cwd, simplifyPaths)}
+				{lineChar}
 			</Typography>
 		</Stack>
 	);

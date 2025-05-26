@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { location, typeId } from "./utils";
 
 const flag = z.enum([

@@ -4,7 +4,7 @@ import type { NodeModulePaths } from "./utils";
 const packageNameRegex = /\/node_modules\/((?:[^@][^/]+)|(?:@[^/]+\/[^/]+))/g;
 
 export function getNodeModulePaths(traceFile: TraceJsonFile): NodeModulePaths {
-	const nodeModulePaths: NodeModulePaths = new Map();
+	const nodeModulePaths: NodeModulePaths = {};
 	traceFile.forEach((event: TraceEvent) => {
 		if (event.name !== "findSourceFile") {
 			return;
@@ -23,14 +23,14 @@ export function getNodeModulePaths(traceFile: TraceJsonFile): NodeModulePaths {
 					match.index + match[0].length,
 				);
 
-				if (nodeModulePaths.has(packageName)) {
-					const paths = nodeModulePaths.get(packageName);
+				if (packageName in nodeModulePaths) {
+					const paths = nodeModulePaths[packageName];
 					if (paths && paths.indexOf(packagePath) < 0) {
 						// Usually contains exactly one element
 						paths.push(packagePath);
 					}
 				} else {
-					nodeModulePaths.set(packageName, [packagePath]);
+					nodeModulePaths[packageName] = [packagePath];
 				}
 			}
 		}

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { absolutePath, typeId } from "./utils";
 
 export const eventPhase = {
@@ -124,7 +124,7 @@ const event_check__checkExpression = z
 			kind: z.number(),
 			pos: z.number(),
 			end: z.number(),
-			path: absolutePath,
+			path: absolutePath.optional(),
 		}),
 	})
 	.strict();
@@ -220,7 +220,7 @@ const event_checktypes__structuredTypeRelatedTo = z
 	})
 	.strict();
 
-const event_checktypes__instantiateType_DepthLimit = z
+export const event_checktypes__instantiateType_DepthLimit = z
 	.object({
 		...eventCommon,
 		...category.checkTypes,
@@ -238,8 +238,11 @@ const event_checktypes__instantiateType_DepthLimit = z
 		}),
 	})
 	.strict();
+export type EventChecktypes__InstantiateType_DepthLimit = z.infer<
+	typeof event_checktypes__instantiateType_DepthLimit
+>;
 
-const event_checktypes__recursiveTypeRelatedTo_DepthLimit = z
+export const event_checktypes__recursiveTypeRelatedTo_DepthLimit = z
 	.object({
 		...eventCommon,
 		...category.checkTypes,
@@ -260,8 +263,11 @@ const event_checktypes__recursiveTypeRelatedTo_DepthLimit = z
 		}),
 	})
 	.strict();
+export type EventChecktypes__RecursiveTypeRelatedTo_DepthLimit = z.infer<
+	typeof event_checktypes__recursiveTypeRelatedTo_DepthLimit
+>;
 
-const event_checktypes__typeRelatedToDiscriminatedType_DepthLimit = z
+export const event_checktypes__typeRelatedToDiscriminatedType_DepthLimit = z
 	.object({
 		...eventCommon,
 		...category.checkTypes,
@@ -279,6 +285,9 @@ const event_checktypes__typeRelatedToDiscriminatedType_DepthLimit = z
 		}),
 	})
 	.strict();
+export type EventChecktypes__TypeRelatedToDiscriminatedType_DepthLimit = z.infer<
+	typeof event_checktypes__typeRelatedToDiscriminatedType_DepthLimit
+>;
 
 /*
  * PROGRAM PHASE EVENTS
@@ -337,15 +346,7 @@ const event_program__processTypeReferenceDirective = z
 		name: z.literal("processTypeReferenceDirective"),
 		dur: z.number(),
 		args: z.object({
-			directive: z.union([
-				z.literal("node"),
-				z.literal("react"),
-				z.literal("eslint-scope"),
-				z.literal("vscode"),
-				z.literal("jsdom"),
-				z.literal("remark-stringify"),
-				z.literal("remark-parse"),
-			]),
+			directive: z.string(),
 			hasResolved: z.literal(true),
 			refKind: z.number().int().positive(),
 			refPath: absolutePath.optional(),

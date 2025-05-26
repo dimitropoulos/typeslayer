@@ -114,9 +114,9 @@ const RunDiagnostics = ({
 	handleNext: () => void;
 	handleBack: () => void;
 }) => {
-	const { mutateAsync: generateTrace } = trpc.generateTrace.useMutation();
-	const { mutateAsync: cpuProfile } = trpc.cpuProfile.useMutation();
-	const { mutateAsync: analyzeTrace } = trpc.analyzeTrace.useMutation();
+	const { mutateAsync: generateTrace, isPending: generateTracePending } = trpc.generateTrace.useMutation();
+	const { mutateAsync: cpuProfile, isPending: cpuProfilePending } = trpc.cpuProfile.useMutation();
+	const { mutateAsync: analyzeTrace, isPending: analyzeTracePending } = trpc.analyzeTrace.useMutation();
 
 	const onGenerateTrace = useCallback(async () => {
 		const result = await generateTrace({ incremental: false });
@@ -130,7 +130,7 @@ const RunDiagnostics = ({
 	}, [cpuProfile]);
 
 	const onAnalyzeTrace = useCallback(async () => {
-		const result = await analyzeTrace({});
+		const result = await analyzeTrace();
 		console.log("result", result);
 	}, [analyzeTrace]);
 
@@ -142,14 +142,16 @@ const RunDiagnostics = ({
 					<BigAction
 						title="Identify Types"
 						description="This makes TypeScript generate event traces and a list of types while it type checks your codebase.  This is critical information for individually identifying every type in your codebase."
-						unlocks={["Search Types", "Perfetto", "trace.json", "types.json"]}
+						unlocks={["Search Type Id", "Perfetto", "trace.json", "types.json"]}
 						onDoIt={onGenerateTrace}
+						isLoading={generateTracePending}
 					/>
 					<BigAction
 						title="CPU Profile"
 						description="Have TypeScript emit a v8 CPU profile during the compiler run. The CPU profile can provide insight into why your builds may be slow."
 						unlocks={["SpeedScope", "tsc.cpuprofile"]}
 						onDoIt={onCpuProfile}
+						isLoading={cpuProfilePending}
 					/>
 					<BigAction
 						title="Analyze Hot Spots"
@@ -157,10 +159,11 @@ const RunDiagnostics = ({
 						unlocks={[
 							"Type Network",
 							"Heatmap",
-							"Analyze Trace",
+							"analyze-trace.json",
 							"Award Winners",
 						]}
 						onDoIt={onAnalyzeTrace}
+						isLoading={analyzeTracePending}
 					/>
 				</Stack>
 				<Stack direction="row" sx={{ mt: 2 }}>

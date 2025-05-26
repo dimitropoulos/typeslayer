@@ -25,11 +25,13 @@ export default function BigAction({
 	description,
 	unlocks,
 	onDoIt,
+	isLoading,
 }: {
 	title: string;
 	description: string;
 	unlocks: ItemsWithTitle<typeof NAVIGATION>;
 	onDoIt: () => void;
+	isLoading: boolean;
 }) {
 	return (
 		<Card sx={{ maxWidth: 500 }}>
@@ -85,7 +87,7 @@ export default function BigAction({
 			</CardContent>
 
 			<CardActions>
-				<Button onClick={onDoIt}>DO IT</Button>
+				<Button onClick={onDoIt} loading={isLoading}>DO IT</Button>
 			</CardActions>
 		</Card>
 	);

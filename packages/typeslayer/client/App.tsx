@@ -64,6 +64,7 @@ export function App() {
 				slots={{
 					appTitle,
 				}}
+				sidebarExpandedWidth={220}
 			>
 				<DemoPageContent pathname={router.pathname} />
 			</DashboardLayout>

@@ -1,29 +1,20 @@
 import { exec } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { initTRPC } from "@trpc/server";
-import { analyzeTrace, analyzeTraceOptions, type AnalyzeTraceResult } from "@typeslayer/analyze-trace";
-import {
-	type ResolvedType,
-	type TypeId,
-	createTypeRegistryFromDir,
-} from "@typeslayer/validate";
+import { analyzeTrace, analyzeTraceOptions } from "@typeslayer/analyze-trace";
+import type { ResolvedType } from "@typeslayer/validate";
 import ts from "typescript";
-import { z } from "zod";
-import { data } from "./data";
+import { z } from "zod/v4";
+import {
+	data,
+	refreshAllFiles,
+	refreshAnalyzeTraceFromDisk,
+	refreshTypesJson,
+} from "./data";
 import { getAllFiles, updateLogFile } from "./utils";
+import { get } from "node:http";
 
 const t = initTRPC.create();
-
-const populateFromAnalyzeTrace = async () => {
-	const { tempDir } = data;
-	const file = `${tempDir}/analyze-trace.json`;
-	const fileString = await readFile(file, "utf8");
-	const result = JSON.parse(fileString) as AnalyzeTraceResult; // TODO zod
-	const { hotSpots, duplicatePackages } = result;
-	data.hotSpots = hotSpots;
-	data.duplicatePackages = duplicatePackages;
-	console.log("populateFromAnalyzeTrace");
-}
 
 export const appRouter = t.router({
 	getCWD: t.procedure.query(() => {
@@ -31,9 +22,11 @@ export const appRouter = t.router({
 		console.log("tempDir", data.tempDir);
 		return data.cwd;
 	}),
+
 	setCWD: t.procedure.input(z.string()).mutation(async ({ input }) => {
 		data.cwd = input;
 		console.log("setCWD", data.cwd);
+		await refreshAllFiles();
 		return data.cwd;
 	}),
 
@@ -41,6 +34,7 @@ export const appRouter = t.router({
 		console.log("getTempDir", data.tempDir);
 		return data.tempDir;
 	}),
+
 	setTempDir: t.procedure.input(z.string()).mutation(async ({ input }) => {
 		data.tempDir = input;
 		console.log("setTempDir", data.tempDir);
@@ -83,10 +77,7 @@ export const appRouter = t.router({
 			console.log("result", { result, instantiations, sourceFiles });
 			updateLogFile(tempDir);
 
-			console.log("creating type registry");
-			const typeRegistry = await createTypeRegistryFromDir(tempDir);
-			data.typeRegistry = typeRegistry;
-			console.log("done");
+			await refreshTypesJson();
 
 			return {
 				result,
@@ -95,10 +86,9 @@ export const appRouter = t.router({
 				cwd,
 				tempDir,
 				rootNames,
-				typeRegistryEntries: typeRegistry.entries() as unknown as [
-					TypeId,
-					ResolvedType,
-				][],
+				typeRegistryEntries: Array.from<[number, ResolvedType]>(
+					data.typeRegistry.entries(),
+				),
 			};
 		}),
 
@@ -130,7 +120,7 @@ export const appRouter = t.router({
 			const { path, line, character } = input;
 			exec(
 				`code --goto ${path}:${line ?? 1}:${character ?? 1}`,
-				(error, stdout, stderr) => { },
+				(error, stdout, stderr) => {},
 			);
 		}),
 
@@ -148,31 +138,15 @@ export const appRouter = t.router({
 	}),
 
 	analyzeTrace: t.procedure
-		.input(analyzeTraceOptions)
+		.input(analyzeTraceOptions.optional())
 		.mutation(async ({ input }) => {
-			const { tempDir } = data;
-			console.log("analyzeTrace", { tempDir });
-
-			// const result = await analyzeTrace({
-			// 	traceDir: tempDir,
-			// });
-
-			// await writeFile(
-			// 	`${tempDir}/analyze-trace.json`,
-			// 	JSON.stringify(result, null, 2),
-			// 	"utf8",
-			// );
-
-			await populateFromAnalyzeTrace();
-			console.log("analyzeTrace done");
-
-			return result;
+			await analyzeTrace({
+				traceDir: data.tempDir,
+				options: input,
+			});
+			await refreshAnalyzeTraceFromDisk();
+			console.log("analyzeTrace complete");
 		}),
-
-	setHotSpots: t.procedure.input(z.string()).mutation(async ({ input: tempDir }) => {
-		console.log("setHotSpots", { tempDir });
-		await mkdir(tempDir, { recursive: true });
-	}),
 
 	getHotSpots: t.procedure.query(() => {
 		const { hotSpots } = data;
@@ -184,6 +158,24 @@ export const appRouter = t.router({
 		const { duplicatePackages } = data;
 		console.log("getDuplicatePackages");
 		return duplicatePackages;
+	}),
+
+	getTypeInstantiationLimits: t.procedure.query(() => {
+		const { typeInstantiationLimits } = data;
+		console.log("getTypeInstantiationLimits");
+		return typeInstantiationLimits;
+	}),
+
+	getRecursiveTypeRelatedToLimits: t.procedure.query(() => {
+		const { recursiveTypeRelatedToLimits } = data;
+		console.log("getRecursiveTypeRelatedToLimits");
+		return recursiveTypeRelatedToLimits;
+	}),
+	
+	getTypeRelatedToDiscriminatedTypeLimits: t.procedure.query(() => {
+		const { typeRelatedToDiscriminatedTypeLimits } = data;
+		console.log("getTypeRelatedToDiscriminatedTypeLimits");
+		return typeRelatedToDiscriminatedTypeLimits;
 	}),
 });
 

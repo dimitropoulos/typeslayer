@@ -62,7 +62,7 @@ export const NAVIGATION = [
 	},
 	{
 		segment: "search-types",
-		title: "Search Types",
+		title: "Search Type Id",
 		icon: <Search />,
 	},
 	{
@@ -99,7 +99,7 @@ export const NAVIGATION = [
 	},
 	{
 		segment: "analyze-trace",
-		title: "Analyze Trace",
+		title: "analyze-trace.json",
 		icon: <Description />,
 	},
 	{

@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
 	type TraceJsonFile,
@@ -88,6 +88,10 @@ export const analyzeTrace = async ({
 		hotSpots,
 		duplicatePackages,
 	};
+	await writeFile(
+		join(traceDir, "analyze-trace.json"),
+		JSON.stringify(result, null, 2),
+	);
 
 	return result;
 };

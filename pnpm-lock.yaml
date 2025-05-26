@@ -27,8 +27,8 @@ importers:
         specifier: ^5.8.3
         version: 5.8.3
       zod:
-        specifier: ^3.24.4
-        version: 3.24.4
+        specifier: ^3.25.28
+        version: 3.25.28
 
   packages/typeslayer:
     dependencies:
@@ -126,8 +126,8 @@ importers:
         specifier: ^6.3.5
         version: 6.3.5(@types/node@22.15.18)(tsx@4.19.4)(yaml@2.5.1)
       zod:
-        specifier: ^3.24.4
-        version: 3.24.4
+        specifier: ^3.25.28
+        version: 3.25.28
 
   packages/validate:
     dependencies:
@@ -141,8 +141,8 @@ importers:
         specifier: ^5.8.3
         version: 5.8.3
       zod:
-        specifier: ^3.24.4
-        version: 3.24.4
+        specifier: ^3.25.28
+        version: 3.25.28
 
 packages:
 
@@ -1927,8 +1927,8 @@ packages:
     resolution: {integrity: sha512-7dSzzRQ++CKnNI/krKnYRV7JKKPUXMEh61soaHKg9mrWEhzFWhFnxPxGl+69cD1Ou63C13NUPCnmIcrvqCuM6w==}
     engines: {node: '>=12'}
 
-  zod@3.24.4:
-    resolution: {integrity: sha512-OdqJE9UDRPwWsrHjLN2F8bPxvwJBK22EHLWtanu0LSYr5YqzsaaW3RMgmjwr8Rypg5k+meEJdSPXJZXE/yqOMg==}
+  zod@3.25.28:
+    resolution: {integrity: sha512-/nt/67WYKnr5by3YS7LroZJbtcCBurDKKPBPWWzaxvVCGuG/NOsiKkrjoOhI8mJ+SQUXEbUzeB3S+6XDUEEj7Q==}
 
 snapshots:
 
@@ -3597,4 +3597,4 @@ snapshots:
       y18n: 5.0.8
       yargs-parser: 21.1.1
 
-  zod@3.24.4: {}
+  zod@3.25.28: {}
