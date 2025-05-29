@@ -1,10 +1,10 @@
 import { normalize } from "node:path";
 import {
-	createTypeRegistry,
 	type ResolvedType,
 	type TypeId,
 	type TypeRegistry,
 	type TypesJsonFile,
+	createTypeRegistry,
 } from "@typeslayer/validate";
 import type { AnalyzeTraceOptions, EventSpan, HotSpot, HotType } from "./utils";
 
@@ -76,7 +76,7 @@ const notFound = {
 		id: -1,
 		display: "[Type Not Found]",
 		flags: [],
-	}
+	},
 } satisfies HotType;
 
 function getHotType({
@@ -92,7 +92,7 @@ function getHotType({
 		}
 
 		const resolvedType = typeRegistry.get(id);
-		
+
 		if (!resolvedType) {
 			throw new Error(`Type ${id} not found`);
 		}
@@ -109,8 +109,7 @@ function getHotType({
 					case "aliasTypeArguments":
 					case "intersectionTypes":
 					case "typeArguments":
-					case "unionTypes":
-						 {
+					case "unionTypes": {
 						const typeIds = resolvedType[property];
 						if (!Array.isArray(typeIds)) {
 							throw new Error(`Expected array for ${property}`);
@@ -124,7 +123,7 @@ function getHotType({
 						continue;
 					}
 
-					case "aliasType": 
+					case "aliasType":
 					case "conditionalCheckType":
 					case "conditionalExtendsType":
 					case "conditionalFalseType":
@@ -139,8 +138,7 @@ function getHotType({
 					case "reverseMappedConstraintType":
 					case "reverseMappedMappedType":
 					case "reverseMappedSourceType":
-					case "substitutionBaseType":
-					{
+					case "substitutionBaseType": {
 						const typeId = resolvedType[property] as TypeId;
 						const child = worker(typeId, ancestorIds);
 						if (child) {

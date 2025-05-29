@@ -26,11 +26,6 @@ export const SearchTypes = () => {
 	const { data: typeRegistryEntries } = trpc.getTypeRegistry.useQuery();
 	const typeRegistry: TypeRegistry = new Map(typeRegistryEntries ?? []);
 
-	const [simplifyPaths, setSimplifyPaths] = useState(true);
-	const handleSimplifyPaths = (event: React.ChangeEvent<HTMLInputElement>) => {
-		setSimplifyPaths(event.target.checked);
-	};
-
 	const typeString = JSON.stringify(typeRegistry.get(numberSearch), null, 2);
 
 	return (
@@ -44,41 +39,19 @@ export const SearchTypes = () => {
 				</Stack>
 			</Stack>
 			<Stack gap={3}>
-				<Stack
-					direction="row"
-					gap={3}
-					divider={<Divider orientation="vertical" flexItem />}
-					alignItems="center"
-				>
-					<TextField
-						label="Search by Type Id"
-						placeholder="type id"
-						variant="outlined"
-						type="number"
-						sx={{ input: { color: theme.palette.primary.main }, width: 600 }}
-						value={search}
-						onChange={(event) => {
-							setSearch(event.target.value);
-						}}
-					/>
-					<FormGroup>
-						<FormControlLabel
-							label="Simplify Paths"
-							control={
-								<Switch
-									checked={simplifyPaths}
-									onChange={handleSimplifyPaths}
-								/>
-							}
-						/>
-					</FormGroup>
-				</Stack>
-
-				<DisplayRecursiveType
-					id={numberSearch}
-					typeRegistry={typeRegistry}
-					simplifyPaths={simplifyPaths}
+				<TextField
+					label="Search by Type Id"
+					placeholder="type id"
+					variant="outlined"
+					type="number"
+					sx={{ input: { color: theme.palette.primary.main }, width: 600 }}
+					value={search}
+					onChange={(event) => {
+						setSearch(event.target.value);
+					}}
 				/>
+
+				<DisplayRecursiveType id={numberSearch} typeRegistry={typeRegistry} />
 
 				{typeString ? (
 					<>

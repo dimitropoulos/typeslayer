@@ -1,10 +1,11 @@
 import { Biotech } from "@mui/icons-material";
 import { Button, Stack, Typography } from "@mui/material";
+import { CPU_PROFILE_FILENAME } from "@typeslayer/validate";
 import { useCallback } from "react";
 
 export const SpeedScope = () => {
 	const onClick = useCallback(() => {
-		const traceUrl = "http://localhost:3000/static/tsc.cpuprofile";
+		const traceUrl = `http://localhost:3000/static/${CPU_PROFILE_FILENAME}`;
 		const speedscopeUrl = `https://www.speedscope.app/#profileURL=${encodeURIComponent(traceUrl)}`;
 		const speedscopeWindow = window.open(speedscopeUrl, "_blank");
 		if (!speedscopeWindow) {

@@ -1,13 +1,18 @@
 import { existsSync } from "node:fs";
 import { stat } from "node:fs/promises";
-import { z } from "zod/v4";
 import { resolvedType, traceEvent } from "@typeslayer/validate";
+import { z } from "zod/v4";
 
-export const absolutePath = z.string().refine((path) => {
-	return path.startsWith("/") || path.startsWith("C:\\") || path.startsWith("D:\\");
-}, {
-	message: "Path must be absolute",
-});
+export const absolutePath = z.string().refine(
+	(path) => {
+		return (
+			path.startsWith("/") || path.startsWith("C:\\") || path.startsWith("D:\\")
+		);
+	},
+	{
+		message: "Path must be absolute",
+	},
+);
 export type AbsolutePath = z.infer<typeof absolutePath>;
 
 export const project = z.object({
@@ -27,17 +32,17 @@ export const projectResult = z.object({
 export type ProjectResult = z.infer<typeof projectResult>;
 
 const Category = z.object({
-  name: z.string(),
-  get subcategories(){
-    return z.array(Category)
-  }
+	name: z.string(),
+	get subcategories() {
+		return z.array(Category);
+	},
 });
 type Category = z.infer<typeof Category>;
 
 export const hotType = z.object({
 	resolvedType: resolvedType,
-	get children(){
-		return z.array(hotType)
+	get children() {
+		return z.array(hotType);
 	},
 });
 export type HotType = z.infer<typeof hotType>;
@@ -45,8 +50,8 @@ export type HotType = z.infer<typeof hotType>;
 export const hotSpot = z.object({
 	description: z.string(),
 	timeMs: z.number(),
-	get children(){
-		return z.array(hotSpot)
+	get children() {
+		return z.array(hotSpot);
 	},
 
 	path: absolutePath.optional(),
@@ -64,7 +69,9 @@ export const duplicatedPackageInstance = z.object({
 	path: absolutePath,
 	version: z.string(),
 });
-export type DuplicatedPackageInstance = z.infer<typeof duplicatedPackageInstance>;
+export type DuplicatedPackageInstance = z.infer<
+	typeof duplicatedPackageInstance
+>;
 
 export const duplicatedPackage = z.object({
 	name: z.string(),
@@ -83,7 +90,9 @@ export const eventSpan = z.object({
 	start: z.number(),
 	end: z.number(),
 	duration: z.number(),
-	get children() { return z.array(eventSpan) },
+	get children() {
+		return z.array(eventSpan);
+	},
 });
 export type EventSpan = z.infer<typeof eventSpan>;
 
@@ -119,7 +128,7 @@ export const analyzeTraceOptions = z.object({
 	minSpanParentPercentage: z.number(),
 	/** the minimum number of emitted imports from a declaration file or bundle */
 	importExpressionThreshold: z.number(),
-})
+});
 export type AnalyzeTraceOptions = z.infer<typeof analyzeTraceOptions>;
 
 export const isFile = async (path: string) => {
@@ -136,7 +145,6 @@ export const throwIfNotDirectory = async (path: string) => {
 };
 
 export const analyzeTraceResult = z.object({
-
 	/** Events that were not closed */
 	unterminatedEvents: z.array(traceEvent),
 	/** Hot spots in the trace */

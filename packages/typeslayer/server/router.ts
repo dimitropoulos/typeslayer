@@ -1,33 +1,26 @@
-import { exec } from "node:child_process";
-import { mkdir, readFile } from "node:fs/promises";
+import { exec, execSync } from "node:child_process";
+import { mkdir } from "node:fs/promises";
 import { initTRPC } from "@trpc/server";
 import { analyzeTrace, analyzeTraceOptions } from "@typeslayer/analyze-trace";
 import type { ResolvedType } from "@typeslayer/validate";
-import ts from "typescript";
 import { z } from "zod/v4";
-import {
-	data,
-	refreshAllFiles,
-	refreshAnalyzeTraceFromDisk,
-	refreshTypesJson,
-} from "./data";
-import { getAllFiles, updateLogFile } from "./utils";
-import { get } from "node:http";
+import { data, refreshAnalyzeTraceFromDisk, refreshTraceJson, refreshTypesJson } from "./data";
+import { settings, settingsInput } from "./settings";
+import { getGenerateCommand, getPackageJson } from "./utils";
 
 const t = initTRPC.create();
 
 export const appRouter = t.router({
-	getCWD: t.procedure.query(() => {
-		console.log("getCWD", data.cwd);
-		console.log("tempDir", data.tempDir);
-		return data.cwd;
+	getProjectRoot: t.procedure.query(async () => {
+		console.log("getProjectRoot", data.projectRoot);
+		return data.projectRoot;
 	}),
 
-	setCWD: t.procedure.input(z.string()).mutation(async ({ input }) => {
-		data.cwd = input;
-		console.log("setCWD", data.cwd);
-		await refreshAllFiles();
-		return data.cwd;
+	setProjectRoot: t.procedure.input(z.string()).mutation(async ({ input }) => {
+		data.projectRoot = input;
+		data.scriptName = null;
+		console.log("setProjectRoot", data.projectRoot);
+		await getPackageJson();
 	}),
 
 	getTempDir: t.procedure.query(() => {
@@ -41,51 +34,65 @@ export const appRouter = t.router({
 		return data.tempDir;
 	}),
 
+	getPotentialScripts: t.procedure.query(async () => {
+		try {
+			const { scripts } = await getPackageJson();
+			console.log("getPotentialScripts", scripts);
+			return scripts;
+		} catch (_error) {
+			return null;
+		}
+	}),
+
+	getScriptName: t.procedure.query(() => {
+		console.log("getScriptName", data.scriptName);
+		return data.scriptName;
+	}),
+
+	setScriptName: t.procedure.input(z.string()).mutation(async ({ input }) => {
+		const { scripts } = await getPackageJson();
+		if (!(input in scripts)) {
+			throw new Error(
+				`Script ${data.scriptName} not found in package.json scripts`,
+			);
+		}
+		data.scriptName = input;
+
+		console.log("setScriptName", data.scriptName);
+		return data.scriptName;
+	}),
+
 	generateTrace: t.procedure
-		.input(
-			z.object({
-				incremental: z.boolean(),
-			}),
-		)
 		.mutation(async ({ input }) => {
-			const { incremental } = input;
-			const { cwd, tempDir } = data;
-			console.log("generateTrace", { cwd, tempDir, incremental });
+			const { projectRoot, tempDir, scriptName } = data;
+			console.log("generateTrace", { projectRoot, tempDir, scriptName });
 
 			await mkdir(tempDir, { recursive: true });
 
-			// resolve all files at the cwd and below
-			const rootNames = await getAllFiles(cwd);
-			data.rootNames = rootNames;
+			if (!scriptName || scriptName.length === 0) {
+				throw new Error("Script name is not set. Please set it first.");
+			}
 
-			const program = ts.createProgram({
-				rootNames,
-				options: {
-					outDir: `${tempDir}/outDir`,
-					incremental,
-					tsBuildInfoFile: `${tempDir}/tsbuildinfo.json`,
-				},
+			const command = await getGenerateCommand(scriptName);
+
+			// execute the command with npm from the project root
+			const execCommand = `npm exec ${command}`;
+			console.log("execCommand", execCommand);
+
+			/* ATTENTION */
+			/* ATTENTION */
+			/* THIS IS EXTREMELY DANGEROUS BECAUSE IT GIVES RCA VIA PACKAGE.JSON SCRIPTS */
+			/* ATTENTION */
+			/* ATTENTION */
+			execSync(execCommand, {
+				cwd: projectRoot.replace(/\/$/, ""),
+				stdio: "inherit",
 			});
 
-			const result = program.emit();
-			// TODO: if there are any errors/diagnostics, we should fail
-			const instantiations = program.getInstantiationCount();
-
-			const sourceFiles = program.getSourceFiles().map((file) => file.fileName);
-			data.sourceFiles = sourceFiles;
-
-			console.log("result", { result, instantiations, sourceFiles });
-			updateLogFile(tempDir);
-
+			await refreshTraceJson();
 			await refreshTypesJson();
 
 			return {
-				result,
-				sourceFiles,
-				instantiations,
-				cwd,
-				tempDir,
-				rootNames,
 				typeRegistryEntries: Array.from<[number, ResolvedType]>(
 					data.typeRegistry.entries(),
 				),
@@ -124,7 +131,6 @@ export const appRouter = t.router({
 			);
 		}),
 
-	// TODO
 	cpuProfile: t.procedure.mutation(async () => {
 		const { tempDir } = data;
 		console.log("analyzeTrace", { tempDir });
@@ -171,12 +177,32 @@ export const appRouter = t.router({
 		console.log("getRecursiveTypeRelatedToLimits");
 		return recursiveTypeRelatedToLimits;
 	}),
-	
+
 	getTypeRelatedToDiscriminatedTypeLimits: t.procedure.query(() => {
 		const { typeRelatedToDiscriminatedTypeLimits } = data;
 		console.log("getTypeRelatedToDiscriminatedTypeLimits");
 		return typeRelatedToDiscriminatedTypeLimits;
 	}),
+
+	getSettings: t.procedure.query(() => {
+		console.log("getSettings", settings);
+		return settings;
+	}),
+
+	setSettings: t.procedure
+		.input(settingsInput.partial())
+		.mutation(async ({ input }) => {
+			if (
+				"simplifyPaths" in input &&
+				typeof input.simplifyPaths === "boolean"
+			) {
+				console.log("settings.simplifyPaths", input.simplifyPaths);
+				settings.simplifyPaths = input.simplifyPaths;
+			}
+
+			console.log("setSettings", { input, settings });
+			return settings;
+		}),
 });
 
 export type AppRouter = typeof appRouter;

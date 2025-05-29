@@ -12,6 +12,7 @@ import { Generate } from "./pages/generate";
 import { Heatmap } from "./pages/heatmap";
 import { Perfetto } from "./pages/perfetto";
 import { SearchTypes } from "./pages/search-types";
+import { SettingsPage } from "./pages/settings";
 import { SpeedScope } from "./pages/speedscope";
 import { TraceJson } from "./pages/trace-json";
 import { TypeNetwork } from "./pages/type-network";
@@ -42,6 +43,8 @@ function DemoPageContent({ pathname }: { pathname: string }) {
 			return <SpeedScope />;
 		case "/search-types":
 			return <SearchTypes />;
+		case "/settings":
+			return <SettingsPage />;
 		default:
 			return <div>Page Not Found</div>;
 	}

@@ -10,22 +10,30 @@ import {
 	Settings,
 	Speed,
 } from "@mui/icons-material";
+import type { NavigationItem } from "@toolpad/core";
+import { ANALYZE_TRACE_FILENAME } from "@typeslayer/analyze-trace/src/constants";
+import {
+	CPU_PROFILE_FILENAME,
+	type ResolvedType,
+	TRACE_JSON_FILENAME,
+	TYPES_JSON_FILENAME,
+} from "@typeslayer/validate";
 import { useEffect, useState } from "react";
 
 export const displayPath = (
 	fullPath: string | undefined,
-	cwd: string | undefined,
+	projectRoot: string | undefined,
 	simplifyPath: boolean,
 ) => {
 	if (!fullPath) {
-		console.error("missing path", { fullPath, cwd, simplifyPath });
+		console.error("missing path", { fullPath, projectRoot, simplifyPath });
 		return "[Missing Path]";
 	}
 
-	if (!simplifyPath || !cwd) {
+	if (!simplifyPath || !projectRoot) {
 		return fullPath;
 	}
-	return fullPath.replace(cwd, ".");
+	return fullPath.replace(projectRoot, "");
 };
 
 export const useStaticFile = (fileName: string) => {
@@ -99,22 +107,22 @@ export const NAVIGATION = [
 	},
 	{
 		segment: "analyze-trace",
-		title: "analyze-trace.json",
+		title: ANALYZE_TRACE_FILENAME,
 		icon: <Description />,
 	},
 	{
 		segment: "trace-json",
-		title: "trace.json",
+		title: TRACE_JSON_FILENAME,
 		icon: <Description />,
 	},
 	{
 		segment: "types-json",
-		title: "types.json",
+		title: TYPES_JSON_FILENAME,
 		icon: <Description />,
 	},
 	{
 		segment: "tsc-cpuprofile",
-		title: "tsc.cpuprofile",
+		title: CPU_PROFILE_FILENAME,
 		icon: <Description />,
 	},
 	{
@@ -134,4 +142,17 @@ export const NAVIGATION = [
 		title: "Settings",
 		icon: <Settings />,
 	},
-] as const;
+] as const satisfies NavigationItem[];
+
+const extractPath = (resolvedType: ResolvedType) => {
+	if (resolvedType.firstDeclaration?.path) {
+		return resolvedType.firstDeclaration.path;
+	}
+	if (resolvedType.referenceLocation?.path) {
+		return resolvedType.referenceLocation.path;
+	}
+	if (resolvedType.destructuringPattern?.path) {
+		return resolvedType.destructuringPattern.path;
+	}
+	return undefined;
+};

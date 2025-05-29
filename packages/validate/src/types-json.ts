@@ -1,6 +1,8 @@
 import { z } from "zod/v4";
 import { location, typeId } from "./utils";
 
+export const TYPES_JSON_FILENAME = "types.json";
+
 const flag = z.enum([
 	"Any",
 	"Unknown",

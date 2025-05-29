@@ -21,8 +21,11 @@ export const DisplayRecursiveType: FC<{
 	id: number;
 	typeRegistry: TypeRegistry;
 	depth?: number;
-	simplifyPaths: boolean;
-}> = ({ id, typeRegistry, depth = 0, simplifyPaths }) => {
+}> = ({ id, typeRegistry, depth = 0 }) => {
+	const {
+		data: { simplifyPaths } = {},
+	} = trpc.getSettings.useQuery();
+
 	if (!typeRegistry) {
 		return <Box>[Missing Data]</Box>;
 	}
@@ -141,7 +144,6 @@ export const DisplayRecursiveType: FC<{
 													absolutePath={value.path}
 													line={value.start.line}
 													character={value.start.character}
-													simplifyPaths={simplifyPaths}
 												/>
 											);
 										}
@@ -182,7 +184,6 @@ export const DisplayRecursiveType: FC<{
 													id={value}
 													typeRegistry={typeRegistry}
 													depth={depth + 2}
-													simplifyPaths={simplifyPaths}
 												/>
 											</Stack>
 										);
@@ -231,7 +232,6 @@ export const DisplayRecursiveType: FC<{
 														id={v as number}
 														typeRegistry={typeRegistry}
 														depth={depth + 2}
-														simplifyPaths={simplifyPaths}
 													/>
 												))}
 											{itsReallyFuckingBig && (
@@ -279,20 +279,21 @@ export function OpenFile({
 	absolutePath,
 	line,
 	character,
-	simplifyPaths = false,
 	title,
 	pathVariant = "body1",
 }: {
 	absolutePath: string;
-	simplifyPaths?: boolean;
 	line?: number;
 	character?: number;
 	title?: string;
 	pathVariant?: TypographyVariant;
 }) {
+	const {
+		data: { simplifyPaths = false } = {},
+	} = trpc.getSettings.useQuery();
 	const { mutateAsync: openFile } = trpc.openFile.useMutation();
+	const { data: projectRoot } = trpc.getProjectRoot.useQuery();
 
-	const { data: cwd } = trpc.getCWD.useQuery();
 	const findInPage = useCallback(async () => {
 		await openFile({
 			path: absolutePath,
@@ -313,7 +314,7 @@ export function OpenFile({
 				<FindInPage />
 			</IconButton>
 			<Typography variant={pathVariant}>
-				{displayPath(absolutePath, cwd, simplifyPaths)}
+				{displayPath(absolutePath, projectRoot, simplifyPaths)}
 				{lineChar}
 			</Typography>
 		</Stack>

@@ -1,5 +1,7 @@
 import { z } from "zod/v4";
 
+export const CPU_PROFILE_FILENAME = "tsc.cpuprofile";
+
 export const typeId = z.number().int().positive().or(z.literal(-1));
 
 export type TypeId = z.infer<typeof typeId>;

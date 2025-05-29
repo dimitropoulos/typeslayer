@@ -17,7 +17,7 @@ export function getNodeModulePaths(traceFile: TraceJsonFile): NodeModulePaths {
 					break;
 				}
 				const packageName = match[1];
-				
+
 				const packagePath = match.input.substring(
 					0,
 					match.index + match[0].length,

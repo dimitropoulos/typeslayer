@@ -1,6 +1,8 @@
 import { z } from "zod/v4";
 import { absolutePath, typeId } from "./utils";
 
+export const TRACE_JSON_FILENAME = "trace.json";
+
 export const eventPhase = {
 	begin: "B",
 	end: "E",
@@ -197,7 +199,7 @@ const event_checktypes__getVariancesWorker = z
 						z.literal("in (unreliable)"),
 						z.literal("out"),
 						z.literal("out (unreliable)"),
-						z.literal("in out"/*burger*/),
+						z.literal("in out" /*burger*/),
 						z.literal("in out (unreliable)"),
 						z.literal("in out (unmeasurable)"),
 					]),
@@ -285,9 +287,8 @@ export const event_checktypes__typeRelatedToDiscriminatedType_DepthLimit = z
 		}),
 	})
 	.strict();
-export type EventChecktypes__TypeRelatedToDiscriminatedType_DepthLimit = z.infer<
-	typeof event_checktypes__typeRelatedToDiscriminatedType_DepthLimit
->;
+export type EventChecktypes__TypeRelatedToDiscriminatedType_DepthLimit =
+	z.infer<typeof event_checktypes__typeRelatedToDiscriminatedType_DepthLimit>;
 
 /*
  * PROGRAM PHASE EVENTS

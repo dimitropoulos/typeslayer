@@ -1,31 +1,34 @@
+import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import {
-	createTypeRegistry,
-	traceJsonFile,
-	typesJsonFile,
-	type ResolvedType,
-	type TypeId,
-	type TypeRegistry,
-	type EventChecktypes__InstantiateType_DepthLimit,
-	type EventChecktypes__RecursiveTypeRelatedTo_DepthLimit,
-	type EventChecktypes__TypeRelatedToDiscriminatedType_DepthLimit,
-} from "@typeslayer/validate";
-import {
-	analyzeTraceResult,
 	type AbsolutePath,
 	type DuplicatedPackage,
 	type HotSpot,
+	analyzeTraceResult,
 } from "@typeslayer/analyze-trace";
-import { readFile } from "node:fs/promises";
+import {
+	type EventChecktypes__InstantiateType_DepthLimit,
+	type EventChecktypes__RecursiveTypeRelatedTo_DepthLimit,
+	type EventChecktypes__TypeRelatedToDiscriminatedType_DepthLimit,
+	type ResolvedType,
+	type TypeId,
+	type TypeRegistry,
+	createTypeRegistry,
+	traceJsonFile,
+	typesJsonFile,
+} from "@typeslayer/validate";
 import type { z } from "zod/v4";
 
 export interface Data {
 	/** the current working directory for the trace */
-	cwd: string;
+	projectRoot: string;
 
 	/** the path to the temporary storage */
 	tempDir: string;
+
+	/** the tsc (or tsgo) script in a user's project */
+	scriptName: string | null;
 
 	/** all the files that were considered in the compilation */
 	sourceFiles: string[];
@@ -75,9 +78,21 @@ const knownFiles = {
 const createTempDir = () =>
 	`${tmpdir()}/typeslayer${serverOptions.makeFresh ? `-${Date.now()}` : ""}`;
 
+const initProjectRoot = () => {
+	const projectRoot = process.cwd();
+	const argumentRoot = process.argv[2];
+	const result = argumentRoot ?? projectRoot;
+
+	if (!result.endsWith("/")) {
+		return `${result}/`;
+	}
+	return result;
+};
+
 export const data = {
-	cwd: "/tmp/typeslayer", // process.cwd(),
+	projectRoot: initProjectRoot(),
 	tempDir: createTempDir(),
+	scriptName: null as string | null,
 	sourceFiles: [] as AbsolutePath[],
 	rootNames: [] as string[],
 	typeRegistry: new Map<TypeId, ResolvedType>(),
@@ -170,7 +185,6 @@ export const refreshTraceJson = async () => {
 			typeRelatedToDiscriminatedTypeLimits:
 				data.typeRelatedToDiscriminatedTypeLimits.length,
 		});
-
 	} catch (error) {
 		console.log("no types.json file found, skipping", error);
 	}

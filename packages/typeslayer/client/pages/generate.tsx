@@ -1,4 +1,12 @@
-import { Stack, TextField } from "@mui/material";
+import {
+	FormControl,
+	InputLabel,
+	MenuItem,
+	Select,
+	type SelectChangeEvent,
+	Stack,
+	TextField,
+} from "@mui/material";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Paper from "@mui/material/Paper";
@@ -10,6 +18,7 @@ import Typography from "@mui/material/Typography";
 import type { TypeRegistry } from "@typeslayer/validate";
 import { useCallback, useEffect, useState } from "react";
 import BigAction from "../components/big-action";
+import { InlineCode } from "../components/inline-code";
 import { trpc } from "../trpc";
 
 export function Generate() {
@@ -54,48 +63,109 @@ export function Generate() {
 }
 
 const SelectCode = ({ handleNext }: { handleNext: () => void }) => {
-	const { data: serverCwd, refetch } = trpc.getCWD.useQuery();
-	const { mutateAsync: mutateCWD } = trpc.setCWD.useMutation({
+	const { data: serverProjectRoot, refetch } = trpc.getProjectRoot.useQuery();
+	const { mutateAsync: mutateProjectRoot } = trpc.setProjectRoot.useMutation({
 		onSuccess: () => {
 			refetch();
 		},
 	});
-	const [localCwd, setLocalCwd] = useState<string | undefined>(undefined);
+	const [localProjectRoot, setLocalProjectRoot] = useState<string | undefined>(
+		undefined,
+	);
 
 	useEffect(() => {
-		setLocalCwd(serverCwd);
-	}, [serverCwd]);
+		setLocalProjectRoot(serverProjectRoot);
+	}, [serverProjectRoot]);
 
 	const onContinue = useCallback(async () => {
-		if (!localCwd) {
+		if (!localProjectRoot) {
 			alert("Please enter a path");
 			return;
 		}
-		await mutateCWD(localCwd);
+		await mutateProjectRoot(localProjectRoot);
 		handleNext();
-	}, [handleNext, localCwd, mutateCWD]);
+	}, [handleNext, localProjectRoot, mutateProjectRoot]);
+
+	const { data: potentialScripts } = trpc.getPotentialScripts.useQuery();
+	const { data: scriptName, refetch: refetchScriptName } =
+		trpc.getScriptName.useQuery();
+	const { mutateAsync: mutateScriptName } = trpc.setScriptName.useMutation();
+	const onScriptChange = useCallback(
+		async (event: SelectChangeEvent<string>) => {
+			const newScriptName = event.target.value;
+			console.log("onScriptChange", newScriptName);
+			if (!Object.hasOwn(potentialScripts ?? {}, newScriptName)) {
+				alert(`Script ${newScriptName} not found in package.json scripts`);
+				return;
+			}
+			await mutateScriptName(newScriptName);
+			await refetchScriptName();
+		},
+		[mutateScriptName, potentialScripts, refetchScriptName],
+	);
 
 	return (
 		<>
 			<StepLabel>Select Code</StepLabel>
 			<StepContent>
-				<Stack spacing={4}>
-					<Stack spacing={2}>
+				<Stack spacing={4} sx={{ mt: 2, maxWidth: 700 }}>
+					<Stack gap={2}>
 						<Typography>
-							The root of the package you'd like to investigate
+							The <InlineCode>package.json</InlineCode> of the package you'd
+							like to investigate.
 						</Typography>
-						<Stack direction="row" spacing={2}>
+						<Stack direction="row" gap={2}>
 							<TextField
-								label="Path to code"
+								label="Path to package"
 								variant="outlined"
-								value={localCwd ?? ""}
+								value={localProjectRoot ?? ""}
 								onChange={(e) => {
-									setLocalCwd(e.target.value);
+									setLocalProjectRoot(e.target.value);
 								}}
 								fullWidth
+								sx={{ maxWidth: 600 }}
 							/>
 							<Button>Locate</Button>
 						</Stack>
+					</Stack>
+
+					<Stack gap={1}>
+						<Typography>
+							Select the script you use to type-check your project.
+						</Typography>
+						<Typography>
+							Normally this is something as simple as{" "}
+							<InlineCode>"type-check": "tsc --noEmit"</InlineCode>.
+						</Typography>
+
+						<FormControl sx={{ mt: 1 }}>
+							<InputLabel id="type-check-script">type-check script</InputLabel>
+							<Select
+								value={scriptName ?? ""}
+								onChange={onScriptChange}
+								displayEmpty
+								labelId="type-check-script"
+								label="type-check-script"
+								sx={{ maxWidth: 600 }}
+							>
+								{Object.entries(potentialScripts ?? {}).map(
+									([name, command]) => (
+										<MenuItem key={name} value={name}>
+											<Stack>
+												<Typography>{name}</Typography>
+												<Typography
+													variant="caption"
+													fontFamily="monospace"
+													color="textSecondary"
+												>
+													{command}
+												</Typography>
+											</Stack>
+										</MenuItem>
+									),
+								)}
+							</Select>
+						</FormControl>
 					</Stack>
 				</Stack>
 
@@ -114,12 +184,15 @@ const RunDiagnostics = ({
 	handleNext: () => void;
 	handleBack: () => void;
 }) => {
-	const { mutateAsync: generateTrace, isPending: generateTracePending } = trpc.generateTrace.useMutation();
-	const { mutateAsync: cpuProfile, isPending: cpuProfilePending } = trpc.cpuProfile.useMutation();
-	const { mutateAsync: analyzeTrace, isPending: analyzeTracePending } = trpc.analyzeTrace.useMutation();
+	const { mutateAsync: generateTrace, isPending: generateTracePending } =
+		trpc.generateTrace.useMutation();
+	const { mutateAsync: cpuProfile, isPending: cpuProfilePending } =
+		trpc.cpuProfile.useMutation();
+	const { mutateAsync: analyzeTrace, isPending: analyzeTracePending } =
+		trpc.analyzeTrace.useMutation();
 
 	const onGenerateTrace = useCallback(async () => {
-		const result = await generateTrace({ incremental: false });
+		const result = await generateTrace();
 		window.typeRegistry = new Map(result.typeRegistryEntries) as TypeRegistry;
 		console.log("result", result);
 	}, [generateTrace]);

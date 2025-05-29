@@ -1,11 +1,12 @@
+import { CPU_PROFILE_FILENAME } from "@typeslayer/validate";
 import { ShowFile } from "../components/show-file";
 
 export const CpuProfile = () => {
 	return (
 		<ShowFile
-			fileName="tsc.cpuprofile"
-			title="tsc.cpuprofile"
-			description="This is the tsc.cpuprofile file created by the `--generateCpuProfile` tsc option."
+			fileName={CPU_PROFILE_FILENAME}
+			title={CPU_PROFILE_FILENAME}
+			description="This is the CPU Profile file created by the `--generateCpuProfile` tsc option."
 		/>
 	);
 };

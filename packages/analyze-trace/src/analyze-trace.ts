@@ -40,7 +40,7 @@ const validateTraceDir = async (
 	}
 	const typesFileJson = JSON.parse(await readFile(typesFilePath, "utf8"));
 	const typesFile = typesJsonFile.parse(typesFileJson);
-	
+
 	const traceFilePath = join(traceDir, "trace.json");
 	if (!existsSync(traceFilePath)) {
 		throw new Error(

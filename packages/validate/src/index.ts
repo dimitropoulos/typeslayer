@@ -3,6 +3,7 @@ export {
 	typesJsonFile,
 	TypesJsonFile,
 	resolvedType,
+	TYPES_JSON_FILENAME,
 } from "./types-json";
 export {
 	type TraceEvent,
@@ -16,6 +17,8 @@ export {
 	event_checktypes__recursiveTypeRelatedTo_DepthLimit,
 	type EventChecktypes__TypeRelatedToDiscriminatedType_DepthLimit,
 	event_checktypes__typeRelatedToDiscriminatedType_DepthLimit,
+	TRACE_JSON_FILENAME,
 } from "./trace-json";
-export { createTypeRegistryFromDir, createTypeRegistry, type TypeRegistry } from "./type-registry";
+export { createTypeRegistry, type TypeRegistry } from "./type-registry";
 export type { TypeId } from "./utils";
+export { CPU_PROFILE_FILENAME } from "./tsc-cpuprofile";

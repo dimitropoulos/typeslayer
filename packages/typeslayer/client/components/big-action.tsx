@@ -87,7 +87,9 @@ export default function BigAction({
 			</CardContent>
 
 			<CardActions>
-				<Button onClick={onDoIt} loading={isLoading}>DO IT</Button>
+				<Button onClick={onDoIt} loading={isLoading}>
+					DO IT
+				</Button>
 			</CardActions>
 		</Card>
 	);

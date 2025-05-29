@@ -14,16 +14,17 @@ import {
 import {
 	Box,
 	Divider,
+	IconButton,
 	List,
-	ListItemIcon,
+	ListItem,
 	ListItemButton,
+	ListItemIcon,
 	ListItemText,
+	ListSubheader,
 	Stack,
 	Typography,
-	ListSubheader,
-	IconButton,
-	ListItem,
 } from "@mui/material";
+import type { DecoratedQuery } from "@trpc/react-query/dist/createTRPCReact";
 import type {
 	EventChecktypes__InstantiateType_DepthLimit,
 	EventChecktypes__RecursiveTypeRelatedTo_DepthLimit,
@@ -41,7 +42,6 @@ import { InlineCode } from "../components/inline-code";
 import { TypeSummary } from "../components/type-summary";
 import { theme } from "../theme";
 import { trpc } from "../trpc";
-import type { DecoratedQuery } from "@trpc/react-query/dist/createTRPCReact";
 
 import type { DefaultErrorShape } from "@trpc/server/unstable-core-do-not-import";
 
@@ -235,14 +235,15 @@ export const RenderPlayground = ({
 					getTypeId={(current) => current.args.sourceId}
 				/>
 			);
-			
+
 		case "limit_typeRelatedToDiscriminatedType":
-				return (
+			return (
 				<ShowTypeLimit<EventChecktypes__TypeRelatedToDiscriminatedType_DepthLimit>
 					key={awards.limit_typeRelatedToDiscriminatedType.title}
 					notFound={{
 						title: "No Discriminated Type Limits Found",
-						description: "No discriminated type limits detected. Did you run analyze-trace?",
+						description:
+							"No discriminated type limits detected. Did you run analyze-trace?",
 					}}
 					title={awards.limit_typeRelatedToDiscriminatedType.title}
 					subtitle={(first) =>
@@ -443,7 +444,7 @@ function ArrayAward({
 
 	return (
 		<Stack direction="row" gap={2} alignItems="flex-start">
-			<Stack sx={{ mx: 1 }}>
+			<Stack sx={{ minWidth: 450, maxWidth: 450, mx: 1 }}>
 				<TitleSubtitle
 					title={title}
 					subtitle={description}
@@ -489,7 +490,6 @@ function ArrayAward({
 			<DisplayRecursiveType
 				id={sorted[selectedIndex]?.id ?? 0}
 				typeRegistry={typeRegistry}
-				simplifyPaths={false}
 			/>
 		</Stack>
 	);
@@ -676,12 +676,12 @@ const ShowTypeLimit = <L extends LimitType>({
 	console.log(title, { data });
 
 	return (
-			<Stack direction="row" gap={2} alignItems="flex-start">
-				<Stack sx={{ minWidth: 450, maxWidth: 450 }}>
-			<TitleSubtitle
-				title={title}
-				subtitle={subtitle(first)}
-				icon={<Icon fontSize="large" />}
+		<Stack direction="row" gap={2} alignItems="flex-start">
+			<Stack sx={{ minWidth: 450, maxWidth: 450 }}>
+				<TitleSubtitle
+					title={title}
+					subtitle={subtitle(first)}
+					icon={<Icon fontSize="large" />}
 				/>
 
 				<List>
@@ -703,26 +703,26 @@ const ShowTypeLimit = <L extends LimitType>({
 							<ListItemButton key={key} onClick={() => handleTypeClick(typeId)}>
 								<ListItemText>
 									<TypeSummary resolvedType={resolvedType} />
-									<Typography variant="caption" sx={{ mr: 2 }}>TODO/path</Typography>
+									<Typography variant="caption" sx={{ mr: 2 }}>
+										TODO/path
+									</Typography>
 									{inlineBarGraph(current, first)}
 								</ListItemText>
 							</ListItemButton>
 						);
 					})}
-				</List></Stack>
+				</List>
+			</Stack>
 
-			
-				{selectedTypeId === null ? null : (
-					<>
-						<Divider orientation="vertical" sx={{ mx: 2 }} />
-						<DisplayRecursiveType
-							id={selectedTypeId}
-							typeRegistry={typeRegistry}
-							simplifyPaths={false}
-						/>
-					</>
-				)}
-		
+			{selectedTypeId === null ? null : (
+				<>
+					<Divider orientation="vertical" sx={{ mx: 2 }} />
+					<DisplayRecursiveType
+						id={selectedTypeId}
+						typeRegistry={typeRegistry}
+					/>
+				</>
+			)}
 		</Stack>
 	);
 };

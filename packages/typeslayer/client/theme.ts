@@ -15,7 +15,7 @@ export const theme = createTheme({
 					fontWeight: 700,
 					height: 40,
 				},
-			}
-		}
-	}
+			},
+		},
+	},
 });
