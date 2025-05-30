@@ -230,10 +230,11 @@ async function makeHotFrame({
 		case "checkExpression":
 		case "checkVariableDeclaration": {
 			const filePath = event.args.path;
+			const path = filePath ? { path: normalize(filePath) } : {};
 			const frame: HotSpot = {
 				description: event.name,
 				timeMs,
-				path: normalize(filePath),
+				...path,
 				children: [],
 			};
 			return frame;

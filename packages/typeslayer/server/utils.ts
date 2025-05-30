@@ -1,5 +1,6 @@
+import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { CPU_PROFILE_FILENAME } from "@typeslayer/validate";
 import { data } from "./data";
@@ -61,12 +62,12 @@ const autodetectScripts = [
 	"tsc -p tsconfig.json --noEmit",
 	"tsc -b --noEmit",
 	"tsc -p . --noEmit",
-]
+];
 
 export const attemptAutoDetectTypeCheckScript = async () => {
 	const { scripts } = await getPackageJson();
-	const typeCheckScript = Object.entries(scripts).find(
-		([_name, command]) => autodetectScripts.includes(command),
+	const typeCheckScript = Object.entries(scripts).find(([_name, command]) =>
+		autodetectScripts.includes(command),
 	);
 	if (typeCheckScript) {
 		const [name] = typeCheckScript;
@@ -75,7 +76,7 @@ export const attemptAutoDetectTypeCheckScript = async () => {
 		return name;
 	}
 	return null;
-}
+};
 
 export const getValidatedCommand = async (scriptName: string) => {
 	const { scripts } = await getPackageJson();
@@ -101,4 +102,34 @@ export const getCpuProfileCommand = async (scriptName: string) => {
 	const command = await getValidatedCommand(scriptName);
 	const addOn = `${commonAddOns} --generateCpuProfile ${data.tempDir}/${CPU_PROFILE_FILENAME}`;
 	return `${command}${addOn}`;
+};
+
+export const execWithNpm = (command: string) => `npm exec -- ${command}`;
+
+export const attachAndRun = async (
+	attachment: (input: string) => Promise<string>,
+) => {
+	const { projectRoot, tempDir, scriptName } = data;
+
+	await mkdir(tempDir, { recursive: true });
+
+	if (!scriptName || scriptName.length === 0) {
+		throw new Error("Script name is not set. Please set it first.");
+	}
+
+	const command = await attachment(scriptName);
+
+	// execute the command with npm from the project root
+	const execCommand = execWithNpm(command);
+	console.log("execCommand", { projectRoot, tempDir, scriptName, execCommand });
+
+	/* ATTENTION */
+	/* ATTENTION */
+	/* THIS IS EXTREMELY DANGEROUS BECAUSE IT GIVES RCA VIA PACKAGE.JSON SCRIPTS */
+	/* ATTENTION */
+	/* ATTENTION */
+	execSync(execCommand, {
+		cwd: projectRoot.replace(/\/$/, ""),
+		stdio: "inherit",
+	});
 };

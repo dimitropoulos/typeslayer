@@ -1,7 +1,5 @@
-import type { TraceEvent, TraceJsonFile } from "@typeslayer/validate";
+import { type TraceEvent, type TraceJsonFile, packageNameRegex } from "@typeslayer/validate";
 import type { NodeModulePaths } from "./utils";
-
-const packageNameRegex = /\/node_modules\/((?:[^@][^/]+)|(?:@[^/]+\/[^/]+))/g;
 
 export function getNodeModulePaths(traceFile: TraceJsonFile): NodeModulePaths {
 	const nodeModulePaths: NodeModulePaths = {};

@@ -15,16 +15,14 @@ import { type FC, useCallback, useState } from "react";
 import { theme } from "../theme";
 import { trpc } from "../trpc";
 import { TypeSummary } from "./type-summary";
-import { displayPath } from "./utils";
+import { friendlyPath } from "./utils";
 
 export const DisplayRecursiveType: FC<{
 	id: number;
 	typeRegistry: TypeRegistry;
 	depth?: number;
 }> = ({ id, typeRegistry, depth = 0 }) => {
-	const {
-		data: { simplifyPaths } = {},
-	} = trpc.getSettings.useQuery();
+	const [expanded, setExpanded] = useState(true);
 
 	if (!typeRegistry) {
 		return <Box>[Missing Data]</Box>;
@@ -43,7 +41,6 @@ export const DisplayRecursiveType: FC<{
 	}
 
 	const resolvedType = typeRegistry.get(id);
-	const [expanded, setExpanded] = useState(true);
 
 	const marginLeft = depth * 16;
 
@@ -73,7 +70,9 @@ export const DisplayRecursiveType: FC<{
 								keyof ResolvedType,
 								ResolvedType[keyof ResolvedType],
 							][]
-						).map(([key, value]) => {
+						).map(([key, value], index) => {
+							const reactKey = `${id}:${key}:${index}`;
+
 							switch (key) {
 								//
 								//  Skip these
@@ -116,7 +115,7 @@ export const DisplayRecursiveType: FC<{
 												border: `1px solid ${theme.palette.divider}`,
 												alignSelf: "flex-start",
 											}}
-											key={key}
+											key={reactKey}
 										>
 											<code>{value.replaceAll("\\", "")}</code>
 										</Box>
@@ -139,7 +138,7 @@ export const DisplayRecursiveType: FC<{
 										) {
 											return (
 												<OpenFile
-													key={key}
+													key={reactKey}
 													title={`${key}:`}
 													absolutePath={value.path}
 													line={value.start.line}
@@ -177,10 +176,9 @@ export const DisplayRecursiveType: FC<{
 
 									if (typeof value === "number") {
 										return (
-											<Stack key={key}>
+											<Stack key={reactKey}>
 												{key}:
 												<DisplayRecursiveType
-													key={key}
 													id={value}
 													typeRegistry={typeRegistry}
 													depth={depth + 2}
@@ -213,7 +211,7 @@ export const DisplayRecursiveType: FC<{
 									}
 									if (value.length === 0) {
 										return (
-											<Stack key={key} direction="row" gap={1}>
+											<Stack key={reactKey} direction="row" gap={1}>
 												{key}: <em>none</em>
 											</Stack>
 										);
@@ -223,12 +221,15 @@ export const DisplayRecursiveType: FC<{
 									const itsReallyFuckingBig = value.length > cutoff;
 
 									const val = (
-										<Stack gap={1} key={key}>
+										<Stack gap={1} key={reactKey}>
 											{value
 												.slice(0, value.length > cutoff ? cutoff : value.length)
-												.map((v) => (
+												.map((v, i) => (
 													<DisplayRecursiveType
-														key={v}
+														key={`${reactKey}:${
+															// biome-ignore lint/suspicious/noArrayIndexKey: the sort order is stable and we don't have any other information to use since you can do `string | string | string`, for example.
+															i
+														}`}
 														id={v as number}
 														typeRegistry={typeRegistry}
 														depth={depth + 2}
@@ -243,7 +244,7 @@ export const DisplayRecursiveType: FC<{
 										</Stack>
 									);
 									return (
-										<Stack key={key}>
+										<Stack key={reactKey}>
 											<Stack display="inline">
 												<Typography display="inline">{key}: </Typography>
 												<Typography
@@ -307,16 +308,15 @@ export function OpenFile({
 			? `:${line}:${character}`
 			: "";
 
+	const exactLocation = `${friendlyPath(absolutePath, projectRoot, simplifyPaths)}${lineChar}`;
+
 	return (
-		<Stack direction="row" alignItems={"center"} gap={1} key={absolutePath}>
+		<Stack direction="row" alignItems={"center"} gap={1} key={exactLocation}>
 			{title ? <Typography>{title}</Typography> : null}
 			<IconButton size="small" onClick={findInPage} sx={{ p: 0 }}>
 				<FindInPage />
 			</IconButton>
-			<Typography variant={pathVariant}>
-				{displayPath(absolutePath, projectRoot, simplifyPaths)}
-				{lineChar}
-			</Typography>
+			<Typography variant={pathVariant}>{exactLocation}</Typography>
 		</Stack>
 	);
 }

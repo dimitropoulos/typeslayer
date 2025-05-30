@@ -1,12 +1,26 @@
 # typeslayer
 
-Raw Data
+## How to use
 
-- `trace.json` (from generateTrace)
-- `types.json` (from generateTrace)
-- analyze-trace output
-- profile.cpuprofile
-- build outputs
+open a terminal in the package you want to explore and then do:
+
+```sh
+npx typeslayer
+```
+
+That's it.  That will do two things:
+
+1. it will open a localhost webserver with the webapp
+2. it will run a server that does all the fancy computations and file access.
+
+## Will I PWN myself if I use this tool in a way other than what was intended (which is, to be clear, strictly for local use)?
+
+Yes.  Seriously yes.  This tool can:
+
+- access any file on your computer (think: directory traversal attack) and serve it
+- run unsanitized inputs from package.json scripts (think: remote code execution attack)
+
+Could the architecture be changed such that these things aren't possible?  Who knows.  Probably.  Don't care, though.  It's a local-only tool at the moment and just like you have terminal access to your own computer and there's nothing wrong with that - think of this tool as an extension of what you could do manually with `tsc` and a Node.js repl.
 
 ## Why Isn't this just a CLI tool?
 
@@ -16,11 +30,4 @@ Raw Data
 
 ## TODO
 
-- allow for configuring default code editor that files open in
-- protection for displaying a recursive type (check recursive relations limit award items)
-
-An example of the command to run in a project.
-
-```sh
-tsc --generateTrace trace --generateCpuProfile trace/tsc.cpuprofile --noErrorTruncation --incremental false
-```
+- allow for configuring default code editor that files open in, right now it's just vscode

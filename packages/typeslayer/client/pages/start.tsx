@@ -21,7 +21,7 @@ import BigAction from "../components/big-action";
 import { InlineCode } from "../components/inline-code";
 import { trpc } from "../trpc";
 
-export function Generate() {
+export function Start() {
 	const [activeStep, setActiveStep] = useState(1);
 
 	const handleNext = () => {
@@ -77,19 +77,11 @@ const SelectCode = ({ handleNext }: { handleNext: () => void }) => {
 		setLocalProjectRoot(serverProjectRoot);
 	}, [serverProjectRoot]);
 
-	const onContinue = useCallback(async () => {
-		if (!localProjectRoot) {
-			alert("Please enter a path");
-			return;
-		}
-		await mutateProjectRoot(localProjectRoot);
-		handleNext();
-	}, [handleNext, localProjectRoot, mutateProjectRoot]);
-
 	const { data: potentialScripts } = trpc.getPotentialScripts.useQuery();
 	const { data: scriptName, refetch: refetchScriptName } =
 		trpc.getScriptName.useQuery();
 	const { mutateAsync: mutateScriptName } = trpc.setScriptName.useMutation();
+
 	const onScriptChange = useCallback(
 		async (event: SelectChangeEvent<string>) => {
 			const newScriptName = event.target.value;
@@ -103,6 +95,18 @@ const SelectCode = ({ handleNext }: { handleNext: () => void }) => {
 		},
 		[mutateScriptName, potentialScripts, refetchScriptName],
 	);
+
+	const onContinue = useCallback(async () => {
+		if (!localProjectRoot) {
+			alert("Please enter a path");
+			return;
+		}
+		await mutateProjectRoot({
+			projectRoot: localProjectRoot,
+			scriptName: scriptName ?? null,
+		});
+		handleNext();
+	}, [handleNext, localProjectRoot, mutateProjectRoot, scriptName]);
 
 	return (
 		<>

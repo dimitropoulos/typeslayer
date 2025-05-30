@@ -1,5 +1,10 @@
 {
 	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
 	"linter": {
 		"rules": {
 			"complexity": {
@@ -7,6 +12,9 @@
 			},
 			"suspicious": {
 				"noConfusingVoidType": "off"
+			},
+			"correctness": {
+				"useHookAtTopLevel": "error"
 			}
 		}
 	},

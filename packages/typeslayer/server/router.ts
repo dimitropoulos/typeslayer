@@ -4,9 +4,20 @@ import { initTRPC } from "@trpc/server";
 import { analyzeTrace, analyzeTraceOptions } from "@typeslayer/analyze-trace";
 import type { ResolvedType } from "@typeslayer/validate";
 import { z } from "zod/v4";
-import { data, refreshAnalyzeTraceFromDisk, refreshTraceJson, refreshTypesJson } from "./data";
+import {
+	data,
+	refreshAnalyzeTraceFromDisk,
+	refreshTraceJson,
+	refreshTypesJson,
+} from "./data";
 import { settings, settingsInput } from "./settings";
-import { getGenerateCommand, getPackageJson } from "./utils";
+import {
+	attachAndRun,
+	execWithNpm,
+	getCpuProfileCommand,
+	getGenerateCommand,
+	getPackageJson,
+} from "./utils";
 
 const t = initTRPC.create();
 
@@ -16,12 +27,20 @@ export const appRouter = t.router({
 		return data.projectRoot;
 	}),
 
-	setProjectRoot: t.procedure.input(z.string()).mutation(async ({ input }) => {
-		data.projectRoot = input;
-		data.scriptName = null;
-		console.log("setProjectRoot", data.projectRoot);
-		await getPackageJson();
-	}),
+	setProjectRoot: t.procedure
+		.input(
+			z.object({
+				projectRoot: z.string(),
+				scriptName: z.string().nullable(),
+			}),
+		)
+		.mutation(async ({ input }) => {
+			const { projectRoot, scriptName } = input;
+			data.projectRoot = projectRoot;
+			data.scriptName = scriptName;
+			console.log("setProjectRoot", input);
+			await getPackageJson();
+		}),
 
 	getTempDir: t.procedure.query(() => {
 		console.log("getTempDir", data.tempDir);
@@ -49,55 +68,38 @@ export const appRouter = t.router({
 		return data.scriptName;
 	}),
 
-	setScriptName: t.procedure.input(z.string()).mutation(async ({ input }) => {
-		const { scripts } = await getPackageJson();
-		if (!(input in scripts)) {
-			throw new Error(
-				`Script ${data.scriptName} not found in package.json scripts`,
-			);
-		}
-		data.scriptName = input;
-
-		console.log("setScriptName", data.scriptName);
-		return data.scriptName;
-	}),
-
-	generateTrace: t.procedure
+	setScriptName: t.procedure
+		.input(z.string().optional())
 		.mutation(async ({ input }) => {
-			const { projectRoot, tempDir, scriptName } = data;
-			console.log("generateTrace", { projectRoot, tempDir, scriptName });
-
-			await mkdir(tempDir, { recursive: true });
-
-			if (!scriptName || scriptName.length === 0) {
-				throw new Error("Script name is not set. Please set it first.");
+			const { scripts } = await getPackageJson();
+			if (!input || input.length === 0) {
+				data.scriptName = null;
+				console.log("setScriptName cleared");
+				return;
 			}
 
-			const command = await getGenerateCommand(scriptName);
+			if (!(input in scripts)) {
+				throw new Error(
+					`Script ${data.scriptName} not found in package.json scripts`,
+				);
+			}
+			data.scriptName = input;
 
-			// execute the command with npm from the project root
-			const execCommand = `npm exec ${command}`;
-			console.log("execCommand", execCommand);
-
-			/* ATTENTION */
-			/* ATTENTION */
-			/* THIS IS EXTREMELY DANGEROUS BECAUSE IT GIVES RCA VIA PACKAGE.JSON SCRIPTS */
-			/* ATTENTION */
-			/* ATTENTION */
-			execSync(execCommand, {
-				cwd: projectRoot.replace(/\/$/, ""),
-				stdio: "inherit",
-			});
-
-			await refreshTraceJson();
-			await refreshTypesJson();
-
-			return {
-				typeRegistryEntries: Array.from<[number, ResolvedType]>(
-					data.typeRegistry.entries(),
-				),
-			};
+			console.log("setScriptName", data.scriptName);
+			return data.scriptName;
 		}),
+
+	generateTrace: t.procedure.mutation(async () => {
+		await attachAndRun(getGenerateCommand);
+		await refreshTraceJson();
+		await refreshTypesJson();
+
+		return {
+			typeRegistryEntries: Array.from<[number, ResolvedType]>(
+				data.typeRegistry.entries(),
+			),
+		};
+	}),
 
 	searchType: t.procedure.input(z.number()).query(async ({ input }) => {
 		const { typeRegistry } = data;
@@ -132,15 +134,7 @@ export const appRouter = t.router({
 		}),
 
 	cpuProfile: t.procedure.mutation(async () => {
-		const { tempDir } = data;
-		console.log("analyzeTrace", { tempDir });
-		await mkdir(tempDir, { recursive: true });
-		exec(
-			`trace-processor analyze --out ${tempDir}/trace.pftrace ${tempDir}/trace.json`,
-			(error, stdout, stderr) => {
-				console.log({ error, stdout, stderr });
-			},
-		);
+		await attachAndRun(getCpuProfileCommand);
 	}),
 
 	analyzeTrace: t.procedure

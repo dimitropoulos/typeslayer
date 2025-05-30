@@ -17,12 +17,14 @@
 	"types": "./dist/index.d.ts",
 	"scripts": {
 		"build": "tsup",
-		"dev": "tsup --watch"
+		"dev": "tsup --watch",
+		"test": "vitest"
 	},
 	"dependencies": {
-		"tsup": "^8.5.0",
 		"@types/node": "^22.15.18",
+		"tsup": "^8.5.0",
 		"typescript": "^5.8.3",
+		"vitest": "^3.1.4",
 		"zod": "^3.25.28"
 	}
 }

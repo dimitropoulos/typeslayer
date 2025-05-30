@@ -22,3 +22,4 @@ export {
 export { createTypeRegistry, type TypeRegistry } from "./type-registry";
 export type { TypeId } from "./utils";
 export { CPU_PROFILE_FILENAME } from "./tsc-cpuprofile";
+export { packageNameRegex, extractPackageName, relativizePath } from "./package-name";

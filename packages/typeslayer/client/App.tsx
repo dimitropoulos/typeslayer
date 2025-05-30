@@ -8,12 +8,12 @@ import { NAVIGATION } from "./components/utils";
 import { AnalyzeTrace } from "./pages/analyze-trace";
 import { AwardWinners } from "./pages/award-winners";
 import { CpuProfile } from "./pages/cpu-profile";
-import { Generate } from "./pages/generate";
 import { Heatmap } from "./pages/heatmap";
 import { Perfetto } from "./pages/perfetto";
 import { SearchTypes } from "./pages/search-types";
 import { SettingsPage } from "./pages/settings";
 import { SpeedScope } from "./pages/speedscope";
+import { Start } from "./pages/start";
 import { TraceJson } from "./pages/trace-json";
 import { TypeNetwork } from "./pages/type-network";
 import { TypesJson } from "./pages/types-json";
@@ -21,28 +21,28 @@ import { theme } from "./theme";
 
 function DemoPageContent({ pathname }: { pathname: string }) {
 	switch (pathname) {
-		case "/generate":
-			return <Generate />;
-		case "/heatmap":
-			return <Heatmap />;
-		case "/type-network":
-			return <TypeNetwork />;
-		case "/perfetto":
-			return <Perfetto />;
-		case "/analyze-trace":
-			return <AnalyzeTrace />;
+		case "/start":
+			return <Start />;
+		case "/search-types":
+			return <SearchTypes />;
 		case "/award-winners":
 			return <AwardWinners />;
+		case "/type-network":
+			return <TypeNetwork />;
+		case "/heatmap":
+			return <Heatmap />;
+		case "/perfetto":
+			return <Perfetto />;
+		case "/speedscope":
+			return <SpeedScope />;
+		case "/analyze-trace":
+			return <AnalyzeTrace />;
 		case "/trace-json":
 			return <TraceJson />;
 		case "/types-json":
 			return <TypesJson />;
 		case "/tsc-cpuprofile":
 			return <CpuProfile />;
-		case "/speedscope":
-			return <SpeedScope />;
-		case "/search-types":
-			return <SearchTypes />;
 		case "/settings":
 			return <SettingsPage />;
 		default:
@@ -60,7 +60,7 @@ function appTitle() {
 }
 
 export function App() {
-	const router = useDemoRouter("/generate");
+	const router = useDemoRouter("/type-network");
 	return (
 		<AppProvider navigation={NAVIGATION} router={router} theme={theme}>
 			<DashboardLayout

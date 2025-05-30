@@ -17,23 +17,61 @@ import {
 	type ResolvedType,
 	TRACE_JSON_FILENAME,
 	TYPES_JSON_FILENAME,
+	extractPackageName,
+	relativizePath,
 } from "@typeslayer/validate";
 import { useEffect, useState } from "react";
+import type { AbsolutePath } from "@typeslayer/analyze-trace/src/utils";
+import { split, without } from "ramda";
 
-export const displayPath = (
-	fullPath: string | undefined,
+export const friendlyPath = (
+	absolutePath: string | undefined,
 	projectRoot: string | undefined,
 	simplifyPath: boolean,
 ) => {
-	if (!fullPath) {
-		console.error("missing path", { fullPath, projectRoot, simplifyPath });
+	if (!absolutePath) {
+		console.error("missing path", {
+			fullPath: absolutePath,
+			projectRoot,
+			simplifyPath,
+		});
 		return "[Missing Path]";
 	}
 
 	if (!simplifyPath || !projectRoot) {
-		return fullPath;
+		return absolutePath;
 	}
-	return fullPath.replace(projectRoot, "");
+	if (absolutePath.startsWith(projectRoot)) {
+		// remove the project root from the path
+		return absolutePath.slice(projectRoot.length);
+	}
+
+
+	const packageName = extractPackageName(absolutePath);
+	if (packageName && packageName !== absolutePath) {
+		const splitVersionIndex = packageName.indexOf("@", packageName.startsWith("@") ? 1 : 0)
+		if (splitVersionIndex === -1) {
+			// no version found, just return the package name
+			return packageName;
+		}
+
+		const withoutVersion = packageName.slice(0, splitVersionIndex);
+		
+		const locationOfWithoutVersion = absolutePath.lastIndexOf(withoutVersion);
+		if (locationOfWithoutVersion === -1) {
+			// the package name without version is not found in the absolute path
+			return packageName;
+		}
+		const pathAfterPackageName = absolutePath.slice(
+			locationOfWithoutVersion + withoutVersion.length,
+		);
+		return `${packageName}${pathAfterPackageName}`;
+	}
+
+	return relativizePath(
+		projectRoot,
+		absolutePath,
+	);
 };
 
 export const useStaticFile = (fileName: string) => {
@@ -64,8 +102,8 @@ export const NAVIGATION = [
 		title: "Explore",
 	},
 	{
-		segment: "generate",
-		title: "Generate",
+		segment: "start",
+		title: "Start",
 		icon: <PlayCircle />,
 	},
 	{
@@ -144,7 +182,7 @@ export const NAVIGATION = [
 	},
 ] as const satisfies NavigationItem[];
 
-const extractPath = (resolvedType: ResolvedType) => {
+export const extractPath = (resolvedType: ResolvedType) => {
 	if (resolvedType.firstDeclaration?.path) {
 		return resolvedType.firstDeclaration.path;
 	}
@@ -155,4 +193,26 @@ const extractPath = (resolvedType: ResolvedType) => {
 		return resolvedType.destructuringPattern.path;
 	}
 	return undefined;
+};
+
+export const friendlyPackageName = (
+	absolutePath: AbsolutePath,
+	projectRoot: string | undefined,
+	simplifyPaths: boolean,
+) => {
+	const extracted = extractPackageName(absolutePath);
+	if (extracted !== absolutePath) {
+		// we were able to extract a package name
+		return extracted;
+	}
+
+	if (!simplifyPaths) {
+		return absolutePath;
+	}
+
+	return friendlyPath(
+		absolutePath,
+		projectRoot,
+		simplifyPaths,
+	);
 };

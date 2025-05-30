@@ -55,7 +55,7 @@ export const hotSpot = z.object({
 	},
 
 	path: absolutePath.optional(),
-	types: hotType.optional(),
+	types: z.array(hotType).optional(),
 	startLine: z.number().optional(),
 	startChar: z.number().optional(),
 	startOffset: z.number().optional(),

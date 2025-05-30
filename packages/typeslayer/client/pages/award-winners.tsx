@@ -44,6 +44,7 @@ import { theme } from "../theme";
 import { trpc } from "../trpc";
 
 import type { DefaultErrorShape } from "@trpc/server/unstable-core-do-not-import";
+import { extractPath, friendlyPackageName } from "../components/utils";
 
 type AwardId = keyof typeof awards;
 
@@ -272,7 +273,7 @@ export const RenderPlayground = ({
 
 export const AwardWinners = () => {
 	const [activeAward, setActiveAward] = useState<AwardId | null>(
-		"limit_instantiateType",
+		"limit_recursiveTypeRelatedTo",
 	);
 	console.log({ activeAward });
 
@@ -540,6 +541,10 @@ const DuplicatePackages = () => {
 export const ShowHotSpots = () => {
 	const { data: hotSpots = [] } = trpc.getHotSpots.useQuery();
 	const { mutateAsync: openFile } = trpc.openFile.useMutation();
+	const {
+		data: { simplifyPaths = false } = {},
+	} = trpc.getSettings.useQuery();
+	const { data: projectRoot } = trpc.getProjectRoot.useQuery();
 
 	const findInPage = useCallback(
 		async (path: string | undefined) => {
@@ -579,7 +584,7 @@ export const ShowHotSpots = () => {
 								) : null}
 							</Typography>
 							<Stack>
-								<Typography variant="caption">{path}</Typography>
+								<Typography variant="caption">{friendlyPackageName(path ?? '', projectRoot, simplifyPaths)}</Typography>
 							</Stack>
 							<InlineBarGraph
 								label={`${timeMs.toLocaleString()}ms`}
@@ -650,7 +655,10 @@ const ShowTypeLimit = <L extends LimitType>({
 	getTypeId: (current: L) => number;
 }) => {
 	const { data = [] } = rpc.useQuery();
-
+	const {
+		data: { simplifyPaths = false } = {},
+	} = trpc.getSettings.useQuery();
+	const { data: projectRoot } = trpc.getProjectRoot.useQuery();
 	const [selectedTypeId, setSelectedTypeId] = useState<number | null>(null);
 	const handleTypeClick = useCallback(
 		(typeId: number) => {
@@ -699,13 +707,17 @@ const ShowTypeLimit = <L extends LimitType>({
 								</ListItemText>
 							);
 						}
+
+						const extractedPath = extractPath(resolvedType);
 						return (
 							<ListItemButton key={key} onClick={() => handleTypeClick(typeId)}>
 								<ListItemText>
 									<TypeSummary resolvedType={resolvedType} />
-									<Typography variant="caption" sx={{ mr: 2 }}>
-										TODO/path
-									</Typography>
+									{extractedPath ? (
+										<Typography variant="caption" sx={{ mr: 2 }}>
+											{friendlyPackageName(extractedPath, projectRoot, simplifyPaths)}
+										</Typography>
+									) : null}
 									{inlineBarGraph(current, first)}
 								</ListItemText>
 							</ListItemButton>
