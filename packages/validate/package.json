@@ -9,8 +9,12 @@
 	"packageManager": "pnpm@10.6.5",
 	"exports": {
 		".": {
-			"import": "./dist/index.js",
-			"types": "./dist/index.d.ts"
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./node": {
+			"types": "./dist/node.d.ts",
+			"import": "./dist/node.js"
 		}
 	},
 	"main": "./dist/index.js",
@@ -21,10 +25,13 @@
 		"test": "vitest"
 	},
 	"dependencies": {
-		"@types/node": "^22.15.18",
+		"@types/node": "^22.15.30",
+		"@types/stream-json": "^1.7.8",
+		"stream-chain": "^3.4.0",
+		"stream-json": "^1.9.1",
 		"tsup": "^8.5.0",
 		"typescript": "^5.8.3",
-		"vitest": "^3.1.4",
-		"zod": "^3.25.28"
+		"vitest": "^3.2.2",
+		"zod": "^3.25.56"
 	}
 }

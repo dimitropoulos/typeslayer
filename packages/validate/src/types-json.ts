@@ -140,5 +140,5 @@ export const resolvedType = z
 	.strict();
 
 export type ResolvedType = z.infer<typeof resolvedType>;
-export const typesJsonFile = z.array(resolvedType);
-export type TypesJsonFile = z.infer<typeof typesJsonFile>;
+export const typesJsonSchema = z.array(resolvedType);
+export type TypesJsonSchema = z.infer<typeof typesJsonSchema>;

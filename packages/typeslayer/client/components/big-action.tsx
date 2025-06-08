@@ -1,11 +1,9 @@
 import { LockReset } from "@mui/icons-material";
 import { Button, CardActions, Chip, Stack } from "@mui/material";
-import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
 import type { NavigationItem } from "@toolpad/core";
-import { theme } from "../theme";
 import { NAVIGATION } from "./utils";
 
 type ItemsWithTitle<

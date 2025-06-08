@@ -1,16 +1,16 @@
 import { normalize } from "node:path";
 import {
+	createTypeRegistry,
 	type ResolvedType,
 	type TypeId,
 	type TypeRegistry,
-	type TypesJsonFile,
-	createTypeRegistry,
+	type TypesJsonSchema,
 } from "@typeslayer/validate";
 import type { AnalyzeTraceOptions, EventSpan, HotSpot, HotType } from "./utils";
 
 export const getHotspots = async (
 	hotPathsTree: EventSpan,
-	typesFile: TypesJsonFile,
+	typesFile: TypesJsonSchema,
 	options: AnalyzeTraceOptions,
 ): Promise<HotSpot[]> => {
 	const typeRegistry = createTypeRegistry(typesFile);

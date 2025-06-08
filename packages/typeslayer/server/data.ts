@@ -1,23 +1,22 @@
-import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { resolve } from "node:path";
 import {
 	type AbsolutePath,
+	analyzeTraceResult,
 	type DuplicatedPackage,
 	type HotSpot,
-	analyzeTraceResult,
 } from "@typeslayer/analyze-trace";
 import {
+	createTypeRegistry,
 	type EventChecktypes__InstantiateType_DepthLimit,
 	type EventChecktypes__RecursiveTypeRelatedTo_DepthLimit,
 	type EventChecktypes__TypeRelatedToDiscriminatedType_DepthLimit,
 	type ResolvedType,
 	type TypeId,
 	type TypeRegistry,
-	createTypeRegistry,
-	traceJsonFile,
-	typesJsonFile,
+	traceJsonSchema,
+	typesJsonSchema,
 } from "@typeslayer/validate";
+import { grabFile } from "@typeslayer/validate/node";
 import type { z } from "zod/v4";
 
 export interface Data {
@@ -67,11 +66,11 @@ const knownFiles = {
 	},
 	typesJson: {
 		name: "types.json",
-		validator: typesJsonFile,
+		validator: typesJsonSchema,
 	},
 	traceJson: {
 		name: "trace.json",
-		validator: traceJsonFile,
+		validator: traceJsonSchema,
 	},
 } satisfies Record<string, KnownFile>;
 
@@ -105,54 +104,35 @@ export const data = {
 		[] as EventChecktypes__TypeRelatedToDiscriminatedType_DepthLimit[],
 } satisfies Data;
 
-const grabFile = async <V extends z.ZodType>(
-	filePath: string,
-	validator: V,
-) => {
-	const { tempDir } = data;
-	const file = `${tempDir}/${filePath}`;
-	const fileString = await readFile(file, "utf8");
-	const json = JSON.parse(fileString) as z.infer<V>;
-	const parsed = validator.safeParse(json);
-	if (!parsed.success) {
-		console.error("Error parsing file", { file, parsed });
-		throw new Error(`Error parsing file ${file}`);
-	}
-	return parsed.data;
-};
-
 export const refreshAnalyzeTraceFromDisk = async () => {
+	const filePath = `${data.tempDir}/${knownFiles.analyzeTrace.name}`;
 	try {
 		const { duplicatePackages, hotSpots } = await grabFile(
-			knownFiles.analyzeTrace.name,
+			filePath,
 			knownFiles.analyzeTrace.validator,
 		);
 		data.duplicatePackages = duplicatePackages;
 		data.hotSpots = hotSpots;
 		console.log("refreshAnalyzeTraceFromDisk");
 	} catch (error) {
-		console.log("no analyze trace file found, skipping", error);
+		console.log("error processing file", filePath, error);
 	}
 };
 
 export const refreshTypesJson = async () => {
+	const filePath = `${data.tempDir}/${knownFiles.typesJson.name}`;
 	try {
-		const typesJson = await grabFile(
-			knownFiles.typesJson.name,
-			knownFiles.typesJson.validator,
-		);
+		const typesJson = await grabFile(filePath, knownFiles.typesJson.validator);
 		data.typeRegistry = createTypeRegistry(typesJson);
 	} catch (error) {
-		console.log("no types.json file found, skipping", error);
+		console.log(`error processing file`, filePath, error);
 	}
 };
 
 export const refreshTraceJson = async () => {
+	const filePath = `${data.tempDir}/${knownFiles.traceJson.name}`;
 	try {
-		const traceJson = await grabFile(
-			knownFiles.traceJson.name,
-			knownFiles.traceJson.validator,
-		);
+		const traceJson = await grabFile(filePath, knownFiles.traceJson.validator);
 
 		data.typeInstantiationLimits = [];
 		data.recursiveTypeRelatedToLimits = [];
@@ -186,7 +166,7 @@ export const refreshTraceJson = async () => {
 				data.typeRelatedToDiscriminatedTypeLimits.length,
 		});
 	} catch (error) {
-		console.log("no types.json file found, skipping", error);
+		console.log("error processing file", filePath, error);
 	}
 };
 

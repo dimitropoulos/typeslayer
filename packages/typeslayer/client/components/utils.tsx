@@ -12,17 +12,16 @@ import {
 } from "@mui/icons-material";
 import type { NavigationItem } from "@toolpad/core";
 import { ANALYZE_TRACE_FILENAME } from "@typeslayer/analyze-trace/src/constants";
+import type { AbsolutePath } from "@typeslayer/analyze-trace/src/utils";
 import {
 	CPU_PROFILE_FILENAME,
+	extractPackageName,
 	type ResolvedType,
+	relativizePath,
 	TRACE_JSON_FILENAME,
 	TYPES_JSON_FILENAME,
-	extractPackageName,
-	relativizePath,
 } from "@typeslayer/validate";
 import { useEffect, useState } from "react";
-import type { AbsolutePath } from "@typeslayer/analyze-trace/src/utils";
-import { split, without } from "ramda";
 
 export const friendlyPath = (
 	absolutePath: string | undefined,
@@ -46,17 +45,19 @@ export const friendlyPath = (
 		return absolutePath.slice(projectRoot.length);
 	}
 
-
 	const packageName = extractPackageName(absolutePath);
 	if (packageName && packageName !== absolutePath) {
-		const splitVersionIndex = packageName.indexOf("@", packageName.startsWith("@") ? 1 : 0)
+		const splitVersionIndex = packageName.indexOf(
+			"@",
+			packageName.startsWith("@") ? 1 : 0,
+		);
 		if (splitVersionIndex === -1) {
 			// no version found, just return the package name
 			return packageName;
 		}
 
 		const withoutVersion = packageName.slice(0, splitVersionIndex);
-		
+
 		const locationOfWithoutVersion = absolutePath.lastIndexOf(withoutVersion);
 		if (locationOfWithoutVersion === -1) {
 			// the package name without version is not found in the absolute path
@@ -68,10 +69,7 @@ export const friendlyPath = (
 		return `${packageName}${pathAfterPackageName}`;
 	}
 
-	return relativizePath(
-		projectRoot,
-		absolutePath,
-	);
+	return relativizePath(projectRoot, absolutePath);
 };
 
 export const useStaticFile = (fileName: string) => {
@@ -210,9 +208,5 @@ export const friendlyPackageName = (
 		return absolutePath;
 	}
 
-	return friendlyPath(
-		absolutePath,
-		projectRoot,
-		simplifyPaths,
-	);
+	return friendlyPath(absolutePath, projectRoot, simplifyPaths);
 };

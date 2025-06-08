@@ -1,13 +1,11 @@
-import type { ResolvedType, TypesJsonFile } from "./types-json";
+import type { ResolvedType, TypesJsonSchema } from "./types-json";
 import type { TypeId } from "./utils";
-
-type AbsolutePath = string;
 
 export type TypeRegistry = Map<TypeId, ResolvedType>;
 
 export const createTypeRegistry = (
-	typesJsonFile: TypesJsonFile,
+	typesJson: TypesJsonSchema,
 ): TypeRegistry => {
-	console.log(typesJsonFile.length, "types");
-	return new Map(typesJsonFile.map((type) => [type.id, type]));
+	console.log(typesJson.length, "types");
+	return new Map(typesJson.map((type) => [type.id, type]));
 };

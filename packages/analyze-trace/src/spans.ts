@@ -1,7 +1,7 @@
 import {
-	type TraceEvent,
-	type TraceJsonFile,
 	eventPhase,
+	type TraceEvent,
+	type TraceJsonSchema,
 } from "@typeslayer/validate";
 import type {
 	AnalyzeTraceOptions,
@@ -13,7 +13,7 @@ import type {
 /*
  * This function takes an array of trace events and converts them into spans.
  */
-export function createSpans(traceFile: TraceJsonFile): ParseResult {
+export function createSpans(traceFile: TraceJsonSchema): ParseResult {
 	// Sorted in increasing order of start time (even when below timestamp resolution)
 	const unclosedStack: TraceEvent[] = [];
 
@@ -54,6 +54,7 @@ export function createSpans(traceFile: TraceJsonFile): ParseResult {
 				break;
 			}
 
+			case eventPhase.instantGlobal:
 			case eventPhase.metadata:
 				return;
 

@@ -16,7 +16,6 @@ import {
 	Divider,
 	IconButton,
 	List,
-	ListItem,
 	ListItemButton,
 	ListItemIcon,
 	ListItemText,
@@ -24,7 +23,6 @@ import {
 	Stack,
 	Typography,
 } from "@mui/material";
-import type { DecoratedQuery } from "@trpc/react-query/dist/createTRPCReact";
 import type {
 	EventChecktypes__InstantiateType_DepthLimit,
 	EventChecktypes__RecursiveTypeRelatedTo_DepthLimit,
@@ -34,17 +32,12 @@ import type {
 } from "@typeslayer/validate";
 import { type ReactNode, useCallback, useState } from "react";
 import { Callout } from "../components/callout";
-import {
-	DisplayRecursiveType,
-	OpenFile,
-} from "../components/display-recursive-type";
+import { DisplayRecursiveType } from "../components/display-recursive-type";
 import { InlineCode } from "../components/inline-code";
 import { TypeSummary } from "../components/type-summary";
+import { extractPath, friendlyPackageName } from "../components/utils";
 import { theme } from "../theme";
 import { trpc } from "../trpc";
-
-import type { DefaultErrorShape } from "@trpc/server/unstable-core-do-not-import";
-import { extractPath, friendlyPackageName } from "../components/utils";
 
 type AwardId = keyof typeof awards;
 
@@ -116,39 +109,39 @@ const awards = {
 	},
 } as const;
 
-export const RenderAward =
-	({
-		activeAward,
-		setActiveAward,
-	}: {
-		activeAward: AwardId | null;
-		setActiveAward: (award: AwardId) => void;
-	}) =>
-	(awardId: AwardId) => {
-		const { title, icon: Icon } = awards[awardId];
-		const onClick = useCallback(
-			() => setActiveAward(awardId),
-			[awardId, setActiveAward],
-		);
-		const selected = activeAward === awardId;
-		const color = selected ? { color: theme.palette.primary.dark } : {};
-		return (
-			<ListItemButton
-				key={awardId}
-				selected={selected}
-				sx={{
-					borderRadius: 2,
-					...color,
-				}}
-				onClick={onClick}
-			>
-				<ListItemIcon sx={{ minWidth: 38 }}>
-					<Icon sx={{ ...color }} />
-				</ListItemIcon>
-				<ListItemText primary={title} />
-			</ListItemButton>
-		);
-	};
+export const RenderAward = ({
+	activeAward,
+	setActiveAward,
+	awardId,
+}: {
+	activeAward: AwardId | null;
+	setActiveAward: (award: AwardId) => void;
+	awardId: AwardId;
+}) => {
+	const { title, icon: Icon } = awards[awardId];
+	const onClick = useCallback(
+		() => setActiveAward(awardId),
+		[awardId, setActiveAward],
+	);
+	const selected = activeAward === awardId;
+	const color = selected ? { color: theme.palette.primary.dark } : {};
+	return (
+		<ListItemButton
+			key={awardId}
+			selected={selected}
+			sx={{
+				borderRadius: 2,
+				...color,
+			}}
+			onClick={onClick}
+		>
+			<ListItemIcon sx={{ minWidth: 38 }}>
+				<Icon sx={{ ...color }} />
+			</ListItemIcon>
+			<ListItemText primary={title} />
+		</ListItemButton>
+	);
+};
 
 export const RenderPlayground = ({
 	activeAward,
@@ -281,8 +274,6 @@ export const AwardWinners = () => {
 	const typeRegistry: TypeRegistry = new Map(typeRegistryEntries ?? []);
 	window.typeRegistry = typeRegistry;
 
-	const Award = RenderAward({ activeAward, setActiveAward });
-
 	return (
 		<Stack
 			direction="row"
@@ -313,7 +304,14 @@ export const AwardWinners = () => {
 							"limit_recursiveTypeRelatedTo",
 							"limit_typeRelatedToDiscriminatedType",
 						] as const
-					).map(Award)}
+					).map((awardId) => (
+						<RenderAward
+							key={awardId}
+							activeAward={activeAward}
+							setActiveAward={setActiveAward}
+							awardId={awardId}
+						/>
+					))}
 				</List>
 
 				<Divider />
@@ -326,12 +324,23 @@ export const AwardWinners = () => {
 							"typeArguments",
 							"aliasTypeArguments",
 						] as const
-					).map(Award)}
+					).map((awardId) => (
+						<RenderAward
+							key={awardId}
+							activeAward={activeAward}
+							setActiveAward={setActiveAward}
+							awardId={awardId}
+						/>
+					))}
 				</List>
 				<Divider />
 
 				<List subheader={<ListSubheader>Bundle Implications</ListSubheader>}>
-					{(["duplicatePackages"] as const).map(Award)}
+					<RenderAward
+						activeAward={activeAward}
+						setActiveAward={setActiveAward}
+						awardId={"duplicatePackages"}
+					/>
 				</List>
 			</Stack>
 
@@ -424,7 +433,7 @@ function ArrayAward({
 	const [selectedIndex, setSelectedIndex] = useState(0);
 
 	const handleListItemClick = (
-		event: React.MouseEvent<HTMLDivElement, MouseEvent>,
+		_event: React.MouseEvent<HTMLDivElement, MouseEvent>,
 		index: number,
 	) => {
 		setSelectedIndex(index);
@@ -541,9 +550,7 @@ const DuplicatePackages = () => {
 export const ShowHotSpots = () => {
 	const { data: hotSpots = [] } = trpc.getHotSpots.useQuery();
 	const { mutateAsync: openFile } = trpc.openFile.useMutation();
-	const {
-		data: { simplifyPaths = false } = {},
-	} = trpc.getSettings.useQuery();
+	const { data: { simplifyPaths = false } = {} } = trpc.getSettings.useQuery();
 	const { data: projectRoot } = trpc.getProjectRoot.useQuery();
 
 	const findInPage = useCallback(
@@ -584,7 +591,9 @@ export const ShowHotSpots = () => {
 								) : null}
 							</Typography>
 							<Stack>
-								<Typography variant="caption">{friendlyPackageName(path ?? '', projectRoot, simplifyPaths)}</Typography>
+								<Typography variant="caption">
+									{friendlyPackageName(path ?? "", projectRoot, simplifyPaths)}
+								</Typography>
 							</Stack>
 							<InlineBarGraph
 								label={`${timeMs.toLocaleString()}ms`}
@@ -642,12 +651,7 @@ const ShowTypeLimit = <L extends LimitType>({
 		description: string;
 	};
 	title: string;
-	rpc: DecoratedQuery<{
-		input: void;
-		output: L[];
-		transformer: false;
-		errorShape: DefaultErrorShape;
-	}>;
+	rpc: { useQuery: () => { data?: L[] }};
 	icon: (typeof awards)[keyof typeof awards]["icon"];
 	subtitle: (first: L) => string;
 	inlineBarGraph: (current: L, first: L) => ReactNode;
@@ -655,9 +659,7 @@ const ShowTypeLimit = <L extends LimitType>({
 	getTypeId: (current: L) => number;
 }) => {
 	const { data = [] } = rpc.useQuery();
-	const {
-		data: { simplifyPaths = false } = {},
-	} = trpc.getSettings.useQuery();
+	const { data: { simplifyPaths = false } = {} } = trpc.getSettings.useQuery();
 	const { data: projectRoot } = trpc.getProjectRoot.useQuery();
 	const [selectedTypeId, setSelectedTypeId] = useState<number | null>(null);
 	const handleTypeClick = useCallback(
@@ -715,7 +717,11 @@ const ShowTypeLimit = <L extends LimitType>({
 									<TypeSummary resolvedType={resolvedType} />
 									{extractedPath ? (
 										<Typography variant="caption" sx={{ mr: 2 }}>
-											{friendlyPackageName(extractedPath, projectRoot, simplifyPaths)}
+											{friendlyPackageName(
+												extractedPath,
+												projectRoot,
+												simplifyPaths,
+											)}
 										</Typography>
 									) : null}
 									{inlineBarGraph(current, first)}
@@ -739,13 +745,7 @@ const ShowTypeLimit = <L extends LimitType>({
 	);
 };
 
-const InlineBarGraph = ({
-	width,
-	label,
-}: {
-	width: string;
-	label: string;
-}) => {
+const InlineBarGraph = ({ width, label }: { width: string; label: string }) => {
 	return (
 		<Stack>
 			<Typography

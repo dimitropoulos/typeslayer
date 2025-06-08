@@ -15,6 +15,9 @@
 			},
 			"correctness": {
 				"useHookAtTopLevel": "error"
+			},
+			"nursery": {
+				"useUniqueElementIds": "off"
 			}
 		}
 	},

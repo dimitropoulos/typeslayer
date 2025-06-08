@@ -289,9 +289,7 @@ export function OpenFile({
 	title?: string;
 	pathVariant?: TypographyVariant;
 }) {
-	const {
-		data: { simplifyPaths = false } = {},
-	} = trpc.getSettings.useQuery();
+	const { data: { simplifyPaths = false } = {} } = trpc.getSettings.useQuery();
 	const { mutateAsync: openFile } = trpc.openFile.useMutation();
 	const { data: projectRoot } = trpc.getProjectRoot.useQuery();
 

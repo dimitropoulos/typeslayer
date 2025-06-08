@@ -42,7 +42,8 @@ fastify.get("/static/*", async (req, reply) => {
 	return createReadStream(absPath);
 });
 
-fastify.listen({ port: 3000 }, async () => {
+try {
+	await fastify.listen({ port: 3000 });
 	console.log("🚀 Server listening on http://localhost:3000");
 	await refreshAllFiles();
 	await attemptAutoDetectTypeCheckScript();
@@ -51,4 +52,7 @@ fastify.listen({ port: 3000 }, async () => {
 		tempDir: data.tempDir,
 		scriptName: data.scriptName,
 	});
-});
+} catch (err) {
+	fastify.log.error(err);
+	process.exit(1);
+}

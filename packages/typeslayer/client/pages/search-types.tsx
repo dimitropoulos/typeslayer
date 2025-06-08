@@ -1,15 +1,4 @@
-import {
-	Box,
-	Divider,
-	FormControl,
-	FormControlLabel,
-	FormGroup,
-	FormLabel,
-	Stack,
-	Switch,
-	TextField,
-	Typography,
-} from "@mui/material";
+import { Box, Divider, Stack, TextField, Typography } from "@mui/material";
 import type { TypeRegistry } from "@typeslayer/validate";
 import { useState } from "react";
 import { Callout } from "../components/callout";

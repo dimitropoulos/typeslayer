@@ -1,5 +1,5 @@
 import { LocalFireDepartment } from "@mui/icons-material";
-import { Stack, styled } from "@mui/material";
+import { Stack } from "@mui/material";
 import Typography from "@mui/material/Typography";
 import { AppProvider } from "@toolpad/core/AppProvider";
 import { DashboardLayout } from "@toolpad/core/DashboardLayout";

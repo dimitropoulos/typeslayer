@@ -1,5 +1,4 @@
-import { exec, execSync } from "node:child_process";
-import { mkdir } from "node:fs/promises";
+import { exec } from "node:child_process";
 import { initTRPC } from "@trpc/server";
 import { analyzeTrace, analyzeTraceOptions } from "@typeslayer/analyze-trace";
 import type { ResolvedType } from "@typeslayer/validate";
@@ -13,7 +12,6 @@ import {
 import { settings, settingsInput } from "./settings";
 import {
 	attachAndRun,
-	execWithNpm,
 	getCpuProfileCommand,
 	getGenerateCommand,
 	getPackageJson,
@@ -129,7 +127,7 @@ export const appRouter = t.router({
 			const { path, line, character } = input;
 			exec(
 				`code --goto ${path}:${line ?? 1}:${character ?? 1}`,
-				(error, stdout, stderr) => {},
+				(_error, _stdout, _stderr) => {},
 			);
 		}),
 

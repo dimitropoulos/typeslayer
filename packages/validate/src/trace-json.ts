@@ -516,5 +516,5 @@ export const traceEvent = z.discriminatedUnion(
 );
 
 export type TraceEvent = z.infer<typeof traceEvent>;
-export const traceJsonFile = z.array(traceEvent);
-export type TraceJsonFile = z.infer<typeof traceJsonFile>;
+export const traceJsonSchema = z.array(traceEvent);
+export type TraceJsonSchema = z.infer<typeof traceJsonSchema>;

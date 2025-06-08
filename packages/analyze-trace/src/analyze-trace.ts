@@ -2,21 +2,21 @@ import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
-	type TraceJsonFile,
-	type TypesJsonFile,
-	traceJsonFile,
-	typesJsonFile,
+	type TraceJsonSchema,
+	type TypesJsonSchema,
+	traceJsonSchema,
+	typesJsonSchema,
 } from "@typeslayer/validate";
 import { getDuplicateNodeModules } from "./get-duplicate-node-modules";
 import { getHotspots } from "./get-hotspots";
 import { getNodeModulePaths } from "./node-module-paths";
-import { createSpanTree, createSpans } from "./spans";
+import { createSpans, createSpanTree } from "./spans";
+import type { AnalyzeTraceResult } from "./utils";
 import {
 	type AbsolutePath,
 	type AnalyzeTraceOptions,
 	throwIfNotDirectory,
 } from "./utils";
-import type { AnalyzeTraceResult } from "./utils";
 
 export function validateOptions(options: AnalyzeTraceOptions) {
 	if (options.forceMillis < options.skipMillis) {
@@ -27,8 +27,8 @@ export function validateOptions(options: AnalyzeTraceOptions) {
 const validateTraceDir = async (
 	traceDir: AbsolutePath,
 ): Promise<{
-	traceFile: TraceJsonFile;
-	typesFile: TypesJsonFile;
+	traceFile: TraceJsonSchema;
+	typesFile: TypesJsonSchema;
 }> => {
 	await throwIfNotDirectory(traceDir);
 
@@ -39,7 +39,7 @@ const validateTraceDir = async (
 		);
 	}
 	const typesFileJson = JSON.parse(await readFile(typesFilePath, "utf8"));
-	const typesFile = typesJsonFile.parse(typesFileJson);
+	const typesFile = typesJsonSchema.parse(typesFileJson);
 
 	const traceFilePath = join(traceDir, "trace.json");
 	if (!existsSync(traceFilePath)) {
@@ -48,7 +48,7 @@ const validateTraceDir = async (
 		);
 	}
 	const traceFileJson = JSON.parse(await readFile(traceFilePath, "utf8"));
-	const traceFile = traceJsonFile.parse(traceFileJson);
+	const traceFile = traceJsonSchema.parse(traceFileJson);
 
 	return {
 		traceFile,

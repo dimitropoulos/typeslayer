@@ -1,9 +1,15 @@
-import { type TraceEvent, type TraceJsonFile, packageNameRegex } from "@typeslayer/validate";
+import {
+	packageNameRegex,
+	type TraceEvent,
+	type TraceJsonSchema,
+} from "@typeslayer/validate";
 import type { NodeModulePaths } from "./utils";
 
-export function getNodeModulePaths(traceFile: TraceJsonFile): NodeModulePaths {
+export function getNodeModulePaths(
+	traceJson: TraceJsonSchema,
+): NodeModulePaths {
 	const nodeModulePaths: NodeModulePaths = {};
-	traceFile.forEach((event: TraceEvent) => {
+	traceJson.forEach((event: TraceEvent) => {
 		if (event.name !== "findSourceFile") {
 			return;
 		}

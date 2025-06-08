@@ -9,9 +9,7 @@ import { InlineCode } from "../components/inline-code";
 import { trpc } from "../trpc";
 
 export const SettingsPage = () => {
-	const {
-		data: { simplifyPaths } = {},
-	} = trpc.getSettings.useQuery();
+	const { data: { simplifyPaths } = {} } = trpc.getSettings.useQuery();
 	const { mutate: mutateSettings } = trpc.setSettings.useMutation();
 	const handleSimplifyPaths = (event: React.ChangeEvent<HTMLInputElement>) => {
 		mutateSettings({ simplifyPaths: event.target.checked });

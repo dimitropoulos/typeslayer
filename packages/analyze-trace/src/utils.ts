@@ -31,14 +31,6 @@ export const projectResult = z.object({
 });
 export type ProjectResult = z.infer<typeof projectResult>;
 
-const Category = z.object({
-	name: z.string(),
-	get subcategories() {
-		return z.array(Category);
-	},
-});
-type Category = z.infer<typeof Category>;
-
 export const hotType = z.object({
 	resolvedType: resolvedType,
 	get children() {
@@ -100,10 +92,8 @@ export const microseconds = z.number();
 export type Microseconds = z.infer<typeof microseconds>;
 
 export const packageName = z.string();
-type PackageName = z.infer<typeof packageName>;
 
 export const packagePath = z.string();
-type PackagePath = z.infer<typeof packagePath>;
 
 export const nodeModulePaths = z.record(packageName, z.array(packagePath));
 /** This is a map where the key corresponds to an NPM package and the value is an array of all files in that package that were used */
