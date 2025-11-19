@@ -44,7 +44,7 @@ export function TypeSummary({
 				{humanReadable}
 			</Typography>
 			<Typography color="primary" sx={{ fontFamily: "monospace" }}>
-				{id}
+				id:{id}
 			</Typography>
 			{showFlags
 				? flags.map((flag) => (

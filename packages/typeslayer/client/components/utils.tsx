@@ -10,7 +10,6 @@ import {
 	Settings,
 	Speed,
 } from "@mui/icons-material";
-import type { NavigationItem } from "@toolpad/core";
 import { ANALYZE_TRACE_FILENAME } from "@typeslayer/analyze-trace/src/constants";
 import type { AbsolutePath } from "@typeslayer/analyze-trace/src/utils";
 import {
@@ -21,7 +20,8 @@ import {
 	TRACE_JSON_FILENAME,
 	TYPES_JSON_FILENAME,
 } from "@typeslayer/validate";
-import { useEffect, useState } from "react";
+import { type JSX, useEffect, useState } from "react";
+import { SERVER_PORT } from "./constants";
 
 export const friendlyPath = (
 	absolutePath: string | undefined,
@@ -78,7 +78,7 @@ export const useStaticFile = (fileName: string) => {
 		const fetchData = async () => {
 			try {
 				const response = await fetch(
-					`http://localhost:3000/static/${fileName}`,
+					`http://localhost:${SERVER_PORT}/static/${fileName}`,
 				);
 				if (!response.ok) {
 					throw new Error("Network response was not ok");
@@ -94,42 +94,70 @@ export const useStaticFile = (fileName: string) => {
 	return data;
 };
 
+export type HeaderNavigationItem = {
+	kind: "header";
+	title: string;
+};
+
+export type SegmentNavigationItem = {
+	kind: "segment";
+	segment: string;
+	title: string;
+	icon: JSX.Element;
+};
+
+export type DividerNavigationItem = {
+	kind: "divider";
+};
+
+export type NavigationItem =
+	| HeaderNavigationItem
+	| SegmentNavigationItem
+	| DividerNavigationItem;
+
 export const NAVIGATION = [
 	{
 		kind: "header",
 		title: "Explore",
 	},
 	{
-		segment: "start",
+		kind: "segment",
+		segment: "start/select-code",
 		title: "Start",
 		icon: <PlayCircle />,
 	},
 	{
+		kind: "segment",
 		segment: "search-types",
 		title: "Search Type Id",
 		icon: <Search />,
 	},
 	{
-		segment: "award-winners",
+		kind: "segment",
+		segment: "award-winners/type-instantiation-limit",
 		title: "Award Winners",
 		icon: <EmojiEvents />,
 	},
 	{
+		kind: "segment",
 		segment: "type-network",
 		title: "Type Network",
 		icon: <Hub />,
 	},
 	{
-		segment: "heatmap",
-		title: "Heatmap",
+		kind: "segment",
+		segment: "treemap",
+		title: "Treemap",
 		icon: <Dashboard />,
 	},
 	{
+		kind: "segment",
 		segment: "perfetto",
 		title: "Perfetto",
 		icon: <Speed />,
 	},
 	{
+		kind: "segment",
 		segment: "speedscope",
 		title: "SpeedScope",
 		icon: <Biotech />,
@@ -142,21 +170,25 @@ export const NAVIGATION = [
 		title: "Raw Data",
 	},
 	{
+		kind: "segment",
 		segment: "analyze-trace",
 		title: ANALYZE_TRACE_FILENAME,
 		icon: <Description />,
 	},
 	{
+		kind: "segment",
 		segment: "trace-json",
 		title: TRACE_JSON_FILENAME,
 		icon: <Description />,
 	},
 	{
+		kind: "segment",
 		segment: "types-json",
 		title: TYPES_JSON_FILENAME,
 		icon: <Description />,
 	},
 	{
+		kind: "segment",
 		segment: "tsc-cpuprofile",
 		title: CPU_PROFILE_FILENAME,
 		icon: <Description />,
@@ -169,11 +201,13 @@ export const NAVIGATION = [
 		title: "Configuration",
 	},
 	{
+		kind: "segment",
 		segment: "integrations",
 		title: "Integrations",
 		icon: <Layers />,
 	},
 	{
+		kind: "segment",
 		segment: "settings",
 		title: "Settings",
 		icon: <Settings />,

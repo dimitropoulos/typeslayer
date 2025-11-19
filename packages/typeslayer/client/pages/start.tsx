@@ -15,29 +15,69 @@ import StepContent from "@mui/material/StepContent";
 import StepLabel from "@mui/material/StepLabel";
 import Stepper from "@mui/material/Stepper";
 import Typography from "@mui/material/Typography";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import type { TypeRegistry } from "@typeslayer/validate";
 import { useCallback, useEffect, useState } from "react";
 import BigAction from "../components/big-action";
 import { InlineCode } from "../components/inline-code";
 import { trpc } from "../trpc";
 
+const stepRoutes = ["select-code", "run-diagnostics", "take-action"] as const;
+type StepRoute = (typeof stepRoutes)[number];
+
+const getStepFromRoute = (route: string | undefined): number => {
+	if (!route) return 0;
+	const index = stepRoutes.indexOf(route as StepRoute);
+	return index === -1 ? 0 : index;
+};
+
+const getRouteFromStep = (step: number): StepRoute | null => {
+	return stepRoutes[step] ?? null;
+};
+
 export function Start() {
-	const [activeStep, setActiveStep] = useState(1);
+	const params = useParams({ strict: false });
+	const navigate = useNavigate();
+	const stepParam = params.step as string | undefined;
+
+	const [activeStep, setActiveStep] = useState(getStepFromRoute(stepParam));
+
+	// Sync active step with URL
+	useEffect(() => {
+		const newStep = getStepFromRoute(stepParam);
+		if (newStep !== activeStep) {
+			setActiveStep(newStep);
+		}
+	}, [stepParam, activeStep]);
 
 	const handleNext = () => {
-		setActiveStep((prevActiveStep) => prevActiveStep + 1);
+		const nextStep = activeStep + 1;
+		setActiveStep(nextStep);
+		const route = getRouteFromStep(nextStep);
+		if (route) {
+			navigate({ to: `/start/${route}` });
+		}
 	};
 
 	const handleBack = () => {
-		setActiveStep((prevActiveStep) => prevActiveStep - 1);
+		const prevStep = activeStep - 1;
+		setActiveStep(prevStep);
+		const route = getRouteFromStep(prevStep);
+		if (route) {
+			navigate({ to: `/start/${route}` });
+		} else {
+			navigate({ to: "/start" });
+		}
 	};
 
 	const handleReset = () => {
 		setActiveStep(0);
+		navigate({ to: "/start" });
 	};
 
 	return (
-		<Box sx={{ m: 4 }}>
+		<Box sx={{ mx: 4 }}>
+			<h1>Start</h1>
 			<Stepper activeStep={activeStep} orientation="vertical">
 				<Step>
 					<SelectCode handleNext={handleNext} />
@@ -235,7 +275,7 @@ const RunDiagnostics = ({
 						description="Identify clear-cut hot-spots and provide enough context to extract a small repro. The repro can then be used as the basis of a bug report or a starting point for manual code inspection or profiling."
 						unlocks={[
 							"Type Network",
-							"Heatmap",
+							"Treemap",
 							"analyze-trace.json",
 							"Award Winners",
 						]}

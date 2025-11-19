@@ -18,10 +18,10 @@
 		"dev": "tsup --watch"
 	},
 	"dependencies": {
-		"@types/node": "^22.15.30",
+		"@types/node": "^24.10.1",
 		"@typeslayer/validate": "workspace:*",
-		"tsup": "^8.5.0",
-		"typescript": "^5.8.3",
-		"zod": "^3.25.56"
+		"tsup": "^8.5.1",
+		"typescript": "^5.9.3",
+		"zod": "^4.1.12"
 	}
 }

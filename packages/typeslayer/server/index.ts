@@ -4,6 +4,7 @@ import cors from "@fastify/cors";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 import Fastify from "fastify";
 import { lookup } from "mime-types";
+import { SERVER_PORT } from "../client/components/constants";
 import { data, refreshAllFiles } from "./data";
 import { appRouter } from "./router";
 import { attemptAutoDetectTypeCheckScript } from "./utils";
@@ -43,8 +44,8 @@ fastify.get("/static/*", async (req, reply) => {
 });
 
 try {
-	await fastify.listen({ port: 3000 });
-	console.log("🚀 Server listening on http://localhost:3000");
+	await fastify.listen({ port: SERVER_PORT });
+	console.log(`🚀 Server listening on http://localhost:${SERVER_PORT}`);
 	await refreshAllFiles();
 	await attemptAutoDetectTypeCheckScript();
 	console.log("ready to slay!", {

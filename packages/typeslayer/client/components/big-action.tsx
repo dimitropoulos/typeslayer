@@ -3,8 +3,7 @@ import { Button, CardActions, Chip, Stack } from "@mui/material";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
-import type { NavigationItem } from "@toolpad/core";
-import { NAVIGATION } from "./utils";
+import { NAVIGATION, type NavigationItem } from "./utils";
 
 type ItemsWithTitle<
 	T extends readonly NavigationItem[],
@@ -18,6 +17,8 @@ type ItemsWithTitle<
 		: ItemsWithTitle<Rest, Acc>
 	: Acc[number][];
 
+type Unlocks = ItemsWithTitle<typeof NAVIGATION>;
+
 export default function BigAction({
 	title,
 	description,
@@ -27,7 +28,7 @@ export default function BigAction({
 }: {
 	title: string;
 	description: string;
-	unlocks: ItemsWithTitle<typeof NAVIGATION>;
+	unlocks: Unlocks;
 	onDoIt: () => void;
 	isLoading: boolean;
 }) {

@@ -1,6 +1,7 @@
 import { Box, Divider, Stack, TextField, Typography } from "@mui/material";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import type { TypeRegistry } from "@typeslayer/validate";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Callout } from "../components/callout";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
 import { InlineCode } from "../components/inline-code";
@@ -8,7 +9,18 @@ import { theme } from "../theme";
 import { trpc } from "../trpc";
 
 export const SearchTypes = () => {
-	const [search, setSearch] = useState("");
+	const params = useParams({ strict: false });
+	const navigate = useNavigate();
+	const typeIdParam = params.typeId as string | undefined;
+
+	const [search, setSearch] = useState(typeIdParam || "");
+
+	// Sync search with URL param
+	useEffect(() => {
+		if (typeIdParam && typeIdParam !== search) {
+			setSearch(typeIdParam);
+		}
+	}, [typeIdParam, search]);
 
 	const numberSearch = Number.parseInt(search, 10);
 
@@ -18,7 +30,7 @@ export const SearchTypes = () => {
 	const typeString = JSON.stringify(typeRegistry.get(numberSearch), null, 2);
 
 	return (
-		<Box sx={{ m: 4 }}>
+		<Box sx={{ mx: 4 }}>
 			<Stack direction="row" gap={5} alignItems="center">
 				<Stack direction="row" alignItems="baseline" gap={1}>
 					<h1>Search</h1>
@@ -36,7 +48,13 @@ export const SearchTypes = () => {
 					sx={{ input: { color: theme.palette.primary.main }, width: 600 }}
 					value={search}
 					onChange={(event) => {
-						setSearch(event.target.value);
+						const newValue = event.target.value;
+						setSearch(newValue);
+						if (newValue) {
+							navigate({ to: `/search-types/${newValue}` });
+						} else {
+							navigate({ to: "/search-types" });
+						}
 					}}
 				/>
 

@@ -15,7 +15,6 @@ export function Callout({
 			direction="row"
 			sx={{
 				background: theme.palette.background.paper,
-				my: 2,
 				maxWidth: 600,
 				padding: 2,
 				borderRadius: 2,

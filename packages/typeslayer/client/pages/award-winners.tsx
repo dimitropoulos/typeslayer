@@ -23,6 +23,7 @@ import {
 	Stack,
 	Typography,
 } from "@mui/material";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import type {
 	EventChecktypes__InstantiateType_DepthLimit,
 	EventChecktypes__RecursiveTypeRelatedTo_DepthLimit,
@@ -30,7 +31,7 @@ import type {
 	ResolvedType,
 	TypeRegistry,
 } from "@typeslayer/validate";
-import { type ReactNode, useCallback, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Callout } from "../components/callout";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
 import { InlineCode } from "../components/inline-code";
@@ -47,6 +48,7 @@ const awards = {
 		description:
 			"Awarded for the most ruthless code simplification without breaking anything.",
 		icon: Whatshot,
+		route: "hot-spots",
 	},
 	unionTypes: {
 		title: "Largest Union",
@@ -55,12 +57,14 @@ const awards = {
 			"Awarded for the most ruthless code simplification without breaking anything.",
 		icon: JoinFull,
 		unit: "union members",
+		route: "largest-union",
 	},
 	duplicatePackages: {
 		title: "Duplicate Packages",
 		description:
 			"Awarded for the most ruthless code simplification without breaking anything.",
 		icon: CopyAll,
+		route: "duplicate-packages",
 	},
 	typeArguments: {
 		title: "Most Type Arguments",
@@ -69,6 +73,7 @@ const awards = {
 			"Awarded for the most ruthless code simplification without breaking anything.",
 		icon: SportsKabaddi,
 		unit: "type arguments",
+		route: "most-type-arguments",
 	},
 	intersectionTypes: {
 		title: "Largest Intersection",
@@ -77,6 +82,7 @@ const awards = {
 			"Awarded for the most ruthless code simplification without breaking anything.",
 		icon: JoinInner,
 		unit: "intersections",
+		route: "largest-intersection",
 	},
 	aliasTypeArguments: {
 		title: "Alias Type Arguments",
@@ -85,6 +91,7 @@ const awards = {
 			"Awarded for the most ruthless code simplification without breaking anything.",
 		icon: GroupAdd,
 		unit: "aliased type arguments",
+		route: "alias-type-arguments",
 	},
 	limit_instantiateType: {
 		title: "Type Instantiation Limit",
@@ -92,6 +99,7 @@ const awards = {
 		description:
 			"Awarded for the most ruthless code simplification without breaking anything.",
 		icon: Lightbulb,
+		route: "type-instantiation-limit",
 	},
 	limit_recursiveTypeRelatedTo: {
 		title: "Recursive Relations Limit",
@@ -99,6 +107,7 @@ const awards = {
 		description:
 			"Awarded for the most ruthless code simplification without breaking anything.",
 		icon: Diversity1,
+		route: "recursive-relations-limit",
 	},
 	limit_typeRelatedToDiscriminatedType: {
 		title: "Discrimination Limit",
@@ -106,6 +115,7 @@ const awards = {
 		description:
 			"Awarded for the most ruthless code simplification without breaking anything.",
 		icon: SafetyDivider,
+		route: "discrimination-limit",
 	},
 } as const;
 
@@ -118,25 +128,24 @@ export const RenderAward = ({
 	setActiveAward: (award: AwardId) => void;
 	awardId: AwardId;
 }) => {
-	const { title, icon: Icon } = awards[awardId];
-	const onClick = useCallback(
-		() => setActiveAward(awardId),
-		[awardId, setActiveAward],
-	);
+	const { title, icon: Icon, route } = awards[awardId];
+	const navigate = useNavigate();
+	const onClick = useCallback(() => {
+		setActiveAward(awardId);
+		navigate({ to: `/award-winners/${route}` });
+	}, [awardId, setActiveAward, route, navigate]);
 	const selected = activeAward === awardId;
-	const color = selected ? { color: theme.palette.primary.dark } : {};
 	return (
 		<ListItemButton
 			key={awardId}
 			selected={selected}
 			sx={{
 				borderRadius: 2,
-				...color,
 			}}
 			onClick={onClick}
 		>
 			<ListItemIcon sx={{ minWidth: 38 }}>
-				<Icon sx={{ ...color }} />
+				<Icon />
 			</ListItemIcon>
 			<ListItemText primary={title} />
 		</ListItemButton>
@@ -265,9 +274,33 @@ export const RenderPlayground = ({
 };
 
 export const AwardWinners = () => {
-	const [activeAward, setActiveAward] = useState<AwardId | null>(
-		"limit_recursiveTypeRelatedTo",
+	const params = useParams({ strict: false });
+	const awardId = params.awardId as string | undefined;
+
+	// Find the award key that matches the route
+	const getAwardIdFromRoute = useCallback(
+		(route: string | undefined): AwardId | null => {
+			if (!route) return "limit_instantiateType";
+			const entry = Object.entries(awards).find(
+				([_, award]) => award.route === route,
+			);
+			return entry ? (entry[0] as AwardId) : "limit_instantiateType";
+		},
+		[],
 	);
+
+	const [activeAward, setActiveAward] = useState<AwardId | null>(
+		getAwardIdFromRoute(awardId),
+	);
+
+	// Sync active award when URL changes
+	useEffect(() => {
+		const newAward = getAwardIdFromRoute(awardId);
+		if (newAward !== activeAward) {
+			setActiveAward(newAward);
+		}
+	}, [awardId, activeAward, getAwardIdFromRoute]);
+
 	console.log({ activeAward });
 
 	const { data: typeRegistryEntries } = trpc.getTypeRegistry.useQuery();
@@ -277,11 +310,14 @@ export const AwardWinners = () => {
 	return (
 		<Stack
 			direction="row"
+			className="asdf"
 			sx={{
 				minWidth: 500,
 				minHeight: 500,
 				alignItems: "flex-start",
 				flexGrow: 1,
+				height: "100%",
+				display: "flex",
 			}}
 		>
 			<Stack
@@ -293,7 +329,7 @@ export const AwardWinners = () => {
 				}}
 			>
 				<List
-					sx={{ width: "100%", maxWidth: 350 }}
+					sx={{ width: "100%", maxWidth: 350, height: "100%" }}
 					component="nav"
 					subheader={<ListSubheader>Performance Metrics</ListSubheader>}
 				>
@@ -607,7 +643,7 @@ export const ShowHotSpots = () => {
 	);
 
 	const noneFound = (
-		<Stack direction="row" gap={2} alignItems="flex-start">
+		<Stack direction="row" alignItems="flex-start">
 			<Callout title="No Hot Spots Found">
 				<Typography>
 					No hot spots detected. Did you run analyze-trace?
@@ -651,7 +687,7 @@ const ShowTypeLimit = <L extends LimitType>({
 		description: string;
 	};
 	title: string;
-	rpc: { useQuery: () => { data?: L[] }};
+	rpc: { useQuery: () => { data?: L[] } };
 	icon: (typeof awards)[keyof typeof awards]["icon"];
 	subtitle: (first: L) => string;
 	inlineBarGraph: (current: L, first: L) => ReactNode;

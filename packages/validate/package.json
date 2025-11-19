@@ -25,13 +25,13 @@
 		"test": "vitest"
 	},
 	"dependencies": {
-		"@types/node": "^22.15.30",
+		"@types/node": "^24.10.1",
 		"@types/stream-json": "^1.7.8",
 		"stream-chain": "^3.4.0",
 		"stream-json": "^1.9.1",
-		"tsup": "^8.5.0",
-		"typescript": "^5.8.3",
-		"vitest": "^3.2.2",
-		"zod": "^3.25.56"
+		"tsup": "^8.5.1",
+		"typescript": "^5.9.3",
+		"vitest": "^4.0.10",
+		"zod": "^4.1.12"
 	}
 }

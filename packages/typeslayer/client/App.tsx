@@ -1,76 +1,207 @@
-import { LocalFireDepartment } from "@mui/icons-material";
-import { Stack } from "@mui/material";
-import Typography from "@mui/material/Typography";
-import { AppProvider } from "@toolpad/core/AppProvider";
-import { DashboardLayout } from "@toolpad/core/DashboardLayout";
-import { useDemoRouter } from "@toolpad/core/internal";
+import { ChevronLeft, LocalFireDepartment } from "@mui/icons-material";
+import {
+	Divider,
+	List,
+	ListItemButton,
+	ListItemIcon,
+	ListItemText,
+	Stack,
+	Typography,
+} from "@mui/material";
+import Box from "@mui/material/Box";
+import Drawer from "@mui/material/Drawer";
+import IconButton from "@mui/material/IconButton";
+import { useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { Outlet, useLocation, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { NAVIGATION } from "./components/utils";
-import { AnalyzeTrace } from "./pages/analyze-trace";
-import { AwardWinners } from "./pages/award-winners";
-import { CpuProfile } from "./pages/cpu-profile";
-import { Heatmap } from "./pages/heatmap";
-import { Perfetto } from "./pages/perfetto";
-import { SearchTypes } from "./pages/search-types";
-import { SettingsPage } from "./pages/settings";
-import { SpeedScope } from "./pages/speedscope";
-import { Start } from "./pages/start";
-import { TraceJson } from "./pages/trace-json";
-import { TypeNetwork } from "./pages/type-network";
-import { TypesJson } from "./pages/types-json";
-import { theme } from "./theme";
 
-function DemoPageContent({ pathname }: { pathname: string }) {
-	switch (pathname) {
-		case "/start":
-			return <Start />;
-		case "/search-types":
-			return <SearchTypes />;
-		case "/award-winners":
-			return <AwardWinners />;
-		case "/type-network":
-			return <TypeNetwork />;
-		case "/heatmap":
-			return <Heatmap />;
-		case "/perfetto":
-			return <Perfetto />;
-		case "/speedscope":
-			return <SpeedScope />;
-		case "/analyze-trace":
-			return <AnalyzeTrace />;
-		case "/trace-json":
-			return <TraceJson />;
-		case "/types-json":
-			return <TypesJson />;
-		case "/tsc-cpuprofile":
-			return <CpuProfile />;
-		case "/settings":
-			return <SettingsPage />;
-		default:
-			return <div>Page Not Found</div>;
-	}
-}
-
-function appTitle() {
+function AppBrand({ collapsed }: { collapsed?: boolean }) {
 	return (
-		<Stack direction="row" spacing={2} alignItems="center">
+		<Stack direction="row" spacing={2} alignItems="center" sx={{ p: 2 }}>
 			<LocalFireDepartment />
-			<Typography variant="h6">TypeSlayer</Typography>
+			{!collapsed && <Typography variant="h6">TypeSlayer</Typography>}
 		</Stack>
 	);
 }
 
 export function App() {
-	const router = useDemoRouter("/type-network");
-	return (
-		<AppProvider navigation={NAVIGATION} router={router} theme={theme}>
-			<DashboardLayout
-				slots={{
-					appTitle,
+	const muiTheme = useTheme();
+	const isMdUp = useMediaQuery(muiTheme.breakpoints.up("md"));
+	const location = useLocation();
+	const navigate = useNavigate();
+
+	const drawerWidth = 220;
+	const collapsedWidth = 64;
+
+	const [open, setOpen] = useState<boolean>(isMdUp);
+	const [collapsed, setCollapsed] = useState<boolean>(false);
+
+	// keep open state in sync with screen size
+	useEffect(() => {
+		setOpen(isMdUp);
+	}, [isMdUp]);
+
+	const activePath = location.pathname;
+
+	const handleToggle = () => {
+		// on md+ allow collapsing (show icons only)
+		if (isMdUp) {
+			setCollapsed((c) => !c);
+		} else {
+			setOpen((o) => !o);
+		}
+	};
+
+	const renderNavItem = (item: (typeof NAVIGATION)[number]) => {
+		if (item.kind === "header") {
+			// hide group headers when the sidebar is collapsed (show icons only)
+			if (collapsed) {
+				return null;
+			}
+			return (
+				<Typography
+					key={item.title}
+					sx={{ px: 2, pt: 2, pb: 1 }}
+					variant="caption"
+					color="text.secondary"
+				>
+					{item.title}
+				</Typography>
+			);
+		}
+		if (item.kind === "divider") {
+			return <Divider key={Math.random()} sx={{ my: 1 }} />;
+		}
+
+		const segment = item.segment as string | undefined;
+		if (!segment) {
+			return null;
+		}
+
+		const to = segment.startsWith("/") ? segment : `/${segment}`;
+
+	// If the configured segment includes a child (e.g. "award-winners/type-instantiation-limit")
+	// treat the navigation item as active for any path under the root ("/award-winners/*").
+	const rootSegment = segment?.includes("/") ? `/${segment.split("/")[0]}` : to;
+	const selected = activePath === to || activePath.startsWith(`${to}/`) || activePath === rootSegment || activePath.startsWith(`${rootSegment}/`);
+
+		return (
+			<ListItemButton
+				key={to}
+				selected={selected}
+				onClick={() => {
+					navigate({ to });
+					if (!isMdUp) setOpen(false);
 				}}
-				sidebarExpandedWidth={220}
+				sx={{
+					borderRadius: 1,
+					mb: 0.5,
+					justifyContent: collapsed ? "center" : "flex-start",
+					px: collapsed ? 1 : 2,
+					transition: (theme) =>
+						theme.transitions.create(["background-color", "padding"], {
+							duration: 200,
+						}),
+				}}
 			>
-				<DemoPageContent pathname={router.pathname} />
-			</DashboardLayout>
-		</AppProvider>
+				<ListItemIcon
+					sx={{ minWidth: collapsed ? 0 : 38, justifyContent: "center" }}
+				>
+					{item.icon}
+				</ListItemIcon>
+				{!collapsed && <ListItemText primary={item.title} />}
+			</ListItemButton>
+		);
+	};
+
+	return (
+		<Box sx={{ display: "flex", height: "100vh" }}>
+			<Drawer
+				variant={isMdUp ? "permanent" : "temporary"}
+				open={open}
+				onClose={() => setOpen(false)}
+				ModalProps={{ keepMounted: true }}
+				PaperProps={{
+					sx: {
+						width: open ? (collapsed ? collapsedWidth : drawerWidth) : 0,
+						transition: (t) =>
+							t.transitions.create(["width"], {
+								duration: t.transitions.duration.standard,
+							}),
+						overflow: "visible",
+						// make Paper the positioning context for absolutely positioned children
+						position: "relative",
+					},
+				}}
+			>
+				<Box
+					sx={{
+						display: "flex",
+						alignItems: "center",
+						justifyContent: collapsed ? "center" : "flex-start",
+						px: 1,
+					}}
+				>
+					<AppBrand collapsed={collapsed} />
+				</Box>
+				<Divider />
+				<List
+					sx={{
+						p: 1,
+						width: open ? (collapsed ? collapsedWidth : drawerWidth) : 0,
+					}}
+				>
+					{NAVIGATION.map((item) => renderNavItem(item))}
+				</List>
+
+				{/* collapse toggle positioned relative to Drawer Paper so it can sit near the bottom */}
+				{isMdUp && (
+					<IconButton
+						onClick={handleToggle}
+						size="small"
+						aria-label="Toggle sidebar"
+						disableRipple
+						sx={{
+							position: "absolute",
+							right: -14,
+							bottom: 16,
+							zIndex: (t) => t.zIndex.drawer + 2,
+							width: 28,
+							height: 28,
+							p: 0.5,
+							minWidth: 0,
+							borderRadius: "999px",
+							boxShadow: (t) => t.shadows[2],
+							bgcolor: (t) => t.palette.background.paper,
+							border: (t) => `1px solid ${t.palette.divider}`,
+							'&:hover': {
+								bgcolor: (t) => t.palette.background.paper,
+								opacity: 1,
+							},
+						}}
+					>
+						<ChevronLeft />
+					</IconButton>
+				)}
+			</Drawer>
+
+			<Box
+				component="main"
+				sx={{
+					flexGrow: 1,
+					overflow: "auto",
+					transition: (t) =>
+						t.transitions.create(["margin", "width"], {
+							duration: t.transitions.duration.standard,
+						}),
+				}}
+			>
+				<Box sx={{ maxHeight: "100vh", height: "100%" }}>
+					<Outlet />
+				</Box>
+			</Box>
+		</Box>
 	);
 }

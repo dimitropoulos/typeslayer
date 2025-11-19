@@ -1,4 +1,3 @@
-import { Speed } from "@mui/icons-material";
 import { Button, Stack, Typography } from "@mui/material";
 import { useCallback } from "react";
 import { useStaticFile } from "../components/utils";
@@ -49,11 +48,8 @@ export const Perfetto = () => {
 		window.addEventListener("message", handleMessage);
 	}, [data]);
 	return (
-		<Stack gap={2} sx={{ m: 4, alignItems: "center" }}>
-			<Stack direction="row" gap={2} alignContent="center">
-				<Speed fontSize="large" />
-				<Typography variant="h4">Perfetto</Typography>
-			</Stack>
+		<Stack gap={2} sx={{ mx: 4 }}>
+			<h1>Perfetto</h1>
 			<Typography variant="body1">
 				perfetto.dev is a system profiling, app tracing, and trace analysis
 				tool.

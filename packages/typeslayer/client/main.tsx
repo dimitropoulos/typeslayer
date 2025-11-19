@@ -4,7 +4,7 @@ import { httpBatchLink } from "@trpc/client";
 import * as R from "ramda";
 import * as RA from "ramda-adjunct";
 import ReactDOM from "react-dom/client";
-import { App } from "./App";
+import { AppRouterProvider } from "./routes";
 import { trpc } from "./trpc";
 
 import "@fontsource/roboto/300.css";
@@ -13,6 +13,7 @@ import "@fontsource/roboto/500.css";
 import "@fontsource/roboto/700.css";
 import { ThemeProvider } from "@mui/material";
 import type { TypeRegistry } from "@typeslayer/validate";
+import { SERVER_PORT } from "./components/constants";
 import { theme } from "./theme";
 
 window.R = R;
@@ -31,7 +32,7 @@ const queryClient = new QueryClient();
 const trpcClient = trpc.createClient({
 	links: [
 		httpBatchLink({
-			url: "http://localhost:3000/trpc",
+			url: `http://localhost:${SERVER_PORT}/trpc`,
 		}),
 	],
 });
@@ -46,7 +47,7 @@ ReactDOM.createRoot(root).render(
 		<QueryClientProvider client={queryClient}>
 			<ThemeProvider theme={theme}>
 				<CssBaseline />
-				<App />
+				<AppRouterProvider />
 			</ThemeProvider>
 		</QueryClientProvider>
 	</trpc.Provider>,
