@@ -152,7 +152,7 @@ const SelectCode = ({ handleNext }: { handleNext: () => void }) => {
 		<>
 			<StepLabel>Select Code</StepLabel>
 			<StepContent>
-				<Stack spacing={4} sx={{ mt: 2, maxWidth: 700 }}>
+				<Stack spacing={4} sx={{ mt: 2 }}>
 					<Stack gap={2}>
 						<Typography>
 							The <InlineCode>package.json</InlineCode> of the package you'd
@@ -167,7 +167,6 @@ const SelectCode = ({ handleNext }: { handleNext: () => void }) => {
 									setLocalProjectRoot(e.target.value);
 								}}
 								fullWidth
-								sx={{ maxWidth: 600 }}
 							/>
 							<Button>Locate</Button>
 						</Stack>

@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { Callout } from "../components/callout";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
 import { InlineCode } from "../components/inline-code";
-import { theme } from "../theme";
 import { trpc } from "../trpc";
 
 export const SearchTypes = () => {
@@ -45,7 +44,7 @@ export const SearchTypes = () => {
 					placeholder="type id"
 					variant="outlined"
 					type="number"
-					sx={{ input: { color: theme.palette.primary.main }, width: 600 }}
+					sx={{ width: 600 }}
 					value={search}
 					onChange={(event) => {
 						const newValue = event.target.value;
@@ -63,7 +62,21 @@ export const SearchTypes = () => {
 				{typeString ? (
 					<>
 						<Divider />
-						<code style={{ whiteSpace: "pre" }}>{typeString}</code>
+						<Typography variant="h6">Raw Type Definition</Typography>
+						<code
+							style={{
+								whiteSpace: "pre",
+								background: "#050505",
+								border: "1px solid #333",
+								borderRadius: 8,
+								padding: "8px",
+								overflowY: "hidden",
+								overflowX: "scroll",
+								marginBottom: 24,
+							}}
+						>
+							{typeString}
+						</code>
 					</>
 				) : (
 					<Callout title="What is this?">

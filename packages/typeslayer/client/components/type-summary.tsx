@@ -43,9 +43,7 @@ export function TypeSummary({
 			<Typography color="secondary" sx={{ fontFamily: "monospace" }}>
 				{humanReadable}
 			</Typography>
-			<Typography color="primary" sx={{ fontFamily: "monospace" }}>
-				id:{id}
-			</Typography>
+			<Typography sx={{ fontFamily: "monospace" }}>id:{id}</Typography>
 			{showFlags
 				? flags.map((flag) => (
 						<Chip

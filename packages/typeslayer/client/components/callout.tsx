@@ -1,13 +1,15 @@
 import { Info } from "@mui/icons-material";
-import { Stack, Typography } from "@mui/material";
+import { Stack, type SxProps, Typography } from "@mui/material";
 import { theme } from "../theme";
 
 export function Callout({
 	children,
 	title,
+	sx = {},
 }: {
 	title: string;
 	children: React.ReactNode;
+	sx?: SxProps;
 }) {
 	return (
 		<Stack
@@ -17,8 +19,8 @@ export function Callout({
 				background: theme.palette.background.paper,
 				maxWidth: 600,
 				padding: 2,
-				borderRadius: 2,
-				color: theme.palette.text.disabled,
+				color: theme.palette.text.secondary,
+				...sx,
 			}}
 		>
 			<Info sx={{ fontSize: "1.5em", mt: 0.5 }} />

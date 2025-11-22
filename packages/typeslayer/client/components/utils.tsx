@@ -117,10 +117,6 @@ export type NavigationItem =
 
 export const NAVIGATION = [
 	{
-		kind: "header",
-		title: "Explore",
-	},
-	{
 		kind: "segment",
 		segment: "start/select-code",
 		title: "Start",

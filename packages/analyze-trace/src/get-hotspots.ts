@@ -194,10 +194,12 @@ async function makeHotFrame({
 
 		case "checkSourceFile": {
 			const filePath = event.args.path;
+			const normalizedPath = normalize(filePath);
 			return {
-				description: `Check file ${normalize(filePath)}`,
+				description: `Check file ${normalizedPath}`,
 				timeMs,
-				path: normalize(filePath),
+				path: normalizedPath,
+				
 				children,
 			};
 		}

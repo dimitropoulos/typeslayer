@@ -1,10 +1,12 @@
 import {
+	FiberManualRecord,
 	FindInPage,
 	KeyboardArrowDown,
 	KeyboardArrowRight,
 } from "@mui/icons-material";
 import {
 	Box,
+	Button,
 	IconButton,
 	Stack,
 	Typography,
@@ -23,6 +25,7 @@ export const DisplayRecursiveType: FC<{
 	depth?: number;
 }> = ({ id, typeRegistry, depth = 0 }) => {
 	const [expanded, setExpanded] = useState(true);
+	const [displayLimit, setDisplayLimit] = useState(500);
 
 	if (!typeRegistry) {
 		return <Box>[Missing Data]</Box>;
@@ -52,18 +55,58 @@ export const DisplayRecursiveType: FC<{
 
 	const toggleExpanded = () => setExpanded((expanded) => !expanded);
 
-	const TwiddlyGuy = expanded ? KeyboardArrowDown : KeyboardArrowRight;
+	const noChildren = (
+		[
+			"BooleanLiteral",
+			"StringLiteral",
+			"BigIntLiteral",
+			"NumberLiteral",
+			"Any",
+			"Undefined",
+			"Null",
+			"Never",
+			"Unknown",
+			"Number",
+			"String",
+			"Boolean",
+			"BigInt",
+			"ESSymbol",
+			"NonPrimitive",
+		] as const
+	).some((flag) => flags.includes(flag));
+
+	const TwiddlyGuy = noChildren
+		? FiberManualRecord
+		: expanded
+			? KeyboardArrowDown
+			: KeyboardArrowRight;
 
 	return (
 		<Stack gap={1} direction="row">
-			<TwiddlyGuy onClick={toggleExpanded} sx={{ cursor: "pointer" }} />
+			<TwiddlyGuy
+				onClick={noChildren ? undefined : toggleExpanded}
+				sx={
+					noChildren
+						? {
+								cursor: "default",
+								fontSize: "0.5rem",
+								alignSelf: "center",
+								color: theme.palette.text.secondary,
+								mx: 1,
+							}
+						: {
+								cursor: "pointer",
+								fontSize: undefined,
+							}
+				}
+			/>
 			<Stack>
 				<TypeSummary
 					showFlags
-					onClick={toggleExpanded}
+					onClick={noChildren ? undefined : toggleExpanded}
 					resolvedType={resolvedType}
 				/>
-				{expanded && (
+				{expanded && !noChildren && (
 					<Stack gap={1}>
 						{(
 							Object.entries(resolvedType) as [
@@ -217,29 +260,46 @@ export const DisplayRecursiveType: FC<{
 										);
 									}
 
-									const cutoff = 3000;
-									const itsReallyFuckingBig = value.length > cutoff;
+									const cutoff = 500;
+									const currentLimit = Math.min(displayLimit, value.length);
+									const hasMore = value.length > currentLimit;
+									const remaining = value.length - currentLimit;
 
 									const val = (
-										<Stack gap={1} key={reactKey}>
-											{value
-												.slice(0, value.length > cutoff ? cutoff : value.length)
-												.map((v, i) => (
-													<DisplayRecursiveType
-														key={`${reactKey}:${
-															// biome-ignore lint/suspicious/noArrayIndexKey: the sort order is stable and we don't have any other information to use since you can do `string | string | string`, for example.
-															i
-														}`}
-														id={v as number}
-														typeRegistry={typeRegistry}
-														depth={depth + 2}
-													/>
-												))}
-											{itsReallyFuckingBig && (
-												<Typography sx={{ px: 2, pl: 0, mb: 2 }}>
-													...and {(value.length - cutoff).toLocaleString()}{" "}
-													more...
-												</Typography>
+										<Stack gap={1} key={reactKey} sx={{ py: 1 }}>
+											{value.slice(0, currentLimit).map((v, i) => (
+												<DisplayRecursiveType
+													key={`${reactKey}:${
+														// biome-ignore lint/suspicious/noArrayIndexKey: the sort order is stable and we don't have any other information to use since you can do `string | string | string`, for example.
+														i
+													}`}
+													id={v as number}
+													typeRegistry={typeRegistry}
+													depth={depth + 2}
+												/>
+											))}
+											{hasMore && (
+												<Stack
+													direction="row"
+													gap={2}
+													alignItems="center"
+													sx={{ px: 2, pl: 0, mb: 2 }}
+												>
+													<Typography>
+														showing {currentLimit.toLocaleString()} out of{" "}
+														{value.length.toLocaleString()}
+													</Typography>
+													<Button
+														variant="outlined"
+														size="small"
+														onClick={() =>
+															setDisplayLimit((prev) => prev + cutoff)
+														}
+													>
+														Show {Math.min(cutoff, remaining).toLocaleString()}{" "}
+														more
+													</Button>
+												</Stack>
 											)}
 										</Stack>
 									);
@@ -247,11 +307,7 @@ export const DisplayRecursiveType: FC<{
 										<Stack key={reactKey}>
 											<Stack display="inline">
 												<Typography display="inline">{key}: </Typography>
-												<Typography
-													display="inline"
-													fontSize="0.8em"
-													color="textDisabled"
-												>
+												<Typography display="inline" color="textDisabled">
 													{value.length.toLocaleString()}
 												</Typography>
 											</Stack>

@@ -193,12 +193,16 @@ const event_checktypes__getVariancesWorker = z
 					z.union([
 						z.literal("[independent]"),
 						z.literal("[independent] (unreliable)"),
+						z.literal("[independent] (unmeasurable)"),
 						z.literal("[bivariant]"),
 						z.literal("[bivariant] (unreliable)"),
+						z.literal("[bivariant] (unmeasurable)"),
 						z.literal("in"),
 						z.literal("in (unreliable)"),
+						z.literal("in (unmeasurable)"),
 						z.literal("out"),
 						z.literal("out (unreliable)"),
+						z.literal("out (unmeasurable)"),
 						z.literal("in out" /*burger*/),
 						z.literal("in out (unreliable)"),
 						z.literal("in out (unmeasurable)"),
@@ -463,11 +467,38 @@ const event_emit__emitBuildInfo = z
 	.object({
 		...eventCommon,
 		...category.emit,
-		...durationEvent,
+		ph: z.union([
+			z.literal(eventPhase.begin),
+			z.literal(eventPhase.end),
+			z.literal(eventPhase.complete),
+		]),
+		dur: z.number().positive().optional(),
 		name: z.literal("emitBuildInfo"),
-		args: z.object({}),
+		args: z.union([
+			z.object({}),
+			z.object({
+				buildInfoPath: absolutePath,
+			}),
+		]),
 	})
 	.strict();
+
+const event_emit__emitDeclarationFileOrBundle = z
+	.object({
+		...eventCommon,
+		...category.emit,
+		...completeEvent,
+		name: z.literal("emitDeclarationFileOrBundle"),
+		dur: z.number(),
+		args: z.object({
+			declarationFilePath: absolutePath,
+		}),
+	})
+	.strict();
+
+/*
+ * TRACE EVENT UNION
+ */
 
 export const traceEvent = z.discriminatedUnion(
 	"name",
@@ -489,6 +520,7 @@ export const traceEvent = z.discriminatedUnion(
 		event_emit__emitJsFileOrBundle,
 		event_emit__transformNodes,
 		event_emit__emitBuildInfo,
+		event_emit__emitDeclarationFileOrBundle,
 
 		event_metadata__TracingStartedInBrowser,
 		event_metadata__process_name,

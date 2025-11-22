@@ -8,7 +8,7 @@ export const InlineCode = ({
 	secondary?: boolean;
 }) => (
 	<code
-		style={{ color: theme.palette[secondary ? "secondary" : "primary"].dark }}
+		style={{ color: theme.palette[secondary ? "secondary" : "primary"].main }}
 	>
 		{children}
 	</code>

@@ -138,8 +138,10 @@ export const appRouter = t.router({
 	analyzeTrace: t.procedure
 		.input(analyzeTraceOptions.optional())
 		.mutation(async ({ input }) => {
+			const traceDir = data.tempDir;
+			console.log("starting analyzeTrace", input, traceDir);
 			await analyzeTrace({
-				traceDir: data.tempDir,
+				traceDir,
 				options: input,
 			});
 			await refreshAnalyzeTraceFromDisk();

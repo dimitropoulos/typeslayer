@@ -1,4 +1,4 @@
-import { ChevronLeft, LocalFireDepartment } from "@mui/icons-material";
+import { ChevronLeft } from "@mui/icons-material";
 import {
 	Divider,
 	List,
@@ -15,13 +15,34 @@ import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import tsLogo from "./assets/ts.png";
+import tsNightmareLogo from "./assets/ts-nightmare.png";
+import typeslayerLogo from "./assets/typeslayer.png";
+import typeslayerNightmareLogo from "./assets/typeslayer-nightmare.png";
 import { NAVIGATION } from "./components/utils";
 
-function AppBrand({ collapsed }: { collapsed?: boolean }) {
+function AppBrand({
+	collapsed,
+	nightmare,
+}: {
+	collapsed?: boolean;
+	nightmare?: boolean;
+}) {
 	return (
 		<Stack direction="row" spacing={2} alignItems="center" sx={{ p: 2 }}>
-			<LocalFireDepartment />
-			{!collapsed && <Typography variant="h6">TypeSlayer</Typography>}
+			<img
+				src={
+					collapsed
+						? nightmare
+							? tsNightmareLogo
+							: tsLogo
+						: nightmare
+							? typeslayerNightmareLogo
+							: typeslayerLogo
+				}
+				alt="TypeSlayer Logo"
+				style={{ width: collapsed ? 34 : 180, height: 26 }}
+			/>
 		</Stack>
 	);
 }
@@ -32,7 +53,7 @@ export function App() {
 	const location = useLocation();
 	const navigate = useNavigate();
 
-	const drawerWidth = 220;
+	const drawerWidth = 224;
 	const collapsedWidth = 64;
 
 	const [open, setOpen] = useState<boolean>(isMdUp);
@@ -82,10 +103,16 @@ export function App() {
 
 		const to = segment.startsWith("/") ? segment : `/${segment}`;
 
-	// If the configured segment includes a child (e.g. "award-winners/type-instantiation-limit")
-	// treat the navigation item as active for any path under the root ("/award-winners/*").
-	const rootSegment = segment?.includes("/") ? `/${segment.split("/")[0]}` : to;
-	const selected = activePath === to || activePath.startsWith(`${to}/`) || activePath === rootSegment || activePath.startsWith(`${rootSegment}/`);
+		// If the configured segment includes a child (e.g. "award-winners/type-instantiation-limit")
+		// treat the navigation item as active for any path under the root ("/award-winners/*").
+		const rootSegment = segment?.includes("/")
+			? `/${segment.split("/")[0]}`
+			: to;
+		const selected =
+			activePath === to ||
+			activePath.startsWith(`${to}/`) ||
+			activePath === rootSegment ||
+			activePath.startsWith(`${rootSegment}/`);
 
 		return (
 			<ListItemButton
@@ -96,7 +123,6 @@ export function App() {
 					if (!isMdUp) setOpen(false);
 				}}
 				sx={{
-					borderRadius: 1,
 					mb: 0.5,
 					justifyContent: collapsed ? "center" : "flex-start",
 					px: collapsed ? 1 : 2,
@@ -123,6 +149,17 @@ export function App() {
 				open={open}
 				onClose={() => setOpen(false)}
 				ModalProps={{ keepMounted: true }}
+				sx={{
+					width: open ? (collapsed ? collapsedWidth : drawerWidth) : 0,
+					flexShrink: 0,
+					transition: (t) =>
+						t.transitions.create(["width"], {
+							duration: t.transitions.duration.standard,
+						}),
+					"& .MuiDrawer-paper": {
+						boxSizing: "border-box",
+					},
+				}}
 				PaperProps={{
 					sx: {
 						width: open ? (collapsed ? collapsedWidth : drawerWidth) : 0,
@@ -140,7 +177,7 @@ export function App() {
 					sx={{
 						display: "flex",
 						alignItems: "center",
-						justifyContent: collapsed ? "center" : "flex-start",
+						justifyContent: "center",
 						px: 1,
 					}}
 				>
@@ -176,7 +213,7 @@ export function App() {
 							boxShadow: (t) => t.shadows[2],
 							bgcolor: (t) => t.palette.background.paper,
 							border: (t) => `1px solid ${t.palette.divider}`,
-							'&:hover': {
+							"&:hover": {
 								bgcolor: (t) => t.palette.background.paper,
 								opacity: 1,
 							},
@@ -191,6 +228,7 @@ export function App() {
 				component="main"
 				sx={{
 					flexGrow: 1,
+					maxHeight: "100%",
 					overflow: "auto",
 					transition: (t) =>
 						t.transitions.create(["margin", "width"], {

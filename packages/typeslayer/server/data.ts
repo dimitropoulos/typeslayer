@@ -159,6 +159,14 @@ export const refreshTraceJson = async () => {
 			(a, b) => b.args.depth - a.args.depth,
 		);
 
+		data.typeRelatedToDiscriminatedTypeLimits.sort(
+			(a, b) => b.args.numCombinations - a.args.numCombinations,
+		);
+
+		data.typeInstantiationLimits.sort(
+			(a, b) => b.args.instantiationCount - a.args.instantiationCount,
+		);
+
 		console.log("refreshTraceJson", {
 			typeInstantiationLimits: data.typeInstantiationLimits.length,
 			recursiveTypeRelatedToLimits: data.recursiveTypeRelatedToLimits.length,

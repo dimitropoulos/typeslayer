@@ -14,3 +14,10 @@ export type Mapping<T extends string> = {
 
 export type Thing1 = Mapping<Byte>;
 export type Thing2 = Mapping<`${Byte}${Byte}`>;
+
+export type Boom<T> = T extends any[] ? Boom<T[number]> : Boom<T[]>;
+export type Explosion = Boom<number>;
+export type UseExplosion = `exploded-${Explosion}`;
+
+export type Sometime = 'later' | 'sooner';
+export type EvenLater = `even-${Sometime}`;

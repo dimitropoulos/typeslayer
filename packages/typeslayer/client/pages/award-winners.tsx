@@ -13,9 +13,11 @@ import {
 } from "@mui/icons-material";
 import {
 	Box,
+	Button,
 	Divider,
 	IconButton,
 	List,
+	ListItem,
 	ListItemButton,
 	ListItemIcon,
 	ListItemText,
@@ -31,7 +33,13 @@ import type {
 	ResolvedType,
 	TypeRegistry,
 } from "@typeslayer/validate";
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import {
+	type ReactNode,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import { Callout } from "../components/callout";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
 import { InlineCode } from "../components/inline-code";
@@ -136,14 +144,7 @@ export const RenderAward = ({
 	}, [awardId, setActiveAward, route, navigate]);
 	const selected = activeAward === awardId;
 	return (
-		<ListItemButton
-			key={awardId}
-			selected={selected}
-			sx={{
-				borderRadius: 2,
-			}}
-			onClick={onClick}
-		>
+		<ListItemButton key={awardId} selected={selected} onClick={onClick}>
 			<ListItemIcon sx={{ minWidth: 38 }}>
 				<Icon />
 			</ListItemIcon>
@@ -162,17 +163,32 @@ export const RenderPlayground = ({
 	switch (activeAward) {
 		case "typeArguments":
 			return (
-				<ArrayAward typeRegistry={typeRegistry} {...awards.typeArguments} />
+				<ArrayAward
+					key={activeAward}
+					typeRegistry={typeRegistry}
+					{...awards.typeArguments}
+				/>
 			);
 		case "unionTypes":
-			return <ArrayAward typeRegistry={typeRegistry} {...awards.unionTypes} />;
+			return (
+				<ArrayAward
+					key={activeAward}
+					typeRegistry={typeRegistry}
+					{...awards.unionTypes}
+				/>
+			);
 		case "intersectionTypes":
 			return (
-				<ArrayAward typeRegistry={typeRegistry} {...awards.intersectionTypes} />
+				<ArrayAward
+					key={activeAward}
+					typeRegistry={typeRegistry}
+					{...awards.intersectionTypes}
+				/>
 			);
 		case "aliasTypeArguments":
 			return (
 				<ArrayAward
+					key={activeAward}
 					typeRegistry={typeRegistry}
 					{...awards.aliasTypeArguments}
 				/>
@@ -323,9 +339,11 @@ export const AwardWinners = () => {
 			<Stack
 				sx={{
 					px: 1,
-					minWidth: 300,
 					minHeight: "100%",
-					backgroundColor: theme.palette.background.paper,
+					flexShrink: 0,
+					backgroundImage:
+						"radial-gradient(circle at 85% 70%, rgba(159,30,30,0.1), transparent 50%)," +
+						"radial-gradient(circle at 30% 20%, rgba(227,179,65,0.025), transparent 60%)",
 				}}
 			>
 				<List
@@ -382,10 +400,9 @@ export const AwardWinners = () => {
 
 			<Box
 				sx={{
-					p: 4,
 					flexGrow: 1,
 					maxWidth: "100%",
-					maxHeight: "100%",
+					height: "100%",
 					overflow: "auto",
 				}}
 			>
@@ -437,7 +454,7 @@ function TitleSubtitle({
 	icon: ReactNode;
 }) {
 	return (
-		<Stack sx={{ mb: 2, mr: 1 }} gap={1}>
+		<Stack gap={1}>
 			<Stack direction="row" gap={2} alignItems="center">
 				{icon}
 				<Typography variant="h4">{title}</Typography>
@@ -467,15 +484,21 @@ function ArrayAward({
 	unit: string;
 }) {
 	const [selectedIndex, setSelectedIndex] = useState(0);
+	const [displayLimit, setDisplayLimit] = useState(20);
+	const scrollContainerRef = useRef<HTMLDivElement>(null);
 
 	const handleListItemClick = (
 		_event: React.MouseEvent<HTMLDivElement, MouseEvent>,
 		index: number,
 	) => {
 		setSelectedIndex(index);
+		// Reset scroll to top when selecting a new item
+		if (scrollContainerRef.current) {
+			scrollContainerRef.current.scrollTop = 0;
+		}
 	};
 
-	// sort typeRegistryEntries by ones that have the hightest number of unionTypes
+	// sort typeRegistryEntries by ones that have the hightest number of the "thing"
 	const sorted = Array.from(typeRegistry.values())
 		.filter((resolvedType: ResolvedType) => property in resolvedType)
 		.sort((a, b) => {
@@ -486,11 +509,28 @@ function ArrayAward({
 
 	const maxValue = sorted[0]?.[property]?.length ?? 0;
 
-	const top = 100;
+	const cutoff = 50;
+	const currentLimit = Math.min(displayLimit, sorted.length);
+	const hasMore = sorted.length > currentLimit;
+	const remaining = sorted.length - currentLimit;
 
 	return (
-		<Stack direction="row" gap={2} alignItems="flex-start">
-			<Stack sx={{ minWidth: 450, maxWidth: 450, mx: 1 }}>
+		<Stack
+			sx={{
+				flexDirection: "row",
+				alignItems: "flex-start",
+				height: "100%",
+			}}
+		>
+			<Stack
+				sx={{
+					maxWidth: 450,
+					minWidth: 450,
+					p: 3,
+					overflowY: "auto",
+					maxHeight: "100%",
+				}}
+			>
 				<TitleSubtitle
 					title={title}
 					subtitle={description}
@@ -498,11 +538,8 @@ function ArrayAward({
 				/>
 
 				<Stack sx={{ my: 2 }}>
-					<Typography variant="h5" sx={{ pl: 2, mt: 2 }}>
-						Top {top}
-					</Typography>
 					<List>
-						{sorted.slice(0, top).map(({ id }, index) => {
+						{sorted.slice(0, currentLimit).map(({ id }, index) => {
 							const value = sorted[index][property]?.length ?? 0;
 							return (
 								<ListItemButton
@@ -514,7 +551,7 @@ function ArrayAward({
 									}}
 								>
 									<ListItemText>
-										<Stack sx={{ flexGrow: 1 }} gap={1}>
+										<Stack sx={{ flexGrow: 1 }} gap={0}>
 											<TypeSummary resolvedType={sorted[index]} />
 											<Stack gap={0.5}>
 												<InlineBarGraph
@@ -528,15 +565,46 @@ function ArrayAward({
 							);
 						})}
 					</List>
+					{hasMore && (
+						<Stack
+							direction="row"
+							gap={2}
+							alignItems="center"
+							sx={{ px: 2, mb: 2 }}
+						>
+							<Typography>
+								showing {currentLimit.toLocaleString()} out of{" "}
+								{sorted.length.toLocaleString()}
+							</Typography>
+							<Button
+								variant="outlined"
+								size="small"
+								onClick={() => setDisplayLimit((prev) => prev + cutoff)}
+							>
+								Show {Math.min(cutoff, remaining).toLocaleString()} more
+							</Button>
+						</Stack>
+					)}
 				</Stack>
 			</Stack>
 
-			<Divider orientation="vertical" sx={{ mx: 2 }} />
+			<Divider orientation="vertical" />
 
-			<DisplayRecursiveType
-				id={sorted[selectedIndex]?.id ?? 0}
-				typeRegistry={typeRegistry}
-			/>
+			<Box
+				sx={{
+					p: 3,
+					overflowY: "auto",
+					maxHeight: "100%",
+					width: "100%",
+					height: "100%",
+				}}
+				ref={scrollContainerRef}
+			>
+				<DisplayRecursiveType
+					id={sorted[selectedIndex]?.id ?? 0}
+					typeRegistry={typeRegistry}
+				/>
+			</Box>
 		</Stack>
 	);
 }
@@ -545,21 +613,21 @@ const DuplicatePackages = () => {
 	const { data: duplicatePackages = [] } = trpc.getDuplicatePackages.useQuery();
 	const Icon = awards.duplicatePackages.icon;
 	return (
-		<Stack>
+		<Stack sx={{ m: 3, gap: 2 }}>
 			<TitleSubtitle
 				title="Duplicate Packages"
-				subtitle="packages that are duplicated in the bundle"
+				subtitle="Packages that are duplicated in the bundle.  TypeScript doesn't keep track of where these were included from, but at least now you know they're there."
 				icon={<Icon fontSize="large" />}
 			/>
 
-			<Stack gap={3} sx={{ ml: 1 }}>
+			<Stack gap={3}>
 				{duplicatePackages.map(({ instances, name }) => (
 					<Stack key={name}>
-						<Typography variant="h6" color="primary">
+						<Typography variant="h5" color="primary">
 							{name}
 						</Typography>
 
-						<List sx={{ ml: 2 }}>
+						<List>
 							{instances.map(({ path, version }) => (
 								<ListItemButton
 									key={path}
@@ -612,7 +680,7 @@ export const ShowHotSpots = () => {
 				const relativeTime = timeMs / firstHotSpot.timeMs;
 				const fileName = path?.split("/").slice(-1)[0] ?? "<no file name>";
 				return (
-					<ListItemButton key={path} sx={{ width: "100%" }}>
+					<ListItem key={path} sx={{ width: "100%" }}>
 						<ListItemText>
 							<Typography variant="h6" justifyContent="center">
 								{fileName}
@@ -636,7 +704,7 @@ export const ShowHotSpots = () => {
 								width={`${relativeTime * 100}%`}
 							/>
 						</ListItemText>
-					</ListItemButton>
+					</ListItem>
 				);
 			})}
 		</List>
@@ -653,7 +721,7 @@ export const ShowHotSpots = () => {
 	);
 
 	return (
-		<Stack>
+		<Stack sx={{ m: 3 }}>
 			<TitleSubtitle
 				title="Hot Spots"
 				subtitle="The most expensive code paths in your application"
@@ -694,26 +762,22 @@ const ShowTypeLimit = <L extends LimitType>({
 	getKey: (current: L) => string;
 	getTypeId: (current: L) => number;
 }) => {
+	const scrollContainerRef = useRef<HTMLDivElement>(null);
 	const { data = [] } = rpc.useQuery();
 	const { data: { simplifyPaths = false } = {} } = trpc.getSettings.useQuery();
 	const { data: projectRoot } = trpc.getProjectRoot.useQuery();
-	const [selectedTypeId, setSelectedTypeId] = useState<number | null>(null);
-	const handleTypeClick = useCallback(
-		(typeId: number) => {
-			if (selectedTypeId === typeId) {
-				setSelectedTypeId(null);
-			} else {
-				setSelectedTypeId(typeId);
-			}
-		},
-		[selectedTypeId],
-	);
+	const [selectedIndex, setSelectedIndex] = useState<number>(0);
+	const handleTypeClick = useCallback((index: number) => {
+		setSelectedIndex(index);
+		// Reset scroll to top when selecting a new item
+		if (scrollContainerRef.current) {
+			scrollContainerRef.current.scrollTop = 0;
+		}
+	}, []);
 
-	const first = data[0];
-
-	if (!first) {
+	if (data.length === 0) {
 		return (
-			<Callout title={notFound.title}>
+			<Callout title={notFound.title} sx={{ m: 3 }}>
 				<Typography>{notFound.description}</Typography>
 			</Callout>
 		);
@@ -721,9 +785,25 @@ const ShowTypeLimit = <L extends LimitType>({
 
 	console.log(title, { data });
 
+	const first = data[0];
+
 	return (
-		<Stack direction="row" gap={2} alignItems="flex-start">
-			<Stack sx={{ minWidth: 450, maxWidth: 450 }}>
+		<Stack
+			sx={{
+				flexDirection: "row",
+				alignItems: "flex-start",
+				height: "100%",
+			}}
+		>
+			<Stack
+				sx={{
+					minWidth: 500,
+					maxWidth: 500,
+					p: 3,
+					overflowY: "auto",
+					maxHeight: "100%",
+				}}
+			>
 				<TitleSubtitle
 					title={title}
 					subtitle={subtitle(first)}
@@ -731,7 +811,7 @@ const ShowTypeLimit = <L extends LimitType>({
 				/>
 
 				<List>
-					{data.map((current) => {
+					{data.map((current, index) => {
 						const typeId = getTypeId(current);
 						const resolvedType = typeRegistry.get(typeId);
 						const key = getKey(current);
@@ -748,7 +828,11 @@ const ShowTypeLimit = <L extends LimitType>({
 
 						const extractedPath = extractPath(resolvedType);
 						return (
-							<ListItemButton key={key} onClick={() => handleTypeClick(typeId)}>
+							<ListItemButton
+								key={key}
+								onClick={() => handleTypeClick(index)}
+								selected={index === selectedIndex}
+							>
 								<ListItemText>
 									<TypeSummary resolvedType={resolvedType} />
 									{extractedPath ? (
@@ -768,15 +852,23 @@ const ShowTypeLimit = <L extends LimitType>({
 				</List>
 			</Stack>
 
-			{selectedTypeId === null ? null : (
-				<>
-					<Divider orientation="vertical" sx={{ mx: 2 }} />
-					<DisplayRecursiveType
-						id={selectedTypeId}
-						typeRegistry={typeRegistry}
-					/>
-				</>
-			)}
+			<Divider orientation="vertical" />
+
+			<Box
+				sx={{
+					p: 3,
+					overflowY: "auto",
+					maxHeight: "100%",
+					width: "100%",
+					height: "100%",
+				}}
+				ref={scrollContainerRef}
+			>
+				<DisplayRecursiveType
+					id={getTypeId(data[selectedIndex])}
+					typeRegistry={typeRegistry}
+				/>
+			</Box>
 		</Stack>
 	);
 };
@@ -784,14 +876,6 @@ const ShowTypeLimit = <L extends LimitType>({
 const InlineBarGraph = ({ width, label }: { width: string; label: string }) => {
 	return (
 		<Stack>
-			<Typography
-				sx={{
-					color: theme.palette.text.disabled,
-					fontSize: "0.8rem",
-				}}
-			>
-				{label}
-			</Typography>
 			<Box
 				style={{
 					width,
@@ -801,6 +885,15 @@ const InlineBarGraph = ({ width, label }: { width: string; label: string }) => {
 					marginTop: "2px",
 				}}
 			/>
+
+			<Typography
+				sx={{
+					color: theme.palette.text.secondary,
+					fontSize: "0.8rem",
+				}}
+			>
+				{label}
+			</Typography>
 		</Stack>
 	);
 };
