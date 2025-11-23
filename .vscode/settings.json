@@ -2,11 +2,18 @@
 	"cSpell.words": [
 		"bivariant",
 		"checktypes",
+		"Dimitri",
 		"Hotspots",
 		"Millis",
+		"Mitropoulos",
 		"perfetto",
 		"speedscope",
+		"tauri",
 		"toolpad",
 		"typeslayer"
-	]
+	],
+	"editor.codeActionsOnSave": {
+		"source.organizeImports.biome": "always",
+		"source.fixAll.biome": "always"
+	}
 }

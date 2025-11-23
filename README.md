@@ -24,10 +24,15 @@ Could the architecture be changed such that these things aren't possible?  Who k
 
 ## Why Isn't this just a CLI tool?
 
-- I don't like CLI tools.  I view them as a last resort, at this point in engineering history.
-- A goal of the project is show interactive visualizations like treemaps and force graphs
-- This involves displaying recursive data structures.  By definition, you can't ever finish the job of printing a recursive data structure to the console because it'd need to loop forever.
+- I don't like CLI tools.  I view them as a last resort, at this point in engineering history.  If you're someone that stays up late into the night staring at your dotfiles from neovim... I'm happy for you.  Be happy for me too?
+- A goal of the project is show intuitive/beautiful interactive visualizations like treemaps and force graphs, inherently not something a terminal can provide.
+- This involves displaying recursive data structures.  By definition, you can't ever finish the job of printing a recursive data structure to the console because it'd need to loop forever.  Sure, there are tricks, but like... why?
 
 ## TODO
 
 - allow for configuring default code editor that files open in, right now it's just vscode
+
+## Contributing
+
+1. all commits (and therefor PR titles) must be the next bar from "My Name Is" by Eminem, until further notice
+2. no further requirements.

@@ -54,6 +54,7 @@ try {
 		scriptName: data.scriptName,
 	});
 } catch (err) {
+	console.error("nope", err);
 	fastify.log.error(err);
 	process.exit(1);
 }

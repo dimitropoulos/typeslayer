@@ -199,7 +199,7 @@ async function makeHotFrame({
 				description: `Check file ${normalizedPath}`,
 				timeMs,
 				path: normalizedPath,
-				
+
 				children,
 			};
 		}

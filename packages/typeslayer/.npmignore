@@ -1,0 +1,15 @@
+node_modules
+src
+src-tauri/target
+src-tauri/Cargo.lock
+dist
+public
+*.log
+.git
+.gitignore
+vite.config.ts
+tsconfig.json
+tsconfig.node.json
+index.html
+pnpm-lock.yaml
+README.md
