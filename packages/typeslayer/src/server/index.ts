@@ -4,7 +4,7 @@ import cors from "@fastify/cors";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 import Fastify from "fastify";
 import { lookup } from "mime-types";
-import { SERVER_PORT } from "../client/components/constants";
+import { SERVER_PORT } from "../components/constants";
 import { data, refreshAllFiles } from "./data";
 import { appRouter } from "./router";
 import { attemptAutoDetectTypeCheckScript } from "./utils";
