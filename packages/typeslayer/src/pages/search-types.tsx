@@ -1,11 +1,12 @@
 import { Box, Divider, Stack, TextField, Typography } from "@mui/material";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import type { TypeRegistry } from "@typeslayer/validate";
+import { invoke } from "@tauri-apps/api/core";
+import type { ResolvedType } from "@typeslayer/validate";
 import { useEffect, useState } from "react";
 import { Callout } from "../components/callout";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
 import { InlineCode } from "../components/inline-code";
-import { trpc } from "../trpc";
 
 export const SearchTypes = () => {
 	const params = useParams({ strict: false });
@@ -23,8 +24,14 @@ export const SearchTypes = () => {
 
 	const numberSearch = Number.parseInt(search, 10);
 
-	const { data: typeRegistryEntries } = trpc.getTypeRegistry.useQuery();
-	const typeRegistry: TypeRegistry = new Map(typeRegistryEntries ?? []);
+	const { data: typesJson } = useQuery<ResolvedType[]>({
+		queryKey: ["types_json"],
+		queryFn: async () => invoke("get_types_json"),
+	});
+
+	const typeRegistry = new Map<number, ResolvedType>(
+		(typesJson ?? []).map((t) => [t.id, t]),
+	);
 
 	const typeString = JSON.stringify(typeRegistry.get(numberSearch), null, 2);
 

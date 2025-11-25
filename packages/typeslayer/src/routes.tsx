@@ -8,6 +8,7 @@ import { App } from "./App";
 import { AnalyzeTrace } from "./pages/analyze-trace";
 import { AwardWinners } from "./pages/award-winners";
 import { CpuProfile } from "./pages/cpu-profile";
+import { Integrations } from "./pages/integrations";
 import { Perfetto } from "./pages/perfetto";
 import { SearchTypes } from "./pages/search-types";
 import { SettingsPage } from "./pages/settings";
@@ -114,6 +115,12 @@ const settingsRoute = createRoute({
 	component: SettingsPage,
 });
 
+const integrationsRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: "/integrations",
+	component: Integrations,
+});
+
 // Index redirect to /type-network
 const indexRoute = createRoute({
 	getParentRoute: () => rootRoute,
@@ -145,6 +152,7 @@ const routeTree = rootRoute.addChildren([
 	typesJsonRoute,
 	cpuProfileRoute,
 	settingsRoute,
+	integrationsRoute,
 ]);
 
 // Create router instance

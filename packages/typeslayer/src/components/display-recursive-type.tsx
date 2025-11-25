@@ -19,6 +19,24 @@ import { trpc } from "../trpc";
 import { TypeSummary } from "./type-summary";
 import { friendlyPath } from "./utils";
 
+// Type guard for Location objects coming from backend serialization
+function isLocation(
+	v: unknown,
+): v is {
+		path: string;
+		start: { line: number; character: number };
+		end?: { line: number; character: number };
+	} {
+	if (!v || typeof v !== "object") return false;
+	const loc = v as Record<string, unknown>;
+	if (typeof loc.path !== "string") return false;
+	const start = loc.start as Record<string, unknown> | undefined;
+	if (!start || typeof start !== "object") return false;
+	return (
+		typeof start.line === "number" && typeof start.character === "number"
+	);
+}
+
 export const DisplayRecursiveType: FC<{
 	id: number;
 	typeRegistry: TypeRegistry;
@@ -160,7 +178,7 @@ export const DisplayRecursiveType: FC<{
 											}}
 											key={reactKey}
 										>
-											<code>{value.replaceAll("\\", "")}</code>
+												<code>{typeof value === "string" ? value.split("\\").join("") : String(value)}</code>
 										</Box>
 									);
 								}
@@ -172,13 +190,7 @@ export const DisplayRecursiveType: FC<{
 								case "destructuringPattern":
 								case "referenceLocation":
 									{
-										if (
-											typeof value === "object" &&
-											"path" in value &&
-											typeof value.path === "string" &&
-											"start" in value &&
-											typeof value.start === "object"
-										) {
+										if (isLocation(value)) {
 											return (
 												<OpenFile
 													key={reactKey}
@@ -189,10 +201,8 @@ export const DisplayRecursiveType: FC<{
 												/>
 											);
 										}
+										return null;
 									}
-									throw new Error(
-										`Expected firstDeclaration to be an object, got ${typeof value}`,
-									);
 
 								//
 								//  TypeId

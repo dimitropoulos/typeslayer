@@ -7,19 +7,25 @@ import {
 	Stack,
 	TextField,
 } from "@mui/material";
+import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Paper from "@mui/material/Paper";
+import Snackbar from "@mui/material/Snackbar";
 import Step from "@mui/material/Step";
 import StepContent from "@mui/material/StepContent";
 import StepLabel from "@mui/material/StepLabel";
 import Stepper from "@mui/material/Stepper";
 import Typography from "@mui/material/Typography";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
+import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 import type { TypeRegistry } from "@typeslayer/validate";
 import { useCallback, useEffect, useState } from "react";
 import BigAction from "../components/big-action";
 import { InlineCode } from "../components/inline-code";
+
 import { trpc } from "../trpc";
 
 const stepRoutes = ["select-code", "run-diagnostics", "take-action"] as const;
@@ -103,37 +109,66 @@ export function Start() {
 }
 
 const SelectCode = ({ handleNext }: { handleNext: () => void }) => {
-	const { data: serverProjectRoot, refetch } = trpc.getProjectRoot.useQuery();
-	const { mutateAsync: mutateProjectRoot } = trpc.setProjectRoot.useMutation({
+	const queryClient = useQueryClient();
+	const { data: serverProjectRoot } = useQuery<string>({
+		queryKey: ["getProjectRoot"],
+		queryFn: () => invoke("get_project_root"),
+	});
+
+	const { mutateAsync: setProjectRoot } = useMutation({
+		mutationFn: async (newRoot: string) => {
+			await invoke("set_project_root", { projectRoot: newRoot });
+		},
 		onSuccess: () => {
-			refetch();
+			queryClient.invalidateQueries({ queryKey: ["getProjectRoot"] });
+			queryClient.invalidateQueries({ queryKey: ["scripts"] });
+			queryClient.invalidateQueries({ queryKey: ["typecheckScriptName"] });
 		},
 	});
+
+	// we want the user to be able to type into this field
 	const [localProjectRoot, setLocalProjectRoot] = useState<string | undefined>(
 		undefined,
 	);
 
+	// TODO: debounce serverProjectRoot into localProjectRoot
 	useEffect(() => {
-		setLocalProjectRoot(serverProjectRoot);
+		if (serverProjectRoot) {
+			setLocalProjectRoot(serverProjectRoot);
+		}
 	}, [serverProjectRoot]);
 
-	const { data: potentialScripts } = trpc.getPotentialScripts.useQuery();
-	const { data: scriptName, refetch: refetchScriptName } =
-		trpc.getScriptName.useQuery();
-	const { mutateAsync: mutateScriptName } = trpc.setScriptName.useMutation();
+	// scripts from backend (package.json scripts)
+	const { data: scripts } = useQuery<Record<string, string>>({
+		queryKey: ["scripts"],
+		queryFn: async () => invoke("get_scripts"),
+	});
+
+	// typecheck script name
+	const { data: typecheckScriptName } = useQuery<string | null>({
+		queryKey: ["typecheckScriptName"],
+		queryFn: async () => invoke("get_typecheck_script_name"),
+	});
+
+	const { mutateAsync: setTypecheckScriptName } = useMutation({
+		mutationFn: async (scriptName: string) => {
+			await invoke("set_typecheck_script_name", { scriptName });
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["typecheckScriptName"] });
+		},
+	});
 
 	const onScriptChange = useCallback(
 		async (event: SelectChangeEvent<string>) => {
 			const newScriptName = event.target.value;
-			console.log("onScriptChange", newScriptName);
-			if (!Object.hasOwn(potentialScripts ?? {}, newScriptName)) {
+			if (!scripts || !(newScriptName in scripts)) {
 				alert(`Script ${newScriptName} not found in package.json scripts`);
 				return;
 			}
-			await mutateScriptName(newScriptName);
-			await refetchScriptName();
+			await setTypecheckScriptName(newScriptName);
 		},
-		[mutateScriptName, potentialScripts, refetchScriptName],
+		[scripts, setTypecheckScriptName],
 	);
 
 	const onContinue = useCallback(async () => {
@@ -141,12 +176,33 @@ const SelectCode = ({ handleNext }: { handleNext: () => void }) => {
 			alert("Please enter a path");
 			return;
 		}
-		await mutateProjectRoot({
-			projectRoot: localProjectRoot,
-			scriptName: scriptName ?? null,
-		});
+		await setProjectRoot(localProjectRoot);
 		handleNext();
-	}, [handleNext, localProjectRoot, mutateProjectRoot, scriptName]);
+	}, [handleNext, localProjectRoot, setProjectRoot]);
+
+	async function locatePackageJson() {
+		try {
+			const selected = await open({
+				multiple: false,
+				filters: [{ name: "package.json", extensions: ["json"] }],
+			});
+			if (selected && typeof selected === "string") {
+				// Accept either the file or the directory; if file, strip trailing /package.json
+				let dirPath = selected;
+				if (dirPath.endsWith("/package.json")) {
+					dirPath = dirPath.slice(0, -"/package.json".length);
+				}
+				// Ensure trailing slash; backend normalizes but keep UI consistent
+				if (!dirPath.endsWith("/")) {
+					dirPath += "/";
+				}
+				setLocalProjectRoot(dirPath);
+				await setProjectRoot(dirPath);
+			}
+		} catch (error) {
+			console.error("Failed to open file picker:", error);
+		}
+	}
 
 	return (
 		<>
@@ -168,7 +224,7 @@ const SelectCode = ({ handleNext }: { handleNext: () => void }) => {
 								}}
 								fullWidth
 							/>
-							<Button>Locate</Button>
+							<Button onClick={locatePackageJson}>Locate</Button>
 						</Stack>
 					</Stack>
 
@@ -184,29 +240,27 @@ const SelectCode = ({ handleNext }: { handleNext: () => void }) => {
 						<FormControl sx={{ mt: 1 }}>
 							<InputLabel id="type-check-script">type-check script</InputLabel>
 							<Select
-								value={scriptName ?? ""}
+								value={typecheckScriptName ?? ""}
 								onChange={onScriptChange}
 								displayEmpty
 								labelId="type-check-script"
 								label="type-check-script"
 								sx={{ maxWidth: 600 }}
 							>
-								{Object.entries(potentialScripts ?? {}).map(
-									([name, command]) => (
-										<MenuItem key={name} value={name}>
-											<Stack>
-												<Typography>{name}</Typography>
-												<Typography
-													variant="caption"
-													fontFamily="monospace"
-													color="textSecondary"
-												>
-													{command}
-												</Typography>
-											</Stack>
-										</MenuItem>
-									),
-								)}
+								{Object.entries(scripts ?? {}).map(([name, command]) => (
+									<MenuItem key={name} value={name}>
+										<Stack>
+											<Typography>{name}</Typography>
+											<Typography
+												variant="caption"
+												fontFamily="monospace"
+												color="textSecondary"
+											>
+												{command}
+											</Typography>
+										</Stack>
+									</MenuItem>
+								))}
 							</Select>
 						</FormControl>
 					</Stack>
@@ -227,22 +281,49 @@ const RunDiagnostics = ({
 	handleNext: () => void;
 	handleBack: () => void;
 }) => {
+	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const { mutateAsync: generateTrace, isPending: generateTracePending } =
-		trpc.generateTrace.useMutation();
-	const { mutateAsync: cpuProfile, isPending: cpuProfilePending } =
-		trpc.cpuProfile.useMutation();
+		useMutation({
+			mutationFn: async () => {
+				return await invoke<Array<{ id: number; [key: string]: unknown }>>(
+					"generate_trace",
+				);
+			},
+			onError: (err: unknown) => {
+				setErrorMessage(String(err));
+			},
+		});
+
+	const { mutateAsync: cpuProfile, isPending: cpuProfilePending } = useMutation(
+		{
+			mutationFn: async () => {
+				return await invoke("generate_cpu_profile");
+			},
+			onError: (err: unknown) => {
+				setErrorMessage(String(err));
+			},
+		},
+	);
 	const { mutateAsync: analyzeTrace, isPending: analyzeTracePending } =
 		trpc.analyzeTrace.useMutation();
 
 	const onGenerateTrace = useCallback(async () => {
 		const result = await generateTrace();
-		window.typeRegistry = new Map(result.typeRegistryEntries) as TypeRegistry;
+		const typeRegistryEntries: Array<[number, unknown]> = result.map((type) => [
+			type.id,
+			type,
+		]);
+		window.typeRegistry = new Map(typeRegistryEntries) as TypeRegistry;
 		console.log("result", result);
 	}, [generateTrace]);
 
 	const onCpuProfile = useCallback(async () => {
-		const result = await cpuProfile();
-		console.log("result", result);
+		try {
+			const result = await cpuProfile();
+			console.log("cpuProfile result", result);
+		} catch (_error) {
+			// error handled by mutation onError
+		}
 	}, [cpuProfile]);
 
 	const onAnalyzeTrace = useCallback(async () => {
@@ -254,7 +335,7 @@ const RunDiagnostics = ({
 		<>
 			<StepLabel>Run Diagnostics</StepLabel>
 			<StepContent>
-				<Stack gap={3}>
+				<Stack sx={{ my: 2, gap: 3 }}>
 					<BigAction
 						title="Identify Types"
 						description="This makes TypeScript generate event traces and a list of types while it type checks your codebase.  This is critical information for individually identifying every type in your codebase."
@@ -289,6 +370,21 @@ const RunDiagnostics = ({
 					<Button onClick={handleBack}>Back</Button>
 				</Stack>
 			</StepContent>
+			<Snackbar
+				open={!!errorMessage}
+				autoHideDuration={6000}
+				onClose={() => setErrorMessage(null)}
+				anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+			>
+				<Alert
+					severity="error"
+					variant="filled"
+					onClose={() => setErrorMessage(null)}
+					sx={{ width: "100%" }}
+				>
+					{errorMessage}
+				</Alert>
+			</Snackbar>
 		</>
 	);
 };

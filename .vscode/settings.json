@@ -15,5 +15,8 @@
 	"editor.codeActionsOnSave": {
 		"source.organizeImports.biome": "always",
 		"source.fixAll.biome": "always"
-	}
+	},
+	"rust-analyzer.linkedProjects": [
+		"packages/typeslayer/src-tauri/Cargo.toml"
+	]
 }
