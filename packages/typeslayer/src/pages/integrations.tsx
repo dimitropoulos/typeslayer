@@ -6,7 +6,7 @@ export const Integrations = () => {
 		const result = await invoke("validate_types_json");
 		console.log(result);
 	}
-	
+
 	return (
 		<div style={{ padding: "20px" }}>
 			<h1>Integrations</h1>

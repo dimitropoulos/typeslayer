@@ -19,9 +19,9 @@ import { createTheme } from "@mui/material";
 import doomTexturePng from "./assets/doom-texture-116.png";
 
 const doomRed = {
-	main: "#9F1E1E",
-	light: "#C02929",
-	dark: "#5E1212",
+	main: "#C02929",
+	light: "#d33030",
+	dark: "#9F1E1E",
 	contrastText: "#F8F8F8",
 };
 

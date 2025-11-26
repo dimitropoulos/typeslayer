@@ -236,7 +236,7 @@ export function App() {
 						}),
 				}}
 			>
-				<Box sx={{ maxHeight: "100vh", height: "100%" }}>
+				<Box sx={{ maxHeight: "100vh", height: "100vh", overflow: 'hidden' }}>
 					<Outlet />
 				</Box>
 			</Box>

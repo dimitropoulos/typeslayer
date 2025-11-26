@@ -1,29 +1,21 @@
-import { Button, Stack, Typography } from "@mui/material";
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useStaticFile } from "../components/utils";
 
 export const Perfetto = () => {
 	const data = useStaticFile("trace.json");
-	const launchPerfetto = useCallback(() => {
-		if (!data) {
-			console.error("No trace data available.");
+	const iframeRef = useRef<HTMLIFrameElement>(null);
+
+	const sendTraceToPerfetto = useCallback(() => {
+		if (!data || !iframeRef.current?.contentWindow) {
+			console.error("No trace data or iframe not ready.");
 			return;
 		}
 
 		const buffer = new TextEncoder().encode(data).buffer;
-		const perfettoWindow = window.open("https://ui.perfetto.dev");
+		const perfettoWindow = iframeRef.current.contentWindow;
 
-		if (!perfettoWindow) {
-			console.error("Failed to open Perfetto UI window.");
-			return;
-		}
-
+		// Wait for iframe to be ready via PING/PONG
 		const interval = setInterval(() => {
-			if (!perfettoWindow || perfettoWindow.closed) {
-				clearInterval(interval);
-				return;
-			}
-
 			perfettoWindow.postMessage("PING", "*");
 		}, 100);
 
@@ -47,17 +39,25 @@ export const Perfetto = () => {
 
 		window.addEventListener("message", handleMessage);
 	}, [data]);
-	return (
-		<Stack gap={2} sx={{ mx: 4 }}>
-			<h1>Perfetto</h1>
-			<Typography variant="body1">
-				perfetto.dev is a system profiling, app tracing, and trace analysis
-				tool.
-			</Typography>
 
-			<Button onClick={launchPerfetto} variant="contained" disabled={!data}>
-				Open Perfetto
-			</Button>
-		</Stack>
+	// Auto-load trace when data is available
+	useEffect(() => {
+		if (data && iframeRef.current) {
+			// Wait a bit for iframe to fully load
+			const timer = setTimeout(sendTraceToPerfetto, 1000);
+			return () => clearTimeout(timer);
+		}
+	}, [data, sendTraceToPerfetto]);
+	return (
+		<iframe
+			ref={iframeRef}
+			src="/perfetto-ui/index.html?hideSidebar=true"
+			style={{
+				width: "100%",
+				height: "100vh",
+				border: "none",
+			}}
+			title="Perfetto UI"
+		/>
 	);
 };

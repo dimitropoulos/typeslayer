@@ -1,28 +1,33 @@
-import { Button, Stack, Typography } from "@mui/material";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import { CPU_PROFILE_FILENAME } from "@typeslayer/validate";
-import { useCallback } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { SERVER_PORT } from "../components/constants";
 
 export const SpeedScope = () => {
-	const onClick = useCallback(() => {
-		const traceUrl = `http://localhost:${SERVER_PORT}/static/${CPU_PROFILE_FILENAME}`;
-		const speedscopeUrl = `https://www.speedscope.app/#profileURL=${encodeURIComponent(traceUrl)}`;
-		openUrl(speedscopeUrl).catch((e) => {
-			console.error("Failed to open SpeedScope window.", e);
-		});
-	}, []);
+	const iframeRef = useRef<HTMLIFrameElement | null>(null);
+
+	const profileUrl = useMemo(
+		() => `http://localhost:${SERVER_PORT}/static/${CPU_PROFILE_FILENAME}`,
+		[],
+	);
+	const embeddedUrl = useMemo(
+		() =>
+			`/speedscope-ui/index.html#profileURL=${encodeURIComponent(profileUrl)}`,
+		[profileUrl],
+	);
+
+	// Auto-load the embedded SpeedScope on mount
+	useEffect(() => {
+		if (iframeRef.current) {
+			iframeRef.current.src = embeddedUrl;
+		}
+	}, [embeddedUrl]);
 
 	return (
-		<Stack gap={2} sx={{ mx: 4 }}>
-			<h1>SpeedScope</h1>
-			<Typography variant="body1">
-				SpeedScope.app is a tool for visualizing the CPU profile for the type
-				checking run.
-			</Typography>
-			<Button variant="contained" onClick={onClick}>
-				Open SpeedScope
-			</Button>
-		</Stack>
+		<iframe
+			ref={iframeRef}
+			title="speedscope"
+			src={embeddedUrl}
+			style={{ width: "100%", height: "100%", border: "none" }}
+		/>
 	);
 };
