@@ -12,10 +12,10 @@ import {
 	Typography,
 	type TypographyVariant,
 } from "@mui/material";
+import { invoke } from "@tauri-apps/api/core";
 import type { ResolvedType, TypeRegistry } from "@typeslayer/validate";
-import { type FC, useCallback, useState } from "react";
+import { type FC, useCallback, useEffect, useState } from "react";
 import { theme } from "../theme";
-import { trpc } from "../trpc";
 import { TypeSummary } from "./type-summary";
 import { friendlyPath } from "./utils";
 
@@ -354,17 +354,34 @@ export function OpenFile({
 	title?: string;
 	pathVariant?: TypographyVariant;
 }) {
-	const { data: { simplifyPaths = false } = {} } = trpc.getSettings.useQuery();
-	const { mutateAsync: openFile } = trpc.openFile.useMutation();
-	const { data: projectRoot } = trpc.getProjectRoot.useQuery();
-
+	const [simplifyPaths, setSimplifyPaths] = useState(false);
+	const [projectRoot, setProjectRoot] = useState<string | undefined>(undefined);
 	const findInPage = useCallback(async () => {
-		await openFile({
-			path: absolutePath,
-			line,
-			character,
-		});
-	}, [openFile, absolutePath, line, character]);
+		try {
+			// Prefer opening in VS Code via backend; include line/char if present
+			const goto =
+				line !== undefined && character !== undefined
+					? `${absolutePath}:${line}:${character}`
+					: absolutePath;
+			await invoke("open_file", { path: goto });
+		} catch (e) {
+			console.error("Failed to open file via backend", e);
+		}
+	}, [absolutePath, line, character]);
+
+	// Load settings and project root
+	useEffect(() => {
+		(async () => {
+			try {
+				const s: { simplifyPaths?: boolean } = await invoke("get_settings");
+				setSimplifyPaths(!!s?.simplifyPaths);
+			} catch {}
+			try {
+				const root: string = await invoke("get_project_root");
+				setProjectRoot(root);
+			} catch {}
+		})();
+	}, []);
 
 	const lineChar =
 		line !== undefined && character !== undefined

@@ -1,100 +1,96 @@
 {
-	"name": "typeslayer",
-	"version": "0.1.0",
-	"description": "Slay your TypeScript types",
-	"private": false,
-	"type": "module",
-	"keywords": [
-		"typescript",
-		"ts",
-		"tauri",
-		"desktop",
-		"benchmarking",
-		"performance"
-	],
-	"author": "Dimitri Mitropoulos",
-	"license": "MIT",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/dimitropoulos/typeslayer.git"
-	},
-	"bugs": {
-		"url": "https://github.com/dimitropoulos/typeslayer/issues"
-	},
-	"homepage": "https://github.com/dimitropoulos/typeslayer#readme",
-	"bin": {
-		"typeslayer": "bin/typeslayer.js"
-	},
-	"files": [
-		"bin",
-		"binaries"
-	],
-	"os": [
-		"linux",
-		"darwin",
-		"win32"
-	],
-	"cpu": [
-		"x64",
-		"arm64"
-	],
-	"engines": {
-		"node": ">=24.0.0",
-		"pnpm": ">=10.0.0"
-	},
-	"packageManager": "pnpm@10.6.5",
-	"scripts": {
-		"dev": "vite",
-		"dev:node-server": "NODE_OPTIONS=--max-old-space-size=2147483648 tsx ./src/server/index.ts",
-		"build": "tsc && vite build",
-		"preview": "vite preview",
-		"tauri": "tauri"
-	},
-	"dependencies": {
-		"@tauri-apps/api": "2.9.0",
-		"@tauri-apps/plugin-dialog": "2.4.2",
-		"@tauri-apps/plugin-opener": "2.5.2",
-		"react": "19.2.0",
-		"react-dom": "19.2.0"
-	},
-	"devDependencies": {
-		"@emotion/react": "11.14.0",
-		"@emotion/styled": "11.14.1",
-		"@fastify/cors": "11.1.0",
-		"@fastify/static": "8.3.0",
-		"@fontsource/roboto": "5.2.9",
-		"@mui/icons-material": "7.3.5",
-		"@mui/material": "7.3.5",
-		"@mui/x-tree-view": "8.19.0",
-		"@tanstack/react-query": "5.90.10",
-		"@tanstack/react-router": "1.139.3",
-		"@tauri-apps/cli": "2.9.4",
-		"@trpc/client": "11.7.1",
-		"@trpc/react-query": "11.7.1",
-		"@trpc/server": "11.7.1",
-		"@types/mime-types": "3.0.1",
-		"@types/node": "24.10.1",
-		"@types/ramda": "0.31.1",
-		"@types/react": "19.2.6",
-		"@types/react-dom": "19.2.3",
-		"@typeslayer/analyze-trace": "workspace:*",
-		"@typeslayer/validate": "workspace:*",
-		"@vitejs/plugin-react": "5.1.1",
-		"concurrently": "9.2.1",
-		"fastify": "5.6.2",
-		"mime-types": "3.0.2",
-		"ramda": "0.32.0",
-		"ramda-adjunct": "5.1.0",
-		"react": "19.2.0",
-		"react-dom": "19.2.0",
-		"tsx": "4.20.6",
-		"typescript": "5.9.3",
-		"vite": "7.2.4",
-		"zod": "4.1.12"
-	},
-	"pnpm": {
-		"onlyBuiltDependencies": [
-			"esbuild"
-		]
-	}
+  "name": "typeslayer",
+  "version": "0.1.0",
+  "description": "Slay your TypeScript types",
+  "private": false,
+  "type": "module",
+  "keywords": [
+    "typescript",
+    "ts",
+    "tauri",
+    "desktop",
+    "benchmarking",
+    "performance"
+  ],
+  "author": "Dimitri Mitropoulos",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dimitropoulos/typeslayer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dimitropoulos/typeslayer/issues"
+  },
+  "homepage": "https://github.com/dimitropoulos/typeslayer#readme",
+  "bin": {
+    "typeslayer": "bin/typeslayer.js"
+  },
+  "files": [
+    "bin",
+    "binaries"
+  ],
+  "os": [
+    "linux",
+    "darwin",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "packageManager": "pnpm@10.6.5",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.9.0",
+    "@tauri-apps/plugin-dialog": "2.4.2",
+    "@tauri-apps/plugin-opener": "2.5.2",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "@emotion/react": "11.14.0",
+    "@emotion/styled": "11.14.1",
+    "@fastify/cors": "11.1.0",
+    "@fastify/static": "8.3.0",
+    "@fontsource/roboto": "5.2.9",
+    "@mui/icons-material": "7.3.5",
+    "@mui/material": "7.3.5",
+    "@mui/x-tree-view": "8.19.0",
+    "@tanstack/react-query": "5.90.10",
+    "@tanstack/react-router": "1.139.3",
+    "@tauri-apps/cli": "2.9.4",
+    "@types/mime-types": "3.0.1",
+    "@types/node": "24.10.1",
+    "@types/ramda": "0.31.1",
+    "@types/react": "19.2.6",
+    "@types/react-dom": "19.2.3",
+    "@typeslayer/analyze-trace": "workspace:*",
+    "@typeslayer/validate": "workspace:*",
+    "@vitejs/plugin-react": "5.1.1",
+    "concurrently": "9.2.1",
+    "fastify": "5.6.2",
+    "mime-types": "3.0.2",
+    "ramda": "0.32.0",
+    "ramda-adjunct": "5.1.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vite": "7.2.4",
+    "zod": "4.1.12"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
 }

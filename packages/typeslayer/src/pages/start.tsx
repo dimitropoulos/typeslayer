@@ -5,6 +5,7 @@ import {
 	Select,
 	type SelectChangeEvent,
 	Stack,
+	StepButton,
 	TextField,
 } from "@mui/material";
 import Alert from "@mui/material/Alert";
@@ -14,7 +15,6 @@ import Paper from "@mui/material/Paper";
 import Snackbar from "@mui/material/Snackbar";
 import Step from "@mui/material/Step";
 import StepContent from "@mui/material/StepContent";
-import StepLabel from "@mui/material/StepLabel";
 import Stepper from "@mui/material/Stepper";
 import Typography from "@mui/material/Typography";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -25,8 +25,6 @@ import type { TypeRegistry } from "@typeslayer/validate";
 import { useCallback, useEffect, useState } from "react";
 import BigAction from "../components/big-action";
 import { InlineCode } from "../components/inline-code";
-
-import { trpc } from "../trpc";
 
 const stepRoutes = ["select-code", "run-diagnostics", "take-action"] as const;
 type StepRoute = (typeof stepRoutes)[number];
@@ -82,16 +80,46 @@ export function Start() {
 	};
 
 	return (
-		<Box sx={{ mx: 4 }}>
+		<Box sx={{ px: 4, overflowY: "auto", maxHeight: "100%" }}>
 			<h1>Start</h1>
-			<Stepper activeStep={activeStep} orientation="vertical">
+			<Stepper nonLinear activeStep={activeStep} orientation="vertical">
 				<Step>
+					<StepButton
+						onClick={() => {
+							const index = 0;
+							setActiveStep(index);
+							const route = getRouteFromStep(index);
+							if (route) navigate({ to: `/start/${route}` });
+						}}
+					>
+						Select Code
+					</StepButton>
 					<SelectCode handleNext={handleNext} />
 				</Step>
 				<Step>
+					<StepButton
+						onClick={() => {
+							const index = 1;
+							setActiveStep(index);
+							const route = getRouteFromStep(index);
+							if (route) navigate({ to: `/start/${route}` });
+						}}
+					>
+						Run Diagnostics
+					</StepButton>
 					<RunDiagnostics handleBack={handleBack} handleNext={handleNext} />
 				</Step>
 				<Step>
+					<StepButton
+						onClick={() => {
+							const index = 2;
+							setActiveStep(index);
+							const route = getRouteFromStep(index);
+							if (route) navigate({ to: `/start/${route}` });
+						}}
+					>
+						Take Action
+					</StepButton>
 					<TakeAction handleBack={handleBack} handleNext={handleNext} />
 				</Step>
 			</Stepper>
@@ -205,72 +233,69 @@ const SelectCode = ({ handleNext }: { handleNext: () => void }) => {
 	}
 
 	return (
-		<>
-			<StepLabel>Select Code</StepLabel>
-			<StepContent>
-				<Stack spacing={4} sx={{ mt: 2 }}>
-					<Stack gap={2}>
-						<Typography>
-							The <InlineCode>package.json</InlineCode> of the package you'd
-							like to investigate.
-						</Typography>
-						<Stack direction="row" gap={2}>
-							<TextField
-								label="Path to package"
-								variant="outlined"
-								value={localProjectRoot ?? ""}
-								onChange={(e) => {
-									setLocalProjectRoot(e.target.value);
-								}}
-								fullWidth
-							/>
-							<Button onClick={locatePackageJson}>Locate</Button>
-						</Stack>
-					</Stack>
-
-					<Stack gap={1}>
-						<Typography>
-							Select the script you use to type-check your project.
-						</Typography>
-						<Typography>
-							Normally this is something as simple as{" "}
-							<InlineCode>"type-check": "tsc --noEmit"</InlineCode>.
-						</Typography>
-
-						<FormControl sx={{ mt: 1 }}>
-							<InputLabel id="type-check-script">type-check script</InputLabel>
-							<Select
-								value={typecheckScriptName ?? ""}
-								onChange={onScriptChange}
-								displayEmpty
-								labelId="type-check-script"
-								label="type-check-script"
-								sx={{ maxWidth: 600 }}
-							>
-								{Object.entries(scripts ?? {}).map(([name, command]) => (
-									<MenuItem key={name} value={name}>
-										<Stack>
-											<Typography>{name}</Typography>
-											<Typography
-												variant="caption"
-												fontFamily="monospace"
-												color="textSecondary"
-											>
-												{command}
-											</Typography>
-										</Stack>
-									</MenuItem>
-								))}
-							</Select>
-						</FormControl>
+		<StepContent>
+			<Stack spacing={4} sx={{ mt: 2 }}>
+				<Stack gap={2}>
+					<Typography>
+						The <InlineCode>package.json</InlineCode> of the package you'd like
+						to investigate.
+					</Typography>
+					<Stack direction="row" gap={2}>
+						<TextField
+							label="Path to package"
+							variant="outlined"
+							value={localProjectRoot ?? ""}
+							onChange={(e) => {
+								setLocalProjectRoot(e.target.value);
+							}}
+							fullWidth
+						/>
+						<Button onClick={locatePackageJson}>Locate</Button>
 					</Stack>
 				</Stack>
 
-				<Button variant="contained" onClick={onContinue} sx={{ mt: 4 }}>
-					Continue
-				</Button>
-			</StepContent>
-		</>
+				<Stack gap={1}>
+					<Typography>
+						Select the script you use to type-check your project.
+					</Typography>
+					<Typography>
+						Normally this is something as simple as{" "}
+						<InlineCode>"type-check": "tsc --noEmit"</InlineCode>.
+					</Typography>
+
+					<FormControl sx={{ mt: 1 }}>
+						<InputLabel id="type-check-script">type-check script</InputLabel>
+						<Select
+							value={typecheckScriptName ?? ""}
+							onChange={onScriptChange}
+							displayEmpty
+							labelId="type-check-script"
+							label="type-check-script"
+							sx={{ maxWidth: 600 }}
+						>
+							{Object.entries(scripts ?? {}).map(([name, command]) => (
+								<MenuItem key={name} value={name}>
+									<Stack>
+										<Typography>{name}</Typography>
+										<Typography
+											variant="caption"
+											fontFamily="monospace"
+											color="textSecondary"
+										>
+											{command}
+										</Typography>
+									</Stack>
+								</MenuItem>
+							))}
+						</Select>
+					</FormControl>
+				</Stack>
+			</Stack>
+
+			<Button variant="contained" onClick={onContinue} sx={{ mt: 4 }}>
+				Continue
+			</Button>
+		</StepContent>
 	);
 };
 
@@ -305,7 +330,14 @@ const RunDiagnostics = ({
 		},
 	);
 	const { mutateAsync: analyzeTrace, isPending: analyzeTracePending } =
-		trpc.analyzeTrace.useMutation();
+		useMutation({
+			mutationFn: async () => {
+				return await invoke("analyze_trace_command");
+			},
+			onError: (err: unknown) => {
+				setErrorMessage(String(err));
+			},
+		});
 
 	const onGenerateTrace = useCallback(async () => {
 		const result = await generateTrace();
@@ -333,7 +365,6 @@ const RunDiagnostics = ({
 
 	return (
 		<>
-			<StepLabel>Run Diagnostics</StepLabel>
 			<StepContent>
 				<Stack sx={{ my: 2, gap: 3 }}>
 					<BigAction
@@ -397,26 +428,23 @@ const TakeAction = ({
 	handleBack: () => void;
 }) => {
 	return (
-		<>
-			<StepLabel>Take Action</StepLabel>
-			<StepContent>
-				<Stack gap={1} maxWidth={500}>
-					<Typography variant="h5">Have Fun!</Typography>
-					<Typography>Now that you have the tools you need, dig in!</Typography>
-					<Typography>
-						This tools's goal is to help you identify what types are slowing you
-						down, but it's always a case-by-case-basis to slay those misbehaving
-						types individually.
-					</Typography>
-					<Typography>Good Luck!</Typography>
-				</Stack>
-				<Stack direction="row" sx={{ mt: 2 }}>
-					<Button variant="contained" onClick={handleNext}>
-						Continue
-					</Button>
-					<Button onClick={handleBack}>Back</Button>
-				</Stack>
-			</StepContent>
-		</>
+		<StepContent>
+			<Stack gap={1} maxWidth={500}>
+				<Typography variant="h5">Have Fun!</Typography>
+				<Typography>Now that you have the tools you need, dig in!</Typography>
+				<Typography>
+					This tools's goal is to help you identify what types are slowing you
+					down, but it's always a case-by-case-basis to slay those misbehaving
+					types individually.
+				</Typography>
+				<Typography>Good Luck!</Typography>
+			</Stack>
+			<Stack direction="row" sx={{ mt: 2 }}>
+				<Button variant="contained" onClick={handleNext}>
+					Continue
+				</Button>
+				<Button onClick={handleBack}>Back</Button>
+			</Stack>
+		</StepContent>
 	);
 };

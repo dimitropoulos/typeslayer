@@ -22,6 +22,7 @@ pub struct AppData {
     pub trace_json: Vec<crate::validate::trace_json::TraceEvent>,
     pub package_scripts: BTreeMap<String, String>,
     pub typecheck_script_name: Option<String>,
+    pub settings: Settings,
 }
 
 impl AppData {
@@ -33,6 +34,7 @@ impl AppData {
             trace_json: Vec::new(),
             package_scripts: BTreeMap::new(),
             typecheck_script_name: None,
+            settings: Settings::default(),
         };
         if app.load_package_json().is_ok() {
             app.typecheck_script_name = Self::init_typecheck_script_name(&app.package_scripts);
@@ -137,14 +139,72 @@ impl AppData {
 
     pub fn update_project_root(&mut self, new_root: String) {
         self.project_root = new_root;
+        // Remember the previously selected script name
+        let previous_selection = self.typecheck_script_name.clone();
         self.package_scripts.clear();
         self.typecheck_script_name = None;
         if self.load_package_json().is_ok() {
+            // If the user had a previous selection and it exists in the new package.json, keep it
+            if let Some(prev) = previous_selection {
+                if self.package_scripts.contains_key(&prev) {
+                    self.typecheck_script_name = Some(prev);
+                    return;
+                }
+            }
+            // Otherwise, auto-detect
             self.auto_select_script();
         }
     }
-    const COMMON_ADD_ONS: &'static str = " --incremental false --noErrorTruncation";
 
+    /// Parse environment variables from a command string
+    /// Example: NODE_OPTIONS="--max-old-space-size=12288" tsc ...
+    /// Returns: (Vec<(String, String)>, String) - env vars and cleaned command
+    fn parse_env_vars(command: &str) -> (Vec<(String, String)>, String) {
+        let mut env_vars = Vec::new();
+        let mut remaining = command;
+
+        // Match pattern: VAR_NAME="value" or VAR_NAME=value
+        loop {
+            let trimmed = remaining.trim_start();
+
+            // Try to match VAR_NAME="value with spaces" pattern
+            if let Some(eq_pos) = trimmed.find('=') {
+                let potential_var = &trimmed[..eq_pos];
+
+                // Check if it looks like an environment variable name (alphanumeric + underscore)
+                if potential_var
+                    .chars()
+                    .all(|c| c.is_alphanumeric() || c == '_')
+                {
+                    let after_eq = &trimmed[eq_pos + 1..];
+
+                    // Handle quoted values
+                    if after_eq.starts_with('"') {
+                        if let Some(close_quote) = after_eq[1..].find('"') {
+                            let value = &after_eq[1..close_quote + 1];
+                            env_vars.push((potential_var.to_string(), value.to_string()));
+                            remaining = &after_eq[close_quote + 2..];
+                            continue;
+                        }
+                    }
+                    // Handle unquoted values (up to first space)
+                    else if let Some(space_pos) = after_eq.find(' ') {
+                        let value = &after_eq[..space_pos];
+                        env_vars.push((potential_var.to_string(), value.to_string()));
+                        remaining = &after_eq[space_pos..];
+                        continue;
+                    }
+                }
+            }
+
+            // No more env vars found
+            break;
+        }
+
+        (env_vars, remaining.trim().to_string())
+    }
+
+    const COMMON_ADD_ONS: &'static str = " --incremental false --noErrorTruncation";
     fn run_typescript_with_flag(&mut self, flag: String, context: &str) -> Result<(), String> {
         let script_name = self.typecheck_script_name.as_ref().ok_or_else(|| {
             "No script selected. Please select a type-check script first.".to_string()
@@ -155,9 +215,14 @@ impl AppData {
             .ok_or_else(|| format!("Script {script_name} not found in package.json"))?;
         fs::create_dir_all(&self.temp_dir)
             .map_err(|e| format!("Failed to create temp directory: {e}"))?;
+
+        // Parse environment variables from the script command
+        // Handle patterns like: NODE_OPTIONS="--max-old-space-size=12288" tsc ...
+        let (env_vars, clean_command) = Self::parse_env_vars(script_command);
+
         let full_command = format!(
             "{script}{addons}{flag}",
-            script = script_command,
+            script = clean_command,
             addons = Self::COMMON_ADD_ONS,
             flag = flag
         );
@@ -167,10 +232,15 @@ impl AppData {
         println!("Executing command: {}", npm_command);
         println!("Working directory: {}", cwd);
 
-        let output = Command::new("sh")
-            .arg("-c")
-            .arg(&npm_command)
-            .current_dir(cwd)
+        let mut cmd = Command::new("sh");
+        cmd.arg("-c").arg(&npm_command).current_dir(cwd);
+
+        // Set parsed environment variables
+        for (key, value) in env_vars {
+            cmd.env(key, value);
+        }
+
+        let output = cmd
             .output()
             .map_err(|e| format!("Failed to execute command: {e}"))?;
 
@@ -191,10 +261,13 @@ impl AppData {
             }
             if fatal_lines.is_empty() {
                 // Treat as success with suppressed warnings
+                println!("Command completed successfully: {}", context);
             } else {
                 let joined = fatal_lines.join("\n");
                 return Err(format!("{context} failed: {joined}"));
             }
+        } else {
+            println!("Command completed successfully: {}", context);
         }
         Ok(())
     }
@@ -255,6 +328,21 @@ impl AppData {
     }
 }
 
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct Settings {
+    pub simplify_paths: bool,
+    pub prefer_editor_open: bool,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            simplify_paths: false,
+            prefer_editor_open: false,
+        }
+    }
+}
+
 #[tauri::command]
 pub fn validate_types_json(state: State<'_, Mutex<AppData>>) -> Result<TypesJsonSchema, String> {
     let mut data = state.lock().map_err(|e| e.to_string())?;
@@ -275,6 +363,73 @@ pub fn get_trace_json(
 ) -> Result<Vec<crate::validate::trace_json::TraceEvent>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     Ok(data.trace_json.clone())
+}
+
+// Helper to extract numeric args field as f64 for limit sorting
+fn extract_arg_number(event: &crate::validate::trace_json::TraceEvent, key: &str) -> f64 {
+    if let serde_json::Value::Object(map) = &event.args {
+        if let Some(serde_json::Value::Number(n)) = map.get(key) {
+            return n.as_f64().unwrap_or(0.0);
+        }
+    }
+    0.0
+}
+
+#[tauri::command]
+pub fn get_type_instantiation_limits(
+    state: State<'_, Mutex<AppData>>,
+) -> Result<Vec<crate::validate::trace_json::TraceEvent>, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    let mut events: Vec<_> = data
+        .trace_json
+        .iter()
+        .filter(|e| e.name == "instantiateType_DepthLimit")
+        .cloned()
+        .collect();
+    events.sort_by(|a, b| {
+        extract_arg_number(b, "instantiationCount")
+            .partial_cmp(&extract_arg_number(a, "instantiationCount"))
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    Ok(events)
+}
+
+#[tauri::command]
+pub fn get_recursive_type_related_to_limits(
+    state: State<'_, Mutex<AppData>>,
+) -> Result<Vec<crate::validate::trace_json::TraceEvent>, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    let mut events: Vec<_> = data
+        .trace_json
+        .iter()
+        .filter(|e| e.name == "recursiveTypeRelatedTo_DepthLimit")
+        .cloned()
+        .collect();
+    events.sort_by(|a, b| {
+        extract_arg_number(b, "depth")
+            .partial_cmp(&extract_arg_number(a, "depth"))
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    Ok(events)
+}
+
+#[tauri::command]
+pub fn get_type_related_to_discriminated_type_limits(
+    state: State<'_, Mutex<AppData>>,
+) -> Result<Vec<crate::validate::trace_json::TraceEvent>, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    let mut events: Vec<_> = data
+        .trace_json
+        .iter()
+        .filter(|e| e.name == "typeRelatedToDiscriminatedType_DepthLimit")
+        .cloned()
+        .collect();
+    events.sort_by(|a, b| {
+        extract_arg_number(b, "numCombinations")
+            .partial_cmp(&extract_arg_number(a, "numCombinations"))
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    Ok(events)
 }
 
 #[tauri::command]
@@ -334,4 +489,73 @@ pub fn generate_trace(state: State<'_, Mutex<AppData>>) -> Result<TypesJsonSchem
 pub fn generate_cpu_profile(state: State<'_, Mutex<AppData>>) -> Result<(), String> {
     let mut data = state.lock().map_err(|e| e.to_string())?;
     data.generate_cpu_profile()
+}
+
+#[tauri::command]
+pub fn analyze_trace_command(
+    state: State<'_, Mutex<AppData>>,
+    options: Option<crate::analyze_trace::AnalyzeTraceOptions>,
+) -> Result<crate::analyze_trace::AnalyzeTraceResult, String> {
+    println!("Starting analyze trace...");
+    let data = state.lock().map_err(|e| e.to_string())?;
+    let temp_dir = data.temp_dir.clone();
+    drop(data); // Release lock before doing the work
+
+    match crate::analyze_trace::analyze_trace(&temp_dir, options) {
+        Ok(result) => {
+            println!("Analyze trace completed successfully");
+            Ok(result)
+        }
+        Err(e) => {
+            eprintln!("Analyze trace failed: {}", e);
+            Err(e)
+        }
+    }
+}
+
+#[tauri::command]
+pub fn get_analyze_trace(
+    state: State<'_, Mutex<AppData>>,
+) -> Result<crate::analyze_trace::AnalyzeTraceResult, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    let path = Path::new(&data.temp_dir).join("analyze-trace.json");
+    let contents = fs::read_to_string(&path)
+        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+    let parsed: crate::analyze_trace::AnalyzeTraceResult = serde_json::from_str(&contents)
+        .map_err(|e| format!("Failed to parse {}: {}", path.display(), e))?;
+    Ok(parsed)
+}
+
+#[tauri::command]
+pub fn get_settings(state: State<'_, Mutex<AppData>>) -> Result<Settings, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    Ok(data.settings.clone())
+}
+
+#[tauri::command]
+pub fn set_settings(state: State<'_, Mutex<AppData>>, settings: Settings) -> Result<(), String> {
+    let mut data = state.lock().map_err(|e| e.to_string())?;
+    data.settings = settings;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn open_file(state: State<'_, Mutex<AppData>>, path: String) -> Result<(), String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    let prefer_editor = data.settings.prefer_editor_open;
+    drop(data);
+
+    if prefer_editor {
+        // Try VS Code first
+        let status = Command::new("code").arg("--goto").arg(&path).status();
+        match status {
+            Ok(s) if s.success() => return Ok(()),
+            _ => {
+                // Fall back to opener plugin by returning an error to be handled client-side
+            }
+        }
+    }
+
+    // If not preferring editor or VS Code failed, just succeed and let frontend opener handle it
+    Ok(())
 }

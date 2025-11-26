@@ -26,6 +26,8 @@ import {
 	Typography,
 } from "@mui/material";
 import { useNavigate, useParams } from "@tanstack/react-router";
+import { invoke } from "@tauri-apps/api/core";
+import { openPath } from "@tauri-apps/plugin-opener";
 import type {
 	EventChecktypes__InstantiateType_DepthLimit,
 	EventChecktypes__RecursiveTypeRelatedTo_DepthLimit,
@@ -46,7 +48,6 @@ import { InlineCode } from "../components/inline-code";
 import { TypeSummary } from "../components/type-summary";
 import { extractPath, friendlyPackageName } from "../components/utils";
 import { theme } from "../theme";
-import { trpc } from "../trpc";
 
 type AwardId = keyof typeof awards;
 
@@ -212,7 +213,11 @@ export const RenderPlayground = ({
 						`The most complex types that were limited by the type system.\nThe current limit is set to ${first.args.instantiationCount.toLocaleString()}, and every type shown below hit that limit.`
 					}
 					typeRegistry={typeRegistry}
-					rpc={trpc.getTypeInstantiationLimits}
+					fetch={async () => {
+						return (await invoke(
+							"get_type_instantiation_limits",
+						)) as EventChecktypes__InstantiateType_DepthLimit[];
+					}}
 					icon={awards.limit_instantiateType.icon}
 					inlineBarGraph={(current, first) => (
 						<InlineBarGraph
@@ -240,7 +245,11 @@ export const RenderPlayground = ({
 						`The most complex types that were limited by the type system.\nThe current limit is set to ${first.args.targetDepth.toLocaleString()}, and every type shown below hit that limit.`
 					}
 					typeRegistry={typeRegistry}
-					rpc={trpc.getRecursiveTypeRelatedToLimits}
+					fetch={async () => {
+						return (await invoke(
+							"get_recursive_type_related_to_limits",
+						)) as EventChecktypes__RecursiveTypeRelatedTo_DepthLimit[];
+					}}
 					icon={awards.limit_recursiveTypeRelatedTo.icon}
 					inlineBarGraph={(current, first) => (
 						<InlineBarGraph
@@ -269,7 +278,11 @@ export const RenderPlayground = ({
 						`The most complex types that were limited by the type system.\nThe current limit is set to ${first.args.numCombinations.toLocaleString()}, and every type shown below hit that limit.`
 					}
 					typeRegistry={typeRegistry}
-					rpc={trpc.getTypeRelatedToDiscriminatedTypeLimits}
+					fetch={async () => {
+						return (await invoke(
+							"get_type_related_to_discriminated_type_limits",
+						)) as EventChecktypes__TypeRelatedToDiscriminatedType_DepthLimit[];
+					}}
 					icon={awards.limit_typeRelatedToDiscriminatedType.icon}
 					inlineBarGraph={(current, first) => (
 						<InlineBarGraph
@@ -319,8 +332,24 @@ export const AwardWinners = () => {
 
 	console.log({ activeAward });
 
-	const { data: typeRegistryEntries } = trpc.getTypeRegistry.useQuery();
-	const typeRegistry: TypeRegistry = new Map(typeRegistryEntries ?? []);
+	const [typeRegistry, setTypeRegistry] = useState<TypeRegistry>(new Map());
+	useEffect(() => {
+		let mounted = true;
+		(async () => {
+			try {
+				const types: ResolvedType[] = await invoke("get_types_json");
+				const entries = types.map((t) => [t.id, t]) as [number, ResolvedType][];
+				if (mounted) setTypeRegistry(new Map(entries));
+				(window as unknown as { typeRegistry: TypeRegistry }).typeRegistry =
+					new Map(entries);
+			} catch (e) {
+				console.error("Failed to load types registry", e);
+			}
+		})();
+		return () => {
+			mounted = false;
+		};
+	}, []);
 	window.typeRegistry = typeRegistry;
 
 	return (
@@ -610,7 +639,24 @@ function ArrayAward({
 }
 
 const DuplicatePackages = () => {
-	const { data: duplicatePackages = [] } = trpc.getDuplicatePackages.useQuery();
+	const [duplicatePackages, setDuplicatePackages] = useState<
+		{ name: string; instances: { path: string; version: string }[] }[]
+	>([]);
+	useEffect(() => {
+		(async () => {
+			try {
+				const result: {
+					duplicatePackages: {
+						name: string;
+						instances: { path: string; version: string }[];
+					}[];
+				} = await invoke("get_analyze_trace");
+				setDuplicatePackages(result.duplicatePackages ?? []);
+			} catch (e) {
+				console.error("Failed to load duplicate packages", e);
+			}
+		})();
+	}, []);
 	const Icon = awards.duplicatePackages.icon;
 	return (
 		<Stack sx={{ m: 3, gap: 2 }}>
@@ -652,23 +698,44 @@ const DuplicatePackages = () => {
 };
 
 export const ShowHotSpots = () => {
-	const { data: hotSpots = [] } = trpc.getHotSpots.useQuery();
-	const { mutateAsync: openFile } = trpc.openFile.useMutation();
-	const { data: { simplifyPaths = false } = {} } = trpc.getSettings.useQuery();
-	const { data: projectRoot } = trpc.getProjectRoot.useQuery();
-
-	const findInPage = useCallback(
-		async (path: string | undefined) => {
-			if (!path) {
-				throw new Error("Path is required to open file");
+	const [hotSpots, setHotSpots] = useState<
+		Array<{ path?: string; timeMs: number }>
+	>([]);
+	const [simplifyPaths, setSimplifyPaths] = useState(false);
+	const [projectRoot, setProjectRoot] = useState<string | undefined>(undefined);
+	useEffect(() => {
+		(async () => {
+			try {
+				const result: { hotSpots: Array<{ path?: string; timeMs: number }> } =
+					await invoke("get_analyze_trace");
+				setHotSpots(result.hotSpots ?? []);
+			} catch (e) {
+				console.error("Failed to load hot spots", e);
 			}
+			try {
+				const root: string = await invoke("get_project_root");
+				setProjectRoot(root);
+			} catch (e) {
+				console.error("Failed to load project root", e);
+			}
+			try {
+				const settings: { simplifyPaths?: boolean } =
+					await invoke("get_settings");
+				setSimplifyPaths(!!settings?.simplifyPaths);
+			} catch {
+				// settings may not exist yet; default false
+			}
+		})();
+	}, []);
 
-			await openFile({
-				path,
-			});
-		},
-		[openFile],
-	);
+	const findInPage = useCallback(async (path: string | undefined) => {
+		if (!path) return;
+		try {
+			await openPath(path);
+		} catch (e) {
+			console.error("Failed to open file", e);
+		}
+	}, []);
 	console.log("hotSpots", { hotSpots });
 
 	const firstHotSpot = hotSpots[0];
@@ -742,7 +809,7 @@ const ShowTypeLimit = <L extends LimitType>({
 	typeRegistry,
 	notFound,
 	title,
-	rpc,
+	fetch,
 	icon: Icon,
 	subtitle,
 	inlineBarGraph,
@@ -755,7 +822,7 @@ const ShowTypeLimit = <L extends LimitType>({
 		description: string;
 	};
 	title: string;
-	rpc: { useQuery: () => { data?: L[] } };
+	fetch: () => Promise<L[]>;
 	icon: (typeof awards)[keyof typeof awards]["icon"];
 	subtitle: (first: L) => string;
 	inlineBarGraph: (current: L, first: L) => ReactNode;
@@ -763,13 +830,30 @@ const ShowTypeLimit = <L extends LimitType>({
 	getTypeId: (current: L) => number;
 }) => {
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
-	const { data = [] } = rpc.useQuery();
-	const { data: { simplifyPaths = false } = {} } = trpc.getSettings.useQuery();
-	const { data: projectRoot } = trpc.getProjectRoot.useQuery();
+	const [data, setData] = useState<L[]>([]);
+	const [simplifyPaths] = useState(false);
+	const [projectRoot, setProjectRoot] = useState<string | undefined>(undefined);
 	const [selectedIndex, setSelectedIndex] = useState<number>(0);
+
+	useEffect(() => {
+		(async () => {
+			try {
+				const root: string = await invoke("get_project_root");
+				setProjectRoot(root);
+			} catch (e) {
+				console.error("Failed to load project root", e);
+			}
+			try {
+				const res = await fetch();
+				setData(res ?? []);
+			} catch (e) {
+				console.error("Failed to load type limits", e);
+			}
+		})();
+	}, [fetch]);
+
 	const handleTypeClick = useCallback((index: number) => {
 		setSelectedIndex(index);
-		// Reset scroll to top when selecting a new item
 		if (scrollContainerRef.current) {
 			scrollContainerRef.current.scrollTop = 0;
 		}
