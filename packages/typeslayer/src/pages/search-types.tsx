@@ -36,7 +36,7 @@ export const SearchTypes = () => {
 	const typeString = JSON.stringify(typeRegistry.get(numberSearch), null, 2);
 
 	return (
-		<Box sx={{ mx: 4 }}>
+		<Box sx={{ px: 4, overflowY: "auto", height: "100%" }}>
 			<Stack direction="row" gap={5} alignItems="center">
 				<Stack direction="row" alignItems="baseline" gap={1}>
 					<h1>Search</h1>
@@ -75,7 +75,6 @@ export const SearchTypes = () => {
 								whiteSpace: "pre",
 								background: "#050505",
 								border: "1px solid #333",
-								borderRadius: 8,
 								padding: "8px",
 								overflowY: "hidden",
 								overflowX: "scroll",

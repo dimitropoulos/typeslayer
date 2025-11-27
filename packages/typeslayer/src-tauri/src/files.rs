@@ -6,7 +6,7 @@ use crate::app_data::AppData;
 pub const TEMP_DIR_NAME: &'static str = "typeslayer";
 
 #[tauri::command]
-pub fn get_current_dir() -> Result<String, String> {
+pub async fn get_current_dir() -> Result<String, String> {
     if let Ok(user_cwd) = std::env::var("USER_CWD") {
         return Ok(user_cwd);
     }
@@ -17,7 +17,7 @@ pub fn get_current_dir() -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn get_project_root(state: State<'_, Mutex<AppData>>) -> Result<String, String> {
+pub async fn get_project_root(state: State<'_, Mutex<AppData>>) -> Result<String, String> {
     state
         .lock()
         .map(|data| data.project_root.clone())
@@ -25,7 +25,7 @@ pub fn get_project_root(state: State<'_, Mutex<AppData>>) -> Result<String, Stri
 }
 
 #[tauri::command]
-pub fn get_temp_dir(state: State<'_, Mutex<AppData>>) -> Result<String, String> {
+pub async fn get_temp_dir(state: State<'_, Mutex<AppData>>) -> Result<String, String> {
     state
         .lock()
         .map(|data| data.temp_dir.clone())
@@ -33,7 +33,7 @@ pub fn get_temp_dir(state: State<'_, Mutex<AppData>>) -> Result<String, String> 
 }
 
 #[tauri::command]
-pub fn set_project_root(
+pub async fn set_project_root(
     state: State<'_, Mutex<AppData>>,
     project_root: String,
 ) -> Result<(), String> {
@@ -44,7 +44,10 @@ pub fn set_project_root(
 }
 
 #[tauri::command]
-pub fn set_temp_dir(state: State<'_, Mutex<AppData>>, temp_dir: String) -> Result<(), String> {
+pub async fn set_temp_dir(
+    state: State<'_, Mutex<AppData>>,
+    temp_dir: String,
+) -> Result<(), String> {
     state
         .lock()
         .map(|mut data| {

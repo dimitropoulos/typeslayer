@@ -1,6 +1,11 @@
 import {
+	FormControl,
 	FormControlLabel,
 	FormGroup,
+	InputLabel,
+	MenuItem,
+	Select,
+	type SelectChangeEvent,
 	Stack,
 	Switch,
 	Typography,
@@ -13,6 +18,10 @@ export const SettingsPage = () => {
 	const [simplifyPaths, setSimplifyPaths] = useState(false);
 	const [preferEditorOpen, setPreferEditorOpen] = useState(false);
 	const [projectRoot, setProjectRoot] = useState<string>("");
+	const [availableEditors, setAvailableEditors] = useState<
+		Array<[string, string]>
+	>([]);
+	const [preferredEditor, setPreferredEditor] = useState<string>("");
 
 	useEffect(() => {
 		(async () => {
@@ -25,6 +34,16 @@ export const SettingsPage = () => {
 			try {
 				const root: string = await invoke("get_project_root");
 				setProjectRoot(root);
+			} catch {}
+			try {
+				const editors: Array<[string, string]> = await invoke(
+					"get_available_editors",
+				);
+				setAvailableEditors(editors);
+			} catch {}
+			try {
+				const preferred: string | null = await invoke("get_preferred_editor");
+				setPreferredEditor(preferred ?? "");
 			} catch {}
 		})();
 	}, []);
@@ -61,8 +80,18 @@ export const SettingsPage = () => {
 		await updateSettings({ preferEditorOpen: checked });
 	};
 
+	const handleEditorChange = async (event: SelectChangeEvent<string>) => {
+		const newEditor = event.target.value;
+		setPreferredEditor(newEditor);
+		try {
+			await invoke("set_preferred_editor", { editor: newEditor });
+		} catch (e) {
+			console.error("Failed to set preferred editor", e);
+		}
+	};
+
 	return (
-		<Stack sx={{ m: 4, maxWidth: 500 }} gap={3}>
+		<Stack sx={{ p: 4, overflow: "auto", gap: 3 }}>
 			<Typography variant="h5" component="h1">
 				Settings
 			</Typography>
@@ -83,15 +112,46 @@ export const SettingsPage = () => {
 					<InlineCode>{projectRoot}/src/index.ts</InlineCode>, it will be
 					displayed as <InlineCode>src/index.ts</InlineCode>.
 				</Typography>
+			</FormGroup>
+			<FormGroup>
 				<FormControlLabel
-					label="Open in Editor (VS Code)"
+					label="Open in Editor"
 					control={
 						<Switch checked={preferEditorOpen} onChange={handlePreferEditor} />
 					}
 				/>
 				<Typography variant="body2" color="textSecondary">
-					When enabled, file open actions try VS Code first.
+					When enabled, file open actions try your preferred editor.
 				</Typography>
+
+				{preferEditorOpen && availableEditors.length > 0 && (
+					<FormControl sx={{ mt: 2 }}>
+						<InputLabel id="editor-preference-label">
+							Preferred Editor
+						</InputLabel>
+						<Select
+							value={preferredEditor}
+							onChange={handleEditorChange}
+							labelId="editor-preference-label"
+							label="Preferred Editor"
+						>
+							{availableEditors.map(([command, label]) => (
+								<MenuItem key={command} value={command}>
+									<Stack>
+										<Typography>{label}</Typography>
+										<Typography
+											variant="caption"
+											fontFamily="monospace"
+											color="textSecondary"
+										>
+											{command}
+										</Typography>
+									</Stack>
+								</MenuItem>
+							))}
+						</Select>
+					</FormControl>
+				)}
 			</FormGroup>
 		</Stack>
 	);

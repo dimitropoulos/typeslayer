@@ -10,18 +10,13 @@ import {
 	Settings,
 	Speed,
 } from "@mui/icons-material";
-import { ANALYZE_TRACE_FILENAME } from "@typeslayer/analyze-trace/src/constants";
 import type { AbsolutePath } from "@typeslayer/analyze-trace/src/utils";
 import {
-	CPU_PROFILE_FILENAME,
 	extractPackageName,
 	type ResolvedType,
 	relativizePath,
-	TRACE_JSON_FILENAME,
-	TYPES_JSON_FILENAME,
 } from "@typeslayer/validate";
 import { type JSX, useEffect, useState } from "react";
-import { SERVER_PORT } from "./constants";
 
 export const friendlyPath = (
 	absolutePath: string | undefined,
@@ -77,9 +72,7 @@ export const useStaticFile = (fileName: string) => {
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
-				const response = await fetch(
-					`http://localhost:${SERVER_PORT}/static/${fileName}`,
-				);
+				const response = await fetch(`/static/${fileName}`);
 				if (!response.ok) {
 					throw new Error("Network response was not ok");
 				}
@@ -87,10 +80,11 @@ export const useStaticFile = (fileName: string) => {
 				setData(text);
 			} catch (error) {
 				console.error("Error fetching data:", error);
+				setData(null);
 			}
 		};
 		fetchData();
-	});
+	}, [fileName]);
 	return data;
 };
 
@@ -159,34 +153,9 @@ export const NAVIGATION = [
 		icon: <Biotech />,
 	},
 	{
-		kind: "divider",
-	},
-	{
-		kind: "header",
+		kind: "segment",
+		segment: "raw-data/types-json",
 		title: "Raw Data",
-	},
-	{
-		kind: "segment",
-		segment: "analyze-trace",
-		title: ANALYZE_TRACE_FILENAME,
-		icon: <Description />,
-	},
-	{
-		kind: "segment",
-		segment: "trace-json",
-		title: TRACE_JSON_FILENAME,
-		icon: <Description />,
-	},
-	{
-		kind: "segment",
-		segment: "types-json",
-		title: TYPES_JSON_FILENAME,
-		icon: <Description />,
-	},
-	{
-		kind: "segment",
-		segment: "tsc-cpuprofile",
-		title: CPU_PROFILE_FILENAME,
 		icon: <Description />,
 	},
 	{

@@ -427,6 +427,8 @@ export const AwardWinners = () => {
 				</List>
 			</Stack>
 
+			<Divider orientation="vertical" />
+
 			<Box
 				sx={{
 					flexGrow: 1,

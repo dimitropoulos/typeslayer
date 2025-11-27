@@ -1,11 +1,15 @@
 use crate::{
+    analyze_trace::constants::ANALYZE_TRACE_FILENAME,
     cli::{resolve_path, resolve_string},
     files::TEMP_DIR_NAME,
-    validate::trace_json::{TRACE_JSON_FILENAME, read_trace_json},
-    validate::types_json::{
-        TYPES_JSON_FILENAME, TypesJsonSchema, validate_types_json as validate_types_json_inner,
+    validate::{
+        trace_json::{TRACE_JSON_FILENAME, parse_trace_json, read_trace_json},
+        types_json::{
+            TYPES_JSON_FILENAME, TypesJsonSchema, parse_types_json,
+            validate_types_json as load_types_json,
+        },
+        utils::CPU_PROFILE_FILENAME,
     },
-    validate::utils::CPU_PROFILE_FILENAME,
 };
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -20,6 +24,8 @@ pub struct AppData {
     pub temp_dir: String,
     pub types_json: TypesJsonSchema,
     pub trace_json: Vec<crate::validate::trace_json::TraceEvent>,
+    pub analyze_trace: Option<crate::analyze_trace::AnalyzeTraceResult>,
+    pub cpu_profile: Option<String>,
     pub package_scripts: BTreeMap<String, String>,
     pub typecheck_script_name: Option<String>,
     pub settings: Settings,
@@ -27,11 +33,20 @@ pub struct AppData {
 
 impl AppData {
     pub fn new() -> Self {
+        let project_root = Self::init_project_root();
+        let temp_dir = Self::init_temp_dir();
+        let types_json = Self::init_types_json(&temp_dir, &project_root);
+        let trace_json = Self::init_trace_json(&temp_dir, &project_root);
+        let analyze_trace = Self::init_analyze_trace(&temp_dir);
+        let cpu_profile = Self::init_cpu_profile(&temp_dir);
+
         let mut app = Self {
-            project_root: Self::init_project_root(),
-            temp_dir: Self::init_temp_dir(),
-            types_json: Vec::new(),
-            trace_json: Vec::new(),
+            project_root,
+            temp_dir,
+            types_json,
+            trace_json,
+            analyze_trace,
+            cpu_profile,
             package_scripts: BTreeMap::new(),
             typecheck_script_name: None,
             settings: Settings::default(),
@@ -39,7 +54,6 @@ impl AppData {
         if app.load_package_json().is_ok() {
             app.typecheck_script_name = Self::init_typecheck_script_name(&app.package_scripts);
         }
-        app.ingest_existing_outputs();
         app
     }
 
@@ -89,23 +103,6 @@ impl AppData {
             }
         }
         None
-    }
-
-    pub fn validate_types_json(&mut self) -> Result<TypesJsonSchema, String> {
-        let path = format!("{}{}", self.temp_dir, TYPES_JSON_FILENAME);
-        let result = validate_types_json_inner(path)?;
-        // store the parsed vector on the struct before returning
-        self.types_json = result.clone();
-        Ok(result)
-    }
-
-    pub fn validate_trace_json(
-        &mut self,
-    ) -> Result<Vec<crate::validate::trace_json::TraceEvent>, String> {
-        let path = format!("{}{}", self.temp_dir, TRACE_JSON_FILENAME);
-        let result = read_trace_json(&path)?;
-        self.trace_json = result.clone();
-        Ok(result)
     }
 
     fn load_package_json(&mut self) -> Result<(), String> {
@@ -205,20 +202,20 @@ impl AppData {
     }
 
     const COMMON_ADD_ONS: &'static str = " --incremental false --noErrorTruncation";
-    fn run_typescript_with_flag(&mut self, flag: String, context: &str) -> Result<(), String> {
-        let script_name = self.typecheck_script_name.as_ref().ok_or_else(|| {
-            "No script selected. Please select a type-check script first.".to_string()
-        })?;
-        let script_command = self
-            .package_scripts
-            .get(script_name)
-            .ok_or_else(|| format!("Script {script_name} not found in package.json"))?;
-        fs::create_dir_all(&self.temp_dir)
+
+    // Blocking helper that does not borrow self; suitable for spawn_blocking
+    fn run_typescript_with_flag_blocking(
+        project_root: String,
+        script_command: String,
+        temp_dir: String,
+        flag: String,
+        context: &str,
+    ) -> Result<(), String> {
+        fs::create_dir_all(&temp_dir)
             .map_err(|e| format!("Failed to create temp directory: {e}"))?;
 
         // Parse environment variables from the script command
-        // Handle patterns like: NODE_OPTIONS="--max-old-space-size=12288" tsc ...
-        let (env_vars, clean_command) = Self::parse_env_vars(script_command);
+        let (env_vars, clean_command) = Self::parse_env_vars(&script_command);
 
         let full_command = format!(
             "{script}{addons}{flag}",
@@ -227,13 +224,13 @@ impl AppData {
             flag = flag
         );
         let npm_command = format!("npm exec -- {full_command}");
-        let cwd = self.project_root.trim_end_matches('/');
+        let cwd = project_root.trim_end_matches('/').to_string();
 
         println!("Executing command: {}", npm_command);
         println!("Working directory: {}", cwd);
 
         let mut cmd = Command::new("sh");
-        cmd.arg("-c").arg(&npm_command).current_dir(cwd);
+        cmd.arg("-c").arg(&npm_command).current_dir(&cwd);
 
         // Set parsed environment variables
         for (key, value) in env_vars {
@@ -256,13 +253,10 @@ impl AppData {
                 let lower = trimmed.to_ascii_lowercase();
                 let is_non_fatal = lower.starts_with("npm warn");
                 if !is_non_fatal {
-                    fatal_lines.push(trimmed);
+                    fatal_lines.push(trimmed.to_string());
                 }
             }
-            if fatal_lines.is_empty() {
-                // Treat as success with suppressed warnings
-                println!("Command completed successfully: {}", context);
-            } else {
+            if !fatal_lines.is_empty() {
                 let joined = fatal_lines.join("\n");
                 return Err(format!("{context} failed: {joined}"));
             }
@@ -272,59 +266,103 @@ impl AppData {
         Ok(())
     }
 
-    pub fn generate_trace(&mut self) -> Result<(), String> {
-        let flag = format!(" --generateTrace {}", self.temp_dir);
-        self.run_typescript_with_flag(flag, "TypeScript compilation with trace generation")?;
-        // Validate types.json first
-        self.validate_types_json()
-            .map_err(|e| format!("types.json validation failed: {e}"))?;
-        // Then validate trace.json
-        self.validate_trace_json()
-            .map_err(|e| format!("trace.json validation failed: {e}"))?;
-        Ok(())
+    // Async helper to validate outputs in temp_dir and return parsed results
+    async fn validate_types_and_trace_async(
+        temp_dir: &str,
+    ) -> Result<
+        (
+            TypesJsonSchema,
+            Vec<crate::validate::trace_json::TraceEvent>,
+        ),
+        String,
+    > {
+        let types_path = format!("{}{}", temp_dir, TYPES_JSON_FILENAME);
+        let trace_path = format!("{}{}", temp_dir, TRACE_JSON_FILENAME);
+
+        // Read/parse concurrently
+        let (types_res, trace_res) =
+            tokio::join!(load_types_json(types_path), read_trace_json(&trace_path));
+
+        let types = types_res.map_err(|e| format!("types.json validation failed: {e}"))?;
+        let trace = trace_res.map_err(|e| format!("trace.json validation failed: {e}"))?;
+
+        Ok((types, trace))
     }
 
-    pub fn generate_cpu_profile(&mut self) -> Result<(), String> {
-        let flag = format!(
-            " --generateCpuProfile {}/{}",
-            self.temp_dir, CPU_PROFILE_FILENAME
-        );
-        self.run_typescript_with_flag(flag, "TypeScript CPU profile run")
-    }
-
-    fn ingest_existing_outputs(&mut self) {
-        // Attempt to ingest existing types.json from temp_dir then project_root
+    fn init_types_json(temp_dir: &str, project_root: &str) -> TypesJsonSchema {
         let type_paths = [
-            format!("{}{}", self.temp_dir, TYPES_JSON_FILENAME),
-            format!("{}{}", self.project_root, TYPES_JSON_FILENAME),
+            format!("{}{}", temp_dir, TYPES_JSON_FILENAME),
+            format!("{}{}", project_root, TYPES_JSON_FILENAME),
         ];
         for p in type_paths.iter() {
             if Path::new(p).exists() {
-                match validate_types_json_inner(p.clone()) {
-                    Ok(parsed) => {
-                        self.types_json = parsed;
-                        break;
-                    }
+                match std::fs::read_to_string(p)
+                    .map_err(|e| e.to_string())
+                    .and_then(|s| parse_types_json(p, &s))
+                {
+                    Ok(parsed) => return parsed,
                     Err(e) => println!("Startup types.json ingestion failed at {p}: {e}"),
                 }
             }
         }
-        // Attempt to ingest existing trace.json similarly
+        Vec::new()
+    }
+
+    fn init_trace_json(
+        temp_dir: &str,
+        project_root: &str,
+    ) -> Vec<crate::validate::trace_json::TraceEvent> {
         let trace_paths = [
-            format!("{}{}", self.temp_dir, TRACE_JSON_FILENAME),
-            format!("{}{}", self.project_root, TRACE_JSON_FILENAME),
+            format!("{}{}", temp_dir, TRACE_JSON_FILENAME),
+            format!("{}{}", project_root, TRACE_JSON_FILENAME),
         ];
         for p in trace_paths.iter() {
             if Path::new(p).exists() {
-                match read_trace_json(p) {
-                    Ok(parsed) => {
-                        self.trace_json = parsed;
-                        break;
-                    }
+                match std::fs::read_to_string(p)
+                    .map_err(|e| e.to_string())
+                    .and_then(|s| parse_trace_json(p, &s))
+                {
+                    Ok(parsed) => return parsed,
                     Err(e) => println!("Startup trace.json ingestion failed at {p}: {e}"),
                 }
             }
         }
+        Vec::new()
+    }
+
+    fn init_analyze_trace(temp_dir: &str) -> Option<crate::analyze_trace::AnalyzeTraceResult> {
+        let analyze_path = Path::new(temp_dir).join(ANALYZE_TRACE_FILENAME);
+        if analyze_path.exists() {
+            match std::fs::read_to_string(&analyze_path)
+                .map_err(|e| e.to_string())
+                .and_then(|s| {
+                    serde_json::from_str::<crate::analyze_trace::AnalyzeTraceResult>(&s)
+                        .map_err(|e| e.to_string())
+                }) {
+                Ok(parsed) => return Some(parsed),
+                Err(e) => println!(
+                    "Startup analyze-trace ingestion failed at {}: {}",
+                    analyze_path.display(),
+                    e
+                ),
+            }
+        }
+        None
+    }
+
+    fn init_cpu_profile(temp_dir: &str) -> Option<String> {
+        let cpu_profile_path = Path::new(temp_dir).join(CPU_PROFILE_FILENAME);
+        if cpu_profile_path.exists() {
+            match std::fs::read_to_string(&cpu_profile_path) {
+                Ok(contents) => return Some(contents),
+                Err(e) => println!(
+                    "Startup CPU profile ingestion failed at {}: {}",
+                    cpu_profile_path.display(),
+                    e
+                ),
+            }
+        }
+        None
     }
 }
 
@@ -332,33 +370,69 @@ impl AppData {
 pub struct Settings {
     pub simplify_paths: bool,
     pub prefer_editor_open: bool,
+    pub available_editors: Vec<(String, String)>,
+    pub preferred_editor: Option<String>,
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Self {
             simplify_paths: false,
-            prefer_editor_open: false,
+            prefer_editor_open: true,
+            available_editors: vec![
+                ("code".to_string(), "VS Code".to_string()),
+                ("cursor".to_string(), "Cursor".to_string()),
+                ("zed".to_string(), "Zed".to_string()),
+                ("nvim".to_string(), "Neovim".to_string()),
+                ("vim".to_string(), "Vim".to_string()),
+                ("ag".to_string(), "Antigravity".to_string()),
+                ("idea".to_string(), "IntelliJ IDEA".to_string()),
+                ("pycharm".to_string(), "PyCharm".to_string()),
+                ("webstorm".to_string(), "WebStorm".to_string()),
+                ("subl".to_string(), "Sublime Text".to_string()),
+                ("emacs".to_string(), "Emacs".to_string()),
+                ("nano".to_string(), "Nano".to_string()),
+                ("hx".to_string(), "Helix".to_string()),
+                ("lapce".to_string(), "Lapce".to_string()),
+                ("lite-xl".to_string(), "Lite XL".to_string()),
+            ],
+            preferred_editor: None,
         }
     }
 }
 
 #[tauri::command]
-pub fn validate_types_json(state: State<'_, Mutex<AppData>>) -> Result<TypesJsonSchema, String> {
+pub async fn validate_types_json(
+    state: State<'_, Mutex<AppData>>,
+) -> Result<TypesJsonSchema, String> {
+    let temp_dir = {
+        let data = state.lock().map_err(|e| e.to_string())?;
+        data.temp_dir.clone()
+    };
+    let path = format!("{}{}", temp_dir, TYPES_JSON_FILENAME);
+    let result = load_types_json(path).await?;
     let mut data = state.lock().map_err(|e| e.to_string())?;
-    data.validate_types_json()
+    data.types_json = result.clone();
+    Ok(result)
 }
 
 #[tauri::command]
-pub fn validate_trace_json(
+pub async fn validate_trace_json(
     state: State<'_, Mutex<AppData>>,
 ) -> Result<Vec<crate::validate::trace_json::TraceEvent>, String> {
+    let temp_dir = {
+        let data = state.lock().map_err(|e| e.to_string())?;
+        data.temp_dir.clone()
+    };
+    let path = format!("{}{}", temp_dir, TRACE_JSON_FILENAME);
+    let result = read_trace_json(&path).await?;
     let mut data = state.lock().map_err(|e| e.to_string())?;
-    data.validate_trace_json()
+    data.trace_json = result.clone();
+    Ok(result)
 }
 
 #[tauri::command]
-pub fn get_trace_json(
+pub async fn get_trace_json(
     state: State<'_, Mutex<AppData>>,
 ) -> Result<Vec<crate::validate::trace_json::TraceEvent>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
@@ -376,7 +450,7 @@ fn extract_arg_number(event: &crate::validate::trace_json::TraceEvent, key: &str
 }
 
 #[tauri::command]
-pub fn get_type_instantiation_limits(
+pub async fn get_type_instantiation_limits(
     state: State<'_, Mutex<AppData>>,
 ) -> Result<Vec<crate::validate::trace_json::TraceEvent>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
@@ -395,7 +469,7 @@ pub fn get_type_instantiation_limits(
 }
 
 #[tauri::command]
-pub fn get_recursive_type_related_to_limits(
+pub async fn get_recursive_type_related_to_limits(
     state: State<'_, Mutex<AppData>>,
 ) -> Result<Vec<crate::validate::trace_json::TraceEvent>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
@@ -414,7 +488,7 @@ pub fn get_recursive_type_related_to_limits(
 }
 
 #[tauri::command]
-pub fn get_type_related_to_discriminated_type_limits(
+pub async fn get_type_related_to_discriminated_type_limits(
     state: State<'_, Mutex<AppData>>,
 ) -> Result<Vec<crate::validate::trace_json::TraceEvent>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
@@ -433,13 +507,13 @@ pub fn get_type_related_to_discriminated_type_limits(
 }
 
 #[tauri::command]
-pub fn get_types_json(state: State<'_, Mutex<AppData>>) -> Result<TypesJsonSchema, String> {
+pub async fn get_types_json(state: State<'_, Mutex<AppData>>) -> Result<TypesJsonSchema, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     Ok(data.types_json.clone())
 }
 
 #[tauri::command]
-pub fn search_type(state: State<'_, Mutex<AppData>>, id: i64) -> Result<Value, String> {
+pub async fn search_type(state: State<'_, Mutex<AppData>>, id: i64) -> Result<Value, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     // types_json contains ResolvedType; we return as JSON Value
     for t in &data.types_json {
@@ -451,13 +525,15 @@ pub fn search_type(state: State<'_, Mutex<AppData>>, id: i64) -> Result<Value, S
 }
 
 #[tauri::command]
-pub fn get_scripts(state: State<'_, Mutex<AppData>>) -> Result<BTreeMap<String, String>, String> {
+pub async fn get_scripts(
+    state: State<'_, Mutex<AppData>>,
+) -> Result<BTreeMap<String, String>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     Ok(data.package_scripts.clone())
 }
 
 #[tauri::command]
-pub fn get_typecheck_script_name(
+pub async fn get_typecheck_script_name(
     state: State<'_, Mutex<AppData>>,
 ) -> Result<Option<String>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
@@ -465,7 +541,7 @@ pub fn get_typecheck_script_name(
 }
 
 #[tauri::command]
-pub fn set_typecheck_script_name(
+pub async fn set_typecheck_script_name(
     state: State<'_, Mutex<AppData>>,
     script_name: String,
 ) -> Result<(), String> {
@@ -478,84 +554,395 @@ pub fn set_typecheck_script_name(
 }
 
 #[tauri::command]
-pub fn generate_trace(state: State<'_, Mutex<AppData>>) -> Result<TypesJsonSchema, String> {
-    let mut data = state.lock().map_err(|e| e.to_string())?;
-    data.generate_trace()?;
-    // Return the parsed types_json that was populated during generate_trace
-    Ok(data.types_json.clone())
-}
+pub async fn generate_trace(state: State<'_, Mutex<AppData>>) -> Result<TypesJsonSchema, String> {
+    // Short lock to get values we need
+    let (script_command, temp_dir, project_root) = {
+        let data = state.lock().map_err(|e| e.to_string())?;
+        let script_name = data.typecheck_script_name.clone().ok_or_else(|| {
+            "No script selected. Please select a type-check script first.".to_string()
+        })?;
+        let script_command = data
+            .package_scripts
+            .get(&script_name)
+            .cloned()
+            .ok_or_else(|| format!("Script {script_name} not found in package.json"))?;
+        (
+            script_command,
+            data.temp_dir.clone(),
+            data.project_root.clone(),
+        )
+    };
 
-#[tauri::command]
-pub fn generate_cpu_profile(state: State<'_, Mutex<AppData>>) -> Result<(), String> {
-    let mut data = state.lock().map_err(|e| e.to_string())?;
-    data.generate_cpu_profile()
-}
+    let handle = tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
+        let flag = format!(" --generateTrace {}", temp_dir);
+        AppData::run_typescript_with_flag_blocking(
+            project_root,
+            script_command,
+            temp_dir,
+            flag,
+            "TypeScript compilation with trace generation",
+        )
+    });
 
-#[tauri::command]
-pub fn analyze_trace_command(
-    state: State<'_, Mutex<AppData>>,
-    options: Option<crate::analyze_trace::AnalyzeTraceOptions>,
-) -> Result<crate::analyze_trace::AnalyzeTraceResult, String> {
-    println!("Starting analyze trace...");
-    let data = state.lock().map_err(|e| e.to_string())?;
-    let temp_dir = data.temp_dir.clone();
-    drop(data); // Release lock before doing the work
-
-    match crate::analyze_trace::analyze_trace(&temp_dir, options) {
-        Ok(result) => {
-            println!("Analyze trace completed successfully");
-            Ok(result)
+    match handle.await {
+        Ok(Ok(())) => {
+            // Now read/validate outputs asynchronously
+            let temp_dir = {
+                let data = state.lock().map_err(|e| e.to_string())?;
+                data.temp_dir.clone()
+            };
+            let (types, trace) = AppData::validate_types_and_trace_async(&temp_dir).await?;
+            let mut data = state.lock().map_err(|e| e.to_string())?;
+            data.types_json = types.clone();
+            data.trace_json = trace;
+            Ok(types)
         }
-        Err(e) => {
-            eprintln!("Analyze trace failed: {}", e);
-            Err(e)
-        }
+        Ok(Err(e)) => Err(e),
+        Err(e) => Err(format!("generate_trace join error: {}", e)),
     }
 }
 
 #[tauri::command]
-pub fn get_analyze_trace(
+pub async fn generate_cpu_profile(state: State<'_, Mutex<AppData>>) -> Result<(), String> {
+    let (script_command, temp_dir, project_root) = {
+        let data = state.lock().map_err(|e| e.to_string())?;
+        let script_name = data.typecheck_script_name.clone().ok_or_else(|| {
+            "No script selected. Please select a type-check script first.".to_string()
+        })?;
+        let script_command = data
+            .package_scripts
+            .get(&script_name)
+            .cloned()
+            .ok_or_else(|| format!("Script {script_name} not found in package.json"))?;
+        (
+            script_command,
+            data.temp_dir.clone(),
+            data.project_root.clone(),
+        )
+    };
+
+    let handle = tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
+        let flag = format!(
+            " --generateCpuProfile {}/{}",
+            temp_dir, CPU_PROFILE_FILENAME
+        );
+        AppData::run_typescript_with_flag_blocking(
+            project_root,
+            script_command,
+            temp_dir,
+            flag,
+            "TypeScript CPU profile run",
+        )
+    });
+
+    match handle.await {
+        Ok(r) => {
+            // On success, read and cache CPU profile contents
+            if r.is_ok() {
+                let temp_dir = {
+                    let data = state.lock().map_err(|e| e.to_string())?;
+                    data.temp_dir.clone()
+                };
+                let path = Path::new(&temp_dir).join(CPU_PROFILE_FILENAME);
+                match tokio::fs::read_to_string(&path).await {
+                    Ok(contents) => {
+                        let mut data = state.lock().map_err(|e| e.to_string())?;
+                        data.cpu_profile = Some(contents);
+                    }
+                    Err(e) => eprintln!("Failed to read CPU profile after generation: {}", e),
+                }
+            }
+            r
+        }
+        Err(e) => Err(format!("generate_cpu_profile join error: {}", e)),
+    }
+}
+
+#[tauri::command]
+pub async fn analyze_trace_command(
+    state: State<'_, Mutex<AppData>>,
+    options: Option<crate::analyze_trace::AnalyzeTraceOptions>,
+) -> Result<crate::analyze_trace::AnalyzeTraceResult, String> {
+    println!("Starting analyze trace...");
+    let temp_dir = {
+        let data = state.lock().map_err(|e| e.to_string())?;
+        data.temp_dir.clone()
+    };
+
+    let handle = tauri::async_runtime::spawn_blocking(move || {
+        match crate::analyze_trace::analyze_trace(&temp_dir, options) {
+            Ok(result) => {
+                println!("Analyze trace completed successfully");
+                Ok::<crate::analyze_trace::AnalyzeTraceResult, String>(result)
+            }
+            Err(e) => {
+                eprintln!("Analyze trace failed: {}", e);
+                Err(e)
+            }
+        }
+    });
+
+    match handle.await {
+        Ok(r) => r,
+        Err(e) => Err(format!("analyze_trace_command join error: {}", e)),
+    }
+}
+
+#[tauri::command]
+pub async fn get_analyze_trace(
     state: State<'_, Mutex<AppData>>,
 ) -> Result<crate::analyze_trace::AnalyzeTraceResult, String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
-    let path = Path::new(&data.temp_dir).join("analyze-trace.json");
-    let contents = fs::read_to_string(&path)
+    // Serve cached value if present
+    {
+        let data = state.lock().map_err(|e| e.to_string())?;
+        if let Some(result) = &data.analyze_trace {
+            return Ok(result.clone());
+        }
+    }
+
+    // Read from disk and cache
+    let temp_dir = {
+        let data = state.lock().map_err(|e| e.to_string())?;
+        data.temp_dir.clone()
+    };
+    let path = Path::new(&temp_dir).join("analyze-trace.json");
+    let contents = tokio::fs::read_to_string(&path)
+        .await
         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
     let parsed: crate::analyze_trace::AnalyzeTraceResult = serde_json::from_str(&contents)
         .map_err(|e| format!("Failed to parse {}: {}", path.display(), e))?;
+    let mut data = state.lock().map_err(|e| e.to_string())?;
+    data.analyze_trace = Some(parsed.clone());
     Ok(parsed)
 }
 
 #[tauri::command]
-pub fn get_settings(state: State<'_, Mutex<AppData>>) -> Result<Settings, String> {
+pub async fn get_cpu_profile(state: State<'_, Mutex<AppData>>) -> Result<Option<String>, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    Ok(data.cpu_profile.clone())
+}
+
+#[tauri::command]
+pub async fn verify_analyze_trace(state: State<'_, Mutex<AppData>>) -> Result<(), String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    match &data.analyze_trace {
+        Some(v) => {
+            let json = serde_json::to_string(v).map_err(|e| e.to_string())?;
+            if json.trim().is_empty() {
+                Err("analyze-trace appears empty".to_string())
+            } else {
+                Ok(())
+            }
+        }
+        None => Err("analyze-trace not loaded".to_string()),
+    }
+}
+
+#[tauri::command]
+pub async fn verify_cpu_profile(state: State<'_, Mutex<AppData>>) -> Result<(), String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    match &data.cpu_profile {
+        Some(contents) => {
+            if contents.trim().is_empty() {
+                Err("tsc.cpuprofile is empty".to_string())
+            } else {
+                Ok(())
+            }
+        }
+        None => Err("tsc.cpuprofile not loaded".to_string()),
+    }
+}
+
+#[tauri::command]
+pub async fn get_types_json_text(state: State<'_, Mutex<AppData>>) -> Result<String, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    serde_json::to_string_pretty(&data.types_json).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_trace_json_text(state: State<'_, Mutex<AppData>>) -> Result<String, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    serde_json::to_string_pretty(&data.trace_json).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_analyze_trace_text(state: State<'_, Mutex<AppData>>) -> Result<String, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    match &data.analyze_trace {
+        Some(v) => serde_json::to_string_pretty(v).map_err(|e| e.to_string()),
+        None => Err("analyze-trace not loaded".to_string()),
+    }
+}
+
+#[tauri::command]
+pub async fn get_cpu_profile_text(state: State<'_, Mutex<AppData>>) -> Result<String, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    match &data.cpu_profile {
+        Some(contents) => Ok(contents.clone()),
+        None => Err("tsc.cpuprofile not loaded".to_string()),
+    }
+}
+
+#[tauri::command]
+pub async fn get_settings(state: State<'_, Mutex<AppData>>) -> Result<Settings, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     Ok(data.settings.clone())
 }
 
 #[tauri::command]
-pub fn set_settings(state: State<'_, Mutex<AppData>>, settings: Settings) -> Result<(), String> {
+pub async fn set_settings(
+    state: State<'_, Mutex<AppData>>,
+    settings: Settings,
+) -> Result<(), String> {
     let mut data = state.lock().map_err(|e| e.to_string())?;
     data.settings = settings;
     Ok(())
 }
 
 #[tauri::command]
-pub fn open_file(state: State<'_, Mutex<AppData>>, path: String) -> Result<(), String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
-    let prefer_editor = data.settings.prefer_editor_open;
-    drop(data);
+pub async fn open_file(state: State<'_, Mutex<AppData>>, path: String) -> Result<(), String> {
+    // Extract settings without holding the lock during blocking operations.
+    let (prefer_editor, preferred_editor, available_editors) = {
+        let data = state.lock().map_err(|e| e.to_string())?;
+        (
+            data.settings.prefer_editor_open,
+            data.settings.preferred_editor.clone(),
+            data.settings.available_editors.clone(),
+        )
+    };
 
-    if prefer_editor {
-        // Try VS Code first
-        let status = Command::new("code").arg("--goto").arg(&path).status();
-        match status {
-            Ok(s) if s.success() => return Ok(()),
-            _ => {
-                // Fall back to opener plugin by returning an error to be handled client-side
-            }
-        }
+    let cli_or_env_editor = resolve_string("--editor", "TYPESLAYER_EDITOR");
+
+    // Separate the file path from optional :line:char suffix for existence checks.
+    let (file_path, _line_char_suffix) = {
+        // Accept paths like /abs/path.ts:123:5
+        let mut parts = path.split(':');
+        let first = parts.next().unwrap_or("").to_string();
+        (first, parts.collect::<Vec<_>>())
+    };
+
+    if file_path.is_empty() {
+        return Err("Empty path".to_string());
+    }
+    if !std::path::Path::new(&file_path).exists() {
+        return Err(format!("Path does not exist: {file_path}"));
     }
 
-    // If not preferring editor or VS Code failed, just succeed and let frontend opener handle it
+    let handle = tauri::async_runtime::spawn_blocking(move || {
+        // Helper to test command availability.
+        fn command_exists(cmd: &str) -> bool {
+            Command::new("sh")
+                .arg("-c")
+                .arg(format!("command -v {cmd} >/dev/null 2>&1"))
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false)
+        }
+
+        if prefer_editor {
+            // Determine editor to use: CLI/env > preferred_editor > first available
+            let editor_to_use = cli_or_env_editor
+                .or(preferred_editor)
+                .or_else(|| available_editors.first().map(|(cmd, _)| cmd.clone()));
+
+            // Build list of editors to try
+            let editors_to_try: Vec<String> = if let Some(ref editor) = editor_to_use {
+                let mut eds = vec![editor.clone()];
+                for (cmd, _label) in &available_editors {
+                    if cmd != editor {
+                        eds.push(cmd.clone());
+                    }
+                }
+                eds
+            } else {
+                available_editors
+                    .iter()
+                    .map(|(cmd, _)| cmd.clone())
+                    .collect()
+            };
+
+            // Try each editor in order
+            for ed in editors_to_try.iter() {
+                if !command_exists(ed) {
+                    continue;
+                }
+                // VS Code supports --goto path:line:col; others we just pass file path.
+                let attempt = if ed == "code" { &path } else { &file_path };
+                let status = if ed == "code" {
+                    Command::new(ed).arg("--goto").arg(attempt).status()
+                } else {
+                    Command::new(ed).arg(attempt).status()
+                };
+                match status {
+                    Ok(s) if s.success() => return Ok(()),
+                    _ => continue,
+                }
+            }
+            // Fall through to system opener if editors failed.
+        }
+
+        // System fallback (xdg-open/open/start) to let OS decide.
+        #[cfg(target_os = "linux")]
+        let fallback_status = Command::new("xdg-open").arg(&file_path).status();
+        #[cfg(target_os = "macos")]
+        let fallback_status = Command::new("open").arg(&file_path).status();
+        #[cfg(target_os = "windows")]
+        let fallback_status = Command::new("cmd")
+            .arg("/C")
+            .arg("start")
+            .arg("")
+            .arg(&file_path)
+            .status();
+
+        match fallback_status {
+            Ok(s) if s.success() => Ok(()),
+            _ => Err("Failed to open file with any known method".to_string()),
+        }
+    });
+
+    match handle.await {
+        Ok(r) => r,
+        Err(e) => Err(format!("open_file join error: {e}")),
+    }
+}
+
+#[tauri::command]
+pub async fn get_available_editors(
+    state: State<'_, Mutex<AppData>>,
+) -> Result<Vec<(String, String)>, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    Ok(data.settings.available_editors.clone())
+}
+
+#[tauri::command]
+pub async fn get_preferred_editor(
+    state: State<'_, Mutex<AppData>>,
+) -> Result<Option<String>, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    Ok(data.settings.preferred_editor.clone())
+}
+
+#[tauri::command]
+pub async fn set_preferred_editor(
+    state: State<'_, Mutex<AppData>>,
+    editor: String,
+) -> Result<(), String> {
+    let mut data = state.lock().map_err(|e| e.to_string())?;
+
+    // Validate that editor is in available_editors
+    let is_valid = data
+        .settings
+        .available_editors
+        .iter()
+        .any(|(cmd, _)| cmd == &editor);
+
+    if !is_valid {
+        return Err(format!(
+            "Editor '{}' is not in available editors list",
+            editor
+        ));
+    }
+
+    data.settings.preferred_editor = Some(editor);
     Ok(())
 }

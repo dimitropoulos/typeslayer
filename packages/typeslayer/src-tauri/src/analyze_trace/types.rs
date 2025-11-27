@@ -3,8 +3,6 @@ use crate::validate::types_json::ResolvedType;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-pub type Microseconds = f64;
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnalyzeTraceOptions {
     #[serde(rename = "forceMillis")]

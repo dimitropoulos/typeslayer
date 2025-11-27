@@ -1,3 +1,5 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
@@ -5,7 +7,41 @@ const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
-	plugins: [react()],
+	plugins: [
+		react(),
+		{
+			name: "serve-temp-files",
+			configureServer(server) {
+				server.middlewares.use((req, res, next) => {
+					if (req.url?.startsWith("/static/")) {
+						const fileName = req.url.slice(8); // Remove '/static/'
+						const tempDir = "/tmp/typeslayer";
+						const filePath = path.join(tempDir, fileName);
+
+						fs.readFile(filePath, (err, data) => {
+							if (err) {
+								res.statusCode = 404;
+								res.end("Not found");
+								return;
+							}
+
+							const ext = path.extname(fileName);
+							const contentType =
+								ext === ".json"
+									? "application/json"
+									: "application/octet-stream";
+
+							res.setHeader("Content-Type", contentType);
+							res.setHeader("Access-Control-Allow-Origin", "*");
+							res.end(data);
+						});
+					} else {
+						next();
+					}
+				});
+			},
+		},
+	],
 	root: "./src",
 	publicDir: "../public",
 

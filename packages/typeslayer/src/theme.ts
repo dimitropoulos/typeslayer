@@ -197,7 +197,7 @@ export const theme: Theme = createTheme({
 					MozOsxFontSmoothing: "grayscale",
 				},
 				"*::-webkit-scrollbar": {
-					width: 8,
+					width: 12,
 					height: 8,
 				},
 				"*::-webkit-scrollbar-track": {
@@ -205,7 +205,6 @@ export const theme: Theme = createTheme({
 				},
 				"*::-webkit-scrollbar-thumb": {
 					background: "linear-gradient(180deg, #5E1212, #9F1E1E)",
-					borderRadius: 20,
 					border: "1px solid rgba(0,0,0,0.6)",
 				},
 			},
@@ -266,11 +265,12 @@ export const theme: Theme = createTheme({
 		MuiChip: {
 			styleOverrides: {
 				root: {
-					borderRadius: 4,
+					borderRadius: 1,
 					backdropFilter: "blur(6px)",
 					background:
 						"linear-gradient(140deg, rgba(159,30,30,0.35), rgba(159,30,30,0.15))",
 					border: "1px solid rgba(255,255,255,0.08)",
+					alignItems: 'end',
 				},
 				labelSmall: {
 					paddingLeft: 4,

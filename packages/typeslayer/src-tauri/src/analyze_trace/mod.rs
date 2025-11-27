@@ -1,19 +1,15 @@
-mod constants;
+pub mod constants;
 mod duplicate_node_modules;
 mod hotspots;
 mod node_module_paths;
 mod spans;
 mod types;
-mod utils;
 
-pub use constants::*;
 pub use types::*;
-pub use utils::*;
 
 use crate::validate::trace_json::TraceEvent;
 use crate::validate::types_json::TypesJsonSchema;
 use serde_json;
-use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 

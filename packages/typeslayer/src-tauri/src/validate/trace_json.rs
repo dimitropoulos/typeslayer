@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::fs;
 
 pub const TRACE_JSON_FILENAME: &str = "trace.json";
 
@@ -289,11 +288,44 @@ fn validate_event(event: &TraceEvent) -> Result<(), String> {
     Ok(())
 }
 
-pub fn read_trace_json(path: &str) -> Result<Vec<TraceEvent>, String> {
-    let contents = fs::read_to_string(path)
-        .map_err(|e| format!("Failed to read trace.json at {path}: {e}"))?;
-    let raw: Value =
-        serde_json::from_str(&contents).map_err(|e| format!("Failed to parse trace.json: {e}"))?;
+fn get_context_lines(contents: &str, error_line: usize) -> String {
+    let lines: Vec<&str> = contents.lines().collect();
+    let mut context = String::new();
+
+    // Show line before (if exists)
+    if error_line > 1 {
+        if let Some(prev) = lines.get(error_line - 2) {
+            context.push_str(&format!("Line {}: {}\n", error_line - 1, prev));
+        }
+    }
+
+    // Show error line
+    if let Some(err_line) = lines.get(error_line - 1) {
+        context.push_str(&format!("Line {} (ERROR): {}\n", error_line, err_line));
+    }
+
+    // Show line after (if exists)
+    if let Some(next) = lines.get(error_line) {
+        context.push_str(&format!("Line {}: {}\n", error_line + 1, next));
+    }
+
+    context
+}
+
+pub fn parse_trace_json(path_label: &str, contents: &str) -> Result<Vec<TraceEvent>, String> {
+    let raw: Value = serde_json::from_str(contents).map_err(|e| {
+        // Try to extract line number from error message
+        let error_msg = format!("{e}");
+        if let Some(line_str) = error_msg.split("line ").nth(1) {
+            if let Some(line_num_str) = line_str.split_whitespace().next() {
+                if let Ok(line_num) = line_num_str.parse::<usize>() {
+                    let context = get_context_lines(contents, line_num);
+                    return format!("Failed to parse {path_label}: {e}\n\nContext:\n{context}");
+                }
+            }
+        }
+        format!("Failed to parse {path_label}: {e}")
+    })?;
     let arr = match raw {
         Value::Array(a) => a,
         _ => return Err("trace.json root is not an array".to_string()),
@@ -306,4 +338,11 @@ pub fn read_trace_json(path: &str) -> Result<Vec<TraceEvent>, String> {
         events.push(ev);
     }
     Ok(events)
+}
+
+pub async fn read_trace_json(path: &str) -> Result<Vec<TraceEvent>, String> {
+    let contents = tokio::fs::read_to_string(path)
+        .await
+        .map_err(|e| format!("Failed to read trace.json at {path}: {e}"))?;
+    parse_trace_json(path, &contents)
 }

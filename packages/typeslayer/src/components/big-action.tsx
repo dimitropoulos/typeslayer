@@ -19,7 +19,7 @@ type ItemsWithTitle<
 
 type Unlocks = ItemsWithTitle<typeof NAVIGATION>;
 
-export default function BigAction({
+export function BigAction({
 	title,
 	description,
 	unlocks,
@@ -68,14 +68,14 @@ export default function BigAction({
 						<Stack
 							direction="column"
 							spacing={1}
-							sx={{ display: "block", mt: 1 }}
+							sx={{ display: "block" }}
 						>
 							{unlocks.map((unlock) => {
-								const icon = NAVIGATION.find(
+								const foundIcon = NAVIGATION.find(
 									(item) => "title" in item && item.title === unlock,
 								);
 								const hasIcon =
-									icon && "icon" in icon ? { icon: icon.icon } : {};
+									foundIcon && "icon" in foundIcon ? { icon: foundIcon.icon } : {};
 								return (
 									<Chip key={unlock} {...hasIcon} label={unlock} size="small" />
 								);

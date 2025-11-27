@@ -23,7 +23,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { TypeRegistry } from "@typeslayer/validate";
 import { useCallback, useEffect, useState } from "react";
-import BigAction from "../components/big-action";
+import { BigAction } from "../components/big-action";
 import { InlineCode } from "../components/inline-code";
 
 const stepRoutes = ["select-code", "run-diagnostics", "take-action"] as const;
@@ -144,9 +144,7 @@ const SelectCode = ({ handleNext }: { handleNext: () => void }) => {
 	});
 
 	const { mutateAsync: setProjectRoot } = useMutation({
-		mutationFn: async (newRoot: string) => {
-			await invoke("set_project_root", { projectRoot: newRoot });
-		},
+		mutationFn: (newRoot: string) => invoke("set_project_root", { projectRoot: newRoot }),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["getProjectRoot"] });
 			queryClient.invalidateQueries({ queryKey: ["scripts"] });
@@ -179,9 +177,9 @@ const SelectCode = ({ handleNext }: { handleNext: () => void }) => {
 	});
 
 	const { mutateAsync: setTypecheckScriptName } = useMutation({
-		mutationFn: async (scriptName: string) => {
-			await invoke("set_typecheck_script_name", { scriptName });
-		},
+		mutationFn: (scriptName: string) => 
+			invoke("set_typecheck_script_name", { scriptName })
+		,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["typecheckScriptName"] });
 		},
@@ -307,90 +305,70 @@ const RunDiagnostics = ({
 	handleBack: () => void;
 }) => {
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
-	const { mutateAsync: generateTrace, isPending: generateTracePending } =
+	const { mutate: generateTrace, isPending: generateTracePending } =
 		useMutation({
-			mutationFn: async () => {
-				return await invoke<Array<{ id: number; [key: string]: unknown }>>(
-					"generate_trace",
+			mutationFn:() => invoke<Array<{ id: number; [key: string]: unknown }>>(
+						"generate_trace",
+					),
+			onSuccess: (result) => {
+				const typeRegistryEntries: Array<[number, unknown]> = result.map(
+					(type) => [type.id, type],
 				);
+				window.typeRegistry = new Map(typeRegistryEntries) as TypeRegistry;
 			},
 			onError: (err: unknown) => {
 				setErrorMessage(String(err));
 			},
 		});
 
-	const { mutateAsync: cpuProfile, isPending: cpuProfilePending } = useMutation(
-		{
-			mutationFn: async () => {
-				return await invoke("generate_cpu_profile");
-			},
-			onError: (err: unknown) => {
-				setErrorMessage(String(err));
-			},
-		},
-	);
-	const { mutateAsync: analyzeTrace, isPending: analyzeTracePending } =
-		useMutation({
-			mutationFn: async () => {
-				return await invoke("analyze_trace_command");
-			},
-			onError: (err: unknown) => {
-				setErrorMessage(String(err));
-			},
-		});
-
-	const onGenerateTrace = useCallback(async () => {
-		const result = await generateTrace();
-		const typeRegistryEntries: Array<[number, unknown]> = result.map((type) => [
-			type.id,
-			type,
-		]);
-		window.typeRegistry = new Map(typeRegistryEntries) as TypeRegistry;
-		console.log("result", result);
-	}, [generateTrace]);
-
-	const onCpuProfile = useCallback(async () => {
-		try {
-			const result = await cpuProfile();
+	const { mutate: cpuProfile, isPending: cpuProfilePending } = useMutation({
+		mutationFn: () => invoke("generate_cpu_profile"),
+		onSuccess: (result) => {
 			console.log("cpuProfile result", result);
-		} catch (_error) {
-			// error handled by mutation onError
-		}
-	}, [cpuProfile]);
+		},
+		onError: (err: unknown) => {
+			setErrorMessage(String(err));
+		},
+	});
 
-	const onAnalyzeTrace = useCallback(async () => {
-		const result = await analyzeTrace();
-		console.log("result", result);
-	}, [analyzeTrace]);
+	const { mutate: analyzeTrace, isPending: analyzeTracePending } = useMutation({
+		mutationFn: () => invoke("analyze_trace_command"),
+		onSuccess: (result) => {
+			console.log("analyzeTrace onSuccess");
+			console.log("result", result);
+		},
+		onError: (err: unknown) => {
+			setErrorMessage(String(err));
+		},
+	});
 
-	return (
+return (
 		<>
 			<StepContent>
-				<Stack sx={{ my: 2, gap: 3 }}>
-					<BigAction
-						title="Identify Types"
-						description="This makes TypeScript generate event traces and a list of types while it type checks your codebase.  This is critical information for individually identifying every type in your codebase."
-						unlocks={["Search Type Id", "Perfetto", "trace.json", "types.json"]}
-						onDoIt={onGenerateTrace}
-						isLoading={generateTracePending}
-					/>
-					<BigAction
-						title="CPU Profile"
-						description="Have TypeScript emit a v8 CPU profile during the compiler run. The CPU profile can provide insight into why your builds may be slow."
-						unlocks={["SpeedScope", "tsc.cpuprofile"]}
-						onDoIt={onCpuProfile}
-						isLoading={cpuProfilePending}
-					/>
-					<BigAction
-						title="Analyze Hot Spots"
-						description="Identify clear-cut hot-spots and provide enough context to extract a small repro. The repro can then be used as the basis of a bug report or a starting point for manual code inspection or profiling."
-						unlocks={[
-							"Type Network",
-							"Treemap",
-							"analyze-trace.json",
-							"Award Winners",
+				<Stack sx={{ my: 2, gap: 3, flexDirection: 'row', flexWrap: 'wrap' }}>
+				<BigAction
+					title="Identify Types"
+					description="This makes TypeScript generate event traces and a list of types while it type checks your codebase.  This is critical information for individually identifying every type in your codebase."
+					unlocks={["Search Type Id", "Perfetto"]}
+					onDoIt={generateTrace}
+					isLoading={generateTracePending}
+				/>
+				<BigAction
+					title="CPU Profile"
+					description="Have TypeScript emit a v8 CPU profile during the compiler run. The CPU profile can provide insight into why your builds may be slow."
+					unlocks={["SpeedScope"]}
+					onDoIt={cpuProfile}
+					isLoading={cpuProfilePending}
+				/>
+				<BigAction
+					title="Analyze Hot Spots"
+					description="Identify clear-cut hot-spots and provide enough context to extract a small repro. The repro can then be used as the basis of a bug report or a starting point for manual code inspection or profiling."
+					unlocks={[
+						"Type Network",
+						"Treemap",
+						"Award Winners",
 						]}
-						onDoIt={onAnalyzeTrace}
+						onDoIt={analyzeTrace}
 						isLoading={analyzeTracePending}
 					/>
 				</Stack>
@@ -418,7 +396,7 @@ const RunDiagnostics = ({
 			</Snackbar>
 		</>
 	);
-};
+}
 
 const TakeAction = ({
 	handleNext,

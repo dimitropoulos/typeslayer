@@ -29,15 +29,25 @@ pub fn run() {
             app_data::generate_trace,
             app_data::generate_cpu_profile,
             app_data::get_analyze_trace,
+            app_data::get_cpu_profile,
             app_data::get_settings,
             app_data::set_settings,
             app_data::open_file,
             app_data::analyze_trace_command,
+            app_data::get_available_editors,
+            app_data::get_preferred_editor,
+            app_data::set_preferred_editor,
             files::get_current_dir,
             files::get_project_root,
             files::set_project_root,
             files::get_temp_dir,
-            files::set_temp_dir
+            files::set_temp_dir,
+            app_data::verify_analyze_trace,
+            app_data::verify_cpu_profile,
+            app_data::get_types_json_text,
+            app_data::get_trace_json_text,
+            app_data::get_analyze_trace_text,
+            app_data::get_cpu_profile_text,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

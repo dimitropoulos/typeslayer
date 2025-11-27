@@ -188,6 +188,7 @@ export function App() {
 					sx={{
 						p: 1,
 						width: open ? (collapsed ? collapsedWidth : drawerWidth) : 0,
+						overflowY: 'auto',
 					}}
 				>
 					{NAVIGATION.map((item) => renderNavItem(item))}
@@ -223,6 +224,8 @@ export function App() {
 					</IconButton>
 				)}
 			</Drawer>
+
+						<Divider orientation="vertical" />
 
 			<Box
 				component="main"

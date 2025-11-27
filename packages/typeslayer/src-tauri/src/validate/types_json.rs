@@ -1,6 +1,5 @@
 use super::utils::{Location, TypeId};
 use serde::{Deserialize, Serialize};
-use std::fs;
 
 pub const TYPES_JSON_FILENAME: &str = "types.json";
 
@@ -200,12 +199,9 @@ pub struct ResolvedType {
 /// `typesJsonSchema` – an array of `ResolvedType`
 pub type TypesJsonSchema = Vec<ResolvedType>;
 
-pub fn validate_types_json(path: String) -> Result<TypesJsonSchema, String> {
-    let json_string =
-        fs::read_to_string(&path).map_err(|e| format!("Failed to read '{path}': {e}"))?;
-
-    let parsed: TypesJsonSchema =
-        serde_json::from_str(&json_string).map_err(|e| format!("Failed to parse '{path}': {e}"))?;
+pub fn parse_types_json(path_label: &str, json_string: &str) -> Result<TypesJsonSchema, String> {
+    let parsed: TypesJsonSchema = serde_json::from_str(json_string)
+        .map_err(|e| format!("Failed to parse '{path_label}': {e}"))?;
 
     for (i, t) in parsed.iter().enumerate() {
         if t.id < -1 {
@@ -214,4 +210,11 @@ pub fn validate_types_json(path: String) -> Result<TypesJsonSchema, String> {
     }
 
     Ok(parsed)
+}
+
+pub async fn validate_types_json(path: String) -> Result<TypesJsonSchema, String> {
+    let json_string = tokio::fs::read_to_string(&path)
+        .await
+        .map_err(|e| format!("Failed to read '{path}': {e}"))?;
+    parse_types_json(&path, &json_string)
 }

@@ -5,19 +5,17 @@ import {
 	RouterProvider,
 } from "@tanstack/react-router";
 import { App } from "./App";
-import { AnalyzeTrace } from "./pages/analyze-trace";
 import { AwardWinners } from "./pages/award-winners";
-import { CpuProfile } from "./pages/cpu-profile";
 import { Integrations } from "./pages/integrations";
 import { Perfetto } from "./pages/perfetto";
+// analyze-trace page remains but is no longer directly routed
+import { RawData } from "./pages/raw-data";
 import { SearchTypes } from "./pages/search-types";
 import { SettingsPage } from "./pages/settings";
 import { SpeedScope } from "./pages/speedscope";
 import { Start } from "./pages/start";
-import { TraceJson } from "./pages/trace-json";
 import { Treemap } from "./pages/treemap";
 import { TypeNetwork } from "./pages/type-network";
-import { TypesJson } from "./pages/types-json";
 
 // Root route – renders App which contains DashboardLayout and Outlet
 const rootRoute = createRootRoute({
@@ -85,28 +83,16 @@ const speedscopeRoute = createRoute({
 	component: SpeedScope,
 });
 
-const analyzeTraceRoute = createRoute({
+const rawDataRoute = createRoute({
 	getParentRoute: () => rootRoute,
-	path: "/analyze-trace",
-	component: AnalyzeTrace,
+	path: "/raw-data",
+	component: RawData,
 });
 
-const traceJsonRoute = createRoute({
+const rawDataChildRoute = createRoute({
 	getParentRoute: () => rootRoute,
-	path: "/trace-json",
-	component: TraceJson,
-});
-
-const typesJsonRoute = createRoute({
-	getParentRoute: () => rootRoute,
-	path: "/types-json",
-	component: TypesJson,
-});
-
-const cpuProfileRoute = createRoute({
-	getParentRoute: () => rootRoute,
-	path: "/tsc-cpuprofile",
-	component: CpuProfile,
+	path: "/raw-data/$fileId",
+	component: RawData,
 });
 
 const settingsRoute = createRoute({
@@ -147,10 +133,8 @@ const routeTree = rootRoute.addChildren([
 	treemapRoute,
 	perfettoRoute,
 	speedscopeRoute,
-	analyzeTraceRoute,
-	traceJsonRoute,
-	typesJsonRoute,
-	cpuProfileRoute,
+	rawDataRoute,
+	rawDataChildRoute,
 	settingsRoute,
 	integrationsRoute,
 ]);

@@ -61,7 +61,7 @@ pub fn create_spans(trace_file: &[TraceEvent]) -> Result<ParseResult, String> {
     })
 }
 
-pub fn create_span_tree(mut parse_result: ParseResult, options: &AnalyzeTraceOptions) -> EventSpan {
+pub fn create_span_tree(parse_result: ParseResult, options: &AnalyzeTraceOptions) -> EventSpan {
     let first_span_start = parse_result.first_span_start;
     let last_span_end = parse_result.last_span_end;
     let mut spans = parse_result.spans;
