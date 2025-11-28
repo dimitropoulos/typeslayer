@@ -17,10 +17,10 @@
 		"source.fixAll.biome": "always"
 	},
 	"search.exclude": {
-    "packages/typeslayer/public/**": true
-  },
-  "files.watcherExclude": {
-    "packages/typeslayer/public/**": true
-  },
+		"packages/typeslayer/public/**": true
+	},
+	"files.watcherExclude": {
+		"packages/typeslayer/public/**": true
+	},
 	"rust-analyzer.linkedProjects": ["packages/typeslayer/src-tauri/Cargo.toml"]
 }

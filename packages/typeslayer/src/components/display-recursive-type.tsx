@@ -363,7 +363,7 @@ export function OpenFile({
 				line !== undefined && character !== undefined
 					? `${absolutePath}:${line}:${character}`
 					: absolutePath;
-					console.log("Opening file via backend:", goto);
+			console.log("Opening file via backend:", goto);
 			await invoke("open_file", { path: goto });
 		} catch (e) {
 			console.error("Failed to open file via backend", e);

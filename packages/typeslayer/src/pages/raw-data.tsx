@@ -1,5 +1,6 @@
 import { Description } from "@mui/icons-material";
 import {
+	Alert,
 	Box,
 	Button,
 	Divider,
@@ -7,18 +8,22 @@ import {
 	ListItemButton,
 	ListItemIcon,
 	ListItemText,
+	Snackbar,
 	Stack,
 	Typography,
 } from "@mui/material";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
+import { downloadDir } from "@tauri-apps/api/path";
+import { download } from "@tauri-apps/plugin-upload";
 import { ANALYZE_TRACE_FILENAME } from "@typeslayer/analyze-trace/src/constants";
 import {
 	CPU_PROFILE_FILENAME,
 	TRACE_JSON_FILENAME,
 	TYPES_JSON_FILENAME,
 } from "@typeslayer/validate";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { serverBaseUrl } from "../components/utils";
 
 type RawKey = "analyze" | "trace" | "types" | "cpu";
 
@@ -105,9 +110,7 @@ export const RawData = () => {
 
 			<Divider orientation="vertical" />
 
-			<Box sx={{ flexGrow: 1, p: 3, overflow: "auto" }}>
-				<RawDataPane key={currentKey} itemKey={currentKey} />
-			</Box>
+			<RawDataPane key={currentKey} itemKey={currentKey} />
 		</Stack>
 	);
 };
@@ -115,13 +118,18 @@ export const RawData = () => {
 const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
 	const item = RAW_ITEMS[itemKey];
 	const [text, setText] = useState<string>("");
-	const [verifyStatus, setVerifyStatus] = useState<string | null>(null);
+	const [toast, setToast] = useState<{
+		open: boolean;
+		message: string;
+		severity: "success" | "error";
+		path?: string;
+	}>({ open: false, message: "", severity: "success" });
 
 	useEffect(() => {
 		let mounted = true;
 		(async () => {
 			try {
-				const url = `/tmp-files/${item.filename}`;
+				const url = `${serverBaseUrl}/outputs/${item.filename}`;
 				const resp = await fetch(url);
 				const content = await resp.text();
 				if (mounted) setText(content);
@@ -137,32 +145,60 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
 	const onCopy = async () => {
 		try {
 			await navigator.clipboard.writeText(text);
-			setVerifyStatus("Copied to clipboard");
-			setTimeout(() => setVerifyStatus(null), 2000);
+			setToast({
+				open: true,
+				message: "Copied to clipboard",
+				severity: "success",
+			});
 		} catch {
-			setVerifyStatus("Copy failed");
+			setToast({ open: true, message: "Copy failed", severity: "error" });
 		}
 	};
 
-	const onDownload = () => {
-		const a = document.createElement("a");
-		a.href = `/tmp-files/${item.filename}`;
-		a.download = item.filename;
-		a.click();
-	};
+	const onDownload = useCallback(async () => {
+		try {
+			const base = await downloadDir();
+			const dest = `${base}${base.endsWith("/") ? "" : "/"}${item.filename}`;
+			const url = `${serverBaseUrl}/outputs/${item.filename}`;
+			await download(url, dest);
+			setToast({
+				open: true,
+				message: `Downloaded to: ${dest}`,
+				severity: "success",
+				path: dest,
+			});
+		} catch {
+			setToast({ open: true, message: `Download failed`, severity: "error" });
+		}
+	}, [item.filename]);
+
+	const onToastClick = useCallback(async () => {
+		if (!toast.path) return;
+		try {
+			await invoke("open_file", { path: toast.path });
+		} catch {
+			setToast({ open: true, message: "Open failed", severity: "error" });
+		}
+	}, [toast.path]);
 
 	const onVerify = async () => {
 		try {
 			await invoke(item.verifyInvoke);
-			setVerifyStatus("Verified: OK");
+			setToast({ open: true, message: "Verified: OK", severity: "success" });
 		} catch (_e) {
-			setVerifyStatus(`Verify failed`);
+			setToast({ open: true, message: "Verify failed", severity: "error" });
 		}
-		setTimeout(() => setVerifyStatus(null), 4000);
 	};
 
 	return (
-		<Stack gap={2}>
+		<Stack
+			sx={{
+				gap: 2,
+				flexGrow: 1,
+				p: 3,
+				overflow: "auto",
+			}}
+		>
 			<Stack gap={1}>
 				<Typography variant="h4">{item.title}</Typography>
 				<Typography variant="body2" color="text.secondary">
@@ -182,23 +218,42 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
 				</Button>
 			</Stack>
 
-			{verifyStatus && (
-				<Typography variant="body2" color="text.secondary">
-					{verifyStatus}
-				</Typography>
-			)}
-
 			<Box
 				component="pre"
 				sx={{
 					p: 2,
 					bgcolor: (t) => t.palette.background.default,
 					borderRadius: 1,
-					overflowX: "auto",
+					overflow: "auto",
+					fontFamily: "monospace",
+					whiteSpace: "pre",
 				}}
 			>
 				{text}
 			</Box>
+			<Snackbar
+				anchorOrigin={{ vertical: "top", horizontal: "right" }}
+				open={toast.open}
+				onClose={() => setToast((t) => ({ ...t, open: false }))}
+				autoHideDuration={5000}
+			>
+				<Alert
+					variant="filled"
+					severity={toast.severity}
+					onClick={onToastClick}
+					sx={{ cursor: toast.path ? "pointer" : "default" }}
+				>
+					{toast.message}
+					{toast.path && (
+						<Typography
+							component="span"
+							sx={{ ml: 1, textDecoration: "underline" }}
+						>
+							Open
+						</Typography>
+					)}
+				</Alert>
+			</Snackbar>
 		</Stack>
 	);
 };

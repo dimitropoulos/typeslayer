@@ -1,4 +1,6 @@
-use crate::analyze_trace::types::{AnalyzeTraceOptions, EventSpan, EventSpanEvent, HotSpot, HotType};
+use crate::analyze_trace::types::{
+    AnalyzeTraceOptions, EventSpan, EventSpanEvent, HotSpot, HotType,
+};
 use crate::validate::types_json::{ResolvedType, TypesJsonSchema};
 use std::collections::HashMap;
 use std::path::Path;
@@ -67,11 +69,7 @@ fn get_hotspots_worker(
 }
 
 fn get_hot_type(id: i64, type_registry: &TypeRegistry) -> HotType {
-    fn worker(
-        id: i64,
-        type_registry: &TypeRegistry,
-        ancestor_ids: &mut Vec<i64>,
-    ) -> HotType {
+    fn worker(id: i64, type_registry: &TypeRegistry, ancestor_ids: &mut Vec<i64>) -> HotType {
         if id == -1 {
             return HotType {
                 resolved_type: ResolvedType {
@@ -231,9 +229,7 @@ fn make_hot_frame(
                     .get("path")
                     .and_then(|v| v.as_str())
                     .unwrap_or("");
-                let normalized_path = Path::new(file_path)
-                    .to_string_lossy()
-                    .to_string();
+                let normalized_path = Path::new(file_path).to_string_lossy().to_string();
 
                 Ok(Some(HotSpot {
                     description: format!("Check file {}", normalized_path),

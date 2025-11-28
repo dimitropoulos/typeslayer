@@ -67,15 +67,18 @@ export const friendlyPath = (
 	return relativizePath(projectRoot, absolutePath);
 };
 
+export const serverBaseUrl = 'http://127.0.0.1:4765';
+
 export const useStaticFile = (fileName: string) => {
 	const [data, setData] = useState<string | null>(null);
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
-				const url = `/tmp-files/${fileName}`;
-				const response = await fetch(url);
+				const response = await fetch(`${serverBaseUrl}/outputs/${fileName}`);
 				if (!response.ok) {
-					throw new Error("Network response was not ok");
+					throw new Error(
+						`Failed to fetch ${fileName}: ${response.statusText}`,
+					);
 				}
 				const text = await response.text();
 				setData(text);

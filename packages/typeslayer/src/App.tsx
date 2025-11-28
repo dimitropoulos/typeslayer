@@ -5,8 +5,8 @@ import {
 	ListItemButton,
 	ListItemIcon,
 	ListItemText,
+	ListSubheader,
 	Stack,
-	Typography,
 } from "@mui/material";
 import Box from "@mui/material/Box";
 import Drawer from "@mui/material/Drawer";
@@ -81,16 +81,7 @@ export function App() {
 			if (collapsed) {
 				return null;
 			}
-			return (
-				<Typography
-					key={item.title}
-					sx={{ px: 2, pt: 2, pb: 1 }}
-					variant="caption"
-					color="text.secondary"
-				>
-					{item.title}
-				</Typography>
-			);
+			return <ListSubheader key={item.title}>{item.title}</ListSubheader>;
 		}
 		if (item.kind === "divider") {
 			return <Divider key={Math.random()} sx={{ my: 1 }} />;
@@ -188,7 +179,7 @@ export function App() {
 					sx={{
 						p: 1,
 						width: open ? (collapsed ? collapsedWidth : drawerWidth) : 0,
-						overflowY: 'auto',
+						overflowY: "auto",
 					}}
 				>
 					{NAVIGATION.map((item) => renderNavItem(item))}
@@ -225,7 +216,7 @@ export function App() {
 				)}
 			</Drawer>
 
-						<Divider orientation="vertical" />
+			<Divider orientation="vertical" />
 
 			<Box
 				component="main"
@@ -239,7 +230,7 @@ export function App() {
 						}),
 				}}
 			>
-				<Box sx={{ maxHeight: "100vh", height: "100vh", overflow: 'hidden' }}>
+				<Box sx={{ maxHeight: "100vh", height: "100vh", overflow: "hidden" }}>
 					<Outlet />
 				</Box>
 			</Box>

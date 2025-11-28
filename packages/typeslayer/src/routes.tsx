@@ -114,7 +114,7 @@ const indexRoute = createRoute({
 	component: () => {
 		// Redirect to /start on mount
 		if (typeof window !== "undefined") {
-			window.location.pathname = "/award-winners/largest-union";
+			window.location.pathname = "/start";
 		}
 		return null;
 	},

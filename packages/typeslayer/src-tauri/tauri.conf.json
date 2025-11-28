@@ -2,17 +2,17 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "typeslayer",
   "version": "0.1.0",
-  "identifier": "com.onyx.typeslayer",
+  "identifier": "typeslayer",
   "build": {
     "beforeDevCommand": "pnpm dev",
-    "devUrl": "http://localhost:1420",
+    "devUrl": "http://localhost:1993",
     "beforeBuildCommand": "pnpm build",
     "frontendDist": "../dist"
   },
   "app": {
     "windows": [
       {
-        "title": "Typeslayer",
+        "title": "TypeSlayer",
         "width": 1920,
         "height": 1080,
         "zoomHotkeysEnabled": true
@@ -27,8 +27,10 @@
     "targets": "all",
     "icon": [
       "icons/32x32.png",
+      "icons/64x64.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
+      "icons/icon.png",
       "icons/icon.icns",
       "icons/icon.ico"
     ]

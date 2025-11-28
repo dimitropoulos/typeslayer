@@ -6,16 +6,73 @@ mod log;
 mod validate;
 
 use std::sync::Mutex;
+use tauri::AppHandle;
+use tauri::Manager;
+use tauri::async_runtime::spawn;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Initialize logging with production-friendly level filtering
     log::init();
-    let app_data = Mutex::new(app_data::AppData::new());
-    let _temp_dir = app_data.lock().unwrap().temp_dir.clone();
 
     tauri::Builder::default()
-        .manage(app_data)
+        .plugin(tauri_plugin_upload::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
+        .setup(|app| {
+            let app_handle = app.app_handle().clone();
+            let app_data = app_data::AppData::new(&app_handle);
+            app.manage(Mutex::new(app_data));
+
+            // Spawn a lightweight HTTP server to serve runtime outputs
+            let outputs_app = app.app_handle().clone();
+            spawn(async move {
+                use axum::{Router, extract::Path, response::IntoResponse, routing::get};
+                use tower_http::cors::{Any, CorsLayer};
+                // no file service needed; direct read from outputs
+
+                // Explicit handler to set correct content type for known files
+                async fn serve_output(
+                    Path(name): Path<String>,
+                    app: AppHandle,
+                ) -> impl IntoResponse {
+                    let base = app_data::AppData::get_outputs_dir(&app);
+                    let path = std::path::Path::new(&base).join(&name);
+                    match tokio::fs::read(&path).await {
+                        Ok(bytes) => {
+                            let content_type = if name.ends_with(".json") {
+                                "application/json"
+                            } else {
+                                "application/octet-stream"
+                            };
+                            ([("Content-Type", content_type)], bytes)
+                        }
+                        Err(e) => {
+                            eprintln!("Failed to read {:?}: {}", path, e);
+                            ([("Content-Type", "text/plain")], Vec::new())
+                        }
+                    }
+                }
+
+                let cors = CorsLayer::new().allow_methods(Any).allow_origin(Any);
+                let app_router = Router::new()
+                    .route(
+                        "/outputs/:name",
+                        get({
+                            let app = outputs_app.clone();
+                            move |p| serve_output(p, app.clone())
+                        }),
+                    )
+                    .layer(cors);
+
+                // Bind to localhost fixed port for simplicity
+                let listener = tokio::net::TcpListener::bind("127.0.0.1:4765")
+                    .await
+                    .expect("bind outputs server");
+                if let Err(e) = axum::serve(listener, app_router.into_make_service()).await {
+                    eprintln!("outputs server error: {}", e);
+                }
+            });
+            Ok(())
+        })
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
@@ -44,8 +101,6 @@ pub fn run() {
             files::get_current_dir,
             files::get_project_root,
             files::set_project_root,
-            files::get_temp_dir,
-            files::set_temp_dir,
             app_data::verify_analyze_trace,
             app_data::verify_cpu_profile,
             app_data::get_types_json_text,

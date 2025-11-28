@@ -1,4 +1,5 @@
-import { Box, Button, Stack, Typography } from "@mui/material";
+import { Alert, Box, Button, Snackbar, Stack, Typography } from "@mui/material";
+import { useState } from "react";
 import { useStaticFile } from "./utils";
 
 export function ShowFile({
@@ -11,18 +12,26 @@ export function ShowFile({
 	description: string;
 }) {
 	const data = useStaticFile(fileName);
+	const [toast, setToast] = useState<{
+		open: boolean;
+		message: string;
+		severity: "success" | "error";
+	}>({ open: false, message: "", severity: "success" });
 
 	const formatted = data
 		? JSON.stringify(JSON.parse(data), null, 2)
 		: "Loading...";
 
 	const copyToClipboard = async () => {
-		if (data) {
-			try {
-				await navigator.clipboard.writeText(formatted);
-			} catch (err) {
-				console.error("Failed to copy text: ", err);
-			}
+		if (!data) {
+			setToast({ open: true, message: "Nothing to copy", severity: "error" });
+			return;
+		}
+		try {
+			await navigator.clipboard.writeText(formatted);
+			setToast({ open: true, message: "Copied", severity: "success" });
+		} catch {
+			setToast({ open: true, message: "Copy failed", severity: "error" });
 		}
 	};
 
@@ -45,6 +54,16 @@ export function ShowFile({
 			>
 				{formatted}
 			</Box>
+			<Snackbar
+				anchorOrigin={{ vertical: "top", horizontal: "right" }}
+				open={toast.open}
+				onClose={() => setToast((t: typeof toast) => ({ ...t, open: false }))}
+				autoHideDuration={2500}
+			>
+				<Alert variant="filled" severity={toast.severity}>
+					{toast.message}
+				</Alert>
+			</Snackbar>
 		</Box>
 	);
 }

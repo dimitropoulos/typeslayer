@@ -355,7 +355,6 @@ export const AwardWinners = () => {
 	return (
 		<Stack
 			direction="row"
-			className="asdf"
 			sx={{
 				minWidth: 500,
 				minHeight: 500,

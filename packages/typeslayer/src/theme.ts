@@ -209,6 +209,80 @@ export const theme: Theme = createTheme({
 				},
 			},
 		},
+		MuiFormControl: {
+			defaultProps: {
+				variant: "standard",
+			},
+		},
+		MuiInputLabel: {
+			defaultProps: {
+				shrink: true,
+			},
+			styleOverrides: {
+				root: {
+					position: "relative",
+					transform: "none",
+					fontSize: "0.875rem",
+					fontWeight: 600,
+					color: "#B4B4B8",
+					marginBottom: "8px",
+					"&.Mui-focused": {
+						color: doomRed.light,
+					},
+				},
+			},
+		},
+		MuiInput: {
+			styleOverrides: {
+				root: {
+					marginTop: "0 !important",
+					"&::before": {
+						borderBottom: "1px solid rgba(255,255,255,0.12)",
+					},
+					"&:hover:not(.Mui-disabled):before": {
+						borderBottom: "1px solid rgba(255,255,255,0.24)",
+					},
+					"&.Mui-focused:after": {
+						borderBottomColor: doomRed.main,
+					},
+				},
+				input: {
+					padding: "8px 0",
+					fontSize: "0.95rem",
+				},
+			},
+		},
+		MuiTextField: {
+			defaultProps: {
+				variant: "standard",
+				InputLabelProps: {
+					shrink: true,
+				},
+			},
+		},
+		MuiSelect: {
+			defaultProps: {
+				variant: "standard",
+				displayEmpty: true,
+			},
+			styleOverrides: {
+				select: {
+					padding: "8px 12px",
+					fontSize: "0.95rem",
+					backgroundColor: "rgba(0, 0, 0, 0.3)",
+					borderRadius: "4px",
+					border: "1px solid rgba(255, 255, 255, 0.12)",
+					"&:hover": {
+						backgroundColor: "rgba(0, 0, 0, 0.4)",
+						borderColor: "rgba(255, 255, 255, 0.24)",
+					},
+					"&.Mui-focused": {
+						backgroundColor: "rgba(0, 0, 0, 0.4)",
+						borderColor: doomRed.main,
+					},
+				},
+			},
+		},
 		MuiPaper: {
 			styleOverrides: {
 				root: {
@@ -270,11 +344,14 @@ export const theme: Theme = createTheme({
 					background:
 						"linear-gradient(140deg, rgba(159,30,30,0.35), rgba(159,30,30,0.15))",
 					border: "1px solid rgba(255,255,255,0.08)",
-					alignItems: 'end',
+					gap: 5,
 				},
 				labelSmall: {
 					paddingLeft: 4,
 					paddingRight: 4,
+				},
+				label: {
+					alignSelf: "baseline",
 				},
 			},
 		},

@@ -1,6 +1,5 @@
 use crate::{
     analyze_trace::constants::ANALYZE_TRACE_FILENAME,
-    files::TEMP_DIR_NAME,
     layercake::{LayerCake, LayerCakeInitArgs, ResolveBoolArgs, ResolveStringArgs, Source},
     validate::{
         trace_json::{TRACE_JSON_FILENAME, parse_trace_json, read_trace_json},
@@ -17,7 +16,7 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 use std::sync::Mutex;
-use tauri::State;
+use tauri::{AppHandle, Manager, State};
 use tracing::{error, info};
 
 // Static list of known editors (cmd, human-readable name)
@@ -39,7 +38,6 @@ const AVAILABLE_EDITORS: &[(&str, &str)] = &[
 ];
 pub struct AppData {
     pub project_root: String,
-    pub temp_dir: String,
     pub types_json: TypesJsonSchema,
     pub trace_json: Vec<crate::validate::trace_json::TraceEvent>,
     pub analyze_trace: Option<crate::analyze_trace::AnalyzeTraceResult>,
@@ -52,31 +50,44 @@ pub struct AppData {
 }
 
 impl AppData {
-    pub fn new() -> Self {
+    pub fn get_outputs_dir(app_handle: &AppHandle) -> String {
+        app_handle
+            .path()
+            .app_data_dir()
+            .expect("app_data_dir unavailable")
+            .join("outputs")
+            .to_string_lossy()
+            .to_string()
+    }
+
+    pub fn new(app_handle: &AppHandle) -> Self {
+        // Determine the app-specific data directory provided by Tauri
+        let base_data_dir = app_handle
+            .path()
+            .app_data_dir()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap();
+        info!("using base_data_dir: {}", base_data_dir);
+
+        let data_dir = Self::get_outputs_dir(app_handle);
+        info!("using outputs data_dir: {}", data_dir);
         // Build a single LayerCake and reuse it across init functions
-        let default_temp = {
-            let sys_temp = std::env::temp_dir();
-            sys_temp.join(TEMP_DIR_NAME).to_string_lossy().to_string()
-        };
-        // Create a single cake first (no config loaded yet), then resolve temp_dir and load config.
         let mut cake = LayerCake::new(LayerCakeInitArgs {
             config_filename: "typeslayer.toml",
             precedence: [Source::Env, Source::Flag, Source::File],
             env_prefix: "TYPESLAYER_",
         });
-        let temp_dir = Self::init_temp_dir_with(&cake, default_temp);
-        cake.load_config_in_dir(&temp_dir);
+        cake.load_config_in_dir(&base_data_dir);
         let project_root = Self::init_project_root_with(&cake);
-        let types_json = Self::init_types_json(&temp_dir, &project_root);
-        let trace_json = Self::init_trace_json(&temp_dir, &project_root);
-        let analyze_trace = Self::init_analyze_trace(&temp_dir);
-        let cpu_profile = Self::init_cpu_profile(&temp_dir);
+        let types_json = Self::init_types_json(&data_dir, &project_root);
+        let trace_json = Self::init_trace_json(&data_dir, &project_root);
+        let analyze_trace = Self::init_analyze_trace(&data_dir);
+        let cpu_profile = Self::init_cpu_profile(&data_dir);
         let settings = Self::settings_from_cake(&cake);
         let verbose = Self::init_verbose_with(&cake);
 
         let mut app = Self {
             project_root,
-            temp_dir,
             types_json,
             trace_json,
             analyze_trace,
@@ -94,22 +105,6 @@ impl AppData {
         app
     }
 
-    fn init_temp_dir_with(cake: &LayerCake, default_temp: String) -> String {
-        cake.resolve_string(ResolveStringArgs {
-            env: "TEMP_DIR",
-            flag: "--temp-dir",
-            file: "temp_dir",
-            default: || default_temp,
-            validate: |s| {
-                if s.is_empty() {
-                    Err("temp_dir cannot be empty".to_string())
-                } else {
-                    Ok(s.to_string())
-                }
-            },
-        })
-    }
-
     fn init_project_root_with(cake: &LayerCake) -> String {
         cake.resolve_string(ResolveStringArgs {
             env: "PROJECT_ROOT",
@@ -117,17 +112,36 @@ impl AppData {
             file: "project_root",
             default: || {
                 std::env::current_dir()
-                    .map(|p| p.to_string_lossy().to_string())
-                    .unwrap_or_else(|_| "./".to_string())
+                    .map(|p| p.join("package.json").to_string_lossy().to_string())
+                    .unwrap_or_else(|_| "./package.json".to_string())
             },
             validate: |s| {
                 let p = std::path::Path::new(s);
+
+                // If path explicitly ends with package.json, verify it exists
                 if p.file_name().map(|f| f == "package.json").unwrap_or(false) {
-                    if let Some(parent) = p.parent() {
-                        return Ok(parent.to_string_lossy().to_string() + "/");
+                    if !p.exists() {
+                        return Err(format!("package.json not found at: {}", s));
                     }
+                    return Ok(s.to_string());
                 }
-                Ok(s.to_string())
+
+                // If path exists and is a complete directory, check for package.json inside
+                // This handles CLI flags like --project-root /existing/dir
+                // But rejects incomplete paths like /home/tr/src/gith... (which don't exist)
+                if p.exists() && p.is_dir() {
+                    let pkg_path = p.join("package.json");
+                    if !pkg_path.exists() {
+                        return Err(format!("package.json not found in directory: {}", s));
+                    }
+                    return Ok(pkg_path.to_string_lossy().to_string());
+                }
+
+                // Path doesn't exist or isn't a directory - reject it
+                return Err(format!(
+                    "Path must be an existing package.json file or directory containing one: {}",
+                    s
+                ));
             },
         })
     }
@@ -154,41 +168,46 @@ impl AppData {
         cake: &LayerCake,
         scripts: &BTreeMap<String, String>,
     ) -> Option<String> {
+        // Auto-detect logic moved to default since validate isn't called for defaults
+        let auto_detect = || {
+            let precedence = [
+                "type-check",
+                "typecheck",
+                "types-check",
+                "typescheck",
+                "check-type",
+                "checktype",
+                "check-types",
+                "checktypes",
+                "typescript",
+            ];
+
+            for name in precedence.iter() {
+                if scripts.contains_key(*name) {
+                    return (*name).to_string();
+                }
+            }
+
+            "".to_string()
+        };
+
         let result = cake.resolve_string(ResolveStringArgs {
             env: "TYPECHECK_SCRIPT_NAME",
             flag: "--typecheck-script-name",
             file: "settings.typecheckScriptName",
-            default: || "".to_string(),
+            default: auto_detect,
             validate: |s| {
+                // Validation only checks if explicitly provided value exists
                 if !s.is_empty() {
                     if scripts.contains_key(s) {
-                        return Ok(s.to_string());
+                        Ok(s.to_string())
                     } else {
-                        return Err(format!("Script '{}' not found in package.json", s));
+                        Err(format!("Script '{}' not found in package.json", s))
                     }
+                } else {
+                    // Empty string is valid (means no script)
+                    Ok("".to_string())
                 }
-
-                // Auto-detect based on precedence
-                let precedence = [
-                    "type-check",
-                    "typecheck",
-                    "types-check",
-                    "typescheck",
-                    "check-type",
-                    "checktype",
-                    "check-types",
-                    "checktypes",
-                    "typescript",
-                ];
-
-                for name in precedence.iter() {
-                    if scripts.contains_key(*name) {
-                        return Ok((*name).to_string());
-                    }
-                }
-
-                // Return empty string if no script found
-                Ok("".to_string())
             },
         });
         if result.is_empty() {
@@ -199,9 +218,8 @@ impl AppData {
     }
 
     fn load_package_json(&mut self) -> Result<(), String> {
-        let path = format!("{}package.json", self.project_root);
-        let contents = fs::read_to_string(&path)
-            .map_err(|e| format!("Failed to read package.json at {path}: {e}"))?;
+        let contents = fs::read_to_string(&self.project_root)
+            .map_err(|e| format!("Failed to read package.json at {}: {e}", self.project_root))?;
         let value: serde_json::Value = serde_json::from_str(&contents)
             .map_err(|e| format!("Failed to parse package.json: {e}"))?;
         let scripts_obj = value
@@ -301,27 +319,60 @@ impl AppData {
     fn run_typescript_with_flag_blocking(
         project_root: String,
         script_command: String,
-        temp_dir: String,
+        data_dir: String,
         flag: String,
         context: &str,
     ) -> Result<(), String> {
-        fs::create_dir_all(&temp_dir)
-            .map_err(|e| format!("Failed to create temp directory: {e}"))?;
+        fs::create_dir_all(&data_dir)
+            .map_err(|e| format!("Failed to create data directory: {e}"))?;
 
         // Parse environment variables from the script command
         let (env_vars, clean_command) = Self::parse_env_vars(&script_command);
 
+        // Remove any existing --generateTrace/--generateCpuProfile flags from user script to ensure our paths are used
+        fn sanitize_ts_flags(cmd: &str) -> String {
+            let mut out: Vec<String> = Vec::new();
+            let mut skip_next = false;
+            for token in cmd.split_whitespace() {
+                if skip_next {
+                    skip_next = false;
+                    continue;
+                }
+                let lower = token.to_ascii_lowercase();
+                let is_gen_trace =
+                    lower == "--generatetrace" || lower.starts_with("--generatetrace=");
+                let is_cpu_prof =
+                    lower == "--generatecpuprofile" || lower.starts_with("--generatecpuprofile=");
+                if is_gen_trace || is_cpu_prof {
+                    // If in form --flag value, skip the next arg as the path
+                    if !lower.contains('=') {
+                        skip_next = true;
+                    }
+                    continue;
+                }
+                out.push(token.to_string());
+            }
+            out.join(" ")
+        }
+        let sanitized_command = sanitize_ts_flags(&clean_command);
+
         let full_command = format!(
             "{script}{addons}{flag}",
-            script = clean_command,
+            script = sanitized_command,
             addons = Self::COMMON_ADD_ONS,
             flag = flag
         );
         let npm_command = format!("npm exec -- {full_command}");
-        let cwd = project_root.trim_end_matches('/').to_string();
+
+        // project_root is now the package.json path, extract directory
+        let cwd = std::path::Path::new(&project_root)
+            .parent()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|| "./".to_string());
 
         info!("Executing command: {}", npm_command);
         info!("Working directory: {}", cwd);
+        info!("Outputs directory (data_dir): {}", data_dir);
 
         let mut cmd = Command::new("sh");
         cmd.arg("-c").arg(&npm_command).current_dir(&cwd);
@@ -360,9 +411,9 @@ impl AppData {
         Ok(())
     }
 
-    // Async helper to validate outputs in temp_dir and return parsed results
+    // Async helper to validate outputs in data_dir and return parsed results
     async fn validate_types_and_trace_async(
-        temp_dir: &str,
+        data_dir: &str,
     ) -> Result<
         (
             TypesJsonSchema,
@@ -370,11 +421,11 @@ impl AppData {
         ),
         String,
     > {
-        let types_path = std::path::Path::new(temp_dir)
+        let types_path = std::path::Path::new(data_dir)
             .join(TYPES_JSON_FILENAME.trim_start_matches('/'))
             .to_string_lossy()
             .to_string();
-        let trace_path = std::path::Path::new(temp_dir)
+        let trace_path = std::path::Path::new(data_dir)
             .join(TRACE_JSON_FILENAME.trim_start_matches('/'))
             .to_string_lossy()
             .to_string();
@@ -389,13 +440,19 @@ impl AppData {
         Ok((types, trace))
     }
 
-    fn init_types_json(temp_dir: &str, project_root: &str) -> TypesJsonSchema {
+    fn init_types_json(data_dir: &str, project_root: &str) -> TypesJsonSchema {
+        // project_root is now package.json path, get directory
+        let project_dir = std::path::Path::new(project_root)
+            .parent()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|| "./".to_string());
+
         let type_paths = [
-            std::path::Path::new(temp_dir)
+            std::path::Path::new(data_dir)
                 .join(TYPES_JSON_FILENAME.trim_start_matches('/'))
                 .to_string_lossy()
                 .to_string(),
-            std::path::Path::new(project_root)
+            std::path::Path::new(&project_dir)
                 .join(TYPES_JSON_FILENAME.trim_start_matches('/'))
                 .to_string_lossy()
                 .to_string(),
@@ -415,15 +472,21 @@ impl AppData {
     }
 
     fn init_trace_json(
-        temp_dir: &str,
+        data_dir: &str,
         project_root: &str,
     ) -> Vec<crate::validate::trace_json::TraceEvent> {
+        // project_root is now package.json path, get directory
+        let project_dir = std::path::Path::new(project_root)
+            .parent()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|| "./".to_string());
+
         let trace_paths = [
-            std::path::Path::new(temp_dir)
+            std::path::Path::new(data_dir)
                 .join(TRACE_JSON_FILENAME.trim_start_matches('/'))
                 .to_string_lossy()
                 .to_string(),
-            std::path::Path::new(project_root)
+            std::path::Path::new(&project_dir)
                 .join(TRACE_JSON_FILENAME.trim_start_matches('/'))
                 .to_string_lossy()
                 .to_string(),
@@ -442,8 +505,8 @@ impl AppData {
         Vec::new()
     }
 
-    fn init_analyze_trace(temp_dir: &str) -> Option<crate::analyze_trace::AnalyzeTraceResult> {
-        let analyze_path = Path::new(temp_dir).join(ANALYZE_TRACE_FILENAME);
+    fn init_analyze_trace(data_dir: &str) -> Option<crate::analyze_trace::AnalyzeTraceResult> {
+        let analyze_path = Path::new(data_dir).join(ANALYZE_TRACE_FILENAME);
         if analyze_path.exists() {
             match std::fs::read_to_string(&analyze_path)
                 .map_err(|e| e.to_string())
@@ -462,8 +525,8 @@ impl AppData {
         None
     }
 
-    fn init_cpu_profile(temp_dir: &str) -> Option<String> {
-        let cpu_profile_path = Path::new(temp_dir).join(CPU_PROFILE_FILENAME);
+    fn init_cpu_profile(data_dir: &str) -> Option<String> {
+        let cpu_profile_path = Path::new(data_dir).join(CPU_PROFILE_FILENAME);
         if cpu_profile_path.exists() {
             match std::fs::read_to_string(&cpu_profile_path) {
                 Ok(contents) => return Some(contents),
@@ -489,7 +552,7 @@ struct OutputTimestamps {
 #[derive(serde::Serialize)]
 struct TypeslayerConfig<'a> {
     project_root: &'a str,
-    temp_dir: &'a str,
+    data_dir: &'a str,
     verbose: bool,
     settings: &'a Settings,
     outputs: OutputTimestamps,
@@ -505,13 +568,15 @@ impl AppData {
         None
     }
 
-    pub fn update_config_file(&self) {
-        let temp_dir = &self.temp_dir;
-        let config_path = Path::new(temp_dir).join("typeslayer.toml");
-        let types_path = Path::new(temp_dir).join(TYPES_JSON_FILENAME.trim_start_matches('/'));
-        let trace_path = Path::new(temp_dir).join(TRACE_JSON_FILENAME.trim_start_matches('/'));
-        let analyze_path = Path::new(temp_dir).join(ANALYZE_TRACE_FILENAME);
-        let cpu_path = Path::new(temp_dir).join(CPU_PROFILE_FILENAME);
+    pub fn update_outputs(&self, app: &AppHandle) {
+        let base_data_dir = app.path().app_data_dir().expect("app_data_dir unavailable");
+        let data_dir = base_data_dir.join("outputs");
+        let data_dir_str = data_dir.to_string_lossy().to_string();
+        let config_path = base_data_dir.join("typeslayer.toml");
+        let types_path = data_dir.join(TYPES_JSON_FILENAME.trim_start_matches('/'));
+        let trace_path = data_dir.join(TRACE_JSON_FILENAME.trim_start_matches('/'));
+        let analyze_path = data_dir.join(ANALYZE_TRACE_FILENAME);
+        let cpu_path = data_dir.join(CPU_PROFILE_FILENAME);
 
         let outputs = OutputTimestamps {
             types_json: Self::file_mtime_iso(&types_path),
@@ -522,7 +587,7 @@ impl AppData {
 
         let cfg = TypeslayerConfig {
             project_root: &self.project_root,
-            temp_dir: &self.temp_dir,
+            data_dir: &data_dir_str,
             verbose: self.verbose,
             settings: &self.settings,
             outputs,
@@ -530,7 +595,7 @@ impl AppData {
 
         match toml::to_string(&cfg) {
             Ok(s) => {
-                if let Err(e) = fs::create_dir_all(temp_dir) {
+                if let Err(e) = fs::create_dir_all(&data_dir) {
                     error!("Failed to create temp dir for config: {}", e);
                     return;
                 }
@@ -613,13 +678,11 @@ impl AppData {
 
 #[tauri::command]
 pub async fn validate_types_json(
+    app: AppHandle,
     state: State<'_, Mutex<AppData>>,
 ) -> Result<TypesJsonSchema, String> {
-    let temp_dir = {
-        let data = state.lock().map_err(|e| e.to_string())?;
-        data.temp_dir.clone()
-    };
-    let path = format!("{}{}", temp_dir, TYPES_JSON_FILENAME);
+    let data_dir = AppData::get_outputs_dir(&app);
+    let path = format!("{}{}", data_dir, TYPES_JSON_FILENAME);
     let result = load_types_json(path).await?;
     let mut data = state.lock().map_err(|e| e.to_string())?;
     data.types_json = result.clone();
@@ -628,13 +691,11 @@ pub async fn validate_types_json(
 
 #[tauri::command]
 pub async fn validate_trace_json(
+    app: AppHandle,
     state: State<'_, Mutex<AppData>>,
 ) -> Result<Vec<crate::validate::trace_json::TraceEvent>, String> {
-    let temp_dir = {
-        let data = state.lock().map_err(|e| e.to_string())?;
-        data.temp_dir.clone()
-    };
-    let path = format!("{}{}", temp_dir, TRACE_JSON_FILENAME);
+    let data_dir = AppData::get_outputs_dir(&app);
+    let path = format!("{}{}", data_dir, TRACE_JSON_FILENAME);
     let result = read_trace_json(&path).await?;
     let mut data = state.lock().map_err(|e| e.to_string())?;
     data.trace_json = result.clone();
@@ -764,9 +825,12 @@ pub async fn set_typecheck_script_name(
 }
 
 #[tauri::command]
-pub async fn generate_trace(state: State<'_, Mutex<AppData>>) -> Result<TypesJsonSchema, String> {
+pub async fn generate_trace(
+    app: AppHandle,
+    state: State<'_, Mutex<AppData>>,
+) -> Result<TypesJsonSchema, String> {
     // Short lock to get values we need
-    let (script_command, temp_dir, project_root) = {
+    let (script_command, project_root) = {
         let data = state.lock().map_err(|e| e.to_string())?;
         let script_name = data.typecheck_script_name.clone().ok_or_else(|| {
             "No script selected. Please select a type-check script first.".to_string()
@@ -776,19 +840,18 @@ pub async fn generate_trace(state: State<'_, Mutex<AppData>>) -> Result<TypesJso
             .get(&script_name)
             .cloned()
             .ok_or_else(|| format!("Script {script_name} not found in package.json"))?;
-        (
-            script_command,
-            data.temp_dir.clone(),
-            data.project_root.clone(),
-        )
+        (script_command, data.project_root.clone())
     };
 
+    let data_dir = AppData::get_outputs_dir(&app);
+
+    info!("generate_trace: will write outputs under {}", data_dir);
     let handle = tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
-        let flag = format!(" --generateTrace {}", temp_dir);
+        let flag = format!(" --generateTrace {}", data_dir);
         AppData::run_typescript_with_flag_blocking(
             project_root,
             script_command,
-            temp_dir,
+            data_dir,
             flag,
             "TypeScript compilation with trace generation",
         )
@@ -797,15 +860,12 @@ pub async fn generate_trace(state: State<'_, Mutex<AppData>>) -> Result<TypesJso
     match handle.await {
         Ok(Ok(())) => {
             // Now read/validate outputs asynchronously
-            let temp_dir = {
-                let data = state.lock().map_err(|e| e.to_string())?;
-                data.temp_dir.clone()
-            };
-            let (types, trace) = AppData::validate_types_and_trace_async(&temp_dir).await?;
+            let data_dir = AppData::get_outputs_dir(&app);
+            let (types, trace) = AppData::validate_types_and_trace_async(&data_dir).await?;
             let mut data = state.lock().map_err(|e| e.to_string())?;
             data.types_json = types.clone();
             data.trace_json = trace;
-            AppData::update_config_file(&data);
+            AppData::update_outputs(&data, &app);
             Ok(types)
         }
         Ok(Err(e)) => Err(e),
@@ -814,8 +874,11 @@ pub async fn generate_trace(state: State<'_, Mutex<AppData>>) -> Result<TypesJso
 }
 
 #[tauri::command]
-pub async fn generate_cpu_profile(state: State<'_, Mutex<AppData>>) -> Result<(), String> {
-    let (script_command, temp_dir, project_root) = {
+pub async fn generate_cpu_profile(
+    app: AppHandle,
+    state: State<'_, Mutex<AppData>>,
+) -> Result<(), String> {
+    let (script_command, project_root) = {
         let data = state.lock().map_err(|e| e.to_string())?;
         let script_name = data.typecheck_script_name.clone().ok_or_else(|| {
             "No script selected. Please select a type-check script first.".to_string()
@@ -825,22 +888,24 @@ pub async fn generate_cpu_profile(state: State<'_, Mutex<AppData>>) -> Result<()
             .get(&script_name)
             .cloned()
             .ok_or_else(|| format!("Script {script_name} not found in package.json"))?;
-        (
-            script_command,
-            data.temp_dir.clone(),
-            data.project_root.clone(),
-        )
+        (script_command, data.project_root.clone())
     };
 
+    let data_dir = AppData::get_outputs_dir(&app);
+
+    info!(
+        "generate_cpu_profile: will write profile under {}",
+        data_dir
+    );
     let handle = tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
         let flag = format!(
             " --generateCpuProfile {}/{}",
-            temp_dir, CPU_PROFILE_FILENAME
+            data_dir, CPU_PROFILE_FILENAME
         );
         AppData::run_typescript_with_flag_blocking(
             project_root,
             script_command,
-            temp_dir,
+            data_dir,
             flag,
             "TypeScript CPU profile run",
         )
@@ -850,16 +915,13 @@ pub async fn generate_cpu_profile(state: State<'_, Mutex<AppData>>) -> Result<()
         Ok(r) => {
             // On success, read and cache CPU profile contents
             if r.is_ok() {
-                let temp_dir = {
-                    let data = state.lock().map_err(|e| e.to_string())?;
-                    data.temp_dir.clone()
-                };
-                let path = Path::new(&temp_dir).join(CPU_PROFILE_FILENAME);
+                let data_dir = AppData::get_outputs_dir(&app);
+                let path = Path::new(&data_dir).join(CPU_PROFILE_FILENAME);
                 match tokio::fs::read_to_string(&path).await {
                     Ok(contents) => {
                         let mut data = state.lock().map_err(|e| e.to_string())?;
                         data.cpu_profile = Some(contents);
-                        AppData::update_config_file(&data);
+                        AppData::update_outputs(&data, &app);
                     }
                     Err(e) => error!("Failed to read CPU profile after generation: {}", e),
                 }
@@ -872,17 +934,20 @@ pub async fn generate_cpu_profile(state: State<'_, Mutex<AppData>>) -> Result<()
 
 #[tauri::command]
 pub async fn analyze_trace_command(
+    app: AppHandle,
     state: State<'_, Mutex<AppData>>,
     options: Option<crate::analyze_trace::AnalyzeTraceOptions>,
 ) -> Result<crate::analyze_trace::AnalyzeTraceResult, String> {
     info!("Starting analyze trace...");
-    let temp_dir = {
-        let data = state.lock().map_err(|e| e.to_string())?;
-        data.temp_dir.clone()
-    };
+    let data_dir = AppData::get_outputs_dir(&app);
+    info!(
+        "analyze_trace: reading inputs and writing output under {}",
+        data_dir
+    );
 
+    let trace_dir_for_log = data_dir.clone();
     let handle = tauri::async_runtime::spawn_blocking(move || {
-        match crate::analyze_trace::analyze_trace(&temp_dir, options) {
+        match crate::analyze_trace::analyze_trace(&data_dir, options) {
             Ok(result) => {
                 info!("Analyze trace completed successfully");
                 Ok::<crate::analyze_trace::AnalyzeTraceResult, String>(result)
@@ -899,7 +964,11 @@ pub async fn analyze_trace_command(
             if let Ok(res) = &r {
                 let mut data = state.lock().map_err(|e| e.to_string())?;
                 data.analyze_trace = Some(res.clone());
-                AppData::update_config_file(&data);
+                AppData::update_outputs(&data, &app);
+                info!(
+                    "analyze_trace: wrote {} in {}",
+                    ANALYZE_TRACE_FILENAME, trace_dir_for_log
+                );
             }
             r
         }
@@ -909,6 +978,7 @@ pub async fn analyze_trace_command(
 
 #[tauri::command]
 pub async fn get_analyze_trace(
+    app: AppHandle,
     state: State<'_, Mutex<AppData>>,
 ) -> Result<crate::analyze_trace::AnalyzeTraceResult, String> {
     // Serve cached value if present
@@ -920,11 +990,8 @@ pub async fn get_analyze_trace(
     }
 
     // Read from disk and cache
-    let temp_dir = {
-        let data = state.lock().map_err(|e| e.to_string())?;
-        data.temp_dir.clone()
-    };
-    let path = Path::new(&temp_dir).join("analyze-trace.json");
+    let data_dir = AppData::get_outputs_dir(&app);
+    let path = Path::new(&data_dir).join("analyze-trace.json");
     let contents = tokio::fs::read_to_string(&path)
         .await
         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
@@ -1010,12 +1077,13 @@ pub async fn get_settings(state: State<'_, Mutex<AppData>>) -> Result<Settings, 
 
 #[tauri::command]
 pub async fn set_settings(
+    app: AppHandle,
     state: State<'_, Mutex<AppData>>,
     settings: Settings,
 ) -> Result<(), String> {
     let mut data = state.lock().map_err(|e| e.to_string())?;
     data.settings = settings;
-    AppData::update_config_file(&data);
+    AppData::update_outputs(&data, &app);
     Ok(())
 }
 
@@ -1162,6 +1230,7 @@ pub async fn get_preferred_editor(
 
 #[tauri::command]
 pub async fn set_preferred_editor(
+    app: AppHandle,
     state: State<'_, Mutex<AppData>>,
     editor: String,
 ) -> Result<(), String> {
@@ -1178,6 +1247,6 @@ pub async fn set_preferred_editor(
     }
 
     data.settings.preferred_editor = Some(editor);
-    AppData::update_config_file(&data);
+    AppData::update_outputs(&data, &app);
     Ok(())
 }

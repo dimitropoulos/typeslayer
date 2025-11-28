@@ -27,15 +27,20 @@ export const SettingsPage = () => {
 	useEffect(() => {
 		(async () => {
 			try {
-				const s: { simplifyPaths: boolean; preferEditorOpen: boolean; autoStart?: boolean } =
-					await invoke("get_settings");
+				const s: {
+					simplifyPaths: boolean;
+					preferEditorOpen: boolean;
+					autoStart?: boolean;
+				} = await invoke("get_settings");
 				setSimplifyPaths(!!s.simplifyPaths);
 				setPreferEditorOpen(!!s.preferEditorOpen);
 				setAutoStart(s.autoStart ?? true);
 			} catch {}
 			try {
 				const root: string = await invoke("get_project_root");
-				setProjectRoot(root);
+				setProjectRoot(
+					root.endsWith("/package.json") ? root.slice(0, -13) : root,
+				);
 			} catch {}
 			try {
 				const editors: Array<[string, string]> = await invoke(
@@ -111,7 +116,7 @@ export const SettingsPage = () => {
 			</Typography>
 			<FormGroup>
 				<FormControlLabel
-					label="Simplify Paths"
+					label="Relative Paths"
 					control={
 						<Switch checked={simplifyPaths} onChange={handleSimplifyPaths} />
 					}
@@ -120,11 +125,19 @@ export const SettingsPage = () => {
 					When enabled, any paths that match the root of your project will be
 					trimmed.
 				</Typography>
-				<Typography variant="body2" color="textSecondary">
-					For example, if your project is at{" "}
-					<InlineCode>{projectRoot}</InlineCode> and you have a file at{" "}
-					<InlineCode>{projectRoot}/src/index.ts</InlineCode>, it will be
-					displayed as <InlineCode>src/index.ts</InlineCode>.
+				<Typography variant="body2" color="textSecondary" lineHeight={2}>
+					For example, if your project root is
+					<br />
+					<InlineCode>{projectRoot}</InlineCode>
+					<br />
+					and you have a file at
+					<br />
+					<InlineCode>{projectRoot}/</InlineCode>
+					<InlineCode secondary>src/index.ts</InlineCode>
+					<br />
+					that file's path will be displayed as
+					<br />
+					<InlineCode secondary>src/index.ts</InlineCode>
 				</Typography>
 			</FormGroup>
 			<FormGroup>

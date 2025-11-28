@@ -1,10 +1,11 @@
 import { CPU_PROFILE_FILENAME } from "@typeslayer/validate";
 import { useEffect, useMemo, useRef } from "react";
+import { serverBaseUrl } from "../components/utils";
 
 export const SpeedScope = () => {
 	const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
-	const profileURL = useMemo(() => `/tmp-files/${CPU_PROFILE_FILENAME}`, []);
+	const profileURL = useMemo(() => `${serverBaseUrl}/outputs/${CPU_PROFILE_FILENAME}`, []);
 	const embeddedUrl = useMemo(
 		() =>
 			`/speedscope-ui/index.html#profileURL=${encodeURIComponent(profileURL)}`,

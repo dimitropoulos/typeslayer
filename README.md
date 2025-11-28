@@ -32,6 +32,14 @@ Could the architecture be changed such that these things aren't possible?  Who k
 
 - allow for configuring default code editor that files open in, right now it's just vscode
 
+## Data
+
+Data is stored:
+
+- Linux: `~/.local/share/typeslayer/`
+- macOS: `~/Library/Application Support/typeslayer/`
+- Windows: `%APPDATA%\typeslayer\`
+
 ## Contributing
 
 1. all commits (and therefor PR titles) must be the next bar from "My Name Is" by Eminem, until further notice
