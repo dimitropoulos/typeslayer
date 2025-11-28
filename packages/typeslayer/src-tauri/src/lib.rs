@@ -1,14 +1,18 @@
 mod analyze_trace;
 mod app_data;
-mod cli;
 mod files;
+mod layercake;
+mod log;
 mod validate;
 
 use std::sync::Mutex;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Initialize logging with production-friendly level filtering
+    log::init();
     let app_data = Mutex::new(app_data::AppData::new());
+    let _temp_dir = app_data.lock().unwrap().temp_dir.clone();
 
     tauri::Builder::default()
         .manage(app_data)

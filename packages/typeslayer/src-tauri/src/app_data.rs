@@ -1,7 +1,7 @@
 use crate::{
     analyze_trace::constants::ANALYZE_TRACE_FILENAME,
-    cli::{resolve_path, resolve_string},
     files::TEMP_DIR_NAME,
+    layercake::{LayerCake, LayerCakeInitArgs, ResolveBoolArgs, ResolveStringArgs, Source},
     validate::{
         trace_json::{TRACE_JSON_FILENAME, parse_trace_json, read_trace_json},
         types_json::{
@@ -18,7 +18,25 @@ use std::path::Path;
 use std::process::Command;
 use std::sync::Mutex;
 use tauri::State;
+use tracing::{error, info};
 
+// Static list of known editors (cmd, human-readable name)
+const AVAILABLE_EDITORS: &[(&str, &str)] = &[
+    ("code", "VS Code"),
+    ("cursor", "Cursor"),
+    ("zed", "Zed"),
+    ("nvim", "Neovim"),
+    ("vim", "Vim"),
+    ("idea", "IntelliJ IDEA"),
+    ("pycharm", "PyCharm"),
+    ("webstorm", "WebStorm"),
+    ("subl", "Sublime Text"),
+    ("emacs", "Emacs"),
+    ("nano", "Nano"),
+    ("hx", "Helix"),
+    ("lapce", "Lapce"),
+    ("lite-xl", "Lite XL"),
+];
 pub struct AppData {
     pub project_root: String,
     pub temp_dir: String,
@@ -29,16 +47,32 @@ pub struct AppData {
     pub package_scripts: BTreeMap<String, String>,
     pub typecheck_script_name: Option<String>,
     pub settings: Settings,
+    pub verbose: bool,
+    pub cake: LayerCake,
 }
 
 impl AppData {
     pub fn new() -> Self {
-        let project_root = Self::init_project_root();
-        let temp_dir = Self::init_temp_dir();
+        // Build a single LayerCake and reuse it across init functions
+        let default_temp = {
+            let sys_temp = std::env::temp_dir();
+            sys_temp.join(TEMP_DIR_NAME).to_string_lossy().to_string()
+        };
+        // Create a single cake first (no config loaded yet), then resolve temp_dir and load config.
+        let mut cake = LayerCake::new(LayerCakeInitArgs {
+            config_filename: "typeslayer.toml",
+            precedence: [Source::Env, Source::Flag, Source::File],
+            env_prefix: "TYPESLAYER_",
+        });
+        let temp_dir = Self::init_temp_dir_with(&cake, default_temp);
+        cake.load_config_in_dir(&temp_dir);
+        let project_root = Self::init_project_root_with(&cake);
         let types_json = Self::init_types_json(&temp_dir, &project_root);
         let trace_json = Self::init_trace_json(&temp_dir, &project_root);
         let analyze_trace = Self::init_analyze_trace(&temp_dir);
         let cpu_profile = Self::init_cpu_profile(&temp_dir);
+        let settings = Self::settings_from_cake(&cake);
+        let verbose = Self::init_verbose_with(&cake);
 
         let mut app = Self {
             project_root,
@@ -49,60 +83,119 @@ impl AppData {
             cpu_profile,
             package_scripts: BTreeMap::new(),
             typecheck_script_name: None,
-            settings: Settings::default(),
+            settings,
+            verbose,
+            cake,
         };
         if app.load_package_json().is_ok() {
-            app.typecheck_script_name = Self::init_typecheck_script_name(&app.package_scripts);
+            app.typecheck_script_name =
+                Self::init_typecheck_script_name_with(&app.cake, &app.package_scripts);
         }
         app
     }
 
-    fn init_project_root() -> String {
-        resolve_path("--project-root", "TYPESLAYER_PROJECT_ROOT", || {
-            std::env::current_dir()
-                .map(|p| p.to_string_lossy().to_string())
-                .unwrap_or_else(|_| "./".to_string())
+    fn init_temp_dir_with(cake: &LayerCake, default_temp: String) -> String {
+        cake.resolve_string(ResolveStringArgs {
+            env: "TEMP_DIR",
+            flag: "--temp-dir",
+            file: "temp_dir",
+            default: || default_temp,
+            validate: |s| {
+                if s.is_empty() {
+                    Err("temp_dir cannot be empty".to_string())
+                } else {
+                    Ok(s.to_string())
+                }
+            },
         })
     }
 
-    fn init_temp_dir() -> String {
-        resolve_path("--temp-dir", "TYPESLAYER_TEMP_DIR", || {
-            let sys_temp = std::env::temp_dir();
-            sys_temp.join(TEMP_DIR_NAME).to_string_lossy().to_string()
+    fn init_project_root_with(cake: &LayerCake) -> String {
+        cake.resolve_string(ResolveStringArgs {
+            env: "PROJECT_ROOT",
+            flag: "--project-root",
+            file: "project_root",
+            default: || {
+                std::env::current_dir()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .unwrap_or_else(|_| "./".to_string())
+            },
+            validate: |s| {
+                let p = std::path::Path::new(s);
+                if p.file_name().map(|f| f == "package.json").unwrap_or(false) {
+                    if let Some(parent) = p.parent() {
+                        return Ok(parent.to_string_lossy().to_string() + "/");
+                    }
+                }
+                Ok(s.to_string())
+            },
         })
     }
 
-    fn init_typecheck_script_name(scripts: &BTreeMap<String, String>) -> Option<String> {
-        // Try CLI flag or env var first
-        if let Some(candidate) = resolve_string(
-            "--typecheck-script-name",
-            "TYPESLAYER_TYPECHECK_SCRIPT_NAME",
-        ) {
-            if scripts.contains_key(&candidate) {
-                return Some(candidate);
-            }
-            // If provided but not found, ignore and fall through to auto-detection
-        }
+    fn init_verbose_with(cake: &LayerCake) -> bool {
+        cake.resolve_bool(ResolveBoolArgs {
+            env: "VERBOSE",
+            flag: "--verbose",
+            file: "verbose",
+            default: || {
+                #[cfg(debug_assertions)]
+                {
+                    true
+                }
+                #[cfg(not(debug_assertions))]
+                {
+                    false
+                }
+            },
+        })
+    }
 
-        // Auto-detect based on precedence
-        let precedence = [
-            "type-check",
-            "typecheck",
-            "types-check",
-            "typescheck",
-            "check-type",
-            "checktype",
-            "check-types",
-            "checktypes",
-            "typescript",
-        ];
+    fn init_typecheck_script_name_with(
+        cake: &LayerCake,
+        scripts: &BTreeMap<String, String>,
+    ) -> Option<String> {
+        let result = cake.resolve_string(ResolveStringArgs {
+            env: "TYPECHECK_SCRIPT_NAME",
+            flag: "--typecheck-script-name",
+            file: "settings.typecheckScriptName",
+            default: || "".to_string(),
+            validate: |s| {
+                if !s.is_empty() {
+                    if scripts.contains_key(s) {
+                        return Ok(s.to_string());
+                    } else {
+                        return Err(format!("Script '{}' not found in package.json", s));
+                    }
+                }
 
-        for name in precedence.iter() {
-            if scripts.contains_key(*name) {
-                return Some((*name).to_string());
-            }
+                // Auto-detect based on precedence
+                let precedence = [
+                    "type-check",
+                    "typecheck",
+                    "types-check",
+                    "typescheck",
+                    "check-type",
+                    "checktype",
+                    "check-types",
+                    "checktypes",
+                    "typescript",
+                ];
+
+                for name in precedence.iter() {
+                    if scripts.contains_key(*name) {
+                        return Ok((*name).to_string());
+                    }
+                }
+
+                // Return empty string if no script found
+                Ok("".to_string())
+            },
+        });
+        if result.is_empty() {
+            None
+        } else {
+            Some(result)
         }
-        None
     }
 
     fn load_package_json(&mut self) -> Result<(), String> {
@@ -131,7 +224,8 @@ impl AppData {
                 return;
             }
         }
-        self.typecheck_script_name = Self::init_typecheck_script_name(&self.package_scripts);
+        self.typecheck_script_name =
+            Self::init_typecheck_script_name_with(&self.cake, &self.package_scripts);
     }
 
     pub fn update_project_root(&mut self, new_root: String) {
@@ -226,8 +320,8 @@ impl AppData {
         let npm_command = format!("npm exec -- {full_command}");
         let cwd = project_root.trim_end_matches('/').to_string();
 
-        println!("Executing command: {}", npm_command);
-        println!("Working directory: {}", cwd);
+        info!("Executing command: {}", npm_command);
+        info!("Working directory: {}", cwd);
 
         let mut cmd = Command::new("sh");
         cmd.arg("-c").arg(&npm_command).current_dir(&cwd);
@@ -261,7 +355,7 @@ impl AppData {
                 return Err(format!("{context} failed: {joined}"));
             }
         } else {
-            println!("Command completed successfully: {}", context);
+            info!("Command completed successfully: {}", context);
         }
         Ok(())
     }
@@ -276,8 +370,14 @@ impl AppData {
         ),
         String,
     > {
-        let types_path = format!("{}{}", temp_dir, TYPES_JSON_FILENAME);
-        let trace_path = format!("{}{}", temp_dir, TRACE_JSON_FILENAME);
+        let types_path = std::path::Path::new(temp_dir)
+            .join(TYPES_JSON_FILENAME.trim_start_matches('/'))
+            .to_string_lossy()
+            .to_string();
+        let trace_path = std::path::Path::new(temp_dir)
+            .join(TRACE_JSON_FILENAME.trim_start_matches('/'))
+            .to_string_lossy()
+            .to_string();
 
         // Read/parse concurrently
         let (types_res, trace_res) =
@@ -291,8 +391,14 @@ impl AppData {
 
     fn init_types_json(temp_dir: &str, project_root: &str) -> TypesJsonSchema {
         let type_paths = [
-            format!("{}{}", temp_dir, TYPES_JSON_FILENAME),
-            format!("{}{}", project_root, TYPES_JSON_FILENAME),
+            std::path::Path::new(temp_dir)
+                .join(TYPES_JSON_FILENAME.trim_start_matches('/'))
+                .to_string_lossy()
+                .to_string(),
+            std::path::Path::new(project_root)
+                .join(TYPES_JSON_FILENAME.trim_start_matches('/'))
+                .to_string_lossy()
+                .to_string(),
         ];
         for p in type_paths.iter() {
             if Path::new(p).exists() {
@@ -301,7 +407,7 @@ impl AppData {
                     .and_then(|s| parse_types_json(p, &s))
                 {
                     Ok(parsed) => return parsed,
-                    Err(e) => println!("Startup types.json ingestion failed at {p}: {e}"),
+                    Err(e) => info!("Startup types.json ingestion failed at {p}: {e}"),
                 }
             }
         }
@@ -313,8 +419,14 @@ impl AppData {
         project_root: &str,
     ) -> Vec<crate::validate::trace_json::TraceEvent> {
         let trace_paths = [
-            format!("{}{}", temp_dir, TRACE_JSON_FILENAME),
-            format!("{}{}", project_root, TRACE_JSON_FILENAME),
+            std::path::Path::new(temp_dir)
+                .join(TRACE_JSON_FILENAME.trim_start_matches('/'))
+                .to_string_lossy()
+                .to_string(),
+            std::path::Path::new(project_root)
+                .join(TRACE_JSON_FILENAME.trim_start_matches('/'))
+                .to_string_lossy()
+                .to_string(),
         ];
         for p in trace_paths.iter() {
             if Path::new(p).exists() {
@@ -323,7 +435,7 @@ impl AppData {
                     .and_then(|s| parse_trace_json(p, &s))
                 {
                     Ok(parsed) => return parsed,
-                    Err(e) => println!("Startup trace.json ingestion failed at {p}: {e}"),
+                    Err(e) => info!("Startup trace.json ingestion failed at {p}: {e}"),
                 }
             }
         }
@@ -340,7 +452,7 @@ impl AppData {
                         .map_err(|e| e.to_string())
                 }) {
                 Ok(parsed) => return Some(parsed),
-                Err(e) => println!(
+                Err(e) => info!(
                     "Startup analyze-trace ingestion failed at {}: {}",
                     analyze_path.display(),
                     e
@@ -355,7 +467,7 @@ impl AppData {
         if cpu_profile_path.exists() {
             match std::fs::read_to_string(&cpu_profile_path) {
                 Ok(contents) => return Some(contents),
-                Err(e) => println!(
+                Err(e) => info!(
                     "Startup CPU profile ingestion failed at {}: {}",
                     cpu_profile_path.display(),
                     e
@@ -366,11 +478,81 @@ impl AppData {
     }
 }
 
+#[derive(serde::Serialize)]
+struct OutputTimestamps {
+    types_json: Option<String>,
+    trace_json: Option<String>,
+    analyze_trace: Option<String>,
+    cpu_profile: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+struct TypeslayerConfig<'a> {
+    project_root: &'a str,
+    temp_dir: &'a str,
+    verbose: bool,
+    settings: &'a Settings,
+    outputs: OutputTimestamps,
+}
+
+impl AppData {
+    fn file_mtime_iso(path: &Path) -> Option<String> {
+        if let Ok(meta) = fs::metadata(path) {
+            if let Ok(modified) = meta.modified() {
+                return Some(chrono::DateTime::<chrono::Utc>::from(modified).to_rfc3339());
+            }
+        }
+        None
+    }
+
+    pub fn update_config_file(&self) {
+        let temp_dir = &self.temp_dir;
+        let config_path = Path::new(temp_dir).join("typeslayer.toml");
+        let types_path = Path::new(temp_dir).join(TYPES_JSON_FILENAME.trim_start_matches('/'));
+        let trace_path = Path::new(temp_dir).join(TRACE_JSON_FILENAME.trim_start_matches('/'));
+        let analyze_path = Path::new(temp_dir).join(ANALYZE_TRACE_FILENAME);
+        let cpu_path = Path::new(temp_dir).join(CPU_PROFILE_FILENAME);
+
+        let outputs = OutputTimestamps {
+            types_json: Self::file_mtime_iso(&types_path),
+            trace_json: Self::file_mtime_iso(&trace_path),
+            analyze_trace: Self::file_mtime_iso(&analyze_path),
+            cpu_profile: Self::file_mtime_iso(&cpu_path),
+        };
+
+        let cfg = TypeslayerConfig {
+            project_root: &self.project_root,
+            temp_dir: &self.temp_dir,
+            verbose: self.verbose,
+            settings: &self.settings,
+            outputs,
+        };
+
+        match toml::to_string(&cfg) {
+            Ok(s) => {
+                if let Err(e) = fs::create_dir_all(temp_dir) {
+                    error!("Failed to create temp dir for config: {}", e);
+                    return;
+                }
+                if let Err(e) = fs::write(&config_path, s) {
+                    error!(
+                        "Failed to write config file {}: {}",
+                        config_path.display(),
+                        e
+                    );
+                }
+            }
+            Err(e) => error!("Failed to serialize config: {}", e),
+        }
+    }
+}
+
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Settings {
     pub simplify_paths: bool,
     pub prefer_editor_open: bool,
-    pub available_editors: Vec<(String, String)>,
+    pub auto_start: bool,
     pub preferred_editor: Option<String>,
 }
 
@@ -379,27 +561,55 @@ impl Default for Settings {
         Self {
             simplify_paths: false,
             prefer_editor_open: true,
-            available_editors: vec![
-                ("code".to_string(), "VS Code".to_string()),
-                ("cursor".to_string(), "Cursor".to_string()),
-                ("zed".to_string(), "Zed".to_string()),
-                ("nvim".to_string(), "Neovim".to_string()),
-                ("vim".to_string(), "Vim".to_string()),
-                ("ag".to_string(), "Antigravity".to_string()),
-                ("idea".to_string(), "IntelliJ IDEA".to_string()),
-                ("pycharm".to_string(), "PyCharm".to_string()),
-                ("webstorm".to_string(), "WebStorm".to_string()),
-                ("subl".to_string(), "Sublime Text".to_string()),
-                ("emacs".to_string(), "Emacs".to_string()),
-                ("nano".to_string(), "Nano".to_string()),
-                ("hx".to_string(), "Helix".to_string()),
-                ("lapce".to_string(), "Lapce".to_string()),
-                ("lite-xl".to_string(), "Lite XL".to_string()),
-            ],
-            preferred_editor: None,
+            auto_start: true,
+            preferred_editor: Some("code".to_string()),
         }
     }
 }
+
+impl AppData {
+    fn settings_from_cake(cake: &LayerCake) -> Settings {
+        let simplify_paths = cake.resolve_bool(ResolveBoolArgs {
+            env: "SIMPLIFY_PATHS",
+            flag: "--simplify-paths",
+            file: "settings.simplifyPaths",
+            default: || false,
+        });
+        let prefer_editor_open = cake.resolve_bool(ResolveBoolArgs {
+            env: "PREFER_EDITOR_OPEN",
+            flag: "--prefer-editor-open",
+            file: "settings.preferEditorOpen",
+            default: || true,
+        });
+        let preferred_editor = Some(cake.resolve_string(ResolveStringArgs {
+            env: "PREFERRED_EDITOR",
+            flag: "--preferred-editor",
+            file: "settings.preferredEditor",
+            default: || "code".to_string(),
+            validate: |s| {
+                if AVAILABLE_EDITORS.iter().any(|(cmd, _)| *cmd == s) {
+                    Ok(s.to_string())
+                } else {
+                    Err(format!("Editor '{}' not in available editors list", s))
+                }
+            },
+        }));
+        let auto_start = cake.resolve_bool(ResolveBoolArgs {
+            env: "AUTO_START",
+            flag: "--autoStart",
+            file: "settings.autoStart",
+            default: || true,
+        });
+        Settings {
+            simplify_paths,
+            prefer_editor_open,
+            auto_start,
+            preferred_editor,
+        }
+    }
+}
+
+// Placeholder for future config-load structs removed to keep AppData::new clean
 
 #[tauri::command]
 pub async fn validate_types_json(
@@ -595,6 +805,7 @@ pub async fn generate_trace(state: State<'_, Mutex<AppData>>) -> Result<TypesJso
             let mut data = state.lock().map_err(|e| e.to_string())?;
             data.types_json = types.clone();
             data.trace_json = trace;
+            AppData::update_config_file(&data);
             Ok(types)
         }
         Ok(Err(e)) => Err(e),
@@ -648,8 +859,9 @@ pub async fn generate_cpu_profile(state: State<'_, Mutex<AppData>>) -> Result<()
                     Ok(contents) => {
                         let mut data = state.lock().map_err(|e| e.to_string())?;
                         data.cpu_profile = Some(contents);
+                        AppData::update_config_file(&data);
                     }
-                    Err(e) => eprintln!("Failed to read CPU profile after generation: {}", e),
+                    Err(e) => error!("Failed to read CPU profile after generation: {}", e),
                 }
             }
             r
@@ -663,7 +875,7 @@ pub async fn analyze_trace_command(
     state: State<'_, Mutex<AppData>>,
     options: Option<crate::analyze_trace::AnalyzeTraceOptions>,
 ) -> Result<crate::analyze_trace::AnalyzeTraceResult, String> {
-    println!("Starting analyze trace...");
+    info!("Starting analyze trace...");
     let temp_dir = {
         let data = state.lock().map_err(|e| e.to_string())?;
         data.temp_dir.clone()
@@ -672,18 +884,25 @@ pub async fn analyze_trace_command(
     let handle = tauri::async_runtime::spawn_blocking(move || {
         match crate::analyze_trace::analyze_trace(&temp_dir, options) {
             Ok(result) => {
-                println!("Analyze trace completed successfully");
+                info!("Analyze trace completed successfully");
                 Ok::<crate::analyze_trace::AnalyzeTraceResult, String>(result)
             }
             Err(e) => {
-                eprintln!("Analyze trace failed: {}", e);
+                error!("Analyze trace failed: {}", e);
                 Err(e)
             }
         }
     });
 
     match handle.await {
-        Ok(r) => r,
+        Ok(r) => {
+            if let Ok(res) = &r {
+                let mut data = state.lock().map_err(|e| e.to_string())?;
+                data.analyze_trace = Some(res.clone());
+                AppData::update_config_file(&data);
+            }
+            r
+        }
         Err(e) => Err(format!("analyze_trace_command join error: {}", e)),
     }
 }
@@ -796,22 +1015,33 @@ pub async fn set_settings(
 ) -> Result<(), String> {
     let mut data = state.lock().map_err(|e| e.to_string())?;
     data.settings = settings;
+    AppData::update_config_file(&data);
     Ok(())
 }
 
 #[tauri::command]
 pub async fn open_file(state: State<'_, Mutex<AppData>>, path: String) -> Result<(), String> {
     // Extract settings without holding the lock during blocking operations.
-    let (prefer_editor, preferred_editor, available_editors) = {
+    let (prefer_editor, preferred_editor) = {
         let data = state.lock().map_err(|e| e.to_string())?;
         (
             data.settings.prefer_editor_open,
             data.settings.preferred_editor.clone(),
-            data.settings.available_editors.clone(),
         )
     };
 
-    let cli_or_env_editor = resolve_string("--editor", "TYPESLAYER_EDITOR");
+    // Resolve editor via precedence using the app's cake (Env > Flag > File)
+    let cli_or_env_editor = {
+        let data = state.lock().map_err(|e| e.to_string())?;
+        let v = data.cake.resolve_string(ResolveStringArgs {
+            env: "EDITOR",
+            flag: "--editor",
+            file: "settings.preferredEditor",
+            default: || "".to_string(),
+            validate: |s| Ok(s.to_string()),
+        });
+        if v.is_empty() { None } else { Some(v) }
+    };
 
     // Separate the file path from optional :line:char suffix for existence checks.
     let (file_path, _line_char_suffix) = {
@@ -840,6 +1070,11 @@ pub async fn open_file(state: State<'_, Mutex<AppData>>, path: String) -> Result
         }
 
         if prefer_editor {
+            // Built-in available editors list
+            let available_editors: Vec<(String, String)> = AVAILABLE_EDITORS
+                .iter()
+                .map(|(c, n)| (c.to_string(), n.to_string()))
+                .collect();
             // Determine editor to use: CLI/env > preferred_editor > first available
             let editor_to_use = cli_or_env_editor
                 .or(preferred_editor)
@@ -910,8 +1145,11 @@ pub async fn open_file(state: State<'_, Mutex<AppData>>, path: String) -> Result
 pub async fn get_available_editors(
     state: State<'_, Mutex<AppData>>,
 ) -> Result<Vec<(String, String)>, String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
-    Ok(data.settings.available_editors.clone())
+    let _ = state; // unused
+    Ok(AVAILABLE_EDITORS
+        .iter()
+        .map(|(c, n)| (c.to_string(), n.to_string()))
+        .collect())
 }
 
 #[tauri::command]
@@ -929,12 +1167,8 @@ pub async fn set_preferred_editor(
 ) -> Result<(), String> {
     let mut data = state.lock().map_err(|e| e.to_string())?;
 
-    // Validate that editor is in available_editors
-    let is_valid = data
-        .settings
-        .available_editors
-        .iter()
-        .any(|(cmd, _)| cmd == &editor);
+    // Validate that editor is in AVAILABLE_EDITORS
+    let is_valid = AVAILABLE_EDITORS.iter().any(|(cmd, _)| *cmd == editor);
 
     if !is_valid {
         return Err(format!(
@@ -944,5 +1178,6 @@ pub async fn set_preferred_editor(
     }
 
     data.settings.preferred_editor = Some(editor);
+    AppData::update_config_file(&data);
     Ok(())
 }

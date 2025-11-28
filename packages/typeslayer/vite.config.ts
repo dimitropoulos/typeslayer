@@ -13,8 +13,9 @@ export default defineConfig(async () => ({
 			name: "serve-temp-files",
 			configureServer(server) {
 				server.middlewares.use((req, res, next) => {
-					if (req.url?.startsWith("/static/")) {
-						const fileName = req.url.slice(8); // Remove '/static/'
+					const start = "/tmp-files/";
+					if (req.url?.startsWith(start)) {
+						const fileName = req.url.slice(start.length);
 						const tempDir = "/tmp/typeslayer";
 						const filePath = path.join(tempDir, fileName);
 
@@ -44,6 +45,10 @@ export default defineConfig(async () => ({
 	],
 	root: "./src",
 	publicDir: "../public",
+	build: {
+		outDir: "../dist", // place build output where tauri.conf expects
+		emptyOutDir: true,
+	},
 
 	// Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
 	//

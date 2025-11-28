@@ -17,6 +17,7 @@ import { InlineCode } from "../components/inline-code";
 export const SettingsPage = () => {
 	const [simplifyPaths, setSimplifyPaths] = useState(false);
 	const [preferEditorOpen, setPreferEditorOpen] = useState(false);
+	const [autoStart, setAutoStart] = useState(true);
 	const [projectRoot, setProjectRoot] = useState<string>("");
 	const [availableEditors, setAvailableEditors] = useState<
 		Array<[string, string]>
@@ -26,10 +27,11 @@ export const SettingsPage = () => {
 	useEffect(() => {
 		(async () => {
 			try {
-				const s: { simplifyPaths: boolean; preferEditorOpen: boolean } =
+				const s: { simplifyPaths: boolean; preferEditorOpen: boolean; autoStart?: boolean } =
 					await invoke("get_settings");
 				setSimplifyPaths(!!s.simplifyPaths);
 				setPreferEditorOpen(!!s.preferEditorOpen);
+				setAutoStart(s.autoStart ?? true);
 			} catch {}
 			try {
 				const root: string = await invoke("get_project_root");
@@ -51,12 +53,16 @@ export const SettingsPage = () => {
 	const updateSettings = async (next: {
 		simplifyPaths?: boolean;
 		preferEditorOpen?: boolean;
+		autoStart?: boolean;
 	}) => {
 		try {
 			await invoke("set_settings", {
 				settings: {
 					simplifyPaths: next.simplifyPaths ?? simplifyPaths,
 					preferEditorOpen: next.preferEditorOpen ?? preferEditorOpen,
+					autoStart: next.autoStart ?? autoStart,
+					availableEditors,
+					preferredEditor: preferredEditor || null,
 				},
 			});
 		} catch (e) {
@@ -78,6 +84,14 @@ export const SettingsPage = () => {
 		const checked = event.target.checked;
 		setPreferEditorOpen(checked);
 		await updateSettings({ preferEditorOpen: checked });
+	};
+
+	const handleAutoStart = async (
+		event: React.ChangeEvent<HTMLInputElement>,
+	) => {
+		const checked = event.target.checked;
+		setAutoStart(checked);
+		await updateSettings({ autoStart: checked });
 	};
 
 	const handleEditorChange = async (event: SelectChangeEvent<string>) => {
@@ -152,6 +166,16 @@ export const SettingsPage = () => {
 						</Select>
 					</FormControl>
 				)}
+			</FormGroup>
+			<FormGroup>
+				<FormControlLabel
+					label="Auto Start"
+					control={<Switch checked={autoStart} onChange={handleAutoStart} />}
+				/>
+				<Typography variant="body2" color="textSecondary">
+					When enabled, Typeslayer will automatically run trace, CPU profile,
+					and analysis on startup and then navigate to Award Winners.
+				</Typography>
 			</FormGroup>
 		</Stack>
 	);

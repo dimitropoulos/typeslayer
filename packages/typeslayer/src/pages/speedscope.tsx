@@ -4,10 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 export const SpeedScope = () => {
 	const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
-	const profileURL = useMemo(
-		() => `/static/${CPU_PROFILE_FILENAME}`,
-		[],
-	);
+	const profileURL = useMemo(() => `/tmp-files/${CPU_PROFILE_FILENAME}`, []);
 	const embeddedUrl = useMemo(
 		() =>
 			`/speedscope-ui/index.html#profileURL=${encodeURIComponent(profileURL)}`,

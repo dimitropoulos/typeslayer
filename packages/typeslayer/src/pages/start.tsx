@@ -23,6 +23,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { TypeRegistry } from "@typeslayer/validate";
 import { useCallback, useEffect, useState } from "react";
+import { AutoStartDialog } from "../components/autostart-popover";
 import { BigAction } from "../components/big-action";
 import { InlineCode } from "../components/inline-code";
 
@@ -46,6 +47,13 @@ export function Start() {
 
 	const [activeStep, setActiveStep] = useState(getStepFromRoute(stepParam));
 
+	// Autostart state
+	const [autoStartOpen, setAutoStartOpen] = useState(false);
+	const [autoStartStep, setAutoStartStep] = useState<0 | 1 | 2 | 3>(0);
+	const [autoStartError, setAutoStartError] = useState<string | null>(null);
+	const [projectRoot, setProjectRoot] = useState<string | undefined>(undefined);
+	const [selectedScript, setSelectedScript] = useState<string | null>(null);
+
 	// Sync active step with URL
 	useEffect(() => {
 		const newStep = getStepFromRoute(stepParam);
@@ -53,6 +61,58 @@ export function Start() {
 			setActiveStep(newStep);
 		}
 	}, [stepParam, activeStep]);
+
+	// Prepare autostart dialog data on mount
+	useEffect(() => {
+		(async () => {
+			try {
+				const root: string = await invoke("get_project_root");
+				setProjectRoot(root);
+			} catch {}
+			try {
+				const script: string | null = await invoke("get_typecheck_script_name");
+				setSelectedScript(script);
+			} catch {}
+		})();
+	}, []);
+
+	const beginAutoStart = useCallback(async () => {
+		let cancelled = false;
+		try {
+			// Ensure we are on the start page
+			navigate({ to: "/start" });
+			setAutoStartError(null);
+
+			// 1. generate_trace
+			setAutoStartStep(0);
+			await invoke("generate_trace");
+			if (cancelled) return;
+
+			// 2. generate_cpu_profile
+			setAutoStartStep(1);
+			await invoke("generate_cpu_profile");
+			if (cancelled) return;
+
+			// 3. analyze_trace_command
+			setAutoStartStep(2);
+			await invoke("analyze_trace_command");
+			if (cancelled) return;
+
+			// done
+			setAutoStartStep(3);
+			setTimeout(() => {
+				if (!cancelled) {
+					setAutoStartOpen(false);
+					navigate({ to: "/award-winners/$awardId", params: { awardId: "largest-union" } });
+				}
+			}, 400);
+		} catch (e) {
+			setAutoStartError(String(e));
+		}
+		return () => {
+			cancelled = true;
+		};
+	}, [navigate]);
 
 	const handleNext = () => {
 		const nextStep = activeStep + 1;
@@ -82,6 +142,19 @@ export function Start() {
 	return (
 		<Box sx={{ px: 4, overflowY: "auto", maxHeight: "100%" }}>
 			<h1>Start</h1>
+			<AutoStartDialog
+				open={autoStartOpen}
+				step={autoStartStep}
+				error={autoStartError}
+				onClose={() => setAutoStartOpen(false)}
+				projectRoot={projectRoot}
+				selectedScript={selectedScript}
+				onBegin={beginAutoStart}
+			/>
+
+					<Stack direction="row" sx={{ mt: 2 }}>
+						<Button variant="outlined" onClick={() => setAutoStartOpen(true)}>Automatic Mode</Button>
+					</Stack>
 			<Stepper nonLinear activeStep={activeStep} orientation="vertical">
 				<Step>
 					<StepButton

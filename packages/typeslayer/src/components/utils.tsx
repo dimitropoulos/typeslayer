@@ -72,7 +72,8 @@ export const useStaticFile = (fileName: string) => {
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
-				const response = await fetch(`/static/${fileName}`);
+				const url = `/tmp-files/${fileName}`;
+				const response = await fetch(url);
 				if (!response.ok) {
 					throw new Error("Network response was not ok");
 				}
@@ -124,7 +125,7 @@ export const NAVIGATION = [
 	},
 	{
 		kind: "segment",
-		segment: "award-winners/type-instantiation-limit",
+		segment: "award-winners/largest-union",
 		title: "Award Winners",
 		icon: <EmojiEvents />,
 	},

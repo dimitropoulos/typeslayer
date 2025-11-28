@@ -107,14 +107,14 @@ const integrationsRoute = createRoute({
 	component: Integrations,
 });
 
-// Index redirect to /type-network
+// Index redirect to Award Winners (Largest Union)
 const indexRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/",
 	component: () => {
-		// Redirect to /type-network on mount
+		// Redirect to /start on mount
 		if (typeof window !== "undefined") {
-			window.location.pathname = "/type-network";
+			window.location.pathname = "/award-winners/largest-union";
 		}
 		return null;
 	},

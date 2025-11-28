@@ -121,7 +121,8 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
 		let mounted = true;
 		(async () => {
 			try {
-				const resp = await fetch(`/static/${item.filename}`);
+				const url = `/tmp-files/${item.filename}`;
+				const resp = await fetch(url);
 				const content = await resp.text();
 				if (mounted) setText(content);
 			} catch {
@@ -145,7 +146,7 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
 
 	const onDownload = () => {
 		const a = document.createElement("a");
-		a.href = `/static/${item.filename}`;
+		a.href = `/tmp-files/${item.filename}`;
 		a.download = item.filename;
 		a.click();
 	};

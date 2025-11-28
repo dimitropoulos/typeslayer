@@ -309,11 +309,11 @@ export const AwardWinners = () => {
 	// Find the award key that matches the route
 	const getAwardIdFromRoute = useCallback(
 		(route: string | undefined): AwardId | null => {
-			if (!route) return "limit_instantiateType";
+			if (!route) return "unionTypes";
 			const entry = Object.entries(awards).find(
 				([_, award]) => award.route === route,
 			);
-			return entry ? (entry[0] as AwardId) : "limit_instantiateType";
+			return entry ? (entry[0] as AwardId) : "unionTypes";
 		},
 		[],
 	);
@@ -375,6 +375,25 @@ export const AwardWinners = () => {
 						"radial-gradient(circle at 30% 20%, rgba(227,179,65,0.025), transparent 60%)",
 				}}
 			>
+				<List subheader={<ListSubheader>Type-level Metrics</ListSubheader>}>
+					{(
+						[
+							"unionTypes",
+							"intersectionTypes",
+							"typeArguments",
+							"aliasTypeArguments",
+						] as const
+					).map((awardId) => (
+						<RenderAward
+							key={awardId}
+							activeAward={activeAward}
+							setActiveAward={setActiveAward}
+							awardId={awardId}
+						/>
+					))}
+				</List>
+				<Divider />
+
 				<List
 					sx={{ width: "100%", maxWidth: 350, height: "100%" }}
 					component="nav"
@@ -386,26 +405,6 @@ export const AwardWinners = () => {
 							"limit_instantiateType",
 							"limit_recursiveTypeRelatedTo",
 							"limit_typeRelatedToDiscriminatedType",
-						] as const
-					).map((awardId) => (
-						<RenderAward
-							key={awardId}
-							activeAward={activeAward}
-							setActiveAward={setActiveAward}
-							awardId={awardId}
-						/>
-					))}
-				</List>
-
-				<Divider />
-
-				<List subheader={<ListSubheader>Type-level Metrics</ListSubheader>}>
-					{(
-						[
-							"unionTypes",
-							"intersectionTypes",
-							"typeArguments",
-							"aliasTypeArguments",
 						] as const
 					).map((awardId) => (
 						<RenderAward
