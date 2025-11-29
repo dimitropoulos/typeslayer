@@ -107,11 +107,11 @@ jobs:
       - name: Reassemble binaries
         run: |
           mkdir -p binaries/linux-x64 binaries/darwin-x64 binaries/darwin-arm64 binaries/win32-x64
-          cp artifacts/linux-x64-binary/typeslayer binaries/linux-x64/
-          cp artifacts/darwin-x64-binary/typeslayer binaries/darwin-x64/
-          cp artifacts/darwin-arm64-binary/typeslayer binaries/darwin-arm64/
-          cp artifacts/win32-x64-binary/typeslayer.exe binaries/win32-x64/
-          chmod +x binaries/linux-x64/typeslayer binaries/darwin-x64/typeslayer binaries/darwin-arm64/typeslayer
+          cp artifacts/linux-x64-binary/typeslayer binaries/linux-x64/typeslayer-linux-x64
+          cp artifacts/darwin-x64-binary/typeslayer binaries/darwin-x64/typeslayer-darwin-x64
+          cp artifacts/darwin-arm64-binary/typeslayer binaries/darwin-arm64/typeslayer-darwin-arm64
+          cp artifacts/win32-x64-binary/typeslayer.exe binaries/win32-x64/typeslayer-win32-x64.exe
+          chmod +x binaries/linux-x64/typeslayer-linux-x64 binaries/darwin-x64/typeslayer-darwin-x64 binaries/darwin-arm64/typeslayer-darwin-arm64
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -164,9 +164,9 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            binaries/linux-x64/typeslayer
-            binaries/darwin-x64/typeslayer
-            binaries/darwin-arm64/typeslayer
-            binaries/win32-x64/typeslayer.exe
+            binaries/linux-x64/typeslayer-linux-x64
+            binaries/darwin-x64/typeslayer-darwin-x64
+            binaries/darwin-arm64/typeslayer-darwin-arm64
+            binaries/win32-x64/typeslayer-win32-x64.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { arch, platform } from "node:os";
 import { dirname, join } from "node:path";
@@ -45,11 +45,24 @@ try {
 	const binaryInfo = getBinaryInfo();
 
 	if (!existsSync(binaryInfo.path)) {
-		console.error(`\n❌ Binary not available for ${binaryInfo.platform}`);
-		console.error(
-			`\nYour platform (${binaryInfo.platform}) is not yet supported.`,
-		);
-		process.exit(1);
+		console.error(`\n⚠️ Binary not found for ${binaryInfo.platform}. Attempting download...`);
+		const postinstallPath = join(__dirname, "..", "scripts", "postinstall.js");
+		const res = spawnSync(process.execPath, [postinstallPath], {
+			stdio: "inherit",
+			env: process.env,
+		});
+		if (res.status !== 0) {
+			console.error("\n❌ Failed to download platform binary.");
+		}
+		if (!existsSync(binaryInfo.path)) {
+			console.error(
+				`\n❌ Binary still unavailable at ${binaryInfo.path}. Please check the release assets or your network.`,
+			);
+			console.error(
+				"You can manually download from: https://github.com/dimitropoulos/typeslayer/releases",
+			);
+			process.exit(1);
+		}
 	}
 
 	const proc = spawn(binaryInfo.path, [], {
