@@ -124,6 +124,9 @@ jobs:
         with:
           version: 10.6.5
 
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Verify publish contents (dry run)
         working-directory: packages/typeslayer
         run: |

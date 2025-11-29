@@ -23,7 +23,7 @@ But I can't figure out which Spice Girl I want to impregnate (Oh)
 And Dr. Dre said, "Slim Shady, you a basehead" (Uh-uh)
 "Then why's your face red? Man, you wasted"
 Well, since age 12, I felt like I'm someone else
-'Cause I hung my original self cc
+'Cause I hung my original self from the top bunk with a belt
 Got pissed off and ripped Pamela Lee's tits off
 And smacked her so hard I knocked her clothes backwards like Kris Kross
 I smoke a fat pound of grass, and fall on my ass

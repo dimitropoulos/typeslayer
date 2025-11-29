@@ -15,26 +15,30 @@ const getBinaryInfo = () => {
 	const plat = platform();
 	const architecture = arch();
 
-	let platformDir, binaryName;
+	let platformDir, binaryName, releaseAssetName;
 
 	if (plat === "linux" && architecture === "x64") {
 		platformDir = "linux-x64";
 		binaryName = "typeslayer";
+		releaseAssetName = "typeslayer-linux-x64";
 	} else if (plat === "darwin" && architecture === "x64") {
 		platformDir = "darwin-x64";
 		binaryName = "typeslayer";
+		releaseAssetName = "typeslayer-darwin-x64";
 	} else if (plat === "darwin" && architecture === "arm64") {
 		platformDir = "darwin-arm64";
 		binaryName = "typeslayer";
+		releaseAssetName = "typeslayer-darwin-arm64";
 	} else if (plat === "win32" && architecture === "x64") {
 		platformDir = "win32-x64";
 		binaryName = "typeslayer.exe";
+		releaseAssetName = "typeslayer-win32-x64.exe";
 	} else {
 		console.warn(`⚠️  Platform ${plat}-${architecture} is not supported`);
 		process.exit(0); // Don't fail the install, just skip
 	}
 
-	return { platformDir, binaryName };
+	return { platformDir, binaryName, releaseAssetName };
 };
 
 const downloadBinary = (url, destPath) => {
@@ -83,7 +87,7 @@ const downloadBinary = (url, destPath) => {
 
 (async () => {
 	try {
-		const { platformDir, binaryName } = getBinaryInfo();
+		const { platformDir, binaryName, releaseAssetName } = getBinaryInfo();
 		const binariesDir = join(__dirname, "..", "binaries", platformDir);
 		const binaryPath = join(binariesDir, binaryName);
 
@@ -97,7 +101,7 @@ const downloadBinary = (url, destPath) => {
 		mkdirSync(binariesDir, { recursive: true });
 
 		// Download from GitHub release
-		const releaseUrl = `https://github.com/dimitropoulos/typeslayer/releases/download/typeslayer-v${PACKAGE_VERSION}/${binaryName}`;
+		const releaseUrl = `https://github.com/dimitropoulos/typeslayer/releases/download/typeslayer-v${PACKAGE_VERSION}/${releaseAssetName}`;
 
 		await downloadBinary(releaseUrl, binaryPath);
 	} catch (error) {
