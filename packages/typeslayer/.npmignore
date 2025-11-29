@@ -12,4 +12,22 @@ tsconfig.json
 tsconfig.node.json
 index.html
 pnpm-lock.yaml
-README.md
+# Editor / OS
+.vscode
+.idea
+.DS_Store
+
+# Env files
+.env
+.env.*
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Coverage and tests
+coverage
+test
+tests
+
+# Source maps
+*.map

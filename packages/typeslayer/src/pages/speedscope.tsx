@@ -5,7 +5,10 @@ import { serverBaseUrl } from "../components/utils";
 export const SpeedScope = () => {
 	const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
-	const profileURL = useMemo(() => `${serverBaseUrl}/outputs/${CPU_PROFILE_FILENAME}`, []);
+	const profileURL = useMemo(
+		() => `${serverBaseUrl}/outputs/${CPU_PROFILE_FILENAME}`,
+		[],
+	);
 	const embeddedUrl = useMemo(
 		() =>
 			`/speedscope-ui/index.html#profileURL=${encodeURIComponent(profileURL)}`,

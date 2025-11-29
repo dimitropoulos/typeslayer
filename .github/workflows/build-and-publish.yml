@@ -1,0 +1,168 @@
+name: Build & Publish TypeSlayer
+
+on:
+  push:
+    tags:
+      - 'typeslayer-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed for creating releases
+  id-token: write   # for OIDC (npm provenance optional)
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-x64
+            target: x86_64-unknown-linux-gnu
+            binary: typeslayer
+          - os: macos-13
+            platform: darwin-x64
+            target: x86_64-apple-darwin
+            binary: typeslayer
+          - os: macos-latest
+            platform: darwin-arm64
+            target: aarch64-apple-darwin
+            binary: typeslayer
+          - os: windows-latest
+            platform: win32-x64
+            target: x86_64-pc-windows-msvc
+            binary: typeslayer.exe
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.6.5
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install system deps (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build internal libraries (@typeslayer/*)
+        run: pnpm -F @typeslayer/validate build && pnpm -F @typeslayer/analyze-trace build
+
+      - name: Build Tauri app (target=${{ matrix.target }})
+        run: pnpm -F typeslayer tauri build --target ${{ matrix.target }}
+
+      - name: Collect binary
+        shell: bash
+        run: |
+          mkdir -p binaries/${{ matrix.platform }}
+          cp packages/typeslayer/src-tauri/target/${{ matrix.target }}/release/${{ matrix.binary }} binaries/${{ matrix.platform }}/
+          if [ "${{ matrix.os }}" != "windows-latest" ]; then chmod +x binaries/${{ matrix.platform }}/${{ matrix.binary }}; fi
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-binary
+          path: binaries/${{ matrix.platform }}/${{ matrix.binary }}
+          retention-days: 7
+
+  package:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Reassemble binaries
+        run: |
+          mkdir -p binaries/linux-x64 binaries/darwin-x64 binaries/darwin-arm64 binaries/win32-x64
+          cp artifacts/linux-x64-binary/typeslayer binaries/linux-x64/
+          cp artifacts/darwin-x64-binary/typeslayer binaries/darwin-x64/
+          cp artifacts/darwin-arm64-binary/typeslayer binaries/darwin-arm64/
+          cp artifacts/win32-x64-binary/typeslayer.exe binaries/win32-x64/
+          chmod +x binaries/linux-x64/typeslayer binaries/darwin-x64/typeslayer binaries/darwin-arm64/typeslayer
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.6.5
+
+      - name: Verify publish contents (dry run)
+        working-directory: packages/typeslayer
+        run: |
+          npm pack --dry-run
+          ls -R ../.. | head -n 50
+
+      - name: Extract tag and version
+        id: taginfo
+        run: |
+          TAG_REF="${GITHUB_REF#refs/tags/}" # typeslayer-vX.Y.Z
+          echo "tag=$TAG_REF" >> $GITHUB_OUTPUT
+          VER="${TAG_REF#typeslayer-v}"
+          echo "version=$VER" >> $GITHUB_OUTPUT
+          echo "Tag: $TAG_REF Parsed Version: $VER"
+
+      - name: Verify tag matches package version
+        run: |
+          PKG_VER=$(jq -r .version packages/typeslayer/package.json)
+          if [ "$PKG_VER" != "${{ steps.taginfo.outputs.version }}" ]; then
+            echo "Version mismatch: tag has ${{ steps.taginfo.outputs.version }} but package.json has $PKG_VER" >&2
+            exit 1
+          fi
+          echo "Version match confirmed: $PKG_VER"
+
+      - name: Publish to npm
+        if: startsWith(github.ref, 'refs/tags/typeslayer-v')
+        working-directory: packages/typeslayer
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/typeslayer-v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            binaries/linux-x64/typeslayer
+            binaries/darwin-x64/typeslayer
+            binaries/darwin-arm64/typeslayer
+            binaries/win32-x64/typeslayer.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

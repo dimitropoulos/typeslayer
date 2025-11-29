@@ -1,0 +1,2 @@
+# Exclude static assets from GitHub Linguist language stats
+packages/typeslayer/public/** linguist-vendored

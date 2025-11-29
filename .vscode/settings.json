@@ -22,5 +22,8 @@
 	"files.watcherExclude": {
 		"packages/typeslayer/public/**": true
 	},
+	"[json]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
 	"rust-analyzer.linkedProjects": ["packages/typeslayer/src-tauri/Cargo.toml"]
 }

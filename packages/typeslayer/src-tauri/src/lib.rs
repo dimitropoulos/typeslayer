@@ -1,5 +1,6 @@
 mod analyze_trace;
 mod app_data;
+mod auth;
 mod files;
 mod layercake;
 mod log;
@@ -76,6 +77,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
+            auth::validate_auth_code,
+            auth::is_authenticated,
             app_data::validate_types_json,
             app_data::validate_trace_json,
             app_data::get_trace_json,

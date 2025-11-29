@@ -1,8 +1,8 @@
 {
 	"name": "@typeslayer/analyze-trace",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"license": "MIT",
-	"private": true,
+	"private": false,
 	"type": "module",
 	"engines": {
 		"node": ">=24"

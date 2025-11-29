@@ -5,6 +5,7 @@ import {
 	type SelectChangeEvent,
 	Stack,
 	TextField,
+	useTheme,
 } from "@mui/material";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
@@ -15,9 +16,37 @@ import { useNavigate } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { TypeRegistry } from "@typeslayer/validate";
-import { useCallback, useEffect, useState } from "react";
+import {
+	type PropsWithChildren,
+	useCallback,
+	useEffect,
+	useState,
+} from "react";
 import { BigAction } from "../components/big-action";
 import { InlineCode } from "../components/inline-code";
+
+export const Step = ({
+	step,
+	children,
+}: PropsWithChildren<{ step: number }>) => {
+	const theme = useTheme();
+	return (
+		<Box sx={{ gap: 2, display: "flex" }}>
+			<Typography
+				variant="h6"
+				component="div"
+				sx={{
+					borderRight: `2px solid ${theme.palette.divider}`,
+					pr: 1,
+					color: "text.secondary",
+				}}
+			>
+				{step}
+			</Typography>
+			{children}
+		</Box>
+	);
+};
 
 export function Start() {
 	const navigate = useNavigate();
@@ -184,138 +213,144 @@ export function Start() {
 	}, [localProjectRoot, typecheckScriptName, navigate, setProjectRoot]);
 
 	return (
-		<Box sx={{ px: 4, overflowY: "auto", maxHeight: "100%" }}>
+		<Box sx={{ px: 4, overflowY: "auto", maxHeight: "100%", gap: 2, pb: 4 }}>
 			<h1>Start</h1>
 
-			{/* Project Setup Section */}
-			<Stack spacing={4} sx={{ mt: 2, mb: 4 }}>
-				<Stack gap={2}>
-					<Typography variant="h4">Locate</Typography>
-					<Typography>
-						Select the <InlineCode secondary>package.json</InlineCode> of the
-						package you'd like to investigate.
-					</Typography>
-					<Stack direction="row" gap={2}>
-						<Button onClick={locatePackageJson} variant="outlined" size="small">
-							Locate
-						</Button>
-						<TextField
-							size="small"
-							placeholder="path to package.json"
-							variant="outlined"
-							value={localProjectRoot ?? ""}
-							onChange={(e) => {
-								setLocalProjectRoot(e.target.value);
-							}}
-							fullWidth
-						/>
+			<Stack gap={3}>
+				<Step step={1}>
+					<Stack gap={1} sx={{ width: "100%" }}>
+						<Typography>
+							Locate the <InlineCode secondary>package.json</InlineCode> of the
+							package you'd like to investigate.
+						</Typography>
+
+						<Stack direction="row" gap={2} width="100%">
+							<Button
+								onClick={locatePackageJson}
+								variant="outlined"
+								size="small"
+							>
+								Locate
+							</Button>
+							<TextField
+								size="small"
+								placeholder="path to package.json"
+								variant="outlined"
+								value={localProjectRoot ?? ""}
+								onChange={(e) => {
+									setLocalProjectRoot(e.target.value);
+								}}
+								fullWidth
+							/>
+						</Stack>
 					</Stack>
-				</Stack>
+				</Step>
 
-				<Stack gap={2}>
-					<Typography>
-						The script you use to type-check your project.
-					</Typography>
+				<Step step={2}>
+					<Stack gap={1}>
+						<Typography>
+							The script you use to call <InlineCode secondary>tsc</InlineCode>{" "}
+							and type-check your project.
+						</Typography>
 
-					<Select
-						value={typecheckScriptName ?? ""}
-						onChange={onScriptChange}
-						displayEmpty
-						sx={{ maxWidth: 600 }}
-						renderValue={(selected) => {
-							if (!selected) {
+						<Select
+							value={typecheckScriptName ?? ""}
+							onChange={onScriptChange}
+							displayEmpty
+							sx={{ maxWidth: 600 }}
+							renderValue={(selected) => {
+								if (!selected) {
+									return (
+										<Stack>
+											<Typography>&lt;your script&gt;</Typography>
+											<Typography
+												variant="caption"
+												fontFamily="monospace"
+												color="textSecondary"
+											>
+												<InlineCode secondary>tsc --noEmit</InlineCode> (for
+												example)
+											</Typography>
+										</Stack>
+									);
+								}
 								return (
 									<Stack>
-										<Typography>&lt;your type-check script&gt;</Typography>
+										<Typography>{selected}</Typography>
+
 										<Typography
 											variant="caption"
 											fontFamily="monospace"
 											color="textSecondary"
 										>
-											for example:{" "}
-											<InlineCode secondary>tsc --noEmit</InlineCode>
+											<InlineCode secondary>{scripts?.[selected]}</InlineCode>
 										</Typography>
 									</Stack>
 								);
+							}}
+						>
+							{Object.entries(scripts ?? {}).map(([name, command]) => (
+								<MenuItem key={name} value={name}>
+									<Stack>
+										<Typography>{name}</Typography>
+										<Typography
+											variant="caption"
+											fontFamily="monospace"
+											color="textSecondary"
+										>
+											{command}
+										</Typography>
+									</Stack>
+								</MenuItem>
+							))}
+						</Select>
+					</Stack>
+				</Step>
+
+				{processingError && (
+					<Alert severity="error" sx={{ my: 4 }}>
+						{processingError}
+					</Alert>
+				)}
+
+				<Step step={3}>
+					<Stack flexDirection="column" gap={2}>
+						<Stack sx={{ gap: 2, flexDirection: "row", flexWrap: "wrap" }}>
+							<BigAction
+								title="Identify Types"
+								description="Generate event traces and and identification for all types from the TypeScript compiler checking your codebase."
+								unlocks={["Search Types", "Perfetto"]}
+								isLoading={isProcessing && processingStep === 0}
+							/>
+							<BigAction
+								title="CPU Profile"
+								description="A v8 CPU profile from the TypeScript compiler during type checking.  This can be a critical tool for identifying bottlenecks."
+								unlocks={["SpeedScope"]}
+								isLoading={isProcessing && processingStep === 1}
+							/>
+							<BigAction
+								title="Analyze Hot Spots"
+								description="Identify computational hot-spots in your type checking, along with duplicate type packages inclusions, unterminated events."
+								unlocks={["Type Network", "Treemap", "Award Winners"]}
+								isLoading={isProcessing && processingStep === 2}
+							/>
+						</Stack>
+						<Button
+							variant="contained"
+							size="large"
+							onClick={processTypes}
+							disabled={
+								isProcessing || !localProjectRoot || !typecheckScriptName
 							}
-							return (
-								<Stack>
-									<Typography>{selected}</Typography>
-
-									<Typography
-										variant="caption"
-										fontFamily="monospace"
-										color="textSecondary"
-									>
-										<InlineCode secondary>{scripts?.[selected]}</InlineCode>
-									</Typography>
-								</Stack>
-							);
-						}}
-					>
-						{Object.entries(scripts ?? {}).map(([name, command]) => (
-							<MenuItem key={name} value={name}>
-								<Stack>
-									<Typography>{name}</Typography>
-									<Typography
-										variant="caption"
-										fontFamily="monospace"
-										color="textSecondary"
-									>
-										{command}
-									</Typography>
-								</Stack>
-							</MenuItem>
-						))}
-					</Select>
-				</Stack>
-			</Stack>
-
-			{/* Diagnostics Section */}
-			<Stack spacing={2} sx={{ mb: 4 }}>
-				<Typography variant="h4">Diagnostics</Typography>
-				<Stack sx={{ gap: 3, flexDirection: "row", flexWrap: "wrap" }}>
-					<BigAction
-						title="Identify Types"
-						description="This makes TypeScript generate event traces and a list of types while it type checks your codebase. This is critical information for individually identifying every type in your codebase."
-						unlocks={["Search Type Id", "Perfetto"]}
-						isLoading={isProcessing && processingStep === 0}
-					/>
-					<BigAction
-						title="CPU Profile"
-						description="Have TypeScript emit a v8 CPU profile during the compiler run. The CPU profile can provide insight into why your builds may be slow."
-						unlocks={["SpeedScope"]}
-						isLoading={isProcessing && processingStep === 1}
-					/>
-					<BigAction
-						title="Analyze Hot Spots"
-						description="Identify clear-cut hot-spots and provide enough context to extract a small repro. The repro can then be used as the basis of a bug report or a starting point for manual code inspection or profiling."
-						unlocks={["Type Network", "Treemap", "Award Winners"]}
-						isLoading={isProcessing && processingStep === 2}
-					/>
-				</Stack>
-			</Stack>
-
-			{/* Error Display */}
-			{processingError && (
-				<Alert severity="error" sx={{ mb: 4 }}>
-					{processingError}
-				</Alert>
-			)}
-
-			{/* Process Button */}
-			<Stack direction="row" sx={{ mt: 4, mb: 4 }}>
-				<Button
-					variant="contained"
-					size="large"
-					onClick={processTypes}
-					disabled={isProcessing || !localProjectRoot || !typecheckScriptName}
-					loading={isProcessing}
-					loadingPosition="start"
-					startIcon={<Insights />}
-				>
-					Run Diagnostics
-				</Button>
+							loading={isProcessing}
+							loadingPosition="start"
+							startIcon={<Insights />}
+							sx={{ alignSelf: "start" }}
+						>
+							Run Diagnostics
+						</Button>
+					</Stack>
+				</Step>
 			</Stack>
 		</Box>
 	);

@@ -186,7 +186,7 @@ export const SettingsPage = () => {
 					control={<Switch checked={autoStart} onChange={handleAutoStart} />}
 				/>
 				<Typography variant="body2" color="textSecondary">
-					When enabled, Typeslayer will automatically run trace, CPU profile,
+					When enabled, TypeSlayer will automatically run trace, CPU profile,
 					and analysis on startup and then navigate to Award Winners.
 				</Typography>
 			</FormGroup>

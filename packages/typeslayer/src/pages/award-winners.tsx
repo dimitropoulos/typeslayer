@@ -530,10 +530,10 @@ function ArrayAward({
 	// sort typeRegistryEntries by ones that have the hightest number of the "thing"
 	const sorted = Array.from(typeRegistry.values())
 		.filter((resolvedType: ResolvedType) => property in resolvedType)
-		.sort((a, b) => {
-			const aAliasTypeArguments = a[property]?.length ?? 0;
-			const bAliasTypeArguments = b[property]?.length ?? 0;
-			return bAliasTypeArguments - aAliasTypeArguments;
+		.sort((a: ResolvedType, b: ResolvedType) => {
+			const aValue = (a[property] as unknown as number[] | undefined)?.length ?? 0;
+			const bValue = (b[property] as unknown as number[] | undefined)?.length ?? 0;
+			return bValue - aValue;
 		});
 
 	const maxValue = sorted[0]?.[property]?.length ?? 0;
@@ -567,9 +567,9 @@ function ArrayAward({
 				/>
 
 				<Stack sx={{ my: 2 }}>
-					<List>
-						{sorted.slice(0, currentLimit).map(({ id }, index) => {
-							const value = sorted[index][property]?.length ?? 0;
+				<List>
+					{sorted.slice(0, currentLimit).map(({ id }, index) => {
+						const value = (sorted[index][property] as unknown as number[] | undefined)?.length ?? 0;
 							return (
 								<ListItemButton
 									selected={index === selectedIndex}
@@ -630,7 +630,7 @@ function ArrayAward({
 				ref={scrollContainerRef}
 			>
 				<DisplayRecursiveType
-					id={sorted[selectedIndex]?.id ?? 0}
+					id={(sorted[selectedIndex] as ResolvedType | undefined)?.id ?? 0}
 					typeRegistry={typeRegistry}
 				/>
 			</Box>

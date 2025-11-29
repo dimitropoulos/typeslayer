@@ -19,6 +19,7 @@ import tsLogo from "./assets/ts.png";
 import tsNightmareLogo from "./assets/ts-nightmare.png";
 import typeslayerLogo from "./assets/typeslayer.png";
 import typeslayerNightmareLogo from "./assets/typeslayer-nightmare.png";
+import { AuthGate } from "./components/auth-gate";
 import { NAVIGATION } from "./components/utils";
 
 function AppBrand({
@@ -58,6 +59,7 @@ export function App() {
 
 	const [open, setOpen] = useState<boolean>(isMdUp);
 	const [collapsed, setCollapsed] = useState<boolean>(false);
+	const [authenticated, setAuthenticated] = useState<boolean>(false);
 
 	// keep open state in sync with screen size
 	useEffect(() => {
@@ -74,6 +76,10 @@ export function App() {
 			setOpen((o) => !o);
 		}
 	};
+
+	if (!authenticated) {
+		return <AuthGate onAuthenticated={() => setAuthenticated(true)} />;
+	}
 
 	const renderNavItem = (item: (typeof NAVIGATION)[number]) => {
 		if (item.kind === "header") {

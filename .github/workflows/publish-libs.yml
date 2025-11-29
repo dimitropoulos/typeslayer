@@ -1,0 +1,151 @@
+name: Publish Libraries
+
+on:
+  push:
+    tags:
+      - 'validate-v*'
+      - 'analyze-trace-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  validate:
+    if: startsWith(github.ref, 'refs/tags/validate-v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.6.5
+
+      - name: Install dependencies (workspace)
+        run: pnpm install --frozen-lockfile
+
+      - name: Extract tag and version
+        id: taginfo
+        run: |
+          TAG_REF="${GITHUB_REF#refs/tags/}" # validate-vX.Y.Z
+          echo "tag=$TAG_REF" >> $GITHUB_OUTPUT
+          VER="${TAG_REF#validate-v}"
+          echo "version=$VER" >> $GITHUB_OUTPUT
+          echo "Tag: $TAG_REF Parsed Version: $VER"
+
+      - name: Verify tag matches package version (@typeslayer/validate)
+        run: |
+          PKG_VER=$(jq -r .version packages/validate/package.json)
+          if [ "$PKG_VER" != "${{ steps.taginfo.outputs.version }}" ]; then
+            echo "Version mismatch: tag has ${{ steps.taginfo.outputs.version }} but package.json has $PKG_VER" >&2
+            exit 1
+          fi
+          echo "Version match confirmed: $PKG_VER"
+
+      - name: Build package
+        working-directory: packages/validate
+        run: pnpm build
+
+      - name: Dry run pack
+        working-directory: packages/validate
+        run: npm pack --dry-run
+
+      - name: Publish @typeslayer/validate
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        working-directory: packages/validate
+        run: npm publish --provenance --access public
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.taginfo.outputs.tag }}
+          name: "@typeslayer/validate ${{ steps.taginfo.outputs.version }}"
+          body: "Automated release for @typeslayer/validate version ${{ steps.taginfo.outputs.version }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  analyze_trace:
+    if: startsWith(github.ref, 'refs/tags/analyze-trace-v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.6.5
+
+      - name: Install dependencies (workspace)
+        run: pnpm install --frozen-lockfile
+
+      - name: Extract tag and version
+        id: taginfo
+        run: |
+          TAG_REF="${GITHUB_REF#refs/tags/}" # analyze-trace-vX.Y.Z
+          echo "tag=$TAG_REF" >> $GITHUB_OUTPUT
+          VER="${TAG_REF#analyze-trace-v}"
+          echo "version=$VER" >> $GITHUB_OUTPUT
+          echo "Tag: $TAG_REF Parsed Version: $VER"
+
+      - name: Verify tag matches package version (@typeslayer/analyze-trace)
+        run: |
+          PKG_VER=$(jq -r .version packages/analyze-trace/package.json)
+          if [ "$PKG_VER" != "${{ steps.taginfo.outputs.version }}" ]; then
+            echo "Version mismatch: tag has ${{ steps.taginfo.outputs.version }} but package.json has $PKG_VER" >&2
+            exit 1
+          fi
+          echo "Version match confirmed: $PKG_VER"
+
+      - name: Build package
+        working-directory: packages/analyze-trace
+        run: pnpm build
+
+      - name: Dry run pack
+        working-directory: packages/analyze-trace
+        run: npm pack --dry-run
+
+      - name: Publish @typeslayer/analyze-trace
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        working-directory: packages/analyze-trace
+        run: npm publish --provenance --access public
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.taginfo.outputs.tag }}
+          name: "@typeslayer/analyze-trace ${{ steps.taginfo.outputs.version }}"
+          body: "Automated release for @typeslayer/analyze-trace version ${{ steps.taginfo.outputs.version }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

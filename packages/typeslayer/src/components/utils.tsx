@@ -67,7 +67,7 @@ export const friendlyPath = (
 	return relativizePath(projectRoot, absolutePath);
 };
 
-export const serverBaseUrl = 'http://127.0.0.1:4765';
+export const serverBaseUrl = "http://127.0.0.1:4765";
 
 export const useStaticFile = (fileName: string) => {
 	const [data, setData] = useState<string | null>(null);
@@ -123,7 +123,7 @@ export const NAVIGATION = [
 	{
 		kind: "segment",
 		segment: "search-types",
-		title: "Search Type Id",
+		title: "Search Types",
 		icon: <Search />,
 	},
 	{

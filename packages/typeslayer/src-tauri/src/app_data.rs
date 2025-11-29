@@ -47,6 +47,7 @@ pub struct AppData {
     pub settings: Settings,
     pub verbose: bool,
     pub cake: LayerCake,
+    pub auth_code: Option<String>,
 }
 
 impl AppData {
@@ -85,6 +86,7 @@ impl AppData {
         let cpu_profile = Self::init_cpu_profile(&data_dir);
         let settings = Self::settings_from_cake(&cake);
         let verbose = Self::init_verbose_with(&cake);
+        let auth_code = Self::init_auth_code_with(&cake);
 
         let mut app = Self {
             project_root,
@@ -97,6 +99,7 @@ impl AppData {
             settings,
             verbose,
             cake,
+            auth_code,
         };
         if app.load_package_json().is_ok() {
             app.typecheck_script_name =
@@ -162,6 +165,18 @@ impl AppData {
                 }
             },
         })
+    }
+
+    fn init_auth_code_with(cake: &LayerCake) -> Option<String> {
+        let code = cake.resolve_string(ResolveStringArgs {
+            env: "AUTH_CODE",
+            flag: "--auth-code",
+            file: "auth_code",
+            default: || "".to_string(),
+            validate: |s| Ok(s.to_string()),
+        });
+        tracing::info!("init_auth_code_with: resolved code = '{}'", code);
+        if code.is_empty() { None } else { Some(code) }
     }
 
     fn init_typecheck_script_name_with(
@@ -550,7 +565,7 @@ struct OutputTimestamps {
 }
 
 #[derive(serde::Serialize)]
-struct TypeslayerConfig<'a> {
+struct TypeSlayerConfig<'a> {
     project_root: &'a str,
     data_dir: &'a str,
     verbose: bool,
@@ -585,7 +600,7 @@ impl AppData {
             cpu_profile: Self::file_mtime_iso(&cpu_path),
         };
 
-        let cfg = TypeslayerConfig {
+        let cfg = TypeSlayerConfig {
             project_root: &self.project_root,
             data_dir: &data_dir_str,
             verbose: self.verbose,
@@ -673,8 +688,6 @@ impl AppData {
         }
     }
 }
-
-// Placeholder for future config-load structs removed to keep AppData::new clean
 
 #[tauri::command]
 pub async fn validate_types_json(

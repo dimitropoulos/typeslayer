@@ -1,6 +1,6 @@
 
 <p align="center">
-  <img src="packages/typeslayer/src/assets/typeslayer-nightmare.png">
+  <img src="./src/assets/typeslayer-nightmare.png">
 </p>
 
 <p align="center">

@@ -45,7 +45,7 @@ export function TypeSummary({
 			</Typography>
 			<Typography sx={{ fontFamily: "monospace" }}>id:{id}</Typography>
 			{showFlags
-				? flags.map((flag) => (
+				? flags.map((flag: (typeof flags)[number]) => (
 						<Chip
 							variant="filled"
 							key={flag}

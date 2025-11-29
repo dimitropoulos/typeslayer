@@ -128,7 +128,7 @@ export const DisplayRecursiveType: FC<{
 								ResolvedType[keyof ResolvedType],
 							][]
 						).map(([key, value], index) => {
-							const reactKey = `${id}:${key}:${index}`;
+							const reactKey = `${id}:${String(key)}:${index}`;
 
 							switch (key) {
 								//
@@ -228,9 +228,9 @@ export const DisplayRecursiveType: FC<{
 
 									if (typeof value === "number") {
 										return (
-											<Stack key={reactKey}>
-												{key}:
-												<DisplayRecursiveType
+										<Stack key={reactKey}>
+											{String(key)}:
+											<DisplayRecursiveType
 													id={value}
 													typeRegistry={typeRegistry}
 													depth={depth + 2}
@@ -315,7 +315,7 @@ export const DisplayRecursiveType: FC<{
 									return (
 										<Stack key={reactKey}>
 											<Stack display="inline">
-												<Typography display="inline">{key}: </Typography>
+												<Typography display="inline">{String(key)}: </Typography>
 												<Typography display="inline" color="textDisabled">
 													{value.length.toLocaleString()}
 												</Typography>
@@ -329,9 +329,9 @@ export const DisplayRecursiveType: FC<{
 								case "isTuple":
 									return null;
 
-								default:
-									key satisfies never;
-									throw new Error(`Unexpected property ${key} in type ${id}`);
+									default:
+										key satisfies never;
+										throw new Error(`Unexpected property ${String(key)} in type ${id}`);
 							}
 						})}
 					</Stack>
