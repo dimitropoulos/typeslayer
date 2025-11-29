@@ -159,6 +159,10 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/typeslayer-v')
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ steps.taginfo.outputs.tag }}
+          name: "TypeSlayer ${{ steps.taginfo.outputs.version }}"
+          draft: false
+          prerelease: false
           files: |
             binaries/linux-x64/typeslayer
             binaries/darwin-x64/typeslayer

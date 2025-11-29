@@ -1,6 +1,6 @@
 {
 	"name": "typeslayer",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Slay your TypeScript types",
 	"private": false,
 	"type": "module",
@@ -27,7 +27,8 @@
 	},
 	"files": [
 		"bin",
-		"binaries"
+		"binaries",
+		"scripts"
 	],
 	"os": [
 		"linux",
@@ -44,6 +45,7 @@
 	},
 	"packageManager": "pnpm@10.6.5",
 	"scripts": {
+		"postinstall": "node scripts/postinstall.js",
 		"dev": "vite",
 		"build": "tsc && vite build",
 		"preview": "vite preview",
