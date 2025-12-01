@@ -55,10 +55,20 @@ pub struct GraphStats {
     pub count: HashMap<String, usize>,
 }
 
+/// Stats for a specific edge kind: ordered list of (target_id, [source_ids])
+/// Ordered by number of sources (most connected first)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EdgeStats {
+    /// Array of [target_id, [source_ids]] tuples, sorted by source count descending
+    pub entries: Vec<(TypeId, Vec<TypeId>)>,
+}
+
 #[derive(Debug, Default)]
 pub struct TypeGraph {
     nodes: HashMap<TypeId, GraphNode>,
     links: Vec<GraphLink>,
+    edge_stats: HashMap<String, EdgeStats>,
 }
 
 impl TypeGraph {
@@ -167,7 +177,56 @@ impl TypeGraph {
             }
         }
 
+        // Calculate edge stats: for each edge kind, map targets to their sources
+        graph.calculate_edge_stats();
+
         graph
+    }
+
+    fn calculate_edge_stats(&mut self) {
+        // Group links by kind, then by target
+        let mut kind_maps: HashMap<String, HashMap<TypeId, Vec<TypeId>>> = HashMap::new();
+
+        for link in &self.links {
+            let kind_str = match link.kind {
+                EdgeKind::Union => "union",
+                EdgeKind::TypeArgument => "typeArgument",
+                EdgeKind::Instantiated => "instantiated",
+                EdgeKind::SubstitutionBase => "substitutionBase",
+                EdgeKind::Constraint => "constraint",
+                EdgeKind::IndexedAccessObject => "indexedAccessObject",
+                EdgeKind::IndexedAccessIndex => "indexedAccessIndex",
+                EdgeKind::ConditionalCheck => "conditionalCheck",
+                EdgeKind::ConditionalExtends => "conditionalExtends",
+                EdgeKind::ConditionalTrue => "conditionalTrue",
+                EdgeKind::ConditionalFalse => "conditionalFalse",
+                EdgeKind::Keyof => "keyof",
+                EdgeKind::EvolvingArrayElement => "evolvingArrayElement",
+                EdgeKind::EvolvingArrayFinal => "evolvingArrayFinal",
+                EdgeKind::ReverseMappedSource => "reverseMappedSource",
+                EdgeKind::ReverseMappedMapped => "reverseMappedMapped",
+                EdgeKind::ReverseMappedConstraint => "reverseMappedConstraint",
+                EdgeKind::Alias => "alias",
+                EdgeKind::AliasTypeArgument => "aliasTypeArgument",
+                EdgeKind::Intersection => "intersection",
+            };
+
+            kind_maps
+                .entry(kind_str.to_string())
+                .or_insert_with(HashMap::new)
+                .entry(link.target)
+                .or_insert_with(Vec::new)
+                .push(link.source);
+        }
+
+        // Convert to EdgeStats (sorted by source count)
+        for (kind, target_map) in kind_maps {
+            let mut entries: Vec<(TypeId, Vec<TypeId>)> = target_map.into_iter().collect();
+            // Sort by number of sources, descending
+            entries.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+
+            self.edge_stats.insert(kind, EdgeStats { entries });
+        }
     }
 
     pub fn to_force_graph(&self) -> ForceGraphData {
@@ -222,6 +281,7 @@ impl TypeGraph {
             nodes,
             links,
             stats: GraphStats { count },
+            edge_stats: self.edge_stats.clone(),
         }
     }
 }
@@ -248,6 +308,7 @@ pub struct ForceGraphData {
     pub nodes: Vec<ForceGraphNode>,
     pub links: Vec<ForceGraphLink>,
     pub stats: GraphStats,
+    pub edge_stats: HashMap<String, EdgeStats>,
 }
 
 /// Build the in-memory graph from the loaded `types_json` and store in AppData via `State`.

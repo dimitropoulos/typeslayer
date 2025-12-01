@@ -1326,3 +1326,12 @@ pub async fn set_preferred_editor(
     AppData::update_outputs(&data, &app);
     Ok(())
 }
+
+#[tauri::command]
+pub async fn get_treemap_data(
+    state: State<'_, Mutex<AppData>>,
+) -> Result<Vec<crate::treemap::TreemapNode>, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    let treemap_data = crate::treemap::build_treemap_from_trace(&data.trace_json);
+    Ok(treemap_data)
+}

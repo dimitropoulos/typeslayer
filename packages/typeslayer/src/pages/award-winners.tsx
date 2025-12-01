@@ -85,6 +85,14 @@ const awards = {
 		unit: "type arguments",
 		route: "most-type-arguments",
 	},
+	mostInstantiatedType: {
+		title: "Most Instantiated Type",
+		description:
+			"Awarded for the type that gets instantiated most frequently across the codebase.",
+		icon: CopyAll,
+		unit: "instantiations",
+		route: "most-instantiated-type",
+	},
 	intersectionTypes: {
 		title: "Largest Intersection",
 		property: "intersectionTypes",
@@ -169,6 +177,14 @@ export const RenderPlayground = ({
 					key={activeAward}
 					typeRegistry={typeRegistry}
 					{...awards.typeArguments}
+				/>
+			);
+		case "mostInstantiatedType":
+			return (
+				<GraphAward
+					key={activeAward}
+					typeRegistry={typeRegistry}
+					{...awards.mostInstantiatedType}
 				/>
 			);
 		case "unionTypes":
@@ -381,6 +397,7 @@ export const AwardWinners = () => {
 							"unionTypes",
 							"intersectionTypes",
 							"typeArguments",
+							"mostInstantiatedType",
 							"aliasTypeArguments",
 						] as const
 					).map((awardId) => (
@@ -634,6 +651,143 @@ function ArrayAward({
 					id={(sorted[selectedIndex] as ResolvedType | undefined)?.id ?? 0}
 					typeRegistry={typeRegistry}
 				/>
+			</Box>
+		</Stack>
+	);
+}
+
+function GraphAward({
+	title,
+	description,
+	icon: Icon,
+	typeRegistry,
+	unit,
+}: {
+	title: string;
+	description: string;
+	icon: (typeof awards)[keyof typeof awards]["icon"];
+	typeRegistry: TypeRegistry;
+	unit: string;
+}) {
+	const [selectedIndex, setSelectedIndex] = useState(0);
+	const [displayLimit, setDisplayLimit] = useState(20);
+	const scrollContainerRef = useRef<HTMLDivElement>(null);
+	const [edgeStats, setEdgeStats] = useState<{
+		entries: Array<[number, number[]]>;
+	} | null>(null);
+
+	useEffect(() => {
+		(async () => {
+			try {
+				const data = await invoke<{
+					nodes: Array<{ id: number; name: string }>;
+					links: Array<{ source: number; target: number; kind: string }>;
+					stats: { count: Record<string, number> };
+					edgeStats: Record<string, { entries: Array<[number, number[]]> }>;
+				}>("get_type_graph");
+				// Extract instantiated stats
+				setEdgeStats(data.edgeStats.instantiated || { entries: [] });
+			} catch (e) {
+				console.error("Failed to load type graph", e);
+			}
+		})();
+	}, []);
+
+	const handleListItemClick = (
+		_event: React.MouseEvent<HTMLDivElement, MouseEvent>,
+		index: number,
+	) => {
+		setSelectedIndex(index);
+		if (scrollContainerRef.current) {
+			scrollContainerRef.current.scrollTop = 0;
+		}
+	};
+
+	if (!edgeStats) {
+		return <Typography>Loading...</Typography>;
+	}
+
+	// Use pre-calculated edge stats from backend
+	const sorted = edgeStats.entries
+		.map(([typeId, sourceIds]) => {
+			const resolvedType = typeRegistry.get(typeId);
+			return resolvedType ? { typeId, count: sourceIds.length, sourceIds, resolvedType } : null;
+		})
+		.filter((item): item is { typeId: number; count: number; sourceIds: number[]; resolvedType: ResolvedType } => item !== null);
+
+	const maxValue = sorted[0]?.count ?? 0;
+	const cutoff = 50;
+	const currentLimit = Math.min(displayLimit, sorted.length);
+	const hasMore = sorted.length > currentLimit;
+	const remaining = sorted.length - currentLimit;
+
+	const selectedItem = sorted[selectedIndex];
+
+	return (
+		<Stack sx={{ flexDirection: "row", alignItems: "flex-start", height: "100%" }}>
+			<Stack sx={{ maxWidth: 450, minWidth: 450, p: 3, overflowY: "auto", maxHeight: "100%" }}>
+				<TitleSubtitle title={title} subtitle={description} icon={<Icon fontSize="large" />} />
+				<Stack sx={{ my: 2 }}>
+					<List>
+						{sorted.slice(0, currentLimit).map(({ typeId, count, resolvedType }, index) => (
+							<ListItemButton
+								selected={index === selectedIndex}
+								onClick={(event) => handleListItemClick(event, index)}
+								key={typeId}
+								sx={{ width: "100%" }}
+							>
+								<ListItemText>
+									<Stack sx={{ flexGrow: 1 }} gap={0}>
+										<TypeSummary resolvedType={resolvedType} />
+										<Stack gap={0.5}>
+											<InlineBarGraph
+												label={`${count.toLocaleString()} ${unit}`}
+												width={`${(count / maxValue) * 100}%`}
+											/>
+										</Stack>
+									</Stack>
+								</ListItemText>
+							</ListItemButton>
+						))}
+					</List>
+					{hasMore && (
+						<Stack direction="row" gap={2} alignItems="center" sx={{ px: 2, mb: 2 }}>
+							<Typography>
+								showing {currentLimit.toLocaleString()} out of {sorted.length.toLocaleString()}
+							</Typography>
+							<Button variant="outlined" size="small" onClick={() => setDisplayLimit((prev) => prev + cutoff)}>
+								Show {Math.min(cutoff, remaining).toLocaleString()} more
+							</Button>
+						</Stack>
+					)}
+				</Stack>
+			</Stack>
+			<Divider orientation="vertical" />
+			<Box sx={{ p: 3, overflowY: "auto", maxHeight: "100%", width: "100%", height: "100%" }} ref={scrollContainerRef}>
+				<Stack gap={3}>
+					<DisplayRecursiveType id={selectedItem?.typeId ?? 0} typeRegistry={typeRegistry} />
+					
+					{selectedItem && selectedItem.sourceIds.length > 0 && (
+						<>
+							<Divider />
+							<Stack gap={1}>
+								<Typography variant="h6">
+									Instantiated by {selectedItem.sourceIds.length} type{selectedItem.sourceIds.length !== 1 ? 's' : ''}:
+								</Typography>
+								<List dense>
+									{selectedItem.sourceIds.map((sourceId) => {
+										const sourceType = typeRegistry.get(sourceId);
+										return sourceType ? (
+											<ListItem key={sourceId}>
+												<TypeSummary resolvedType={sourceType} />
+											</ListItem>
+										) : null;
+									})}
+								</List>
+							</Stack>
+						</>
+					)}
+				</Stack>
 			</Box>
 		</Stack>
 	);

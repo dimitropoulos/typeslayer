@@ -57,6 +57,8 @@
 		"@tauri-apps/plugin-dialog": "2.4.2",
 		"@tauri-apps/plugin-opener": "2.5.2",
 		"@tauri-apps/plugin-upload": "^2.3.2",
+		"echarts": "^6.0.0",
+		"echarts-for-react": "^3.0.5",
 		"react": "19.2.0",
 		"react-dom": "19.2.0"
 	},

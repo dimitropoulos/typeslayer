@@ -4,6 +4,8 @@ mod auth;
 mod files;
 mod layercake;
 mod log;
+mod screenshot;
+mod treemap;
 mod type_graph;
 mod validate;
 
@@ -19,6 +21,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_upload::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_screenshots::init())
         .setup(|app| {
             let app_handle = app.app_handle().clone();
             let app_data = app_data::AppData::new(&app_handle);
@@ -117,6 +120,8 @@ pub fn run() {
             app_data::get_cpu_profile_text,
             type_graph::build_type_graph,
             type_graph::get_type_graph,
+            app_data::get_treemap_data,
+            screenshot::take_screenshot,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

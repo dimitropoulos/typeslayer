@@ -47,113 +47,93 @@ type EdgeConfig = {
 	label: string;
 };
 
-const EDGE_CONFIGS: EdgeConfig[] = [
-	{ id: "union", colorRGB: [1, 0, 0], color: "#ff0000", label: "Union" },
-	{
-		id: "typeArgument",
-		colorRGB: [0, 1, 0],
-		color: "#00ff00",
-		label: "Type Argument",
-	},
-	{
-		id: "instantiated",
-		colorRGB: [0, 0, 1],
-		color: "#0000ff",
-		label: "Instantiated",
-	},
-	{
-		id: "substitutionBase",
-		colorRGB: [1, 0.5, 0],
-		color: "#ff8000",
-		label: "Substitution Base",
-	},
-	{
-		id: "constraint",
-		colorRGB: [0.5, 0, 0.5],
-		color: "#800080",
-		label: "Constraint",
-	},
-	{
-		id: "indexedAccessObject",
-		colorRGB: [0, 0.5, 0.5],
-		color: "#008080",
-		label: "Indexed Access Object",
-	},
-	{
-		id: "indexedAccessIndex",
-		colorRGB: [0.5, 0.5, 0],
-		color: "#808000",
-		label: "Indexed Access Index",
-	},
-	{
-		id: "conditionalCheck",
-		colorRGB: [1, 0, 0.5],
-		color: "#ff0080",
-		label: "Conditional Check",
-	},
-	{
-		id: "conditionalExtends",
-		colorRGB: [0.5, 0, 1],
-		color: "#8000ff",
-		label: "Conditional Extends",
-	},
-	{
-		id: "conditionalTrue",
-		colorRGB: [0, 1, 0.5],
-		color: "#00ff80",
-		label: "Conditional True",
-	},
-	{
-		id: "conditionalFalse",
-		colorRGB: [1, 0.5, 0.5],
-		color: "#ff8080",
-		label: "Conditional False",
-	},
-	{ id: "keyof", colorRGB: [0.5, 1, 0], color: "#80ff00", label: "Keyof" },
-	{
-		id: "evolvingArrayElement",
-		colorRGB: [0, 0.5, 1],
-		color: "#0080ff",
-		label: "Evolving Array Element",
-	},
-	{
-		id: "evolvingArrayFinal",
-		colorRGB: [0.5, 0.5, 0.5],
-		color: "#808080",
-		label: "Evolving Array Final",
-	},
-	{
-		id: "reverseMappedSource",
-		colorRGB: [1, 1, 0],
-		color: "#ffff00",
-		label: "Reverse Mapped Source",
-	},
-	{
-		id: "reverseMappedMapped",
-		colorRGB: [1, 0, 1],
-		color: "#ff00ff",
-		label: "Reverse Mapped Mapped",
-	},
-	{
-		id: "reverseMappedConstraint",
-		colorRGB: [0, 1, 1],
-		color: "#00ffff",
-		label: "Reverse Mapped Constraint",
-	},
-	{ id: "alias", colorRGB: [0.7, 0.7, 0], color: "#b3b300", label: "Alias" },
-	{
-		id: "aliasTypeArgument",
-		colorRGB: [0, 0.7, 0.7],
-		color: "#00b3b3",
-		label: "Alias Type Argument",
-	},
-	{
-		id: "intersection",
-		colorRGB: [0.7, 0, 0],
-		color: "#b30000",
-		label: "Intersection",
-	},
+// Ranking provided by user, highest to lowest
+const EDGE_RANKING: EdgeKind[] = [
+	"union",
+	"intersection",
+	"typeArgument",
+	"instantiated",
+	"aliasTypeArgument",
+	"conditionalCheck",
+	"conditionalExtends",
+	"conditionalFalse",
+	"conditionalTrue",
+	"indexedAccessObject",
+	"indexedAccessIndex",
+	"keyof",
+	"reverseMappedSource",
+	"reverseMappedMapped",
+	"reverseMappedConstraint",
+	"substitutionBase",
+	"constraint",
+	"evolvingArrayElement",
+	"evolvingArrayFinal",
+	"alias",
 ];
+
+// Color palette preference groups:
+// Top 3: R, G, B
+// Next 3: Y, M, C
+// Next groups of 3: high-visibility tertiary variants
+const EDGE_COLORS_HEX: string[] = [
+	"#ff0000", // R
+	"#00ff00", // G
+	"#0000ff", // B
+	"#ffff00", // Y
+	"#ff00ff", // M
+	"#00ffff", // C
+	"#ff8000", // orange
+	"#8000ff", // violet
+	"#00ff80", // spring green
+	"#ff8080", // light red
+	"#80ff00", // chartreuse
+	"#0080ff", // azure
+	"#808080", // gray
+	"#b3b300", // olive
+	"#00b3b3", // teal
+	"#ffbf00", // amber
+	"#bf00ff", // purple
+	"#00ffbf", // aquamarine
+	"#ff4000", // vermilion
+	"#00bfFF", // sky
+];
+
+const EDGE_LABELS: Record<EdgeKind, string> = {
+	union: "Union",
+	intersection: "Intersection",
+	typeArgument: "Type Argument",
+	instantiated: "Instantiated",
+	aliasTypeArgument: "Alias Type Argument",
+	conditionalCheck: "Conditional Check",
+	conditionalExtends: "Conditional Extends",
+	conditionalFalse: "Conditional False",
+	conditionalTrue: "Conditional True",
+	indexedAccessObject: "Indexed Access Object",
+	indexedAccessIndex: "Indexed Access Index",
+	keyof: "Keyof",
+	reverseMappedSource: "Reverse Mapped Source",
+	reverseMappedMapped: "Reverse Mapped Mapped",
+	reverseMappedConstraint: "Reverse Mapped Constraint",
+	substitutionBase: "Substitution Base",
+	constraint: "Constraint",
+	evolvingArrayElement: "Evolving Array Element",
+	evolvingArrayFinal: "Evolving Array Final",
+	alias: "Alias",
+};
+
+const EDGE_CONFIGS: EdgeConfig[] = EDGE_RANKING.map((id, i) => {
+	const hex = EDGE_COLORS_HEX[i % EDGE_COLORS_HEX.length];
+	// convert hex to RGB 0..1
+	const r = parseInt(hex.slice(1, 3), 16) / 255;
+	const g = parseInt(hex.slice(3, 5), 16) / 255;
+	const b = parseInt(hex.slice(5, 7), 16) / 255;
+	return {
+		id,
+		colorRGB: [r, g, b],
+		color: hex,
+		label: EDGE_LABELS[id],
+	};
+});
 
 const EDGE_CONFIG_MAP = new Map(EDGE_CONFIGS.map((cfg) => [cfg.id, cfg]));
 
@@ -200,6 +180,8 @@ export const TypeNetwork = () => {
 	const originalPositionsRef = useRef<Float32Array | null>(null);
 	const hiddenIndicesRef = useRef<Set<number>>(new Set());
 	const [showFreeTypes, setShowFreeTypes] = useState(true);
+	const [sidebarWidth, setSidebarWidth] = useState(35); // percentage
+	const [isResizing, setIsResizing] = useState(false);
 	const typesJson = useTypesJson();
 	const typeRegistry: TypeRegistry = new Map<number, ResolvedType>(
 		((typesJson.data ?? []) as ResolvedType[]).map((t) => [t.id, t]),
@@ -502,7 +484,7 @@ export const TypeNetwork = () => {
 					linkColorMode: "rgba",
 					renderHoveredPointRing: true,
 					hoveredPointRingColor: "#4B5BBF",
-					backgroundColor: "#000000",
+					backgroundColor: "#00000000",
 					// Add direct handlers if supported
 					onPointClick: (index: number | undefined) => {
 						if (index === undefined) return;
@@ -623,6 +605,30 @@ export const TypeNetwork = () => {
 		};
 	}, []);
 
+	// Handle resize drag
+	useEffect(() => {
+		const handleMouseMove = (e: MouseEvent) => {
+			if (!isResizing) return;
+			const containerWidth = window.innerWidth;
+			const newWidth = ((containerWidth - e.clientX) / containerWidth) * 100;
+			// Clamp between 20% and 80%
+			setSidebarWidth(Math.max(20, Math.min(80, newWidth)));
+		};
+
+		const handleMouseUp = () => {
+			setIsResizing(false);
+		};
+
+		if (isResizing) {
+			document.addEventListener("mousemove", handleMouseMove);
+			document.addEventListener("mouseup", handleMouseUp);
+			return () => {
+				document.removeEventListener("mousemove", handleMouseMove);
+				document.removeEventListener("mouseup", handleMouseUp);
+			};
+		}
+	}, [isResizing]);
+
 	return (
 		<Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
 			<Box sx={{ py: 2, px: 4 }}>
@@ -694,6 +700,12 @@ export const TypeNetwork = () => {
 				anchorEl={filterAnchor}
 				onClose={() => setFilterAnchor(null)}
 				anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+				disableScrollLock
+				slotProps={{
+					paper: {
+						onMouseLeave: () => setFilterAnchor(null),
+					},
+				}}
 			>
 				<Box
 					sx={{
@@ -745,7 +757,6 @@ export const TypeNetwork = () => {
 																width: 16,
 																height: 16,
 																bgcolor: config.color,
-																border: "1px solid #ccc",
 															}}
 														/>
 														<Typography variant="body2">
@@ -817,7 +828,7 @@ export const TypeNetwork = () => {
 							top: 0,
 							right: 0,
 							bottom: 0,
-							width: "25%",
+							width: `${sidebarWidth}%`,
 							bgcolor: "background.paper",
 							borderLeft: "1px solid",
 							borderColor: "divider",
@@ -826,9 +837,22 @@ export const TypeNetwork = () => {
 							zIndex: 10,
 						}}
 					>
-						<Typography variant="subtitle2" sx={{ mb: 1 }}>
-							Type {selectedId}
-						</Typography>
+						<Box
+							onMouseDown={() => setIsResizing(true)}
+							sx={{
+								position: "absolute",
+								left: -4,
+								top: 0,
+								bottom: 0,
+								width: 8,
+								cursor: "ew-resize",
+								zIndex: 11,
+								"&:hover": {
+									bgcolor: "primary.main",
+									opacity: 0.3,
+								},
+							}}
+						/>
 						{typeRegistry.size > 0 ? (
 							<DisplayRecursiveType
 								id={Number(selectedId)}

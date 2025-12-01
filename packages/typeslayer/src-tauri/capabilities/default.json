@@ -9,6 +9,9 @@
 		"dialog:default",
 		"core:webview:allow-set-webview-zoom",
 		"clipboard-manager:default",
-		"upload:default"
+		"upload:default",
+		"core:window:allow-is-fullscreen",
+		"core:window:allow-set-fullscreen",
+		"screenshots:default"
 	]
 }

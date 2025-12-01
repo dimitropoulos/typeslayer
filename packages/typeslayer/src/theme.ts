@@ -16,7 +16,6 @@
 
 import type { Theme } from "@mui/material";
 import { createTheme } from "@mui/material";
-import doomTexturePng from "./assets/doom-texture-116.png";
 
 const doomRed = {
 	main: "#C02929",
@@ -60,8 +59,6 @@ declare module "@mui/material/styles" {
 				strong: string;
 			};
 			sidebar: {
-				texture: string; // local SVG cracked stone
-				external: string; // external Doom texture PNG
 				overlay: string; // gradient overlay for darkening & blending
 			};
 		};
@@ -146,8 +143,6 @@ export const theme: Theme = createTheme({
 		},
 		sidebar: {
 			// Local textures: imported cracked stone + downloaded Doom UI texture (526.png)
-			texture: `url(${doomTexturePng})`,
-			external: `url(${doomTexturePng})`,
 			overlay:
 				"linear-gradient(180deg, rgba(20,20,22,0.92) 0%, rgba(20,20,22,0.78) 40%, rgba(20,20,22,0.95) 100%)",
 		},

@@ -2505,6 +2505,96 @@
           "markdownDescription": "Denies the reveal_item_in_dir command without any pre-configured scope."
         },
         {
+          "description": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-get-screenshotable-windows`\n- `allow-get-screenshotable-monitors`\n- `allow-get-window-screenshot`\n- `allow-get-monitor-screenshot`\n- `allow-remove-window-screenshot`\n- `allow-remove-monitor-screenshot`\n- `allow-clear-screenshots`",
+          "type": "string",
+          "const": "screenshots:default",
+          "markdownDescription": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-get-screenshotable-windows`\n- `allow-get-screenshotable-monitors`\n- `allow-get-window-screenshot`\n- `allow-get-monitor-screenshot`\n- `allow-remove-window-screenshot`\n- `allow-remove-monitor-screenshot`\n- `allow-clear-screenshots`"
+        },
+        {
+          "description": "Enables the clear_screenshots command without any pre-configured scope.",
+          "type": "string",
+          "const": "screenshots:allow-clear-screenshots",
+          "markdownDescription": "Enables the clear_screenshots command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_monitor_screenshot command without any pre-configured scope.",
+          "type": "string",
+          "const": "screenshots:allow-get-monitor-screenshot",
+          "markdownDescription": "Enables the get_monitor_screenshot command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_screenshotable_monitors command without any pre-configured scope.",
+          "type": "string",
+          "const": "screenshots:allow-get-screenshotable-monitors",
+          "markdownDescription": "Enables the get_screenshotable_monitors command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_screenshotable_windows command without any pre-configured scope.",
+          "type": "string",
+          "const": "screenshots:allow-get-screenshotable-windows",
+          "markdownDescription": "Enables the get_screenshotable_windows command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_window_screenshot command without any pre-configured scope.",
+          "type": "string",
+          "const": "screenshots:allow-get-window-screenshot",
+          "markdownDescription": "Enables the get_window_screenshot command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the remove_monitor_screenshot command without any pre-configured scope.",
+          "type": "string",
+          "const": "screenshots:allow-remove-monitor-screenshot",
+          "markdownDescription": "Enables the remove_monitor_screenshot command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the remove_window_screenshot command without any pre-configured scope.",
+          "type": "string",
+          "const": "screenshots:allow-remove-window-screenshot",
+          "markdownDescription": "Enables the remove_window_screenshot command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the clear_screenshots command without any pre-configured scope.",
+          "type": "string",
+          "const": "screenshots:deny-clear-screenshots",
+          "markdownDescription": "Denies the clear_screenshots command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_monitor_screenshot command without any pre-configured scope.",
+          "type": "string",
+          "const": "screenshots:deny-get-monitor-screenshot",
+          "markdownDescription": "Denies the get_monitor_screenshot command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_screenshotable_monitors command without any pre-configured scope.",
+          "type": "string",
+          "const": "screenshots:deny-get-screenshotable-monitors",
+          "markdownDescription": "Denies the get_screenshotable_monitors command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_screenshotable_windows command without any pre-configured scope.",
+          "type": "string",
+          "const": "screenshots:deny-get-screenshotable-windows",
+          "markdownDescription": "Denies the get_screenshotable_windows command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_window_screenshot command without any pre-configured scope.",
+          "type": "string",
+          "const": "screenshots:deny-get-window-screenshot",
+          "markdownDescription": "Denies the get_window_screenshot command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the remove_monitor_screenshot command without any pre-configured scope.",
+          "type": "string",
+          "const": "screenshots:deny-remove-monitor-screenshot",
+          "markdownDescription": "Denies the remove_monitor_screenshot command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the remove_window_screenshot command without any pre-configured scope.",
+          "type": "string",
+          "const": "screenshots:deny-remove-window-screenshot",
+          "markdownDescription": "Denies the remove_window_screenshot command without any pre-configured scope."
+        },
+        {
           "description": "This permission set configures what kind of\noperations are available from the upload plugin.\n\n#### Granted Permissions\n\nAll operations are enabled by default.\n\n\n#### This default permission set includes:\n\n- `allow-upload`\n- `allow-download`",
           "type": "string",
           "const": "upload:default",
