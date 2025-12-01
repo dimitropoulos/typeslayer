@@ -14,7 +14,7 @@ use crate::{
 use serde_json::Value;
 use std::fs;
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager, State};
 use tracing::{error, info};
@@ -332,7 +332,12 @@ impl AppData {
         info!("Outputs directory (data_dir): {}", data_dir);
 
         let mut cmd = Command::new("sh");
-        cmd.arg("-c").arg(&npm_command).current_dir(&cwd);
+        cmd.arg("-c")
+            .arg(&npm_command)
+            .current_dir(&cwd)
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
 
         let child = cmd
             .spawn()

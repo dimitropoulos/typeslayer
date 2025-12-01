@@ -9,13 +9,11 @@ export const SpeedScope = () => {
 		[],
 	);
 
-
 	const embeddedUrl = useMemo(
 		() =>
 			`/speedscope-ui/index.html#profileURL=${encodeURIComponent(profileUrl)}`,
 		[profileUrl],
 	);
-
 
 	if (!profileUrl) {
 		return <div>Loading CPU profile...</div>;

@@ -10,6 +10,10 @@ import {
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 import Typography from "@mui/material/Typography";
 import { useNavigate } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
@@ -58,6 +62,16 @@ export function Start() {
 	// Processing state
 	const [processingStep, setProcessingStep] = useState<0 | 1 | 2 | 3>(0);
 	const [processingError, setProcessingError] = useState<string | null>(null);
+	const [processingErrorDetails, setProcessingErrorDetails] = useState<
+		string | null
+	>(null);
+	const [processingErrorStdout, setProcessingErrorStdout] = useState<
+		string | null
+	>(null);
+	const [processingErrorStderr, setProcessingErrorStderr] = useState<
+		string | null
+	>(null);
+	const [isErrorDialogOpen, setIsErrorDialogOpen] = useState(false);
 	const [isProcessing, setIsProcessing] = useState(false);
 
 	// Use hooks from tauri-hooks
@@ -153,6 +167,10 @@ export function Start() {
 
 		setIsProcessing(true);
 		setProcessingError(null);
+		setProcessingErrorDetails(null);
+		setProcessingErrorStdout(null);
+		setProcessingErrorStderr(null);
+		setIsErrorDialogOpen(false);
 
 		try {
 			// Ensure project root is synced
@@ -186,12 +204,22 @@ export function Start() {
 				});
 			}, 400);
 		} catch (e) {
-			const message = e instanceof Error ? e.message : String(e);
-			if (message.toLowerCase().includes("cancel")) {
+			const rawMessage = e instanceof Error ? e.message : String(e);
+			const normalizedMessage = normalizeInvokeError(rawMessage);
+			if (normalizedMessage.toLowerCase().includes("cancel")) {
 				setProcessingError(null);
+				setProcessingErrorDetails(null);
+				setProcessingErrorStdout(null);
+				setProcessingErrorStderr(null);
 				setProcessingStep(0);
 			} else {
-				setProcessingError(message);
+				const { summary, details, stdout, stderr } =
+					splitCompilerError(normalizedMessage);
+				setProcessingError(summary);
+				setProcessingErrorDetails(details);
+				setProcessingErrorStdout(stdout);
+				setProcessingErrorStderr(stderr);
+				setIsErrorDialogOpen(true);
 			}
 		} finally {
 			setIsProcessing(false);
@@ -203,17 +231,42 @@ export function Start() {
 		try {
 			await invoke("clear_outputs", { cancelRunning: isProcessing });
 			setProcessingError(null);
+			setProcessingErrorDetails(null);
+			setProcessingErrorStdout(null);
+			setProcessingErrorStderr(null);
+			setIsErrorDialogOpen(false);
 			setProcessingStep(0);
 			if (isProcessing) {
 				setIsProcessing(false);
 			}
 		} catch (error) {
 			console.error("Failed to clear outputs:", error);
-			setProcessingError(String(error));
+			const rawMessage = error instanceof Error ? error.message : String(error);
+			const normalizedMessage = normalizeInvokeError(rawMessage);
+			const { summary, details, stdout, stderr } =
+				splitCompilerError(normalizedMessage);
+			setProcessingError(summary);
+			setProcessingErrorDetails(details);
+			setProcessingErrorStdout(stdout);
+			setProcessingErrorStderr(stderr);
+			setIsErrorDialogOpen(true);
 		} finally {
 			setIsClearingOutputs(false);
 		}
 	}, [isProcessing]);
+
+	const handleCopyErrorDetails = useCallback(() => {
+		if (!processingErrorDetails) {
+			return;
+		}
+		navigator.clipboard
+			.writeText(processingErrorDetails)
+			.catch((error) => console.error("Failed to copy error details", error));
+	}, [processingErrorDetails]);
+
+	const errorDialogTitle = processingError ?? "Diagnostics failed";
+	const hasStdout = !!processingErrorStdout?.trim();
+	const hasStderr = !!processingErrorStderr?.trim();
 
 	return (
 		<Box sx={{ px: 4, overflowY: "auto", maxHeight: "100%", gap: 2, pb: 4 }}>
@@ -335,7 +388,22 @@ export function Start() {
 				<Step step={3}>
 					<Stack flexDirection="column" gap={2}>
 						{processingError && (
-							<Alert severity="error">{processingError}</Alert>
+							<Alert
+								severity="error"
+								action={
+									processingErrorDetails || hasStdout || hasStderr ? (
+										<Button
+											size="small"
+											color="inherit"
+											onClick={() => setIsErrorDialogOpen(true)}
+										>
+											View details
+										</Button>
+									) : undefined
+								}
+							>
+								{processingError}
+							</Alert>
 						)}
 						<Stack sx={{ gap: 2, flexDirection: "row", flexWrap: "wrap" }}>
 							<BigAction
@@ -382,6 +450,161 @@ export function Start() {
 					</Stack>
 				</Step>
 			</Stack>
+			<Dialog
+				open={isErrorDialogOpen}
+				onClose={() => setIsErrorDialogOpen(false)}
+				maxWidth="md"
+				fullWidth
+			>
+				<DialogTitle>{errorDialogTitle}</DialogTitle>
+				<DialogContent dividers>
+					<Stack gap={2}>
+						{processingErrorDetails && (
+							<Typography color="text.secondary">
+								Detailed compiler output collected from the most recent run.
+							</Typography>
+						)}
+						<Box
+							sx={{
+								display: "flex",
+								flexDirection: "column",
+								gap: 2,
+							}}
+						>
+							<ErrorStreamSection
+								title="STDOUT"
+								content={
+									hasStdout
+										? (processingErrorStdout ?? "")
+										: "No STDOUT output captured."
+								}
+							/>
+							<ErrorStreamSection
+								title="STDERR"
+								content={
+									hasStderr
+										? (processingErrorStderr ?? "")
+										: "No STDERR output captured."
+								}
+							/>
+						</Box>
+					</Stack>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={() => setIsErrorDialogOpen(false)}>Close</Button>
+					<Button
+						onClick={handleCopyErrorDetails}
+						disabled={!processingErrorDetails}
+					>
+						Copy
+					</Button>
+				</DialogActions>
+			</Dialog>
 		</Box>
 	);
 }
+
+type CompilerErrorParts = {
+	summary: string;
+	details: string | null;
+	stdout: string | null;
+	stderr: string | null;
+};
+
+const normalizeInvokeError = (message: string) => {
+	const invokePrefix = /^InvokeError:\s*/i;
+	let normalized = message.replace(invokePrefix, "").trim();
+	const quoted = normalized.match(/^"([\s\S]*)"$/);
+	if (quoted) {
+		normalized = quoted[1].replace(/\\"/g, '"');
+	}
+	return normalized.trim();
+};
+
+const splitCompilerError = (message: string): CompilerErrorParts => {
+	const stdoutIndex = message.indexOf("STDOUT:");
+	if (stdoutIndex === -1) {
+		return {
+			summary: message,
+			details: message,
+			stdout: null,
+			stderr: null,
+		};
+	}
+	const beforeStdout = message.slice(0, stdoutIndex).trim();
+	const rest = message.slice(stdoutIndex);
+	const stderrIndex = rest.indexOf("STDERR:");
+	let stdoutContent = rest;
+	let stderrContent: string | undefined;
+	if (stderrIndex !== -1) {
+		stdoutContent = rest.slice(0, stderrIndex);
+		stderrContent = rest.slice(stderrIndex);
+	}
+	const normalizedStdout = stdoutContent.replace(/^STDOUT:\s*/i, "").trim();
+	const normalizedStderr = stderrContent?.replace(/^STDERR:\s*/i, "").trim();
+	const detailSections = [] as string[];
+	if (normalizedStdout) {
+		detailSections.push(`STDOUT:\n${normalizedStdout}`);
+	}
+	if (normalizedStderr) {
+		detailSections.push(`STDERR:\n${normalizedStderr}`);
+	}
+	const details = detailSections.length ? detailSections.join("\n\n") : message;
+	return {
+		summary: beforeStdout || "TypeScript compilation failed",
+		details,
+		stdout: normalizedStdout || null,
+		stderr: normalizedStderr || null,
+	};
+};
+
+const ErrorStreamSection = ({
+	title,
+	content,
+}: {
+	title: string;
+	content: string;
+}) => (
+	<Box
+		sx={{
+			flex: 1,
+			minWidth: 0,
+			border: (theme) => `1px solid ${theme.palette.divider}`,
+			borderRadius: 1,
+			display: "flex",
+			flexDirection: "column",
+			overflow: "hidden",
+		}}
+	>
+		<Box
+			sx={{
+				px: 2,
+				py: 1,
+				bgcolor: (theme) => theme.palette.background.paper,
+				borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+				fontSize: 12,
+				fontWeight: 600,
+				textTransform: "uppercase",
+				letterSpacing: 0.75,
+			}}
+		>
+			{title}
+		</Box>
+		<Box
+			component="pre"
+			sx={{
+				m: 0,
+				px: 2,
+				py: 1.5,
+				fontFamily: "monospace",
+				whiteSpace: "pre-wrap",
+				wordBreak: "break-word",
+				overflow: "auto",
+				maxHeight: 320,
+				bgcolor: (theme) => theme.palette.background.default,
+			}}
+		>
+			{content}
+		</Box>
+	</Box>
+);

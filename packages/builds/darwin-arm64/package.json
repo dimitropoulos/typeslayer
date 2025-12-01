@@ -1,0 +1,29 @@
+{
+	"name": "@typeslayer/darwin-arm64",
+	"version": "0.1.5",
+	"description": "TypeSlayer binary for macOS arm64",
+	"private": false,
+	"type": "module",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/dimitropoulos/typeslayer.git",
+		"directory": "packages/builds/darwin-arm64"
+	},
+	"bugs": {
+		"url": "https://github.com/dimitropoulos/typeslayer/issues"
+	},
+	"homepage": "https://github.com/dimitropoulos/typeslayer#readme",
+	"os": [
+		"darwin"
+	],
+	"cpu": [
+		"arm64"
+	],
+	"files": [
+		"typeslayer"
+	],
+	"engines": {
+		"node": ">=24.0.0"
+	}
+}

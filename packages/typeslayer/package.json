@@ -1,6 +1,6 @@
 {
 	"name": "typeslayer",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"description": "Slay your TypeScript types",
 	"private": false,
 	"type": "module",
@@ -87,8 +87,6 @@
 		"mime-types": "3.0.2",
 		"ramda": "0.32.0",
 		"ramda-adjunct": "5.1.0",
-		"react": "19.2.0",
-		"react-dom": "19.2.0",
 		"tsx": "4.20.6",
 		"typescript": "5.9.3",
 		"vite": "7.2.4",

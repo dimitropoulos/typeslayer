@@ -18,6 +18,7 @@ export type Thing1 = Mapping<Byte>;
 export type Thing2 = Mapping<`${Byte}${Byte}`>;
 
 export type Boom<T> = T extends any[] ? Boom<T[number]> : Boom<T[]>;
+// @ts-expect-error naa naa nuh boo boo
 export type Explosion = Boom<number>;
 export type UseExplosion = `exploded-${Explosion}`;
 

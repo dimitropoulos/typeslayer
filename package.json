@@ -14,9 +14,12 @@
 	},
 	"scripts": {
 		"biome:check": "biome check --write",
-		"rip-and-tear": "echo \"did you?\""
+		"rip-and-tear": "echo \"did you?\"",
+		"sync-build-versions": "tsx scripts/sync-build-versions.ts",
+		"prepare-build-packages": "tsx scripts/prepare-build-packages.ts"
 	},
 	"devDependencies": {
+		"@types/node": "^24.10.1",
 		"@biomejs/biome": "^2.3.7"
 	}
 }

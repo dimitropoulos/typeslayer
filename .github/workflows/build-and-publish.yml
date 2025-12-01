@@ -71,7 +71,7 @@ jobs:
       - name: Install workspace dependencies
         env:
           TYPESLAYER_SKIP_POSTINSTALL: true
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --frozen-lockfile
 
       - name: Build internal libraries (@typeslayer/*)
         run: pnpm -F @typeslayer/validate build && pnpm -F @typeslayer/analyze-trace build
@@ -108,12 +108,12 @@ jobs:
 
       - name: Reassemble binaries
         run: |
-          mkdir -p binaries/linux-x64 binaries/darwin-x64 binaries/darwin-arm64 binaries/win32-x64
-          cp artifacts/linux-x64-binary/typeslayer binaries/linux-x64/typeslayer-linux-x64
-          cp artifacts/darwin-x64-binary/typeslayer binaries/darwin-x64/typeslayer-darwin-x64
-          cp artifacts/darwin-arm64-binary/typeslayer binaries/darwin-arm64/typeslayer-darwin-arm64
-          cp artifacts/win32-x64-binary/typeslayer.exe binaries/win32-x64/typeslayer-win32-x64.exe
-          chmod +x binaries/linux-x64/typeslayer-linux-x64 binaries/darwin-x64/typeslayer-darwin-x64 binaries/darwin-arm64/typeslayer-darwin-arm64
+          mkdir -p builds/linux-x64 builds/darwin-x64 builds/darwin-arm64 builds/win32-x64
+          cp artifacts/linux-x64-binary/typeslayer builds/linux-x64/typeslayer
+          cp artifacts/darwin-x64-binary/typeslayer builds/darwin-x64/typeslayer
+          cp artifacts/darwin-arm64-binary/typeslayer builds/darwin-arm64/typeslayer
+          cp artifacts/win32-x64-binary/typeslayer.exe builds/win32-x64/typeslayer.exe
+          chmod +x builds/linux-x64/typeslayer builds/darwin-x64/typeslayer builds/darwin-arm64/typeslayer
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -155,21 +155,36 @@ jobs:
           fi
           echo "Version match confirmed: $PKG_VER"
 
+      - name: Prepare build packages
+        if: startsWith(github.ref, 'refs/tags/typeslayer-v')
+        run: npx tsx scripts/prepare-build-packages.ts
+
       - name: Strip dependencies from package.json for npm publish
         if: startsWith(github.ref, 'refs/tags/typeslayer-v')
         working-directory: packages/typeslayer
         run: |
-          # Remove dependencies, devDependencies, and pnpm fields since we ship a prebuilt binary
-          jq 'del(.dependencies, .devDependencies, .pnpm)' package.json > package.json.tmp
+          # Remove dependencies, devDependencies, pnpm, and unnecessary scripts since we ship a prebuilt binary
+          jq 'del(.dependencies, .devDependencies, .pnpm, .scripts.dev, .scripts.build, .scripts.preview, .scripts.tauri)' package.json > package.json.tmp
           mv package.json.tmp package.json
           cat package.json
 
-      - name: Publish to npm
+      - name: Publish main package to npm
         if: startsWith(github.ref, 'refs/tags/typeslayer-v')
         working-directory: packages/typeslayer
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --provenance --access public
+
+      - name: Publish platform binaries to npm
+        if: startsWith(github.ref, 'refs/tags/typeslayer-v')
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          for platform in linux-x64 darwin-x64 darwin-arm64 win32-x64; do
+            cd "builds/$platform"
+            npm publish --provenance --access public
+            cd ../../
+          done
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/typeslayer-v')
@@ -180,9 +195,9 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            binaries/linux-x64/typeslayer-linux-x64
-            binaries/darwin-x64/typeslayer-darwin-x64
-            binaries/darwin-arm64/typeslayer-darwin-arm64
-            binaries/win32-x64/typeslayer-win32-x64.exe
+            builds/linux-x64/typeslayer
+            builds/darwin-x64/typeslayer
+            builds/darwin-arm64/typeslayer
+            builds/win32-x64/typeslayer.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
