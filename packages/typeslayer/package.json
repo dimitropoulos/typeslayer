@@ -51,6 +51,7 @@
 		"tauri": "tauri"
 	},
 	"dependencies": {
+		"@cosmos.gl/graph": "^2.6.1",
 		"@tauri-apps/api": "2.9.0",
 		"@tauri-apps/plugin-clipboard-manager": "~2",
 		"@tauri-apps/plugin-dialog": "2.4.2",

@@ -69,6 +69,8 @@ jobs:
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
 
       - name: Install workspace dependencies
+        env:
+          TYPESLAYER_SKIP_POSTINSTALL: true
         run: pnpm install --frozen-lockfile
 
       - name: Build internal libraries (@typeslayer/*)
@@ -125,6 +127,8 @@ jobs:
           version: 10.6.5
 
       - name: Install dependencies
+        env:
+          TYPESLAYER_SKIP_POSTINSTALL: true
         run: pnpm install --frozen-lockfile
 
       - name: Verify publish contents (dry run)
@@ -150,6 +154,15 @@ jobs:
             exit 1
           fi
           echo "Version match confirmed: $PKG_VER"
+
+      - name: Strip dependencies from package.json for npm publish
+        if: startsWith(github.ref, 'refs/tags/typeslayer-v')
+        working-directory: packages/typeslayer
+        run: |
+          # Remove dependencies, devDependencies, and pnpm fields since we ship a prebuilt binary
+          jq 'del(.dependencies, .devDependencies, .pnpm)' package.json > package.json.tmp
+          mv package.json.tmp package.json
+          cat package.json
 
       - name: Publish to npm
         if: startsWith(github.ref, 'refs/tags/typeslayer-v')

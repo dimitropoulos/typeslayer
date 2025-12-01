@@ -22,8 +22,8 @@ import {
 	TRACE_JSON_FILENAME,
 	TYPES_JSON_FILENAME,
 } from "@typeslayer/validate";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { serverBaseUrl } from "../components/utils";
+import { useCallback, useMemo, useState } from "react";
+import { serverBaseUrl, useStaticFile } from "../components/utils";
 
 type RawKey = "analyze" | "trace" | "types" | "cpu";
 
@@ -117,7 +117,7 @@ export const RawData = () => {
 
 const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
 	const item = RAW_ITEMS[itemKey];
-	const [text, setText] = useState<string>("");
+	const { data: text, isLoading } = useStaticFile(item.filename);
 	const [toast, setToast] = useState<{
 		open: boolean;
 		message: string;
@@ -125,24 +125,8 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
 		path?: string;
 	}>({ open: false, message: "", severity: "success" });
 
-	useEffect(() => {
-		let mounted = true;
-		(async () => {
-			try {
-				const url = `${serverBaseUrl}/outputs/${item.filename}`;
-				const resp = await fetch(url);
-				const content = await resp.text();
-				if (mounted) setText(content);
-			} catch {
-				console.error("Failed to fetch file contents");
-			}
-		})();
-		return () => {
-			mounted = false;
-		};
-	}, [item.filename]);
-
 	const onCopy = async () => {
+		if (!text) return;
 		try {
 			await navigator.clipboard.writeText(text);
 			setToast({
@@ -229,7 +213,7 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
 					whiteSpace: "pre",
 				}}
 			>
-				{text}
+				{isLoading ? "Loading..." : text ?? "No data"}
 			</Box>
 			<Snackbar
 				anchorOrigin={{ vertical: "top", horizontal: "right" }}

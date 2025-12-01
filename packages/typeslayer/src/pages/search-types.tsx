@@ -1,12 +1,11 @@
 import { Box, Divider, Stack, TextField, Typography } from "@mui/material";
-import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { invoke } from "@tauri-apps/api/core";
 import type { ResolvedType } from "@typeslayer/validate";
 import { useEffect, useState } from "react";
 import { Callout } from "../components/callout";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
 import { InlineCode } from "../components/inline-code";
+import { useTypesJson } from "../hooks/tauri-hooks";
 
 export const SearchTypes = () => {
 	const params = useParams({ strict: false });
@@ -24,13 +23,10 @@ export const SearchTypes = () => {
 
 	const numberSearch = Number.parseInt(search, 10);
 
-	const { data: typesJson } = useQuery<ResolvedType[]>({
-		queryKey: ["types_json"],
-		queryFn: async () => invoke("get_types_json"),
-	});
+	const typesJson = useTypesJson();
 
 	const typeRegistry = new Map<number, ResolvedType>(
-		(typesJson ?? []).map((t) => [t.id, t]),
+		((typesJson.data ?? []) as ResolvedType[]).map((t) => [t.id, t]),
 	);
 
 	const typeString = JSON.stringify(typeRegistry.get(numberSearch), null, 2);
@@ -47,8 +43,7 @@ export const SearchTypes = () => {
 			</Stack>
 			<Stack gap={3}>
 				<TextField
-					label="Search by Type Id"
-					placeholder="type id"
+					placeholder="search by type id"
 					variant="outlined"
 					type="number"
 					sx={{ width: 600 }}

@@ -10,13 +10,14 @@ import {
 	Settings,
 	Speed,
 } from "@mui/icons-material";
+import { useQuery } from "@tanstack/react-query";
 import type { AbsolutePath } from "@typeslayer/analyze-trace/src/utils";
 import {
 	extractPackageName,
 	type ResolvedType,
 	relativizePath,
 } from "@typeslayer/validate";
-import { type JSX, useEffect, useState } from "react";
+import type { JSX } from "react";
 
 export const friendlyPath = (
 	absolutePath: string | undefined,
@@ -70,26 +71,19 @@ export const friendlyPath = (
 export const serverBaseUrl = "http://127.0.0.1:4765";
 
 export const useStaticFile = (fileName: string) => {
-	const [data, setData] = useState<string | null>(null);
-	useEffect(() => {
-		const fetchData = async () => {
-			try {
-				const response = await fetch(`${serverBaseUrl}/outputs/${fileName}`);
-				if (!response.ok) {
-					throw new Error(
-						`Failed to fetch ${fileName}: ${response.statusText}`,
-					);
-				}
-				const text = await response.text();
-				setData(text);
-			} catch (error) {
-				console.error("Error fetching data:", error);
-				setData(null);
+	return useQuery<string>({
+		queryKey: ["outputs", fileName],
+		queryFn: async () => {
+			const response = await fetch(`${serverBaseUrl}/outputs/${fileName}`);
+			if (!response.ok) {
+				throw new Error(
+					`Failed to fetch ${fileName}: ${response.statusText}`,
+				);
 			}
-		};
-		fetchData();
-	}, [fileName]);
-	return data;
+			return response.text();
+		},
+		staleTime: Number.POSITIVE_INFINITY,
+	});
 };
 
 export type HeaderNavigationItem = {

@@ -11,6 +11,12 @@ const __dirname = dirname(__filename);
 
 const PACKAGE_VERSION = process.env.npm_package_version;
 
+// Allow CI or callers to skip binary download (release assets may not exist yet in same run)
+if (process.env.TYPESLAYER_SKIP_POSTINSTALL) {
+	console.log("⏭️  Skipping typeslayer binary download (TYPESLAYER_SKIP_POSTINSTALL set)." );
+	process.exit(0);
+}
+
 const getBinaryInfo = () => {
 	const plat = platform();
 	const architecture = arch();

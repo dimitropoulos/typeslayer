@@ -4,6 +4,7 @@ mod auth;
 mod files;
 mod layercake;
 mod log;
+mod type_graph;
 mod validate;
 
 use std::sync::Mutex;
@@ -94,8 +95,12 @@ pub fn run() {
             app_data::generate_cpu_profile,
             app_data::get_analyze_trace,
             app_data::get_cpu_profile,
-            app_data::get_settings,
-            app_data::set_settings,
+            app_data::get_simplify_paths,
+            app_data::set_simplify_paths,
+            app_data::get_prefer_editor_open,
+            app_data::set_prefer_editor_open,
+            app_data::get_auto_start,
+            app_data::set_auto_start,
             app_data::open_file,
             app_data::analyze_trace_command,
             app_data::get_available_editors,
@@ -110,6 +115,8 @@ pub fn run() {
             app_data::get_trace_json_text,
             app_data::get_analyze_trace_text,
             app_data::get_cpu_profile_text,
+            type_graph::build_type_graph,
+            type_graph::get_type_graph,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

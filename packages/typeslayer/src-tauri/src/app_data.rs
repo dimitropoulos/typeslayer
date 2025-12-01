@@ -48,6 +48,7 @@ pub struct AppData {
     pub verbose: bool,
     pub cake: LayerCake,
     pub auth_code: Option<String>,
+    pub type_graph: Option<crate::type_graph::TypeGraph>,
 }
 
 impl AppData {
@@ -100,6 +101,7 @@ impl AppData {
             verbose,
             cake,
             auth_code,
+            type_graph: None,
         };
         if app.load_package_json().is_ok() {
             app.typecheck_script_name =
@@ -446,11 +448,23 @@ impl AppData {
             .to_string();
 
         // Read/parse concurrently
-        let (types_res, trace_res) =
-            tokio::join!(load_types_json(types_path), read_trace_json(&trace_path));
+        let (types_res, trace_res) = tokio::join!(
+            load_types_json(types_path.clone()),
+            read_trace_json(&trace_path)
+        );
 
-        let types = types_res.map_err(|e| format!("types.json validation failed: {e}"))?;
-        let trace = trace_res.map_err(|e| format!("trace.json validation failed: {e}"))?;
+        let types = types_res.map_err(|e| {
+            format!(
+                "types.json validation failed: {}\nExpected file at: {}",
+                e, types_path
+            )
+        })?;
+        let trace = trace_res.map_err(|e| {
+            format!(
+                "trace.json validation failed: {}\nExpected file at: {}",
+                e, trace_path
+            )
+        })?;
 
         Ok((types, trace))
     }
@@ -639,7 +653,7 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            simplify_paths: false,
+            simplify_paths: true,
             prefer_editor_open: true,
             auto_start: true,
             preferred_editor: Some("code".to_string()),
@@ -653,7 +667,7 @@ impl AppData {
             env: "SIMPLIFY_PATHS",
             flag: "--simplify-paths",
             file: "settings.simplifyPaths",
-            default: || false,
+            default: || true,
         });
         let prefer_editor_open = cake.resolve_bool(ResolveBoolArgs {
             env: "PREFER_EDITOR_OPEN",
@@ -874,6 +888,19 @@ pub async fn generate_trace(
         Ok(Ok(())) => {
             // Now read/validate outputs asynchronously
             let data_dir = AppData::get_outputs_dir(&app);
+
+            // List files in output directory for debugging
+            info!("Listing files in output directory: {}", data_dir);
+            if let Ok(entries) = std::fs::read_dir(&data_dir) {
+                for entry in entries.flatten() {
+                    if let Ok(file_name) = entry.file_name().into_string() {
+                        info!("  Found file: {}", file_name);
+                    }
+                }
+            } else {
+                info!("Could not read output directory: {}", data_dir);
+            }
+
             let (types, trace) = AppData::validate_types_and_trace_async(&data_dir).await?;
             let mut data = state.lock().map_err(|e| e.to_string())?;
             data.types_json = types.clone();
@@ -1083,19 +1110,55 @@ pub async fn get_cpu_profile_text(state: State<'_, Mutex<AppData>>) -> Result<St
 }
 
 #[tauri::command]
-pub async fn get_settings(state: State<'_, Mutex<AppData>>) -> Result<Settings, String> {
+pub async fn get_simplify_paths(state: State<'_, Mutex<AppData>>) -> Result<bool, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
-    Ok(data.settings.clone())
+    Ok(data.settings.simplify_paths)
 }
 
 #[tauri::command]
-pub async fn set_settings(
+pub async fn set_simplify_paths(
     app: AppHandle,
     state: State<'_, Mutex<AppData>>,
-    settings: Settings,
+    value: bool,
 ) -> Result<(), String> {
     let mut data = state.lock().map_err(|e| e.to_string())?;
-    data.settings = settings;
+    data.settings.simplify_paths = value;
+    AppData::update_outputs(&data, &app);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_prefer_editor_open(state: State<'_, Mutex<AppData>>) -> Result<bool, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    Ok(data.settings.prefer_editor_open)
+}
+
+#[tauri::command]
+pub async fn set_prefer_editor_open(
+    app: AppHandle,
+    state: State<'_, Mutex<AppData>>,
+    value: bool,
+) -> Result<(), String> {
+    let mut data = state.lock().map_err(|e| e.to_string())?;
+    data.settings.prefer_editor_open = value;
+    AppData::update_outputs(&data, &app);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_auto_start(state: State<'_, Mutex<AppData>>) -> Result<bool, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    Ok(data.settings.auto_start)
+}
+
+#[tauri::command]
+pub async fn set_auto_start(
+    app: AppHandle,
+    state: State<'_, Mutex<AppData>>,
+    value: bool,
+) -> Result<(), String> {
+    let mut data = state.lock().map_err(|e| e.to_string())?;
+    data.settings.auto_start = value;
     AppData::update_outputs(&data, &app);
     Ok(())
 }

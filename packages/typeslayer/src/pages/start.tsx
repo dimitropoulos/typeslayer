@@ -11,7 +11,6 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -24,6 +23,11 @@ import {
 } from "react";
 import { BigAction } from "../components/big-action";
 import { InlineCode } from "../components/inline-code";
+import {
+	useProjectRoot,
+	useScripts,
+	useTypecheckScriptName,
+} from "../hooks/tauri-hooks";
 
 export const Step = ({
 	step,
@@ -56,23 +60,10 @@ export function Start() {
 	const [processingError, setProcessingError] = useState<string | null>(null);
 	const [isProcessing, setIsProcessing] = useState(false);
 
-	const queryClient = useQueryClient();
-
-	// Project root
-	const { data: serverProjectRoot } = useQuery<string>({
-		queryKey: ["getProjectRoot"],
-		queryFn: () => invoke("get_project_root"),
-	});
-
-	const { mutateAsync: setProjectRoot } = useMutation({
-		mutationFn: (newRoot: string) =>
-			invoke("set_project_root", { projectRoot: newRoot }),
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["getProjectRoot"] });
-			queryClient.invalidateQueries({ queryKey: ["scripts"] });
-			queryClient.invalidateQueries({ queryKey: ["typecheckScriptName"] });
-		},
-	});
+	// Use hooks from tauri-hooks
+	const projectRoot = useProjectRoot();
+	const scripts = useScripts();
+	const typecheckScriptName = useTypecheckScriptName();
 
 	const [localProjectRoot, setLocalProjectRoot] = useState<string | undefined>(
 		undefined,
@@ -80,14 +71,14 @@ export function Start() {
 	const [isTyping, setIsTyping] = useState(false);
 
 	useEffect(() => {
-		if (serverProjectRoot && !isTyping) {
-			setLocalProjectRoot(serverProjectRoot);
+		if (projectRoot.data && !isTyping) {
+			setLocalProjectRoot(projectRoot.data);
 		}
-	}, [serverProjectRoot, isTyping]);
+	}, [projectRoot.data, isTyping]);
 
 	// Debounced project root validation
 	useEffect(() => {
-		if (!localProjectRoot || localProjectRoot === serverProjectRoot) {
+		if (!localProjectRoot || localProjectRoot === projectRoot.data) {
 			setIsTyping(false);
 			return;
 		}
@@ -95,7 +86,7 @@ export function Start() {
 		setIsTyping(true);
 		const timer = setTimeout(async () => {
 			try {
-				await setProjectRoot(localProjectRoot);
+				await projectRoot.set(localProjectRoot);
 			} catch (error) {
 				console.error("Failed to set project root:", error);
 			} finally {
@@ -104,37 +95,18 @@ export function Start() {
 		}, 500);
 
 		return () => clearTimeout(timer);
-	}, [localProjectRoot, serverProjectRoot, setProjectRoot]);
-
-	// Scripts and typecheck script
-	const { data: scripts } = useQuery<Record<string, string>>({
-		queryKey: ["scripts"],
-		queryFn: async () => invoke("get_scripts"),
-	});
-
-	const { data: typecheckScriptName } = useQuery<string | null>({
-		queryKey: ["typecheckScriptName"],
-		queryFn: async () => invoke("get_typecheck_script_name"),
-	});
-
-	const { mutateAsync: setTypecheckScriptName } = useMutation({
-		mutationFn: (scriptName: string) =>
-			invoke("set_typecheck_script_name", { scriptName }),
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["typecheckScriptName"] });
-		},
-	});
+	}, [localProjectRoot, projectRoot.data, projectRoot.set]);
 
 	const onScriptChange = useCallback(
 		async (event: SelectChangeEvent<string>) => {
 			const newScriptName = event.target.value;
-			if (!scripts || !(newScriptName in scripts)) {
+			if (!scripts.data || !(newScriptName in scripts.data)) {
 				alert(`Script ${newScriptName} not found in package.json scripts`);
 				return;
 			}
-			await setTypecheckScriptName(newScriptName);
+			await typecheckScriptName.set(newScriptName);
 		},
-		[scripts, setTypecheckScriptName],
+		[scripts.data, typecheckScriptName.set],
 	);
 
 	async function locatePackageJson() {
@@ -153,8 +125,8 @@ export function Start() {
 					}
 					pkgPath += "package.json";
 				}
-				setLocalProjectRoot(pkgPath);
-				await setProjectRoot(pkgPath);
+			setLocalProjectRoot(pkgPath);
+			await projectRoot.set(pkgPath);
 			}
 		} catch (error) {
 			console.error("Failed to open file picker:", error);
@@ -167,7 +139,7 @@ export function Start() {
 			alert("Please enter a path");
 			return;
 		}
-		if (!typecheckScriptName) {
+		if (!typecheckScriptName.data) {
 			alert("Please select a typecheck script");
 			return;
 		}
@@ -177,7 +149,7 @@ export function Start() {
 
 		try {
 			// Ensure project root is synced
-			await setProjectRoot(localProjectRoot);
+			await projectRoot.set(localProjectRoot);
 
 			// 1. generate_trace
 			setProcessingStep(0);
@@ -210,7 +182,7 @@ export function Start() {
 			setProcessingError(String(e));
 			setIsProcessing(false);
 		}
-	}, [localProjectRoot, typecheckScriptName, navigate, setProjectRoot]);
+	}, [localProjectRoot, typecheckScriptName.data, navigate, projectRoot.set]);
 
 	return (
 		<Box sx={{ px: 4, overflowY: "auto", maxHeight: "100%", gap: 2, pb: 4 }}>
@@ -253,9 +225,9 @@ export function Start() {
 							and type-check your project.
 						</Typography>
 
-						<Select
-							value={typecheckScriptName ?? ""}
-							onChange={onScriptChange}
+					<Select
+						value={typecheckScriptName.data ?? ""}
+						onChange={onScriptChange}
 							displayEmpty
 							sx={{ maxWidth: 600 }}
 							renderValue={(selected) => {
@@ -283,13 +255,15 @@ export function Start() {
 											fontFamily="monospace"
 											color="textSecondary"
 										>
-											<InlineCode secondary>{scripts?.[selected]}</InlineCode>
+											<InlineCode secondary>
+											{scripts.data && selected ? scripts.data[selected] : ""}
+										</InlineCode>
 										</Typography>
 									</Stack>
 								);
 							}}
 						>
-							{Object.entries(scripts ?? {}).map(([name, command]) => (
+							{Object.entries(scripts.data ?? {}).map(([name, command]) => (
 								<MenuItem key={name} value={name}>
 									<Stack>
 										<Typography>{name}</Typography>
@@ -307,14 +281,13 @@ export function Start() {
 					</Stack>
 				</Step>
 
-				{processingError && (
-					<Alert severity="error" sx={{ my: 4 }}>
-						{processingError}
-					</Alert>
-				)}
-
 				<Step step={3}>
 					<Stack flexDirection="column" gap={2}>
+						{processingError && (
+							<Alert severity="error">
+								{processingError}
+							</Alert>
+						)}
 						<Stack sx={{ gap: 2, flexDirection: "row", flexWrap: "wrap" }}>
 							<BigAction
 								title="Identify Types"

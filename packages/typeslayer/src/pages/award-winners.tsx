@@ -47,6 +47,7 @@ import { DisplayRecursiveType } from "../components/display-recursive-type";
 import { InlineCode } from "../components/inline-code";
 import { TypeSummary } from "../components/type-summary";
 import { extractPath, friendlyPackageName } from "../components/utils";
+import { useProjectRoot, useSimplifyPaths } from "../hooks/tauri-hooks";
 import { theme } from "../theme";
 
 type AwardId = keyof typeof awards;
@@ -701,8 +702,9 @@ export const ShowHotSpots = () => {
 	const [hotSpots, setHotSpots] = useState<
 		Array<{ path?: string; timeMs: number }>
 	>([]);
-	const [simplifyPaths, setSimplifyPaths] = useState(false);
-	const [projectRoot, setProjectRoot] = useState<string | undefined>(undefined);
+	const simplifyPaths = useSimplifyPaths();
+	const projectRoot = useProjectRoot();
+	
 	useEffect(() => {
 		(async () => {
 			try {
@@ -711,19 +713,6 @@ export const ShowHotSpots = () => {
 				setHotSpots(result.hotSpots ?? []);
 			} catch (e) {
 				console.error("Failed to load hot spots", e);
-			}
-			try {
-				const root: string = await invoke("get_project_root");
-				setProjectRoot(root);
-			} catch (e) {
-				console.error("Failed to load project root", e);
-			}
-			try {
-				const settings: { simplifyPaths?: boolean } =
-					await invoke("get_settings");
-				setSimplifyPaths(!!settings?.simplifyPaths);
-			} catch {
-				// settings may not exist yet; default false
 			}
 		})();
 	}, []);
@@ -736,6 +725,15 @@ export const ShowHotSpots = () => {
 			console.error("Failed to open file", e);
 		}
 	}, []);
+	
+	if (simplifyPaths.isLoading || projectRoot.isLoading || simplifyPaths.data === undefined || projectRoot.data === undefined) {
+		return null;
+	}
+	
+	// Type narrowing: we know data exists after the check above
+	const simplifyPathsValue: boolean = simplifyPaths.data;
+	const projectRootValue: string = projectRoot.data;
+	
 	console.log("hotSpots", { hotSpots });
 
 	const firstHotSpot = hotSpots[0];
@@ -763,7 +761,7 @@ export const ShowHotSpots = () => {
 							</Typography>
 							<Stack>
 								<Typography variant="caption">
-									{friendlyPackageName(path ?? "", projectRoot, simplifyPaths)}
+										{friendlyPackageName(path ?? "", projectRootValue, simplifyPathsValue)}
 								</Typography>
 							</Stack>
 							<InlineBarGraph
@@ -831,18 +829,12 @@ const ShowTypeLimit = <L extends LimitType>({
 }) => {
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 	const [data, setData] = useState<L[]>([]);
-	const [simplifyPaths] = useState(false);
-	const [projectRoot, setProjectRoot] = useState<string | undefined>(undefined);
 	const [selectedIndex, setSelectedIndex] = useState<number>(0);
+	const simplifyPaths = useSimplifyPaths();
+	const projectRoot = useProjectRoot();
 
 	useEffect(() => {
 		(async () => {
-			try {
-				const root: string = await invoke("get_project_root");
-				setProjectRoot(root);
-			} catch (e) {
-				console.error("Failed to load project root", e);
-			}
 			try {
 				const res = await fetch();
 				setData(res ?? []);
@@ -858,6 +850,14 @@ const ShowTypeLimit = <L extends LimitType>({
 			scrollContainerRef.current.scrollTop = 0;
 		}
 	}, []);
+
+	if (simplifyPaths.isLoading || projectRoot.isLoading || simplifyPaths.data === undefined || projectRoot.data === undefined) {
+		return null;
+	}
+
+	// Type narrowing: we know data exists after the check above
+	const simplifyPathsValue: boolean = simplifyPaths.data;
+	const projectRootValue: string = projectRoot.data;
 
 	if (data.length === 0) {
 		return (
@@ -923,8 +923,8 @@ const ShowTypeLimit = <L extends LimitType>({
 										<Typography variant="caption" sx={{ mr: 2 }}>
 											{friendlyPackageName(
 												extractedPath,
-												projectRoot,
-												simplifyPaths,
+												projectRootValue,
+												simplifyPathsValue,
 											)}
 										</Typography>
 									) : null}

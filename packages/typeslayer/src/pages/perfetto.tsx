@@ -2,11 +2,11 @@ import { useCallback, useEffect, useRef } from "react";
 import { useStaticFile } from "../components/utils";
 
 export const Perfetto = () => {
-	const data = useStaticFile("trace.json");
+	const { data, isLoading } = useStaticFile("trace.json");
 	const iframeRef = useRef<HTMLIFrameElement>(null);
 
 	const sendTraceToPerfetto = useCallback(() => {
-		if (!data || !iframeRef.current?.contentWindow) {
+		if (isLoading || !data || !iframeRef.current?.contentWindow) {
 			console.error("No trace data or iframe not ready.");
 			return;
 		}
@@ -38,7 +38,7 @@ export const Perfetto = () => {
 		};
 
 		window.addEventListener("message", handleMessage);
-	}, [data]);
+	}, [data, isLoading]);
 
 	// Auto-load trace when data is available
 	useEffect(() => {

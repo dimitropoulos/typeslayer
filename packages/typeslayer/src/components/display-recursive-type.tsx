@@ -14,7 +14,8 @@ import {
 } from "@mui/material";
 import { invoke } from "@tauri-apps/api/core";
 import type { ResolvedType, TypeRegistry } from "@typeslayer/validate";
-import { type FC, useCallback, useEffect, useState } from "react";
+import { type FC, useCallback, useState } from "react";
+import { useProjectRoot, useSimplifyPaths } from "../hooks/tauri-hooks";
 import { theme } from "../theme";
 import { TypeSummary } from "./type-summary";
 import { friendlyPath } from "./utils";
@@ -354,8 +355,8 @@ export function OpenFile({
 	title?: string;
 	pathVariant?: TypographyVariant;
 }) {
-	const [simplifyPaths, setSimplifyPaths] = useState(false);
-	const [projectRoot, setProjectRoot] = useState<string | undefined>(undefined);
+	const simplifyPaths = useSimplifyPaths();
+	const projectRoot = useProjectRoot();
 	const findInPage = useCallback(async () => {
 		try {
 			// Prefer opening in VS Code via backend; include line/char if present
@@ -370,26 +371,16 @@ export function OpenFile({
 		}
 	}, [absolutePath, line, character]);
 
-	// Load settings and project root
-	useEffect(() => {
-		(async () => {
-			try {
-				const s: { simplifyPaths?: boolean } = await invoke("get_settings");
-				setSimplifyPaths(!!s?.simplifyPaths);
-			} catch {}
-			try {
-				const root: string = await invoke("get_project_root");
-				setProjectRoot(root);
-			} catch {}
-		})();
-	}, []);
+	if (simplifyPaths.isLoading || projectRoot.isLoading || simplifyPaths.data === undefined || projectRoot.data === undefined) {
+		return null;
+	}
 
 	const lineChar =
 		line !== undefined && character !== undefined
 			? `:${line}:${character}`
 			: "";
 
-	const exactLocation = `${friendlyPath(absolutePath, projectRoot, simplifyPaths)}${lineChar}`;
+	const exactLocation = `${friendlyPath(absolutePath, projectRoot.data, simplifyPaths.data)}${lineChar}`;
 
 	return (
 		<Stack direction="row" alignItems={"center"} gap={1} key={exactLocation}>

@@ -1,0 +1,312 @@
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use tauri::{AppHandle, State};
+
+use crate::app_data::AppData;
+use crate::validate::types_json::TypesJsonSchema;
+use crate::validate::utils::TypeId;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GraphNode {
+    pub id: TypeId,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum EdgeKind {
+    // one to many
+    AliasTypeArgument,
+    Intersection,
+    TypeArgument,
+    Union,
+
+    // one to one
+    Instantiated,
+    SubstitutionBase,
+    Constraint,
+    IndexedAccessObject,
+    IndexedAccessIndex,
+    ConditionalCheck,
+    ConditionalExtends,
+    ConditionalTrue,
+    ConditionalFalse,
+    Keyof,
+    EvolvingArrayElement,
+    EvolvingArrayFinal,
+    ReverseMappedSource,
+    ReverseMappedMapped,
+    ReverseMappedConstraint,
+    Alias,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GraphLink {
+    pub source: TypeId,
+    pub target: TypeId,
+    pub kind: EdgeKind,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GraphStats {
+    pub count: HashMap<String, usize>,
+}
+
+#[derive(Debug, Default)]
+pub struct TypeGraph {
+    nodes: HashMap<TypeId, GraphNode>,
+    links: Vec<GraphLink>,
+}
+
+impl TypeGraph {
+    pub fn from_types(types: &TypesJsonSchema) -> Self {
+        let mut graph = TypeGraph::default();
+
+        // First pass: create nodes
+        for t in types.iter() {
+            let id = t.id;
+            let name = t
+                .symbol_name
+                .as_ref()
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| "<anonymous>".to_string());
+            graph.nodes.entry(id).or_insert(GraphNode { id, name });
+        }
+
+        // Helper to add edge if both endpoints exist
+        let mut add_edge = |source: TypeId, target: TypeId, kind: EdgeKind| {
+            if graph.nodes.contains_key(&source) && graph.nodes.contains_key(&target) {
+                graph.links.push(GraphLink {
+                    source,
+                    target,
+                    kind,
+                });
+            }
+        };
+
+        // Second pass: add links for supported relations
+        for t in types.iter() {
+            let src = t.id;
+
+            if let Some(union) = &t.union_types {
+                for &target in union.iter() {
+                    add_edge(src, target, EdgeKind::Union);
+                }
+            }
+
+            if let Some(type_args) = &t.type_arguments {
+                for &target in type_args.iter() {
+                    add_edge(src, target, EdgeKind::TypeArgument);
+                }
+            }
+
+            if let Some(inst) = t.instantiated_type {
+                add_edge(src, inst, EdgeKind::Instantiated);
+            }
+
+            // Additional single TypeId relationships
+            if let Some(target) = t.substitution_base_type {
+                add_edge(src, target, EdgeKind::SubstitutionBase);
+            }
+            if let Some(target) = t.constraint_type {
+                add_edge(src, target, EdgeKind::Constraint);
+            }
+            if let Some(target) = t.indexed_access_object_type {
+                add_edge(src, target, EdgeKind::IndexedAccessObject);
+            }
+            if let Some(target) = t.indexed_access_index_type {
+                add_edge(src, target, EdgeKind::IndexedAccessIndex);
+            }
+            if let Some(target) = t.conditional_check_type {
+                add_edge(src, target, EdgeKind::ConditionalCheck);
+            }
+            if let Some(target) = t.conditional_extends_type {
+                add_edge(src, target, EdgeKind::ConditionalExtends);
+            }
+            if let Some(target) = t.conditional_true_type {
+                add_edge(src, target, EdgeKind::ConditionalTrue);
+            }
+            if let Some(target) = t.conditional_false_type {
+                add_edge(src, target, EdgeKind::ConditionalFalse);
+            }
+            if let Some(target) = t.keyof_type {
+                add_edge(src, target, EdgeKind::Keyof);
+            }
+            if let Some(target) = t.evolving_array_element_type {
+                add_edge(src, target, EdgeKind::EvolvingArrayElement);
+            }
+            if let Some(target) = t.evolving_array_final_type {
+                add_edge(src, target, EdgeKind::EvolvingArrayFinal);
+            }
+            if let Some(target) = t.reverse_mapped_source_type {
+                add_edge(src, target, EdgeKind::ReverseMappedSource);
+            }
+            if let Some(target) = t.reverse_mapped_mapped_type {
+                add_edge(src, target, EdgeKind::ReverseMappedMapped);
+            }
+            if let Some(target) = t.reverse_mapped_constraint_type {
+                add_edge(src, target, EdgeKind::ReverseMappedConstraint);
+            }
+            if let Some(target) = t.alias_type {
+                add_edge(src, target, EdgeKind::Alias);
+            }
+
+            // Array relationships
+            if let Some(alias_args) = &t.alias_type_arguments {
+                for &target in alias_args.iter() {
+                    add_edge(src, target, EdgeKind::AliasTypeArgument);
+                }
+            }
+            if let Some(intersection) = &t.intersection_types {
+                for &target in intersection.iter() {
+                    add_edge(src, target, EdgeKind::Intersection);
+                }
+            }
+        }
+
+        graph
+    }
+
+    pub fn to_force_graph(&self) -> ForceGraphData {
+        let nodes: Vec<ForceGraphNode> = self
+            .nodes
+            .values()
+            .map(|n| ForceGraphNode {
+                id: n.id,
+                name: n.name.clone(),
+            })
+            .collect();
+
+        let links: Vec<ForceGraphLink> = self
+            .links
+            .iter()
+            .map(|l| ForceGraphLink {
+                source: l.source,
+                target: l.target,
+                kind: l.kind.clone(),
+            })
+            .collect();
+
+        // Count edge kinds
+        let mut count: HashMap<String, usize> = HashMap::new();
+        for link in &self.links {
+            let kind_str = match link.kind {
+                EdgeKind::Union => "union",
+                EdgeKind::TypeArgument => "typeArgument",
+                EdgeKind::Instantiated => "instantiated",
+                EdgeKind::SubstitutionBase => "substitutionBase",
+                EdgeKind::Constraint => "constraint",
+                EdgeKind::IndexedAccessObject => "indexedAccessObject",
+                EdgeKind::IndexedAccessIndex => "indexedAccessIndex",
+                EdgeKind::ConditionalCheck => "conditionalCheck",
+                EdgeKind::ConditionalExtends => "conditionalExtends",
+                EdgeKind::ConditionalTrue => "conditionalTrue",
+                EdgeKind::ConditionalFalse => "conditionalFalse",
+                EdgeKind::Keyof => "keyof",
+                EdgeKind::EvolvingArrayElement => "evolvingArrayElement",
+                EdgeKind::EvolvingArrayFinal => "evolvingArrayFinal",
+                EdgeKind::ReverseMappedSource => "reverseMappedSource",
+                EdgeKind::ReverseMappedMapped => "reverseMappedMapped",
+                EdgeKind::ReverseMappedConstraint => "reverseMappedConstraint",
+                EdgeKind::Alias => "alias",
+                EdgeKind::AliasTypeArgument => "aliasTypeArgument",
+                EdgeKind::Intersection => "intersection",
+            };
+            *count.entry(kind_str.to_string()).or_insert(0) += 1;
+        }
+
+        ForceGraphData {
+            nodes,
+            links,
+            stats: GraphStats { count },
+        }
+    }
+}
+
+// react-force-graph expected shape
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ForceGraphNode {
+    pub id: TypeId,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ForceGraphLink {
+    pub source: TypeId,
+    pub target: TypeId,
+    pub kind: EdgeKind,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ForceGraphData {
+    pub nodes: Vec<ForceGraphNode>,
+    pub links: Vec<ForceGraphLink>,
+    pub stats: GraphStats,
+}
+
+/// Build the in-memory graph from the loaded `types_json` and store in AppData via `State`.
+#[tauri::command]
+pub fn build_type_graph(
+    _app: AppHandle,
+    state: State<'_, std::sync::Mutex<AppData>>,
+) -> Result<(), String> {
+    let types: TypesJsonSchema = {
+        let app_data = state
+            .lock()
+            .map_err(|_| "AppData mutex poisoned".to_string())?;
+        app_data.types_json.clone()
+    };
+
+    // Build the graph
+    let graph = TypeGraph::from_types(&types);
+
+    // Attach to LayerCake or settings? Keep simple: stash in `cake` extras via BTreeMap
+    // For now, we add it to an ad-hoc static holder in AppData via lazy BTreeMap-like cache.
+    // Since AppData does not yet include a graph field, we use a simple file cache as fallback.
+    // To keep everything in-memory, we store it on the `auth_code` field comment-free by extending AppData later if needed.
+    // Minimal approach: serialize into a ForceGraphData and keep as text output for retrieval.
+
+    // Store in AppData for quick in-memory access
+    {
+        let mut app_data = state
+            .lock()
+            .map_err(|_| "AppData mutex poisoned".to_string())?;
+        app_data.type_graph = Some(graph);
+    }
+
+    Ok(())
+}
+
+/// Return the graph data formatted for react-force-graph. Builds if missing.
+#[tauri::command]
+pub fn get_type_graph(
+    app: AppHandle,
+    state: State<'_, std::sync::Mutex<AppData>>,
+) -> Result<ForceGraphData, String> {
+    // If not yet built, build once
+    let needs_build = {
+        let app_data = state
+            .lock()
+            .map_err(|_| "AppData mutex poisoned".to_string())?;
+        app_data.type_graph.is_none()
+    };
+    if needs_build {
+        build_type_graph(app.clone(), state.clone())?;
+    }
+
+    let app_data = state
+        .lock()
+        .map_err(|_| "AppData mutex poisoned".to_string())?;
+    let fg = app_data
+        .type_graph
+        .as_ref()
+        .map(|g| g.to_force_graph())
+        .ok_or_else(|| "type graph unavailable".to_string())?;
+    Ok(fg)
+}
