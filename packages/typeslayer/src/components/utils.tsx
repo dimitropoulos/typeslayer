@@ -1,5 +1,6 @@
 import {
 	Biotech,
+	CameraAlt,
 	Dashboard,
 	Description,
 	EmojiEvents,
@@ -10,14 +11,74 @@ import {
 	Settings,
 	Speed,
 } from "@mui/icons-material";
+import { IconButton, Snackbar } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
+import { invoke } from "@tauri-apps/api/core";
 import type { AbsolutePath } from "@typeslayer/analyze-trace/src/utils";
 import {
 	extractPackageName,
 	type ResolvedType,
 	relativizePath,
 } from "@typeslayer/validate";
-import type { JSX } from "react";
+import { type FC, type JSX, useState } from "react";
+import dimitropoulosAvatar from "../assets/dimitropoulos.png";
+
+const ScreenshotAction: FC<{ collapsed: boolean }> = ({ collapsed }) => {
+	const [screenshotSnackbar, setScreenshotSnackbar] = useState<{
+		open: boolean;
+		message: string;
+	}>({ open: false, message: "" });
+
+	const handleScreenshot = async () => {
+		try {
+			const savedPath = await invoke<string>("take_screenshot");
+			setScreenshotSnackbar({
+				open: true,
+				message: savedPath
+					? `Screenshot saved to ${savedPath} and copied to clipboard`
+					: "Screenshot captured",
+			});
+		} catch (error) {
+			setScreenshotSnackbar({
+				open: true,
+				message: `Unable to capture screenshot: ${String(error)}`,
+			});
+		}
+	};
+	return (
+		<>
+			<IconButton
+				onClick={handleScreenshot}
+				size="small"
+				aria-label="Take screenshot"
+				sx={{
+					width: "100%",
+					flexGrow: 1,
+					height: 40,
+					display: "flex",
+					gap: 1,
+					mb: 0.5,
+					borderRadius: 0,
+					bgcolor: (t) => t.palette.background.paper,
+					border: (t) => `1px solid ${t.palette.divider}`,
+					"&:hover": {
+						bgcolor: (t) => t.palette.action.hover,
+					},
+				}}
+			>
+				<CameraAlt fontSize="small" />
+				{!collapsed && <span style={{ fontSize: 14 }}>Screenshot</span>}
+			</IconButton>
+			<Snackbar
+				open={screenshotSnackbar.open}
+				autoHideDuration={4000}
+				onClose={() => setScreenshotSnackbar({ open: false, message: "" })}
+				message={screenshotSnackbar.message}
+				anchorOrigin={{ vertical: "top", horizontal: "center" }}
+			/>
+		</>
+	);
+};
 
 export const friendlyPath = (
 	absolutePath: string | undefined,
@@ -76,9 +137,7 @@ export const useStaticFile = (fileName: string) => {
 		queryFn: async () => {
 			const response = await fetch(`${serverBaseUrl}/outputs/${fileName}`);
 			if (!response.ok) {
-				throw new Error(
-					`Failed to fetch ${fileName}: ${response.statusText}`,
-				);
+				throw new Error(`Failed to fetch ${fileName}: ${response.statusText}`);
 			}
 			return response.text();
 		},
@@ -102,10 +161,21 @@ export type DividerNavigationItem = {
 	kind: "divider";
 };
 
+export type ExpanderNavigationItem = {
+	kind: "expander";
+};
+
+export type ActionNavigationItem = {
+	kind: "action";
+	action: FC<{ collapsed: boolean }>;
+};
+
 export type NavigationItem =
 	| HeaderNavigationItem
 	| SegmentNavigationItem
-	| DividerNavigationItem;
+	| DividerNavigationItem
+	| ExpanderNavigationItem
+	| ActionNavigationItem;
 
 export const NAVIGATION = [
 	{
@@ -152,7 +222,7 @@ export const NAVIGATION = [
 	},
 	{
 		kind: "segment",
-		segment: "raw-data/types-json",
+		segment: "raw-data/analyze-trace",
 		title: "Raw Data",
 		icon: <Description />,
 	},
@@ -174,6 +244,28 @@ export const NAVIGATION = [
 		segment: "settings",
 		title: "Settings",
 		icon: <Settings />,
+	},
+	{
+		kind: "expander",
+	},
+	{
+		kind: "action",
+		action: ScreenshotAction,
+	},
+	{
+		kind: "divider",
+	},
+	{
+		kind: "segment",
+		segment: "about",
+		title: "by dimitropoulos",
+		icon: (
+			<img
+				src={dimitropoulosAvatar}
+				alt="dimitropoulos avatar"
+				style={{ width: 20, height: 20, borderRadius: "50%" }}
+			/>
+		),
 	},
 ] as const satisfies NavigationItem[];
 

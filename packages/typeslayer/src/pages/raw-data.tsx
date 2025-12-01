@@ -38,6 +38,15 @@ const RAW_ITEMS: Record<
 		fetchInvoke: string;
 	}
 > = {
+	analyze: {
+		title: ANALYZE_TRACE_FILENAME,
+		route: "analyze-trace",
+		filename: ANALYZE_TRACE_FILENAME,
+		description:
+			"Summary insights extracted from trace.json, including hotspots and duplicate packages.",
+		verifyInvoke: "verify_analyze_trace",
+		fetchInvoke: "get_analyze_trace_text",
+	},
 	trace: {
 		title: TRACE_JSON_FILENAME,
 		route: "trace-json",
@@ -55,15 +64,7 @@ const RAW_ITEMS: Record<
 		verifyInvoke: "validate_types_json",
 		fetchInvoke: "get_types_json_text",
 	},
-	analyze: {
-		title: ANALYZE_TRACE_FILENAME,
-		route: "analyze-trace",
-		filename: ANALYZE_TRACE_FILENAME,
-		description:
-			"Summary insights extracted from trace.json, including hotspots and duplicate packages.",
-		verifyInvoke: "verify_analyze_trace",
-		fetchInvoke: "get_analyze_trace_text",
-	},
+
 	cpu: {
 		title: CPU_PROFILE_FILENAME,
 		route: "tsc-cpuprofile",
@@ -78,11 +79,11 @@ const RAW_ITEMS: Record<
 export const RawData = () => {
 	const params = useParams({ strict: false });
 	const navigate = useNavigate();
-	const child = (params.fileId as string | undefined) ?? "types-json";
+	const child = (params.fileId as string | undefined) ?? "analyze-trace";
 
 	const currentKey: RawKey = useMemo(() => {
 		const entry = Object.entries(RAW_ITEMS).find(([, v]) => v.route === child);
-		return (entry?.[0] as RawKey) ?? "types";
+		return (entry?.[0] as RawKey) ?? "analyze";
 	}, [child]);
 
 	const setActive = (key: RawKey) => {
@@ -213,7 +214,7 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
 					whiteSpace: "pre",
 				}}
 			>
-				{isLoading ? "Loading..." : text ?? "No data"}
+				{isLoading ? "Loading..." : (text ?? "No data")}
 			</Box>
 			<Snackbar
 				anchorOrigin={{ vertical: "top", horizontal: "right" }}

@@ -229,9 +229,9 @@ export const DisplayRecursiveType: FC<{
 
 									if (typeof value === "number") {
 										return (
-										<Stack key={reactKey}>
-											{String(key)}:
-											<DisplayRecursiveType
+											<Stack key={reactKey}>
+												{String(key)}:
+												<DisplayRecursiveType
 													id={value}
 													typeRegistry={typeRegistry}
 													depth={depth + 2}
@@ -316,7 +316,9 @@ export const DisplayRecursiveType: FC<{
 									return (
 										<Stack key={reactKey}>
 											<Stack display="inline">
-												<Typography display="inline">{String(key)}: </Typography>
+												<Typography display="inline">
+													{String(key)}:{" "}
+												</Typography>
 												<Typography display="inline" color="textDisabled">
 													{value.length.toLocaleString()}
 												</Typography>
@@ -330,9 +332,11 @@ export const DisplayRecursiveType: FC<{
 								case "isTuple":
 									return null;
 
-									default:
-										key satisfies never;
-										throw new Error(`Unexpected property ${String(key)} in type ${id}`);
+								default:
+									key satisfies never;
+									throw new Error(
+										`Unexpected property ${String(key)} in type ${id}`,
+									);
 							}
 						})}
 					</Stack>
@@ -371,7 +375,12 @@ export function OpenFile({
 		}
 	}, [absolutePath, line, character]);
 
-	if (simplifyPaths.isLoading || projectRoot.isLoading || simplifyPaths.data === undefined || projectRoot.data === undefined) {
+	if (
+		simplifyPaths.isLoading ||
+		projectRoot.isLoading ||
+		simplifyPaths.data === undefined ||
+		projectRoot.data === undefined
+	) {
 		return null;
 	}
 

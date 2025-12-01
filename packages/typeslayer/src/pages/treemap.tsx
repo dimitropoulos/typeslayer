@@ -103,7 +103,8 @@ export const Treemap = () => {
 			min: 0,
 			max: Math.max(...data.map((f) => f.value)),
 			inRange: {
-				colorAlpha: [0.1, 0.6],
+				colorLightness: [0, 0],
+				colorAlpha: [0.8, 0],
 			},
 			seriesIndex: 0,
 		},
@@ -125,12 +126,15 @@ export const Treemap = () => {
 					borderColor: "#000000",
 					borderWidth: 2,
 					color: "#C02929",
+					gapWidth: 3,
 				},
 				levels: [
 					{},
 					{
 						itemStyle: {
 							color: "#C02929",
+							borderColorSaturation: 0.4,
+							borderWidth: 1,
 						},
 					},
 				],
@@ -174,7 +178,23 @@ export const Treemap = () => {
 				open={snackbarOpen}
 				autoHideDuration={4000}
 				onClose={() => setSnackbarOpen(false)}
-				message="Copied file path to clipboard, paste it into perfetto to learn more"
+				sx={{
+					"& .MuiSnackbarContent-root": {
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						fontSize: 14,
+						textAlign: "center",
+					},
+				}}
+				message={
+					<span>
+						Copied file path to clipboard.
+						<br />
+						<br />
+						Paste it into Perfetto to learn more.
+					</span>
+				}
 				anchorOrigin={{ vertical: "top", horizontal: "center" }}
 			/>
 		</Box>

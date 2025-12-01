@@ -25,8 +25,8 @@ import { BigAction } from "../components/big-action";
 import { InlineCode } from "../components/inline-code";
 import {
 	useProjectRoot,
-	useScripts,
-	useTypecheckScriptName,
+	useSelectedTsconfig,
+	useTsconfigPaths,
 } from "../hooks/tauri-hooks";
 
 export const Step = ({
@@ -62,13 +62,29 @@ export function Start() {
 
 	// Use hooks from tauri-hooks
 	const projectRoot = useProjectRoot();
-	const scripts = useScripts();
-	const typecheckScriptName = useTypecheckScriptName();
+	const tsconfigPaths = useTsconfigPaths();
+	const selectedTsconfig = useSelectedTsconfig();
 
 	const [localProjectRoot, setLocalProjectRoot] = useState<string | undefined>(
 		undefined,
 	);
 	const [isTyping, setIsTyping] = useState(false);
+	const [isClearingOutputs, setIsClearingOutputs] = useState(false);
+
+	const applyProjectRoot = useCallback(
+		async (pkgPath: string) => {
+			setLocalProjectRoot(pkgPath);
+			try {
+				await projectRoot.set(pkgPath);
+			} catch (error) {
+				console.error("Failed to set project root:", error);
+				throw error;
+			} finally {
+				setIsTyping(false);
+			}
+		},
+		[projectRoot.set],
+	);
 
 	useEffect(() => {
 		if (projectRoot.data && !isTyping) {
@@ -97,16 +113,12 @@ export function Start() {
 		return () => clearTimeout(timer);
 	}, [localProjectRoot, projectRoot.data, projectRoot.set]);
 
-	const onScriptChange = useCallback(
+	const onTsconfigChange = useCallback(
 		async (event: SelectChangeEvent<string>) => {
-			const newScriptName = event.target.value;
-			if (!scripts.data || !(newScriptName in scripts.data)) {
-				alert(`Script ${newScriptName} not found in package.json scripts`);
-				return;
-			}
-			await typecheckScriptName.set(newScriptName);
+			const newTsconfigPath = event.target.value;
+			await selectedTsconfig.set(newTsconfigPath);
 		},
-		[scripts.data, typecheckScriptName.set],
+		[selectedTsconfig.set],
 	);
 
 	async function locatePackageJson() {
@@ -125,8 +137,7 @@ export function Start() {
 					}
 					pkgPath += "package.json";
 				}
-			setLocalProjectRoot(pkgPath);
-			await projectRoot.set(pkgPath);
+				await applyProjectRoot(pkgPath);
 			}
 		} catch (error) {
 			console.error("Failed to open file picker:", error);
@@ -137,10 +148,6 @@ export function Start() {
 	const processTypes = useCallback(async () => {
 		if (!localProjectRoot) {
 			alert("Please enter a path");
-			return;
-		}
-		if (!typecheckScriptName.data) {
-			alert("Please select a typecheck script");
 			return;
 		}
 
@@ -179,10 +186,34 @@ export function Start() {
 				});
 			}, 400);
 		} catch (e) {
-			setProcessingError(String(e));
+			const message = e instanceof Error ? e.message : String(e);
+			if (message.toLowerCase().includes("cancel")) {
+				setProcessingError(null);
+				setProcessingStep(0);
+			} else {
+				setProcessingError(message);
+			}
+		} finally {
 			setIsProcessing(false);
 		}
-	}, [localProjectRoot, typecheckScriptName.data, navigate, projectRoot.set]);
+	}, [localProjectRoot, navigate, projectRoot.set]);
+
+	const handleClearOrCancel = useCallback(async () => {
+		setIsClearingOutputs(true);
+		try {
+			await invoke("clear_outputs", { cancelRunning: isProcessing });
+			setProcessingError(null);
+			setProcessingStep(0);
+			if (isProcessing) {
+				setIsProcessing(false);
+			}
+		} catch (error) {
+			console.error("Failed to clear outputs:", error);
+			setProcessingError(String(error));
+		} finally {
+			setIsClearingOutputs(false);
+		}
+	}, [isProcessing]);
 
 	return (
 		<Box sx={{ px: 4, overflowY: "auto", maxHeight: "100%", gap: 2, pb: 4 }}>
@@ -196,12 +227,8 @@ export function Start() {
 							package you'd like to investigate.
 						</Typography>
 
-						<Stack direction="row" gap={2} width="100%">
-							<Button
-								onClick={locatePackageJson}
-								variant="outlined"
-								size="small"
-							>
+						<Stack direction="row" gap={1} width="100%">
+							<Button onClick={locatePackageJson} variant="outlined">
 								Locate
 							</Button>
 							<TextField
@@ -212,6 +239,16 @@ export function Start() {
 								onChange={(e) => {
 									setLocalProjectRoot(e.target.value);
 								}}
+								onKeyDown={async (event) => {
+									if (event.key === "Enter" && localProjectRoot) {
+										event.preventDefault();
+										try {
+											await applyProjectRoot(localProjectRoot);
+										} catch (error) {
+											console.error("Failed to apply project root:", error);
+										}
+									}
+								}}
 								fullWidth
 							/>
 						</Stack>
@@ -219,74 +256,86 @@ export function Start() {
 				</Step>
 
 				<Step step={2}>
-					<Stack gap={1}>
+					<Stack gap={1} sx={{ width: "100%" }}>
 						<Typography>
-							The script you use to call <InlineCode secondary>tsc</InlineCode>{" "}
-							and type-check your project.
+							Select the <InlineCode secondary>tsconfig.json</InlineCode> to use
+							for type checking.
 						</Typography>
 
-					<Select
-						value={typecheckScriptName.data ?? ""}
-						onChange={onScriptChange}
+						<Select
+							value={selectedTsconfig.data ?? ""}
+							onChange={onTsconfigChange}
 							displayEmpty
-							sx={{ maxWidth: 600 }}
+							sx={{ maxWidth: 800 }}
 							renderValue={(selected) => {
 								if (!selected) {
 									return (
 										<Stack>
-											<Typography>&lt;your script&gt;</Typography>
+											<Typography>&lt;no tsconfig&gt;</Typography>
 											<Typography
 												variant="caption"
 												fontFamily="monospace"
 												color="textSecondary"
 											>
-												<InlineCode secondary>tsc --noEmit</InlineCode> (for
-												example)
+												Run <InlineCode secondary>tsc</InlineCode> without the{" "}
+												<InlineCode secondary>--project</InlineCode> flag
 											</Typography>
 										</Stack>
 									);
 								}
+								// Extract just the filename for display
+								const filename = selected.split("/").pop() || selected;
 								return (
 									<Stack>
-										<Typography>{selected}</Typography>
-
+										<Typography>{filename}</Typography>
 										<Typography
 											variant="caption"
 											fontFamily="monospace"
 											color="textSecondary"
 										>
-											<InlineCode secondary>
-											{scripts.data && selected ? scripts.data[selected] : ""}
-										</InlineCode>
+											{selected}
 										</Typography>
 									</Stack>
 								);
 							}}
 						>
-							{Object.entries(scripts.data ?? {}).map(([name, command]) => (
-								<MenuItem key={name} value={name}>
-									<Stack>
-										<Typography>{name}</Typography>
-										<Typography
-											variant="caption"
-											fontFamily="monospace"
-											color="textSecondary"
-										>
-											{command}
-										</Typography>
-									</Stack>
-								</MenuItem>
-							))}
+							<MenuItem value="">
+								<Stack>
+									<Typography>&lt;no tsconfig&gt;</Typography>
+									<Typography
+										variant="caption"
+										fontFamily="monospace"
+										color="textSecondary"
+									>
+										Run <InlineCode secondary>tsc</InlineCode> without the{" "}
+										<InlineCode secondary>--project</InlineCode> flag
+									</Typography>
+								</Stack>
+							</MenuItem>
+							{(tsconfigPaths.data ?? []).map((path) => {
+								const filename = path.split("/").pop() || path;
+								return (
+									<MenuItem key={path} value={path}>
+										<Stack>
+											<Typography>{filename}</Typography>
+											<Typography
+												variant="caption"
+												fontFamily="monospace"
+												color="textSecondary"
+											>
+												{path}
+											</Typography>
+										</Stack>
+									</MenuItem>
+								);
+							})}
 						</Select>
 					</Stack>
 				</Step>
-
 				<Step step={3}>
 					<Stack flexDirection="column" gap={2}>
 						{processingError && (
-							<Alert severity="error">
-								{processingError}
-							</Alert>
+							<Alert severity="error">{processingError}</Alert>
 						)}
 						<Stack sx={{ gap: 2, flexDirection: "row", flexWrap: "wrap" }}>
 							<BigAction
@@ -308,20 +357,28 @@ export function Start() {
 								isLoading={isProcessing && processingStep === 2}
 							/>
 						</Stack>
-						<Button
-							variant="contained"
-							size="large"
-							onClick={processTypes}
-							disabled={
-								isProcessing || !localProjectRoot || !typecheckScriptName
-							}
-							loading={isProcessing}
-							loadingPosition="start"
-							startIcon={<Insights />}
-							sx={{ alignSelf: "start" }}
-						>
-							Run Diagnostics
-						</Button>
+						<Stack direction="row" gap={2} alignItems="center">
+							<Button
+								variant="contained"
+								size="large"
+								onClick={processTypes}
+								disabled={isProcessing || !localProjectRoot}
+								loading={isProcessing}
+								loadingPosition="start"
+								startIcon={<Insights />}
+								sx={{ alignSelf: "start" }}
+							>
+								Run Diagnostics
+							</Button>
+							<Button
+								variant="outlined"
+								size="large"
+								onClick={handleClearOrCancel}
+								disabled={isClearingOutputs}
+							>
+								{isProcessing ? "Cancel" : "Clear"}
+							</Button>
+						</Stack>
 					</Stack>
 				</Step>
 			</Stack>

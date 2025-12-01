@@ -30,6 +30,8 @@ in the root package you want to inspect (i.e. colocated to your package.json). T
 - why isn't this just a CLI tool?
   - A goal of the project is show intuitive/beautiful interactive visualizations like treemaps and force graphs, inherently not something a terminal can provide.
   - I don't like CLI tools.  I view them as a last resort, at this point in engineering history.  If you're someone that stays up late into the night staring at your dotfiles from neovim... I'm happy for you.  Be happy for me too?
+- will this work with ts-go?
+  - that's the hope but it ain't ready yet on the ts-go side
 
 ## Data / Security
 

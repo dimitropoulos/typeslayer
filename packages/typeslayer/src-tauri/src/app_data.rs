@@ -1,6 +1,7 @@
 use crate::{
     analyze_trace::constants::ANALYZE_TRACE_FILENAME,
     layercake::{LayerCake, LayerCakeInitArgs, ResolveBoolArgs, ResolveStringArgs, Source},
+    process_controller::ProcessController,
     validate::{
         trace_json::{TRACE_JSON_FILENAME, parse_trace_json, read_trace_json},
         types_json::{
@@ -11,7 +12,6 @@ use crate::{
     },
 };
 use serde_json::Value;
-use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -36,19 +36,21 @@ const AVAILABLE_EDITORS: &[(&str, &str)] = &[
     ("lapce", "Lapce"),
     ("lite-xl", "Lite XL"),
 ];
+
 pub struct AppData {
     pub project_root: String,
     pub types_json: TypesJsonSchema,
     pub trace_json: Vec<crate::validate::trace_json::TraceEvent>,
     pub analyze_trace: Option<crate::analyze_trace::AnalyzeTraceResult>,
     pub cpu_profile: Option<String>,
-    pub package_scripts: BTreeMap<String, String>,
-    pub typecheck_script_name: Option<String>,
+    pub tsconfig_paths: Vec<String>,
+    pub selected_tsconfig: Option<String>,
     pub settings: Settings,
     pub verbose: bool,
     pub cake: LayerCake,
     pub auth_code: Option<String>,
     pub type_graph: Option<crate::type_graph::TypeGraph>,
+    pub process_controller: ProcessController,
 }
 
 impl AppData {
@@ -95,22 +97,34 @@ impl AppData {
             trace_json,
             analyze_trace,
             cpu_profile,
-            package_scripts: BTreeMap::new(),
-            typecheck_script_name: None,
+            tsconfig_paths: Vec::new(),
+            selected_tsconfig: None,
             settings,
             verbose,
             cake,
             auth_code,
             type_graph: None,
+            process_controller: ProcessController::new(),
         };
-        if app.load_package_json().is_ok() {
-            app.typecheck_script_name =
-                Self::init_typecheck_script_name_with(&app.cake, &app.package_scripts);
-        }
+        app.discover_tsconfigs();
+        app.selected_tsconfig = Self::init_selected_tsconfig_with(&app.cake, &app.tsconfig_paths);
         app
     }
 
     fn init_project_root_with(cake: &LayerCake) -> String {
+        // If neither env nor CLI flag have been provided, favor the current working directory
+        // when it already contains a package.json. This prevents stale typeslayer.toml entries
+        // from overriding local runs.
+        let no_env_or_flag = !cake.has_env("PROJECT_ROOT") && !cake.has_flag("--project-root");
+        if no_env_or_flag {
+            if let Some(cwd_pkg) = Self::detect_project_root_from_cwd() {
+                if let Ok(validated) = Self::validate_project_root_path(&cwd_pkg) {
+                    info!("using project_root from current directory: {}", validated);
+                    return validated;
+                }
+            }
+        }
+
         cake.resolve_string(ResolveStringArgs {
             env: "PROJECT_ROOT",
             flag: "--project-root",
@@ -120,35 +134,42 @@ impl AppData {
                     .map(|p| p.join("package.json").to_string_lossy().to_string())
                     .unwrap_or_else(|_| "./package.json".to_string())
             },
-            validate: |s| {
-                let p = std::path::Path::new(s);
-
-                // If path explicitly ends with package.json, verify it exists
-                if p.file_name().map(|f| f == "package.json").unwrap_or(false) {
-                    if !p.exists() {
-                        return Err(format!("package.json not found at: {}", s));
-                    }
-                    return Ok(s.to_string());
-                }
-
-                // If path exists and is a complete directory, check for package.json inside
-                // This handles CLI flags like --project-root /existing/dir
-                // But rejects incomplete paths like /home/tr/src/gith... (which don't exist)
-                if p.exists() && p.is_dir() {
-                    let pkg_path = p.join("package.json");
-                    if !pkg_path.exists() {
-                        return Err(format!("package.json not found in directory: {}", s));
-                    }
-                    return Ok(pkg_path.to_string_lossy().to_string());
-                }
-
-                // Path doesn't exist or isn't a directory - reject it
-                return Err(format!(
-                    "Path must be an existing package.json file or directory containing one: {}",
-                    s
-                ));
-            },
+            validate: |s| Self::validate_project_root_path(s),
         })
+    }
+
+    fn detect_project_root_from_cwd() -> Option<String> {
+        let cwd = std::env::current_dir().ok()?;
+        let pkg_path = cwd.join("package.json");
+        if pkg_path.exists() {
+            Some(pkg_path.to_string_lossy().to_string())
+        } else {
+            None
+        }
+    }
+
+    fn validate_project_root_path(s: &str) -> Result<String, String> {
+        let p = std::path::Path::new(s);
+
+        if p.file_name().map(|f| f == "package.json").unwrap_or(false) {
+            if !p.exists() {
+                return Err(format!("package.json not found at: {}", s));
+            }
+            return Ok(p.to_string_lossy().to_string());
+        }
+
+        if p.exists() && p.is_dir() {
+            let pkg_path = p.join("package.json");
+            if !pkg_path.exists() {
+                return Err(format!("package.json not found in directory: {}", s));
+            }
+            return Ok(pkg_path.to_string_lossy().to_string());
+        }
+
+        Err(format!(
+            "Path must be an existing package.json file or directory containing one: {}",
+            s
+        ))
     }
 
     fn init_verbose_with(cake: &LayerCake) -> bool {
@@ -181,52 +202,31 @@ impl AppData {
         if code.is_empty() { None } else { Some(code) }
     }
 
-    fn init_typecheck_script_name_with(
-        cake: &LayerCake,
-        scripts: &BTreeMap<String, String>,
-    ) -> Option<String> {
-        // Auto-detect logic moved to default since validate isn't called for defaults
+    fn init_selected_tsconfig_with(cake: &LayerCake, tsconfig_paths: &[String]) -> Option<String> {
         let auto_detect = || {
-            let precedence = [
-                "type-check",
-                "typecheck",
-                "types-check",
-                "typescheck",
-                "check-type",
-                "checktype",
-                "check-types",
-                "checktypes",
-                "typescript",
-            ];
-
-            for name in precedence.iter() {
-                if scripts.contains_key(*name) {
-                    return (*name).to_string();
+            // Prefer tsconfig.json, then first found tsconfig
+            for path in tsconfig_paths.iter() {
+                if path.ends_with("tsconfig.json") {
+                    return path.clone();
                 }
             }
-
-            "".to_string()
+            tsconfig_paths.first().cloned().unwrap_or_default()
         };
 
         let result = cake.resolve_string(ResolveStringArgs {
-            env: "TYPECHECK_SCRIPT_NAME",
-            flag: "--typecheck-script-name",
-            file: "settings.typecheckScriptName",
+            env: "TSCONFIG",
+            flag: "--tsconfig",
+            file: "settings.tsconfig",
             default: auto_detect,
             validate: |s| {
-                // Validation only checks if explicitly provided value exists
-                if !s.is_empty() {
-                    if scripts.contains_key(s) {
-                        Ok(s.to_string())
-                    } else {
-                        Err(format!("Script '{}' not found in package.json", s))
-                    }
+                if s.is_empty() || tsconfig_paths.contains(&s.to_string()) {
+                    Ok(s.to_string())
                 } else {
-                    // Empty string is valid (means no script)
-                    Ok("".to_string())
+                    Err(format!("tsconfig '{}' not found in discovered paths", s))
                 }
             },
         });
+
         if result.is_empty() {
             None
         } else {
@@ -234,154 +234,94 @@ impl AppData {
         }
     }
 
-    fn load_package_json(&mut self) -> Result<(), String> {
-        let contents = fs::read_to_string(&self.project_root)
-            .map_err(|e| format!("Failed to read package.json at {}: {e}", self.project_root))?;
-        let value: serde_json::Value = serde_json::from_str(&contents)
-            .map_err(|e| format!("Failed to parse package.json: {e}"))?;
-        let scripts_obj = value
-            .get("scripts")
-            .and_then(|v| v.as_object())
-            .ok_or_else(|| "package.json missing scripts field".to_string())?;
-        self.package_scripts.clear();
-        for (k, v) in scripts_obj.iter() {
-            if let Some(cmd) = v.as_str() {
-                self.package_scripts.insert(k.to_string(), cmd.to_string());
-            }
-        }
-        Ok(())
-    }
+    fn discover_tsconfigs(&mut self) {
+        self.tsconfig_paths.clear();
 
-    fn auto_select_script(&mut self) {
-        // Re-validate current selection or auto-detect
-        if let Some(sel) = &self.typecheck_script_name {
-            if self.package_scripts.contains_key(sel) {
-                return;
+        // Get the directory containing the package.json
+        let project_dir = std::path::Path::new(&self.project_root)
+            .parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| std::path::PathBuf::from("."));
+
+        // Search for tsconfig*.json files in the project directory and subdirectories
+        if let Ok(entries) = fs::read_dir(&project_dir) {
+            for entry in entries.flatten() {
+                if let Ok(file_name) = entry.file_name().into_string() {
+                    if file_name.starts_with("tsconfig") && file_name.ends_with(".json") {
+                        if let Ok(full_path) = entry.path().canonicalize() {
+                            self.tsconfig_paths
+                                .push(full_path.to_string_lossy().to_string());
+                        }
+                    }
+                }
             }
         }
-        self.typecheck_script_name =
-            Self::init_typecheck_script_name_with(&self.cake, &self.package_scripts);
+
+        // Sort with tsconfig.json first
+        self.tsconfig_paths.sort_by(|a, b| {
+            let a_is_main = a.ends_with("tsconfig.json");
+            let b_is_main = b.ends_with("tsconfig.json");
+            match (a_is_main, b_is_main) {
+                (true, false) => std::cmp::Ordering::Less,
+                (false, true) => std::cmp::Ordering::Greater,
+                _ => a.cmp(b),
+            }
+        });
     }
 
     pub fn update_project_root(&mut self, new_root: String) {
         self.project_root = new_root;
-        // Remember the previously selected script name
-        let previous_selection = self.typecheck_script_name.clone();
-        self.package_scripts.clear();
-        self.typecheck_script_name = None;
-        if self.load_package_json().is_ok() {
-            // If the user had a previous selection and it exists in the new package.json, keep it
-            if let Some(prev) = previous_selection {
-                if self.package_scripts.contains_key(&prev) {
-                    self.typecheck_script_name = Some(prev);
-                    return;
-                }
+        let previous_selection = self.selected_tsconfig.clone();
+
+        self.discover_tsconfigs();
+
+        // Try to keep previous selection if it still exists
+        if let Some(prev) = previous_selection {
+            if self.tsconfig_paths.contains(&prev) {
+                self.selected_tsconfig = Some(prev);
+                return;
             }
-            // Otherwise, auto-detect
-            self.auto_select_script();
-        }
-    }
-
-    /// Parse environment variables from a command string
-    /// Example: NODE_OPTIONS="--max-old-space-size=12288" tsc ...
-    /// Returns: (Vec<(String, String)>, String) - env vars and cleaned command
-    fn parse_env_vars(command: &str) -> (Vec<(String, String)>, String) {
-        let mut env_vars = Vec::new();
-        let mut remaining = command;
-
-        // Match pattern: VAR_NAME="value" or VAR_NAME=value
-        loop {
-            let trimmed = remaining.trim_start();
-
-            // Try to match VAR_NAME="value with spaces" pattern
-            if let Some(eq_pos) = trimmed.find('=') {
-                let potential_var = &trimmed[..eq_pos];
-
-                // Check if it looks like an environment variable name (alphanumeric + underscore)
-                if potential_var
-                    .chars()
-                    .all(|c| c.is_alphanumeric() || c == '_')
-                {
-                    let after_eq = &trimmed[eq_pos + 1..];
-
-                    // Handle quoted values
-                    if after_eq.starts_with('"') {
-                        if let Some(close_quote) = after_eq[1..].find('"') {
-                            let value = &after_eq[1..close_quote + 1];
-                            env_vars.push((potential_var.to_string(), value.to_string()));
-                            remaining = &after_eq[close_quote + 2..];
-                            continue;
-                        }
-                    }
-                    // Handle unquoted values (up to first space)
-                    else if let Some(space_pos) = after_eq.find(' ') {
-                        let value = &after_eq[..space_pos];
-                        env_vars.push((potential_var.to_string(), value.to_string()));
-                        remaining = &after_eq[space_pos..];
-                        continue;
-                    }
-                }
-            }
-
-            // No more env vars found
-            break;
         }
 
-        (env_vars, remaining.trim().to_string())
+        // Otherwise, auto-detect
+        self.selected_tsconfig =
+            Self::init_selected_tsconfig_with(&self.cake, &self.tsconfig_paths);
     }
-
-    const COMMON_ADD_ONS: &'static str = " --incremental false --noErrorTruncation";
-
-    // Blocking helper that does not borrow self; suitable for spawn_blocking
+    // Blocking helper that runs tsc directly with optional tsconfig
     fn run_typescript_with_flag_blocking(
         project_root: String,
-        script_command: String,
+        tsconfig_path: Option<String>,
         data_dir: String,
         flag: String,
         context: &str,
+        process_controller: ProcessController,
     ) -> Result<(), String> {
         fs::create_dir_all(&data_dir)
             .map_err(|e| format!("Failed to create data directory: {e}"))?;
 
-        // Parse environment variables from the script command
-        let (env_vars, clean_command) = Self::parse_env_vars(&script_command);
+        process_controller.reset_cancel_flag();
 
-        // Remove any existing --generateTrace/--generateCpuProfile flags from user script to ensure our paths are used
-        fn sanitize_ts_flags(cmd: &str) -> String {
-            let mut out: Vec<String> = Vec::new();
-            let mut skip_next = false;
-            for token in cmd.split_whitespace() {
-                if skip_next {
-                    skip_next = false;
-                    continue;
-                }
-                let lower = token.to_ascii_lowercase();
-                let is_gen_trace =
-                    lower == "--generatetrace" || lower.starts_with("--generatetrace=");
-                let is_cpu_prof =
-                    lower == "--generatecpuprofile" || lower.starts_with("--generatecpuprofile=");
-                if is_gen_trace || is_cpu_prof {
-                    // If in form --flag value, skip the next arg as the path
-                    if !lower.contains('=') {
-                        skip_next = true;
-                    }
-                    continue;
-                }
-                out.push(token.to_string());
-            }
-            out.join(" ")
+        // Build tsc command
+        let mut command_parts = vec!["tsc".to_string()];
+
+        if let Some(tsconfig) = tsconfig_path {
+            command_parts.push("--project".to_string());
+            command_parts.push(tsconfig);
         }
-        let sanitized_command = sanitize_ts_flags(&clean_command);
 
-        let full_command = format!(
-            "{script}{addons}{flag}",
-            script = sanitized_command,
-            addons = Self::COMMON_ADD_ONS,
-            flag = flag
-        );
-        let npm_command = format!("npm exec -- {full_command}");
+        command_parts.push("--noEmit".to_string());
+        command_parts.push("--incremental".to_string());
+        command_parts.push("false".to_string());
+        command_parts.push("--noErrorTruncation".to_string());
 
-        // project_root is now the package.json path, extract directory
+        let flag_parts: Vec<&str> = flag.trim().split_whitespace().collect();
+        for part in flag_parts {
+            command_parts.push(part.to_string());
+        }
+
+        let full_command = command_parts.join(" ");
+        let npm_command = format!("npm exec -- {}", full_command);
+
         let cwd = std::path::Path::new(&project_root)
             .parent()
             .map(|p| p.to_string_lossy().to_string())
@@ -394,37 +334,33 @@ impl AppData {
         let mut cmd = Command::new("sh");
         cmd.arg("-c").arg(&npm_command).current_dir(&cwd);
 
-        // Set parsed environment variables
-        for (key, value) in env_vars {
-            cmd.env(key, value);
-        }
-
-        let output = cmd
-            .output()
+        let child = cmd
+            .spawn()
             .map_err(|e| format!("Failed to execute command: {e}"))?;
 
-        if !output.status.success() {
-            let stderr_raw = String::from_utf8_lossy(&output.stderr);
-            // Filter out all npm WARN lines (non-fatal)
-            let mut fatal_lines = Vec::new();
-            for line in stderr_raw.lines() {
-                let trimmed = line.trim();
-                if trimmed.is_empty() {
-                    continue;
-                }
-                let lower = trimmed.to_ascii_lowercase();
-                let is_non_fatal = lower.starts_with("npm warn");
-                if !is_non_fatal {
-                    fatal_lines.push(trimmed.to_string());
-                }
-            }
-            if !fatal_lines.is_empty() {
-                let joined = fatal_lines.join("\n");
-                return Err(format!("{context} failed: {joined}"));
-            }
-        } else {
-            info!("Command completed successfully: {}", context);
+        process_controller.register_process(child.id());
+
+        let output = child
+            .wait_with_output()
+            .map_err(|e| format!("Failed to wait for command completion: {e}"))?;
+
+        let cancelled = process_controller.cancel_requested();
+        process_controller.clear_current_process();
+        process_controller.reset_cancel_flag();
+
+        if cancelled {
+            return Err("Operation cancelled".to_string());
         }
+
+        if !output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(format!(
+                "{context} failed:\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}"
+            ));
+        }
+
+        info!("Command completed successfully: {}", context);
         Ok(())
     }
 
@@ -639,6 +575,38 @@ impl AppData {
             Err(e) => error!("Failed to serialize config: {}", e),
         }
     }
+
+    pub fn clear_outputs_dir(&mut self, app: &AppHandle) -> Result<(), String> {
+        let data_dir = Self::get_outputs_dir(app);
+        let outputs_path = Path::new(&data_dir);
+
+        fs::create_dir_all(outputs_path)
+            .map_err(|e| format!("failed to ensure outputs directory exists: {e}"))?;
+
+        if outputs_path.exists() {
+            for entry in fs::read_dir(outputs_path)
+                .map_err(|e| format!("failed to read outputs directory: {e}"))?
+            {
+                let entry = entry.map_err(|e| format!("failed to inspect outputs entry: {e}"))?;
+                let path = entry.path();
+                if path.is_dir() {
+                    fs::remove_dir_all(&path)
+                        .map_err(|e| format!("failed to remove directory {:?}: {e}", path))?;
+                } else {
+                    fs::remove_file(&path)
+                        .map_err(|e| format!("failed to remove file {:?}: {e}", path))?;
+                }
+            }
+        }
+
+        self.types_json.clear();
+        self.trace_json.clear();
+        self.analyze_trace = None;
+        self.cpu_profile = None;
+
+        self.update_outputs(app);
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -823,32 +791,61 @@ pub async fn search_type(state: State<'_, Mutex<AppData>>, id: i64) -> Result<Va
 }
 
 #[tauri::command]
-pub async fn get_scripts(
-    state: State<'_, Mutex<AppData>>,
-) -> Result<BTreeMap<String, String>, String> {
+pub async fn get_tsconfig_paths(state: State<'_, Mutex<AppData>>) -> Result<Vec<String>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
-    Ok(data.package_scripts.clone())
+    Ok(data.tsconfig_paths.clone())
 }
 
 #[tauri::command]
-pub async fn get_typecheck_script_name(
+pub async fn get_selected_tsconfig(
     state: State<'_, Mutex<AppData>>,
 ) -> Result<Option<String>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
-    Ok(data.typecheck_script_name.clone())
+    Ok(data.selected_tsconfig.clone())
 }
 
 #[tauri::command]
-pub async fn set_typecheck_script_name(
+pub async fn set_selected_tsconfig(
     state: State<'_, Mutex<AppData>>,
-    script_name: String,
+    tsconfig_path: String,
 ) -> Result<(), String> {
     let mut data = state.lock().map_err(|e| e.to_string())?;
-    if !data.package_scripts.contains_key(&script_name) {
-        return Err(format!("Script {script_name} not found"));
+
+    // Empty string means no tsconfig (valid)
+    if tsconfig_path.is_empty() {
+        data.selected_tsconfig = None;
+        return Ok(());
     }
-    data.typecheck_script_name = Some(script_name);
+
+    // Validate that the path exists in discovered tsconfigs
+    if !data.tsconfig_paths.contains(&tsconfig_path) {
+        return Err(format!(
+            "tsconfig '{}' not found in discovered paths",
+            tsconfig_path
+        ));
+    }
+
+    data.selected_tsconfig = Some(tsconfig_path);
     Ok(())
+}
+
+#[tauri::command]
+pub async fn clear_outputs(
+    app: AppHandle,
+    state: State<'_, Mutex<AppData>>,
+    cancel_running: bool,
+) -> Result<(), String> {
+    let controller = {
+        let data = state.lock().map_err(|e| e.to_string())?;
+        data.process_controller.clone()
+    };
+
+    if cancel_running {
+        controller.request_cancel()?;
+    }
+
+    let mut data = state.lock().map_err(|e| e.to_string())?;
+    data.clear_outputs_dir(&app)
 }
 
 #[tauri::command]
@@ -857,30 +854,27 @@ pub async fn generate_trace(
     state: State<'_, Mutex<AppData>>,
 ) -> Result<TypesJsonSchema, String> {
     // Short lock to get values we need
-    let (script_command, project_root) = {
+    let (tsconfig_path, project_root, process_controller) = {
         let data = state.lock().map_err(|e| e.to_string())?;
-        let script_name = data.typecheck_script_name.clone().ok_or_else(|| {
-            "No script selected. Please select a type-check script first.".to_string()
-        })?;
-        let script_command = data
-            .package_scripts
-            .get(&script_name)
-            .cloned()
-            .ok_or_else(|| format!("Script {script_name} not found in package.json"))?;
-        (script_command, data.project_root.clone())
+        (
+            data.selected_tsconfig.clone(),
+            data.project_root.clone(),
+            data.process_controller.clone(),
+        )
     };
 
     let data_dir = AppData::get_outputs_dir(&app);
 
     info!("generate_trace: will write outputs under {}", data_dir);
     let handle = tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
-        let flag = format!(" --generateTrace {}", data_dir);
+        let flag = format!("--generateTrace {}", data_dir);
         AppData::run_typescript_with_flag_blocking(
             project_root,
-            script_command,
+            tsconfig_path,
             data_dir,
             flag,
             "TypeScript compilation with trace generation",
+            process_controller,
         )
     });
 
@@ -918,17 +912,13 @@ pub async fn generate_cpu_profile(
     app: AppHandle,
     state: State<'_, Mutex<AppData>>,
 ) -> Result<(), String> {
-    let (script_command, project_root) = {
+    let (tsconfig_path, project_root, process_controller) = {
         let data = state.lock().map_err(|e| e.to_string())?;
-        let script_name = data.typecheck_script_name.clone().ok_or_else(|| {
-            "No script selected. Please select a type-check script first.".to_string()
-        })?;
-        let script_command = data
-            .package_scripts
-            .get(&script_name)
-            .cloned()
-            .ok_or_else(|| format!("Script {script_name} not found in package.json"))?;
-        (script_command, data.project_root.clone())
+        (
+            data.selected_tsconfig.clone(),
+            data.project_root.clone(),
+            data.process_controller.clone(),
+        )
     };
 
     let data_dir = AppData::get_outputs_dir(&app);
@@ -938,16 +928,14 @@ pub async fn generate_cpu_profile(
         data_dir
     );
     let handle = tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
-        let flag = format!(
-            " --generateCpuProfile {}/{}",
-            data_dir, CPU_PROFILE_FILENAME
-        );
+        let flag = format!("--generateCpuProfile {}/{}", data_dir, CPU_PROFILE_FILENAME);
         AppData::run_typescript_with_flag_blocking(
             project_root,
-            script_command,
+            tsconfig_path,
             data_dir,
             flag,
             "TypeScript CPU profile run",
+            process_controller,
         )
     });
 
@@ -1332,6 +1320,6 @@ pub async fn get_treemap_data(
     state: State<'_, Mutex<AppData>>,
 ) -> Result<Vec<crate::treemap::TreemapNode>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
-    let treemap_data = crate::treemap::build_treemap_from_trace(&data.trace_json);
+    let treemap_data = crate::treemap::build_treemap_from_trace(&data.trace_json)?;
     Ok(treemap_data)
 }

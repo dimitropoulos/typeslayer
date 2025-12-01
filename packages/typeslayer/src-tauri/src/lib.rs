@@ -4,6 +4,7 @@ mod auth;
 mod files;
 mod layercake;
 mod log;
+mod process_controller;
 mod screenshot;
 mod treemap;
 mod type_graph;
@@ -91,9 +92,10 @@ pub fn run() {
             app_data::get_type_related_to_discriminated_type_limits,
             app_data::get_types_json,
             app_data::search_type,
-            app_data::get_scripts,
-            app_data::get_typecheck_script_name,
-            app_data::set_typecheck_script_name,
+            app_data::get_tsconfig_paths,
+            app_data::get_selected_tsconfig,
+            app_data::set_selected_tsconfig,
+            app_data::clear_outputs,
             app_data::generate_trace,
             app_data::generate_cpu_profile,
             app_data::get_analyze_trace,

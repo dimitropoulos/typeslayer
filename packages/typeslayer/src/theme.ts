@@ -276,6 +276,9 @@ export const theme: Theme = createTheme({
 						borderColor: doomRed.main,
 					},
 				},
+				iconStandard: {
+					right: "6px",
+				},
 			},
 		},
 		MuiPaper: {
@@ -351,10 +354,10 @@ export const theme: Theme = createTheme({
 			},
 		},
 		MuiListSubheader: {
-			defaultProps: {
-				sx: {
+			styleOverrides: {
+				root: {
 					padding: 0,
-					marginLeft: 2,
+					marginLeft: 16,
 					marginBottom: 1,
 					fontSize: "12px",
 					letterSpacing: 1,
@@ -363,6 +366,15 @@ export const theme: Theme = createTheme({
 					height: 36,
 					color: doomYellow.light,
 					background: "transparent",
+				},
+			},
+		},
+		MuiLink: {
+			styleOverrides: {
+				root: {
+					color: doomRed.main,
+					textDecorationColor: doomRed.light,
+					fontWeight: 600,
 				},
 			},
 		},

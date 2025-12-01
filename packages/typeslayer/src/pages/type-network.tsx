@@ -14,7 +14,7 @@ import {
 } from "@mui/material";
 import { invoke } from "@tauri-apps/api/core";
 import type { ResolvedType, TypeRegistry } from "@typeslayer/validate";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
 import { useTypesJson } from "../hooks/tauri-hooks";
 
@@ -137,6 +137,29 @@ const EDGE_CONFIGS: EdgeConfig[] = EDGE_RANKING.map((id, i) => {
 
 const EDGE_CONFIG_MAP = new Map(EDGE_CONFIGS.map((cfg) => [cfg.id, cfg]));
 
+const StatPill = ({ label, value }: { label: string; value: number }) => (
+	<Box
+		sx={{
+			display: "flex",
+			alignItems: "baseline",
+			gap: 1,
+			px: 1.25,
+			py: 0.5,
+			border: (t) => `1px solid ${t.palette.primary.main}80`,
+		}}
+	>
+		<Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+			{value.toLocaleString()}
+		</Typography>
+		<Typography
+			variant="caption"
+			sx={{ textTransform: "uppercase", letterSpacing: 1 }}
+		>
+			{label}
+		</Typography>
+	</Box>
+);
+
 type CosmosNode = { id: string; name: string };
 type CosmosLink = { source: string; target: string; kind: EdgeKind };
 type GraphData = { nodes: CosmosNode[]; links: CosmosLink[] };
@@ -158,9 +181,14 @@ export const TypeNetwork = () => {
 	const [stats, setStats] = useState<{ nodes: number; links: number } | null>(
 		null,
 	);
+	const [visibleStats, setVisibleStats] = useState<{
+		nodes: number;
+		links: number;
+	} | null>(null);
 	const [edgeStats, setEdgeStats] = useState<Record<string, number>>({});
 
 	const [paused, setPaused] = useState(false);
+	const pausedRef = useRef(paused);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 	const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 	const selectedIndexRef = useRef<number | null>(null);
@@ -182,10 +210,28 @@ export const TypeNetwork = () => {
 	const [showFreeTypes, setShowFreeTypes] = useState(true);
 	const [sidebarWidth, setSidebarWidth] = useState(35); // percentage
 	const [isResizing, setIsResizing] = useState(false);
+	const spaceHoldRef = useRef({ active: false, previous: false });
 	const typesJson = useTypesJson();
 	const typeRegistry: TypeRegistry = new Map<number, ResolvedType>(
 		((typesJson.data ?? []) as ResolvedType[]).map((t) => [t.id, t]),
 	);
+
+	useEffect(() => {
+		pausedRef.current = paused;
+	}, [paused]);
+
+	const setSimulationPaused = useCallback((nextPaused: boolean) => {
+		const g = graphRef.current;
+		if (!g) return;
+		if (nextPaused === pausedRef.current) return;
+		if (nextPaused) {
+			g.pause?.();
+		} else {
+			g.unpause?.();
+		}
+		setPaused(nextPaused);
+		pausedRef.current = nextPaused;
+	}, []);
 
 	const applySelectionVisuals = (selectedIndex: number | null) => {
 		const g = graphRef.current as unknown as {
@@ -436,6 +482,14 @@ export const TypeNetwork = () => {
 		}
 		g.render();
 
+		const visibleNodeCount = showFree
+			? cosmosData.nodes.length
+			: (visibleTypeIds?.size ?? 0);
+		setVisibleStats({
+			nodes: visibleNodeCount,
+			links: filteredLinks.length,
+		});
+
 		// Re-apply selection visuals if a node is selected
 		if (selectedId) {
 			const idx = idToIndexRef.current.get(selectedId);
@@ -444,6 +498,41 @@ export const TypeNetwork = () => {
 
 		// no-op for removed debug view info
 	};
+
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (e.code !== "Space") return;
+			if (spaceHoldRef.current.active) {
+				e.preventDefault();
+				return;
+			}
+			e.preventDefault();
+			spaceHoldRef.current = {
+				active: true,
+				previous: pausedRef.current,
+			};
+			if (pausedRef.current) {
+				setSimulationPaused(false);
+			} else {
+				setSimulationPaused(true);
+			}
+		};
+
+		const handleKeyUp = (e: KeyboardEvent) => {
+			if (e.code !== "Space" || !spaceHoldRef.current.active) return;
+			e.preventDefault();
+			const prev = spaceHoldRef.current.previous;
+			spaceHoldRef.current = { active: false, previous: prev };
+			setSimulationPaused(prev);
+		};
+
+		window.addEventListener("keydown", handleKeyDown);
+		window.addEventListener("keyup", handleKeyUp);
+		return () => {
+			window.removeEventListener("keydown", handleKeyDown);
+			window.removeEventListener("keyup", handleKeyUp);
+		};
+	}, [setSimulationPaused]);
 
 	useEffect(() => {
 		let graph: Graph | null = null;
@@ -593,6 +682,10 @@ export const TypeNetwork = () => {
 					nodes: cosmosData.nodes.length,
 					links: cosmosData.links.length,
 				});
+				setVisibleStats({
+					nodes: cosmosData.nodes.length,
+					links: cosmosData.links.length,
+				});
 				setLoading(false);
 			} catch (e) {
 				console.error("get_type_graph failed:", e);
@@ -633,43 +726,6 @@ export const TypeNetwork = () => {
 		<Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
 			<Box sx={{ py: 2, px: 4 }}>
 				<Stack direction="row" spacing={2} alignItems="flex-end">
-					<Button
-						variant="contained"
-						onClick={() => {
-							const g = graphRef.current;
-							if (!g) return;
-							if (paused) {
-								g.unpause?.();
-								setPaused(false);
-							} else {
-								g.pause?.();
-								setPaused(true);
-							}
-						}}
-					>
-						{paused ? "Resume" : "Pause"}
-					</Button>
-					<Button
-						variant="outlined"
-						startIcon={<FilterList />}
-						onClick={(e) => setFilterAnchor(e.currentTarget)}
-					>
-						Filter Links
-					</Button>
-					<FormControlLabel
-						control={
-							<Switch
-								checked={showFreeTypes}
-								onChange={(_, checked) => {
-									setShowFreeTypes(checked);
-									// Reapply filters using the latest toggle value (avoid stale state)
-									applyFilters(activeFilters, checked);
-								}}
-								color="primary"
-							/>
-						}
-						label={"Show Unlinked Types"}
-					/>
 					<TextField
 						placeholder="Zoom to Type ID"
 						size="small"
@@ -685,13 +741,47 @@ export const TypeNetwork = () => {
 							}
 						}}
 					/>
+					<Button
+						variant="outlined"
+						startIcon={<FilterList />}
+						onClick={(e) => setFilterAnchor(e.currentTarget)}
+					>
+						Filter Links
+					</Button>
+					<Button
+						variant="contained"
+						onClick={() => {
+							setSimulationPaused(!pausedRef.current);
+						}}
+					>
+						{paused ? "Resume" : "Pause"}
+					</Button>
+
+					<FormControlLabel
+						control={
+							<Switch
+								checked={showFreeTypes}
+								onChange={(_, checked) => {
+									setShowFreeTypes(checked);
+									// Reapply filters using the latest toggle value (avoid stale state)
+									applyFilters(activeFilters, checked);
+								}}
+								color="primary"
+							/>
+						}
+						label={"Show Unlinked Types"}
+					/>
 					<span style={{ flex: 1 }} />
-					{stats && (
-						<span>
-							{stats.nodes.toLocaleString()} types,{" "}
-							{stats.links.toLocaleString()} links
-						</span>
-					)}
+					{(() => {
+						const statsToRender = visibleStats ?? stats;
+						if (!statsToRender) return null;
+						return (
+							<Stack direction="row" spacing={1}>
+								<StatPill label="types" value={statsToRender.nodes} />
+								<StatPill label="links" value={statsToRender.links} />
+							</Stack>
+						);
+					})()}
 				</Stack>
 				{loading && <p>Loading graph…</p>}
 			</Box>
@@ -794,7 +884,7 @@ export const TypeNetwork = () => {
 							onClick={() => {
 								const all = new Set(EDGE_CONFIGS.map((c) => c.id));
 								setActiveFilters(all);
-								applyFilters(all);
+								applyFilters(all, showFreeTypes);
 							}}
 						>
 							ALL
@@ -805,7 +895,7 @@ export const TypeNetwork = () => {
 							onClick={() => {
 								const none = new Set<EdgeKind>();
 								setActiveFilters(none);
-								applyFilters(none);
+								applyFilters(none, showFreeTypes);
 							}}
 						>
 							NONE

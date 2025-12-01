@@ -7,6 +7,7 @@ import {
 	JoinFull,
 	JoinInner,
 	Lightbulb,
+	Polyline,
 	SafetyDivider,
 	SportsKabaddi,
 	Whatshot,
@@ -89,7 +90,7 @@ const awards = {
 		title: "Most Instantiated Type",
 		description:
 			"Awarded for the type that gets instantiated most frequently across the codebase.",
-		icon: CopyAll,
+		icon: Polyline,
 		unit: "instantiations",
 		route: "most-instantiated-type",
 	},
@@ -239,7 +240,11 @@ export const RenderPlayground = ({
 					inlineBarGraph={(current, first) => (
 						<InlineBarGraph
 							label={`${current.args.instantiationDepth.toLocaleString()} depth`}
-							width={`${(current.args.instantiationDepth / first.args.instantiationDepth) * 100}%`}
+							width={`${
+								(current.args.instantiationDepth /
+									first.args.instantiationDepth) *
+								100
+							}%`}
 						/>
 					)}
 					getKey={(current) =>
@@ -304,7 +309,10 @@ export const RenderPlayground = ({
 					inlineBarGraph={(current, first) => (
 						<InlineBarGraph
 							label={`${current.args.numCombinations.toLocaleString()} depth`}
-							width={`${(current.args.numCombinations / first.args.numCombinations) * 100}%`}
+							width={`${
+								(current.args.numCombinations / first.args.numCombinations) *
+								100
+							}%`}
 						/>
 					)}
 					getKey={(current) =>
@@ -549,8 +557,10 @@ function ArrayAward({
 	const sorted = Array.from(typeRegistry.values())
 		.filter((resolvedType: ResolvedType) => property in resolvedType)
 		.sort((a: ResolvedType, b: ResolvedType) => {
-			const aValue = (a[property] as unknown as number[] | undefined)?.length ?? 0;
-			const bValue = (b[property] as unknown as number[] | undefined)?.length ?? 0;
+			const aValue =
+				(a[property] as unknown as number[] | undefined)?.length ?? 0;
+			const bValue =
+				(b[property] as unknown as number[] | undefined)?.length ?? 0;
 			return bValue - aValue;
 		});
 
@@ -585,9 +595,11 @@ function ArrayAward({
 				/>
 
 				<Stack sx={{ my: 2 }}>
-				<List>
-					{sorted.slice(0, currentLimit).map(({ id }, index) => {
-						const value = (sorted[index][property] as unknown as number[] | undefined)?.length ?? 0;
+					<List>
+						{sorted.slice(0, currentLimit).map(({ id }, index) => {
+							const value =
+								(sorted[index][property] as unknown as number[] | undefined)
+									?.length ?? 0;
 							return (
 								<ListItemButton
 									selected={index === selectedIndex}
@@ -647,10 +659,14 @@ function ArrayAward({
 				}}
 				ref={scrollContainerRef}
 			>
-				<DisplayRecursiveType
-					id={(sorted[selectedIndex] as ResolvedType | undefined)?.id ?? 0}
-					typeRegistry={typeRegistry}
-				/>
+				{sorted[selectedIndex]?.id && typeRegistry ? (
+					<DisplayRecursiveType
+						id={sorted[selectedIndex].id}
+						typeRegistry={typeRegistry}
+					/>
+				) : (
+					<span>Loading...</span>
+				)}
 			</Box>
 		</Stack>
 	);
@@ -711,9 +727,20 @@ function GraphAward({
 	const sorted = edgeStats.entries
 		.map(([typeId, sourceIds]) => {
 			const resolvedType = typeRegistry.get(typeId);
-			return resolvedType ? { typeId, count: sourceIds.length, sourceIds, resolvedType } : null;
+			return resolvedType
+				? { typeId, count: sourceIds.length, sourceIds, resolvedType }
+				: null;
 		})
-		.filter((item): item is { typeId: number; count: number; sourceIds: number[]; resolvedType: ResolvedType } => item !== null);
+		.filter(
+			(
+				item,
+			): item is {
+				typeId: number;
+				count: number;
+				sourceIds: number[];
+				resolvedType: ResolvedType;
+			} => item !== null,
+		);
 
 	const maxValue = sorted[0]?.count ?? 0;
 	const cutoff = 50;
@@ -724,38 +751,64 @@ function GraphAward({
 	const selectedItem = sorted[selectedIndex];
 
 	return (
-		<Stack sx={{ flexDirection: "row", alignItems: "flex-start", height: "100%" }}>
-			<Stack sx={{ maxWidth: 450, minWidth: 450, p: 3, overflowY: "auto", maxHeight: "100%" }}>
-				<TitleSubtitle title={title} subtitle={description} icon={<Icon fontSize="large" />} />
+		<Stack
+			sx={{ flexDirection: "row", alignItems: "flex-start", height: "100%" }}
+		>
+			<Stack
+				sx={{
+					maxWidth: 450,
+					minWidth: 450,
+					p: 3,
+					overflowY: "auto",
+					maxHeight: "100%",
+				}}
+			>
+				<TitleSubtitle
+					title={title}
+					subtitle={description}
+					icon={<Icon fontSize="large" />}
+				/>
 				<Stack sx={{ my: 2 }}>
 					<List>
-						{sorted.slice(0, currentLimit).map(({ typeId, count, resolvedType }, index) => (
-							<ListItemButton
-								selected={index === selectedIndex}
-								onClick={(event) => handleListItemClick(event, index)}
-								key={typeId}
-								sx={{ width: "100%" }}
-							>
-								<ListItemText>
-									<Stack sx={{ flexGrow: 1 }} gap={0}>
-										<TypeSummary resolvedType={resolvedType} />
-										<Stack gap={0.5}>
-											<InlineBarGraph
-												label={`${count.toLocaleString()} ${unit}`}
-												width={`${(count / maxValue) * 100}%`}
-											/>
+						{sorted
+							.slice(0, currentLimit)
+							.map(({ typeId, count, resolvedType }, index) => (
+								<ListItemButton
+									selected={index === selectedIndex}
+									onClick={(event) => handleListItemClick(event, index)}
+									key={typeId}
+									sx={{ width: "100%" }}
+								>
+									<ListItemText>
+										<Stack sx={{ flexGrow: 1 }} gap={0}>
+											<TypeSummary resolvedType={resolvedType} />
+											<Stack gap={0.5}>
+												<InlineBarGraph
+													label={`${count.toLocaleString()} ${unit}`}
+													width={`${(count / maxValue) * 100}%`}
+												/>
+											</Stack>
 										</Stack>
-									</Stack>
-								</ListItemText>
-							</ListItemButton>
-						))}
+									</ListItemText>
+								</ListItemButton>
+							))}
 					</List>
 					{hasMore && (
-						<Stack direction="row" gap={2} alignItems="center" sx={{ px: 2, mb: 2 }}>
+						<Stack
+							direction="row"
+							gap={2}
+							alignItems="center"
+							sx={{ px: 2, mb: 2 }}
+						>
 							<Typography>
-								showing {currentLimit.toLocaleString()} out of {sorted.length.toLocaleString()}
+								showing {currentLimit.toLocaleString()} out of{" "}
+								{sorted.length.toLocaleString()}
 							</Typography>
-							<Button variant="outlined" size="small" onClick={() => setDisplayLimit((prev) => prev + cutoff)}>
+							<Button
+								variant="outlined"
+								size="small"
+								onClick={() => setDisplayLimit((prev) => prev + cutoff)}
+							>
 								Show {Math.min(cutoff, remaining).toLocaleString()} more
 							</Button>
 						</Stack>
@@ -763,16 +816,29 @@ function GraphAward({
 				</Stack>
 			</Stack>
 			<Divider orientation="vertical" />
-			<Box sx={{ p: 3, overflowY: "auto", maxHeight: "100%", width: "100%", height: "100%" }} ref={scrollContainerRef}>
+			<Box
+				sx={{
+					p: 3,
+					overflowY: "auto",
+					maxHeight: "100%",
+					width: "100%",
+					height: "100%",
+				}}
+				ref={scrollContainerRef}
+			>
 				<Stack gap={3}>
-					<DisplayRecursiveType id={selectedItem?.typeId ?? 0} typeRegistry={typeRegistry} />
-					
+					<DisplayRecursiveType
+						id={selectedItem?.typeId ?? 0}
+						typeRegistry={typeRegistry}
+					/>
+
 					{selectedItem && selectedItem.sourceIds.length > 0 && (
 						<>
 							<Divider />
 							<Stack gap={1}>
 								<Typography variant="h6">
-									Instantiated by {selectedItem.sourceIds.length} type{selectedItem.sourceIds.length !== 1 ? 's' : ''}:
+									Instantiated by {selectedItem.sourceIds.length} type
+									{selectedItem.sourceIds.length !== 1 ? "s" : ""}:
 								</Typography>
 								<List dense>
 									{selectedItem.sourceIds.map((sourceId) => {
@@ -858,7 +924,7 @@ export const ShowHotSpots = () => {
 	>([]);
 	const simplifyPaths = useSimplifyPaths();
 	const projectRoot = useProjectRoot();
-	
+
 	useEffect(() => {
 		(async () => {
 			try {
@@ -879,15 +945,20 @@ export const ShowHotSpots = () => {
 			console.error("Failed to open file", e);
 		}
 	}, []);
-	
-	if (simplifyPaths.isLoading || projectRoot.isLoading || simplifyPaths.data === undefined || projectRoot.data === undefined) {
+
+	if (
+		simplifyPaths.isLoading ||
+		projectRoot.isLoading ||
+		simplifyPaths.data === undefined ||
+		projectRoot.data === undefined
+	) {
 		return null;
 	}
-	
+
 	// Type narrowing: we know data exists after the check above
 	const simplifyPathsValue: boolean = simplifyPaths.data;
 	const projectRootValue: string = projectRoot.data;
-	
+
 	console.log("hotSpots", { hotSpots });
 
 	const firstHotSpot = hotSpots[0];
@@ -915,7 +986,11 @@ export const ShowHotSpots = () => {
 							</Typography>
 							<Stack>
 								<Typography variant="caption">
-										{friendlyPackageName(path ?? "", projectRootValue, simplifyPathsValue)}
+									{friendlyPackageName(
+										path ?? "",
+										projectRootValue,
+										simplifyPathsValue,
+									)}
 								</Typography>
 							</Stack>
 							<InlineBarGraph
@@ -1005,7 +1080,12 @@ const ShowTypeLimit = <L extends LimitType>({
 		}
 	}, []);
 
-	if (simplifyPaths.isLoading || projectRoot.isLoading || simplifyPaths.data === undefined || projectRoot.data === undefined) {
+	if (
+		simplifyPaths.isLoading ||
+		projectRoot.isLoading ||
+		simplifyPaths.data === undefined ||
+		projectRoot.data === undefined
+	) {
 		return null;
 	}
 

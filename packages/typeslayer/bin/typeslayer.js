@@ -45,7 +45,9 @@ try {
 	const binaryInfo = getBinaryInfo();
 
 	if (!existsSync(binaryInfo.path)) {
-		console.error(`\n⚠️ Binary not found for ${binaryInfo.platform}. Attempting download...`);
+		console.error(
+			`\n⚠️ Binary not found for ${binaryInfo.platform}. Attempting download...`,
+		);
 		const postinstallPath = join(__dirname, "..", "scripts", "postinstall.js");
 		const res = spawnSync(process.execPath, [postinstallPath], {
 			stdio: "inherit",

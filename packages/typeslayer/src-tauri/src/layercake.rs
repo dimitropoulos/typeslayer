@@ -224,4 +224,21 @@ impl LayerCake {
         }
         cur.as_bool()
     }
+
+    /// Check whether a CLI flag was provided (e.g. `--project-root`).
+    pub fn has_flag(&self, flag: &str) -> bool {
+        self.flags.contains_key(flag)
+    }
+
+    /// Determine if the given env key (without prefix) is set to a non-empty value.
+    pub fn has_env(&self, key: &str) -> bool {
+        let env_key = if self.env_prefix.is_empty() {
+            key.to_string()
+        } else {
+            format!("{}{}", self.env_prefix, key)
+        };
+        std::env::var(env_key)
+            .map(|v| !v.trim().is_empty())
+            .unwrap_or(false)
+    }
 }

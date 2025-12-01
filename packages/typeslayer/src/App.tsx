@@ -1,4 +1,4 @@
-import { CameraAlt, ChevronLeft } from "@mui/icons-material";
+import { ChevronLeft } from "@mui/icons-material";
 import {
 	Divider,
 	List,
@@ -6,7 +6,6 @@ import {
 	ListItemIcon,
 	ListItemText,
 	ListSubheader,
-	Snackbar,
 	Stack,
 } from "@mui/material";
 import Box from "@mui/material/Box";
@@ -15,16 +14,13 @@ import IconButton from "@mui/material/IconButton";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { Outlet, useLocation, useNavigate } from "@tanstack/react-router";
-import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useState } from "react";
-import dimitropoulosAvatar from "./assets/dimitropoulos.png";
 import tsLogo from "./assets/ts.png";
 import tsNightmareLogo from "./assets/ts-nightmare.png";
 import typeslayerLogo from "./assets/typeslayer.png";
 import typeslayerNightmareLogo from "./assets/typeslayer-nightmare.png";
-import { AuthGate } from "./components/auth-gate";
-import { NAVIGATION } from "./components/utils";
+import { NAVIGATION, type NavigationItem } from "./components/utils";
 
 function AppBrand({
 	collapsed,
@@ -64,11 +60,6 @@ export function App() {
 
 	const [open, setOpen] = useState<boolean>(isMdUp);
 	const [collapsed, setCollapsed] = useState<boolean>(false);
-	const [authenticated, setAuthenticated] = useState<boolean>(false);
-	const [screenshotSnackbar, setScreenshotSnackbar] = useState<{
-		open: boolean;
-		message: string;
-	}>({ open: false, message: "" });
 
 	// keep open state in sync with screen size
 	useEffect(() => {
@@ -100,35 +91,62 @@ export function App() {
 		}
 	};
 
-	const handleScreenshot = async () => {
-		try {
-			const path = await invoke<string>("take_screenshot");
-			setScreenshotSnackbar({
-				open: true,
-				message: `Screenshot saved to ${path} and copied to clipboard`,
-			});
-		} catch (error) {
-			setScreenshotSnackbar({
-				open: true,
-				message: `Failed to take screenshot: ${error}`,
-			});
+	const renderNavItem = (item: NavigationItem, index: number) => {
+		if (item.kind === "expander") {
+			return (
+				<Box
+					component="li"
+					key={`nav-expander-${index}`}
+					sx={{
+						listStyle: "none",
+						flex: "1 1 auto",
+						minHeight: 0,
+					}}
+				/>
+			);
 		}
-	};
 
-	if (!authenticated) {
-		return <AuthGate onAuthenticated={() => setAuthenticated(true)} />;
-	}
+		if (item.kind === "action") {
+			const Action = item.action;
+			return (
+				<Box
+					key={`nav-action-${index}`}
+					component="li"
+					sx={{
+						listStyle: "none",
+						display: "flex",
+						justifyContent: collapsed ? "center" : "flex-start",
+						flex: "0 0 auto",
+					}}
+				>
+					<Action collapsed={collapsed} />
+				</Box>
+			);
+		}
 
-	const renderNavItem = (item: (typeof NAVIGATION)[number]) => {
 		if (item.kind === "header") {
 			// hide group headers when the sidebar is collapsed (show icons only)
 			if (collapsed) {
 				return null;
 			}
-			return <ListSubheader key={item.title}>{item.title}</ListSubheader>;
+			return (
+				<ListSubheader
+					key={item.title}
+					sx={{
+						flex: "0 0 auto",
+					}}
+				>
+					{item.title}
+				</ListSubheader>
+			);
 		}
 		if (item.kind === "divider") {
-			return <Divider key={Math.random()} sx={{ my: 1 }} />;
+			return (
+				<Divider
+					key={Math.random()}
+					sx={{ mt: 0.5, mb: 1, flex: "0 0 auto" }}
+				/>
+			);
 		}
 
 		const segment = item.segment as string | undefined;
@@ -151,16 +169,16 @@ export function App() {
 
 		return (
 			<ListItemButton
-				key={to}
+				key={`${to}-${index}`}
 				selected={selected}
 				onClick={() => {
 					navigate({ to });
 					if (!isMdUp) setOpen(false);
 				}}
 				sx={{
-					mb: 0.5,
 					justifyContent: collapsed ? "center" : "flex-start",
 					px: 1,
+					flex: "0 0 auto",
 					transition: (theme) =>
 						theme.transitions.create(["background-color", "padding"], {
 							duration: 200,
@@ -168,7 +186,16 @@ export function App() {
 				}}
 			>
 				<ListItemIcon
-					sx={{ minWidth: collapsed ? 0 : 38, justifyContent: "center" }}
+					sx={{
+						minWidth: collapsed ? 0 : 38,
+						justifyContent: "center",
+						flexShrink: 0,
+						display: "flex",
+						minHeight: "16px",
+						"& svg": {
+							fontSize: collapsed ? 24 : 24,
+						},
+					}}
 				>
 					{item.icon}
 				</ListItemIcon>
@@ -223,10 +250,17 @@ export function App() {
 					sx={{
 						p: 1,
 						width: open ? (collapsed ? collapsedWidth : drawerWidth) : 0,
+						height: "100%",
+						display: "flex",
+						flexDirection: "column",
+						flexGrow: 1,
+						overflow: "hidden",
 						overflowY: "auto",
+						gap: 0,
+						marginBottom: 0,
 					}}
 				>
-					{NAVIGATION.map((item) => renderNavItem(item))}
+					{NAVIGATION.map((item, index) => renderNavItem(item, index))}
 				</List>
 				{/* collapse toggle positioned relative to Drawer Paper so it can sit near the bottom */}
 				{isMdUp && (
@@ -238,7 +272,7 @@ export function App() {
 						sx={{
 							position: "absolute",
 							right: -14,
-							bottom: 16,
+							bottom: 18,
 							zIndex: (t) => t.zIndex.drawer + 2,
 							width: 28,
 							height: 28,
@@ -254,68 +288,17 @@ export function App() {
 							},
 						}}
 					>
-						<ChevronLeft />
+						<ChevronLeft
+							sx={{
+								transform: collapsed ? "rotate(180deg)" : "rotate(0deg)",
+								transition: (t) =>
+									t.transitions.create("transform", {
+										duration: t.transitions.duration.shorter,
+									}),
+							}}
+						/>
 					</IconButton>
 				)}
-				{/* Screenshot button */}
-				<IconButton
-					onClick={handleScreenshot}
-					size="small"
-					aria-label="Take screenshot"
-					sx={{
-						position: "absolute",
-						bottom: 64,
-						left: collapsed ? 8 : 12,
-						right: collapsed ? 8 : 12,
-						width: collapsed ? 48 : "auto",
-						height: 40,
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						gap: 1,
-						borderRadius: 1,
-						bgcolor: (t) => t.palette.background.paper,
-						border: (t) => `1px solid ${t.palette.divider}`,
-						"&:hover": {
-							bgcolor: (t) => t.palette.action.hover,
-						},
-					}}
-				>
-					<CameraAlt fontSize="small" />
-					{!collapsed && <span style={{ fontSize: 14 }}>Screenshot</span>}
-				</IconButton>
-				<span style={{ flex: 1 }} />{" "}
-				<Box
-					sx={{
-						display: "flex",
-						alignItems: "center",
-						gap: 1,
-						borderTop: (t) => `1px solid ${t.palette.divider}`,
-						px: 2,
-						py: 2,
-						color: "text.secondary",
-					}}
-				>
-					<a
-						href="https://github.com/dimitropoulos"
-						target="_blank"
-						rel="noreferrer"
-						style={{
-							display: "flex",
-							alignItems: "center",
-							gap: 8,
-							textDecoration: "none",
-							color: "inherit",
-						}}
-					>
-						<img
-							src={dimitropoulosAvatar}
-							alt="dimitropoulos avatar"
-							style={{ width: 23, height: 23 }}
-						/>
-						{!collapsed && <span>by&nbsp;dimitropoulos</span>}
-					</a>
-				</Box>
 			</Drawer>
 
 			<Divider orientation="vertical" />
@@ -336,13 +319,6 @@ export function App() {
 					<Outlet />
 				</Box>
 			</Box>
-			<Snackbar
-				open={screenshotSnackbar.open}
-				autoHideDuration={4000}
-				onClose={() => setScreenshotSnackbar({ open: false, message: "" })}
-				message={screenshotSnackbar.message}
-				anchorOrigin={{ vertical: "top", horizontal: "center" }}
-			/>
 		</Box>
 	);
 }

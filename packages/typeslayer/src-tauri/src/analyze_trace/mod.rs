@@ -5,6 +5,7 @@ mod node_module_paths;
 mod spans;
 mod types;
 
+pub use spans::create_spans;
 pub use types::*;
 
 use crate::validate::trace_json::TraceEvent;

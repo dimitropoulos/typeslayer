@@ -5,6 +5,7 @@ import {
 	RouterProvider,
 } from "@tanstack/react-router";
 import { App } from "./App";
+import { AboutPage } from "./pages/about";
 import { AwardWinners } from "./pages/award-winners";
 import { Integrations } from "./pages/integrations";
 import { Perfetto } from "./pages/perfetto";
@@ -107,6 +108,12 @@ const integrationsRoute = createRoute({
 	component: Integrations,
 });
 
+const aboutRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: "/about",
+	component: AboutPage,
+});
+
 // Index redirect to Award Winners (Largest Union)
 const indexRoute = createRoute({
 	getParentRoute: () => rootRoute,
@@ -137,6 +144,7 @@ const routeTree = rootRoute.addChildren([
 	rawDataChildRoute,
 	settingsRoute,
 	integrationsRoute,
+	aboutRoute,
 ]);
 
 // Create router instance
