@@ -22,9 +22,6 @@ const getBinaryInfo = () => {
 	if (plat === "linux" && architecture === "x64") {
 		platformDir = "linux-x64";
 		binaryName = "typeslayer";
-	} else if (plat === "darwin" && architecture === "x64") {
-		platformDir = "darwin-x64";
-		binaryName = "typeslayer";
 	} else if (plat === "darwin" && architecture === "arm64") {
 		platformDir = "darwin-arm64";
 		binaryName = "typeslayer";

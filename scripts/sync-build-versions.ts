@@ -17,9 +17,9 @@ if (!bumpType || !["patch", "minor", "major"].includes(bumpType)) {
 
 function bumpVersion(version: string, type: string): string {
 	const parts = version.split(".");
-	const major = parseInt(parts[0]);
-	const minor = parseInt(parts[1]);
-	const patch = parseInt(parts[2]);
+	const major = parseInt(parts[0], 10);
+	const minor = parseInt(parts[1], 10);
+	const patch = parseInt(parts[2], 10);
 
 	if (type === "major") {
 		return `${major + 1}.0.0`;
@@ -31,12 +31,7 @@ function bumpVersion(version: string, type: string): string {
 }
 
 // Read main package version
-const mainPackageJsonPath = join(
-	rootDir,
-	"packages",
-	"typeslayer",
-	"package.json",
-);
+const mainPackageJsonPath = join(rootDir, "npm", "typeslayer", "package.json");
 const mainPackageJson = JSON.parse(readFileSync(mainPackageJsonPath, "utf-8"));
 const oldMainVersion = mainPackageJson.version;
 const newMainVersion = bumpVersion(oldMainVersion, bumpType);
@@ -54,21 +49,15 @@ if (mainPackageJson.optionalDependencies) {
 
 writeFileSync(
 	mainPackageJsonPath,
-	JSON.stringify(mainPackageJson, null, "\t") + "\n",
+	`${JSON.stringify(mainPackageJson, null, "\t")}\n`,
 );
 
 console.log(`📦 Bumped main package: ${oldMainVersion} → ${newMainVersion}`);
 
-const platforms = ["linux-x64", "darwin-x64", "darwin-arm64", "win32-x64"];
+const platforms = ["linux-x64", "darwin-arm64", "win32-x64"];
 
 for (const platform of platforms) {
-	const buildPackageJsonPath = join(
-		rootDir,
-		"packages",
-		"builds",
-		platform,
-		"package.json",
-	);
+	const buildPackageJsonPath = join(rootDir, "npm", platform, "package.json");
 
 	const buildPackageJson = JSON.parse(
 		readFileSync(buildPackageJsonPath, "utf-8"),
@@ -78,7 +67,7 @@ for (const platform of platforms) {
 	buildPackageJson.version = newMainVersion;
 	writeFileSync(
 		buildPackageJsonPath,
-		JSON.stringify(buildPackageJson, null, "\t") + "\n",
+		`${JSON.stringify(buildPackageJson, null, "\t")}\n`,
 	);
 	console.log(
 		`  ✅ @typeslayer/${platform}: ${oldVersion} → ${newMainVersion}`,

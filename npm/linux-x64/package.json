@@ -1,27 +1,27 @@
 {
-	"name": "@typeslayer/win32-x64",
-	"version": "0.1.5",
-	"description": "TypeSlayer binary for Windows x64",
+	"name": "@typeslayer/linux-x64",
+	"version": "0.1.6",
+	"description": "TypeSlayer binary for Linux x64",
 	"private": false,
 	"type": "module",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/dimitropoulos/typeslayer.git",
-		"directory": "packages/builds/win32-x64"
+		"url": "https://github.com/dimitropoulos/typeslayer.git",
+		"directory": "npm/linux-x64"
 	},
 	"bugs": {
 		"url": "https://github.com/dimitropoulos/typeslayer/issues"
 	},
 	"homepage": "https://github.com/dimitropoulos/typeslayer#readme",
 	"os": [
-		"win32"
+		"linux"
 	],
 	"cpu": [
 		"x64"
 	],
 	"files": [
-		"typeslayer.exe"
+		"typeslayer"
 	],
 	"engines": {
 		"node": ">=24.0.0"
