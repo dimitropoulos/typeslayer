@@ -50,7 +50,7 @@ const getBinaryInfo = () => {
 (async () => {
 	try {
 		const { platformDir, binaryName, npmPackage } = getBinaryInfo();
-		const binariesDir = join(__dirname, "..", "..", "builds", platformDir);
+		const binariesDir = join(__dirname, "..", "binaries", platformDir);
 		const binaryPath = join(binariesDir, binaryName);
 
 		// Skip if binary already exists
@@ -92,7 +92,7 @@ const getBinaryInfo = () => {
 				stdio: "inherit",
 			});
 
-			// Copy the binary from node_modules to our builds directory
+			// Copy the binary from node_modules to our binaries directory
 			const nodeModulesBinaryPath = join(
 				__dirname,
 				"..",

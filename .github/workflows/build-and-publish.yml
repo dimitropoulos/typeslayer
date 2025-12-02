@@ -169,6 +169,14 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: cd npm/typeslayer && npm publish --access public
 
+      - name: Verify binaries exist before release
+        if: startsWith(github.ref, 'refs/tags/typeslayer-v')
+        run: |
+          echo "Checking binaries for release..."
+          ls -lh npm/linux-x64/typeslayer
+          ls -lh npm/darwin-arm64/typeslayer
+          ls -lh npm/win32-x64/typeslayer.exe
+
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/typeslayer-v')
         uses: softprops/action-gh-release@v1
