@@ -9,11 +9,17 @@ export const SpeedScope = () => {
 		[],
 	);
 
-	const embeddedUrl = useMemo(
-		() =>
-			`/speedscope-ui/index.html#profileURL=${encodeURIComponent(profileUrl)}`,
-		[profileUrl],
-	);
+	const embeddedUrl = useMemo(() => {
+		const isHttpLike =
+			typeof window !== "undefined" &&
+			window.location.protocol.startsWith("http");
+		// When not served over http(s) (e.g., tauri://), use hosted speedscope to allow profileURL loading
+		if (!isHttpLike) {
+			return `https://www.speedscope.app/#profileURL=${encodeURIComponent(profileUrl)}`;
+		}
+		// In dev/http, use the bundled local copy
+		return `/speedscope-ui/index.html#profileURL=${encodeURIComponent(profileUrl)}`;
+	}, [profileUrl]);
 
 	if (!profileUrl) {
 		return <div>Loading CPU profile...</div>;

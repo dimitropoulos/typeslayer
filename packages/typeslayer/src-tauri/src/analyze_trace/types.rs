@@ -4,16 +4,12 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AnalyzeTraceOptions {
-    #[serde(rename = "forceMillis")]
     pub force_millis: f64,
-    #[serde(rename = "skipMillis")]
     pub skip_millis: f64,
-    #[serde(rename = "expandTypes")]
     pub expand_types: bool,
-    #[serde(rename = "minSpanParentPercentage")]
     pub min_span_parent_percentage: f64,
-    #[serde(rename = "importExpressionThreshold")]
     pub import_expression_threshold: u32,
 }
 
@@ -46,24 +42,23 @@ pub enum EventSpanEvent {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ParseResult {
-    #[serde(rename = "firstSpanStart")]
     pub first_span_start: f64,
-    #[serde(rename = "lastSpanEnd")]
     pub last_span_end: f64,
     pub spans: Vec<EventSpan>,
-    #[serde(rename = "unclosedStack")]
     pub unclosed_stack: Vec<TraceEvent>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct HotType {
-    #[serde(rename = "resolvedType")]
     pub resolved_type: ResolvedType,
     pub children: Vec<HotType>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct HotSpot {
     pub description: String,
     #[serde(rename = "timeMs")]
@@ -72,17 +67,17 @@ pub struct HotSpot {
     pub path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub types: Option<Vec<HotType>>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "startLine")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub start_line: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "startChar")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub start_char: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "startOffset")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub start_offset: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "endLine")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub end_line: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "endChar")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub end_char: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "endOffset")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub end_offset: Option<i64>,
     pub children: Vec<HotSpot>,
 }
@@ -102,13 +97,11 @@ pub struct DuplicatedPackage {
 pub type NodeModulePaths = HashMap<String, Vec<String>>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AnalyzeTraceResult {
-    #[serde(rename = "nodeModulePaths")]
     pub node_module_paths: NodeModulePaths,
-    #[serde(rename = "unterminatedEvents")]
     pub unterminated_events: Vec<TraceEvent>,
-    #[serde(rename = "hotSpots")]
     pub hot_spots: Vec<HotSpot>,
-    #[serde(rename = "duplicatePackages")]
     pub duplicate_packages: Vec<DuplicatedPackage>,
+    pub depth_limits: std::collections::HashMap<String, Vec<TraceEvent>>,
 }

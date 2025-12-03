@@ -175,6 +175,18 @@ export const theme: Theme = createTheme({
 		"0 0 0 1px rgba(255,255,255,0.07), 0 42px 98px -40px rgba(0,0,0,1)",
 	],
 	components: {
+		MuiListItemIcon: {
+			styleOverrides: {
+				root: {
+					// Ensure list icons provide a consistent box for SVGs to fill
+					minWidth: 32,
+					height: 24,
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+				},
+			},
+		},
 		MuiCssBaseline: {
 			styleOverrides: {
 				"@global": {
@@ -261,8 +273,16 @@ export const theme: Theme = createTheme({
 				displayEmpty: true,
 			},
 			styleOverrides: {
+				root: {
+					"& .MuiSelect-icon": {
+						top: 0,
+						bottom: 0,
+						right: 0,
+						alignSelf: "center",
+					},
+				},
 				select: {
-					padding: "8px 12px",
+					padding: "8px 48px 8px 12px !important",
 					fontSize: "0.95rem",
 					backgroundColor: "rgba(0, 0, 0, 0.3)",
 					borderRadius: "4px",

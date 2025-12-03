@@ -159,7 +159,13 @@ export function BigAction({
 										? { icon: foundIcon.icon }
 										: {};
 								return (
-									<Chip key={unlock} {...hasIcon} label={unlock} size="small" />
+									<Chip
+										key={unlock}
+										{...hasIcon}
+										label={unlock}
+										sx={{ userSelect: "none" }}
+										size="small"
+									/>
 								);
 							})}
 						</Stack>

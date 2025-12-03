@@ -293,6 +293,7 @@ impl AppData {
         tsconfig_path: Option<String>,
         data_dir: String,
         flag: String,
+        extra_tsc_flags: String,
         context: &str,
         process_controller: ProcessController,
     ) -> Result<(), String> {
@@ -309,10 +310,11 @@ impl AppData {
             command_parts.push(tsconfig);
         }
 
-        command_parts.push("--noEmit".to_string());
-        command_parts.push("--incremental".to_string());
-        command_parts.push("false".to_string());
-        command_parts.push("--noErrorTruncation".to_string());
+        // Add configurable extra flags
+        let extra_flag_parts: Vec<&str> = extra_tsc_flags.trim().split_whitespace().collect();
+        for part in extra_flag_parts {
+            command_parts.push(part.to_string());
+        }
 
         let flag_parts: Vec<&str> = flag.trim().split_whitespace().collect();
         for part in flag_parts {
@@ -509,6 +511,35 @@ impl AppData {
         }
         None
     }
+
+    pub fn compute_window_title(&self) -> Option<String> {
+        // self.project_root points to package.json
+        let pkg_path = std::path::Path::new(&self.project_root);
+        let contents = std::fs::read_to_string(pkg_path).ok()?;
+        let v: serde_json::Value = serde_json::from_str(&contents).ok()?;
+        let name = v.get("name")?.as_str()?.to_string();
+        if name.is_empty() {
+            None
+        } else {
+            Some(format!("TypeSlayer | {}", name))
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn set_window_title_from_project(
+    app: tauri::AppHandle,
+    state: State<'_, Mutex<AppData>>,
+) -> Result<(), String> {
+    let guard = state.lock().map_err(|_| "state poisoned".to_string())?;
+    let title = guard
+        .compute_window_title()
+        .unwrap_or_else(|| "TypeSlayer".to_string());
+    let win = app
+        .get_webview_window("main")
+        .ok_or_else(|| "main window not found".to_string())?;
+    win.set_title(&title)
+        .map_err(|e| format!("failed to set title: {}", e))
 }
 
 #[derive(serde::Serialize)]
@@ -621,6 +652,7 @@ pub struct Settings {
     pub prefer_editor_open: bool,
     pub auto_start: bool,
     pub preferred_editor: Option<String>,
+    pub extra_tsc_flags: String,
 }
 
 impl Default for Settings {
@@ -630,7 +662,14 @@ impl Default for Settings {
             prefer_editor_open: true,
             auto_start: true,
             preferred_editor: Some("code".to_string()),
+            extra_tsc_flags: "--noEmit --incremental false --noErrorTruncation".to_string(),
         }
+    }
+}
+
+impl Settings {
+    pub fn default_extra_tsc_flags() -> String {
+        "--noEmit --incremental false --noErrorTruncation".to_string()
     }
 }
 
@@ -667,11 +706,19 @@ impl AppData {
             file: "settings.autoStart",
             default: || true,
         });
+        let extra_tsc_flags = cake.resolve_string(ResolveStringArgs {
+            env: "EXTRA_TSC_FLAGS",
+            flag: "--extra-tsc-flags",
+            file: "settings.extraTscFlags",
+            default: Settings::default_extra_tsc_flags,
+            validate: |s| Ok(s.to_string()),
+        });
         Settings {
             simplify_paths,
             prefer_editor_open,
             auto_start,
             preferred_editor,
+            extra_tsc_flags,
         }
     }
 }
@@ -708,73 +755,6 @@ pub async fn get_trace_json(
 ) -> Result<Vec<crate::validate::trace_json::TraceEvent>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     Ok(data.trace_json.clone())
-}
-
-// Helper to extract numeric args field as f64 for limit sorting
-fn extract_arg_number(event: &crate::validate::trace_json::TraceEvent, key: &str) -> f64 {
-    if let serde_json::Value::Object(map) = &event.args {
-        if let Some(serde_json::Value::Number(n)) = map.get(key) {
-            return n.as_f64().unwrap_or(0.0);
-        }
-    }
-    0.0
-}
-
-#[tauri::command]
-pub async fn get_type_instantiation_limits(
-    state: State<'_, Mutex<AppData>>,
-) -> Result<Vec<crate::validate::trace_json::TraceEvent>, String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
-    let mut events: Vec<_> = data
-        .trace_json
-        .iter()
-        .filter(|e| e.name == "instantiateType_DepthLimit")
-        .cloned()
-        .collect();
-    events.sort_by(|a, b| {
-        extract_arg_number(b, "instantiationCount")
-            .partial_cmp(&extract_arg_number(a, "instantiationCount"))
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
-    Ok(events)
-}
-
-#[tauri::command]
-pub async fn get_recursive_type_related_to_limits(
-    state: State<'_, Mutex<AppData>>,
-) -> Result<Vec<crate::validate::trace_json::TraceEvent>, String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
-    let mut events: Vec<_> = data
-        .trace_json
-        .iter()
-        .filter(|e| e.name == "recursiveTypeRelatedTo_DepthLimit")
-        .cloned()
-        .collect();
-    events.sort_by(|a, b| {
-        extract_arg_number(b, "depth")
-            .partial_cmp(&extract_arg_number(a, "depth"))
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
-    Ok(events)
-}
-
-#[tauri::command]
-pub async fn get_type_related_to_discriminated_type_limits(
-    state: State<'_, Mutex<AppData>>,
-) -> Result<Vec<crate::validate::trace_json::TraceEvent>, String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
-    let mut events: Vec<_> = data
-        .trace_json
-        .iter()
-        .filter(|e| e.name == "typeRelatedToDiscriminatedType_DepthLimit")
-        .cloned()
-        .collect();
-    events.sort_by(|a, b| {
-        extract_arg_number(b, "numCombinations")
-            .partial_cmp(&extract_arg_number(a, "numCombinations"))
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
-    Ok(events)
 }
 
 #[tauri::command]
@@ -859,12 +839,13 @@ pub async fn generate_trace(
     state: State<'_, Mutex<AppData>>,
 ) -> Result<TypesJsonSchema, String> {
     // Short lock to get values we need
-    let (tsconfig_path, project_root, process_controller) = {
+    let (tsconfig_path, project_root, process_controller, extra_tsc_flags) = {
         let data = state.lock().map_err(|e| e.to_string())?;
         (
             data.selected_tsconfig.clone(),
             data.project_root.clone(),
             data.process_controller.clone(),
+            data.settings.extra_tsc_flags.clone(),
         )
     };
 
@@ -878,6 +859,7 @@ pub async fn generate_trace(
             tsconfig_path,
             data_dir,
             flag,
+            extra_tsc_flags,
             "TypeScript compilation with trace generation",
             process_controller,
         )
@@ -917,12 +899,13 @@ pub async fn generate_cpu_profile(
     app: AppHandle,
     state: State<'_, Mutex<AppData>>,
 ) -> Result<(), String> {
-    let (tsconfig_path, project_root, process_controller) = {
+    let (tsconfig_path, project_root, process_controller, extra_tsc_flags) = {
         let data = state.lock().map_err(|e| e.to_string())?;
         (
             data.selected_tsconfig.clone(),
             data.project_root.clone(),
             data.process_controller.clone(),
+            data.settings.extra_tsc_flags.clone(),
         )
     };
 
@@ -939,6 +922,7 @@ pub async fn generate_cpu_profile(
             tsconfig_path,
             data_dir,
             flag,
+            extra_tsc_flags,
             "TypeScript CPU profile run",
             process_controller,
         )
@@ -1316,6 +1300,29 @@ pub async fn set_preferred_editor(
     }
 
     data.settings.preferred_editor = Some(editor);
+    AppData::update_outputs(&data, &app);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_extra_tsc_flags(state: State<'_, Mutex<AppData>>) -> Result<String, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    Ok(data.settings.extra_tsc_flags.clone())
+}
+
+#[tauri::command]
+pub async fn get_default_extra_tsc_flags() -> Result<String, String> {
+    Ok(Settings::default_extra_tsc_flags())
+}
+
+#[tauri::command]
+pub async fn set_extra_tsc_flags(
+    app: AppHandle,
+    state: State<'_, Mutex<AppData>>,
+    flags: String,
+) -> Result<(), String> {
+    let mut data = state.lock().map_err(|e| e.to_string())?;
+    data.settings.extra_tsc_flags = flags;
     AppData::update_outputs(&data, &app);
     Ok(())
 }

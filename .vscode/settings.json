@@ -3,6 +3,7 @@
 		"bivariant",
 		"checktypes",
 		"Dimitri",
+		"hotspot",
 		"Hotspots",
 		"Millis",
 		"Mitropoulos",
@@ -10,12 +11,14 @@
 		"speedscope",
 		"tauri",
 		"toolpad",
+		"treemaps",
 		"typeslayer"
 	],
 	"editor.codeActionsOnSave": {
 		"source.organizeImports.biome": "always",
 		"source.fixAll.biome": "always"
 	},
+	"editor.defaultFormatter": "biomejs.biome",
 	"search.exclude": {
 		"packages/typeslayer/public/**": true
 	},
@@ -23,6 +26,12 @@
 		"packages/typeslayer/public/**": true
 	},
 	"[json]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"[typescript]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"[typescriptreact]": {
 		"editor.defaultFormatter": "biomejs.biome"
 	},
 	"rust-analyzer.linkedProjects": ["packages/typeslayer/src-tauri/Cargo.toml"]

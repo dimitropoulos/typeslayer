@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-router";
 import { App } from "./App";
 import { AboutPage } from "./pages/about";
-import { AwardWinners } from "./pages/award-winners";
+import { AwardWinners } from "./pages/award-winners/award-winners";
 import { Integrations } from "./pages/integrations";
 import { Perfetto } from "./pages/perfetto";
 // analyze-trace page remains but is no longer directly routed

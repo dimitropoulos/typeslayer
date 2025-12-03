@@ -192,9 +192,6 @@ export function App() {
 						flexShrink: 0,
 						display: "flex",
 						minHeight: "16px",
-						"& svg": {
-							fontSize: collapsed ? 24 : 24,
-						},
 					}}
 				>
 					{item.icon}

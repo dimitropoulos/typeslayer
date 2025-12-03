@@ -89,6 +89,24 @@ jobs:
           path: binaries/${{ matrix.platform }}/${{ matrix.binary }}
           retention-days: 7
 
+      - name: Collect Linux bundles (deb, rpm, AppImage)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          mkdir -p bundles/linux
+          cp packages/typeslayer/src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb bundles/linux/ || true
+          cp packages/typeslayer/src-tauri/target/${{ matrix.target }}/release/bundle/rpm/*.rpm bundles/linux/ || true
+          cp packages/typeslayer/src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage bundles/linux/ || true
+          ls -lh bundles/linux/
+
+      - name: Upload Linux bundle artifacts
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-bundles
+          path: bundles/linux/*
+          retention-days: 7
+
   package:
     needs: build
     runs-on: ubuntu-latest
@@ -102,7 +120,7 @@ jobs:
         with:
           path: artifacts
 
-      - name: Reassemble binaries
+      - name: Reassemble binaries and bundles
         run: |
           echo "Contents of artifacts directory:"
           ls -lR artifacts/
@@ -111,6 +129,14 @@ jobs:
           cp artifacts/darwin-arm64-binary/typeslayer npm/darwin-arm64/typeslayer
           cp artifacts/win32-x64-binary/typeslayer.exe npm/win32-x64/typeslayer.exe
           chmod +x npm/linux-x64/typeslayer npm/darwin-arm64/typeslayer
+          
+          # Copy Linux bundles for release
+          if [ -d "artifacts/linux-bundles" ]; then
+            mkdir -p release-assets/linux
+            cp artifacts/linux-bundles/* release-assets/linux/
+            echo "Linux bundles ready for release:"
+            ls -lh release-assets/linux/
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -176,6 +202,17 @@ jobs:
           ls -lh npm/linux-x64/typeslayer
           ls -lh npm/darwin-arm64/typeslayer
           ls -lh npm/win32-x64/typeslayer.exe
+          
+          # Rename binaries for release with platform in filename
+          mv npm/linux-x64/typeslayer npm/linux-x64/typeslayer-linux-x64
+          mv npm/darwin-arm64/typeslayer npm/darwin-arm64/typeslayer-darwin-arm64
+          mv npm/win32-x64/typeslayer.exe npm/win32-x64/typeslayer-win32-x64.exe
+          
+          # Prepare Linux bundles for release
+          if [ -d "release-assets/linux" ]; then
+            echo "Linux installer bundles available for release:"
+            ls -lh release-assets/linux/
+          fi
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/typeslayer-v')
@@ -186,8 +223,9 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            npm/linux-x64/typeslayer
-            npm/darwin-arm64/typeslayer
-            npm/win32-x64/typeslayer.exe
+            npm/linux-x64/typeslayer-linux-x64
+            npm/darwin-arm64/typeslayer-darwin-arm64
+            npm/win32-x64/typeslayer-win32-x64.exe
+            release-assets/linux/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

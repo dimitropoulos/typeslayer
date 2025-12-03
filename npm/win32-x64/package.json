@@ -22,8 +22,5 @@
 	],
 	"files": [
 		"typeslayer.exe"
-	],
-	"engines": {
-		"node": ">=24.0.0"
-	}
+	]
 }

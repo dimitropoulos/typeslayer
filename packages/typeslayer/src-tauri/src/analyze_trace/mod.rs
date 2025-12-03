@@ -74,11 +74,15 @@ pub fn analyze_trace(
     let duplicate_packages =
         duplicate_node_modules::get_duplicate_node_modules(&node_module_paths)?;
 
+    // Group depth limit events by event name via helper
+    let depth_limits = create_depth_limits(&trace_file);
+
     let result = AnalyzeTraceResult {
         node_module_paths,
         unterminated_events: parse_result.unclosed_stack.into_iter().rev().collect(),
         hot_spots,
         duplicate_packages,
+        depth_limits,
     };
 
     // Write result to analyze-trace.json
@@ -89,4 +93,98 @@ pub fn analyze_trace(
         .map_err(|e| format!("Failed to write analyze-trace.json: {}", e))?;
 
     Ok(result)
+}
+
+use std::collections::HashMap;
+fn create_depth_limits(trace_file: &Vec<TraceEvent>) -> HashMap<String, Vec<TraceEvent>> {
+    let depth_limit_names = [
+        "checkCrossProductUnion_DepthLimit", // sort by args.size
+        "checkTypeRelatedTo_DepthLimit",     // sort by args.depth
+        "getTypeAtFlowNode_DepthLimit",      // sort by args.flowId
+        "instantiateType_DepthLimit",        // sort by args.instantiationDepth
+        "recursiveTypeRelatedTo_DepthLimit", // sort by args.depth
+        "removeSubtypes_DepthLimit",         // not sorted
+        "traceUnionsOrIntersectionsTooLarge_DepthLimit", // sort by args.sourceSize * args.targetSize
+        "typeRelatedToDiscriminatedType_DepthLimit",     // sort by args.numCombinations
+    ];
+
+    let mut depth_limits: HashMap<String, Vec<TraceEvent>> = HashMap::new();
+    for name in depth_limit_names.iter() {
+        depth_limits.insert(name.to_string(), Vec::new());
+    }
+
+    let mut depth_limits = trace_file.iter().fold(depth_limits, |mut acc, ev| {
+        if depth_limit_names.contains(&ev.name.as_str()) {
+            if let Some(vec) = acc.get_mut(&ev.name) {
+                vec.push(ev.clone());
+            }
+        }
+        acc
+    });
+
+    // Helpers to extract numeric args
+    fn num_arg(ev: &TraceEvent, key: &str) -> f64 {
+        match ev.args.get(key) {
+            Some(serde_json::Value::Number(n)) => n.as_f64().unwrap_or(0.0),
+            _ => 0.0,
+        }
+    }
+
+    // Sort per bucket based on noted criteria
+    if let Some(v) = depth_limits.get_mut("checkCrossProductUnion_DepthLimit") {
+        v.sort_by(|a, b| {
+            num_arg(a, "size")
+                .partial_cmp(&num_arg(b, "size"))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+    }
+    if let Some(v) = depth_limits.get_mut("checkTypeRelatedTo_DepthLimit") {
+        v.sort_by(|a, b| {
+            num_arg(a, "depth")
+                .partial_cmp(&num_arg(b, "depth"))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+    }
+    if let Some(v) = depth_limits.get_mut("getTypeAtFlowNode_DepthLimit") {
+        v.sort_by(|a, b| {
+            num_arg(a, "flowId")
+                .partial_cmp(&num_arg(b, "flowId"))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+    }
+    if let Some(v) = depth_limits.get_mut("instantiateType_DepthLimit") {
+        v.sort_by(|a, b| {
+            num_arg(a, "instantiationDepth")
+                .partial_cmp(&num_arg(b, "instantiationDepth"))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+    }
+    if let Some(v) = depth_limits.get_mut("recursiveTypeRelatedTo_DepthLimit") {
+        v.sort_by(|a, b| {
+            num_arg(a, "depth")
+                .partial_cmp(&num_arg(b, "depth"))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+    }
+
+    // removeSubtypes_DepthLimit: not sorted
+
+    if let Some(v) = depth_limits.get_mut("traceUnionsOrIntersectionsTooLarge_DepthLimit") {
+        v.sort_by(|a, b| {
+            let a_prod = num_arg(a, "sourceSize") * num_arg(a, "targetSize");
+            let b_prod = num_arg(b, "sourceSize") * num_arg(b, "targetSize");
+            a_prod
+                .partial_cmp(&b_prod)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+    }
+    if let Some(v) = depth_limits.get_mut("typeRelatedToDiscriminatedType_DepthLimit") {
+        v.sort_by(|a, b| {
+            num_arg(a, "numCombinations")
+                .partial_cmp(&num_arg(b, "numCombinations"))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+    }
+
+    depth_limits
 }

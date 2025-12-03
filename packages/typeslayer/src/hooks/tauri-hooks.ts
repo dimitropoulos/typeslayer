@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
+import type { AnalyzeTraceResult } from "@typeslayer/analyze-trace/src/utils";
+import type { TypesJsonSchema } from "@typeslayer/validate";
+import type { z } from "zod/v4";
 
-// Settings Hooks
 export function useSimplifyPaths() {
 	const queryClient = useQueryClient();
 
@@ -105,6 +107,39 @@ export function usePreferredEditor() {
 	};
 }
 
+export function useExtraTscFlags() {
+	const queryClient = useQueryClient();
+
+	const query = useQuery<string>({
+		queryKey: ["extra_tsc_flags"],
+		queryFn: async () => invoke<string>("get_extra_tsc_flags"),
+		staleTime: Number.POSITIVE_INFINITY,
+	});
+
+	const defaultQuery = useQuery<string>({
+		queryKey: ["default_extra_tsc_flags"],
+		queryFn: async () => invoke<string>("get_default_extra_tsc_flags"),
+		staleTime: Number.POSITIVE_INFINITY,
+	});
+
+	const mutation = useMutation({
+		mutationFn: async (flags: string) =>
+			invoke("set_extra_tsc_flags", { flags }),
+		onSuccess: (_, flags) => {
+			queryClient.setQueryData(["extra_tsc_flags"], flags);
+		},
+	});
+
+	return {
+		data: query.data,
+		isLoading: query.isLoading,
+		error: query.error,
+		set: mutation.mutateAsync,
+		isSettingValue: mutation.isPending,
+		defaultFlags: defaultQuery.data,
+	};
+}
+
 export function useAvailableEditors() {
 	return useQuery<Array<[string, string]>>({
 		queryKey: ["available_editors"],
@@ -114,7 +149,6 @@ export function useAvailableEditors() {
 	});
 }
 
-// Project Root Hook
 export function useProjectRoot() {
 	const queryClient = useQueryClient();
 
@@ -143,26 +177,35 @@ export function useProjectRoot() {
 	};
 }
 
-// Types JSON Hook
 export function useTypesJson() {
-	return useQuery<unknown[]>({
+	return useQuery<z.infer<TypesJsonSchema>>({
 		queryKey: ["types_json"],
 		queryFn: async () => invoke("get_types_json"),
 		staleTime: Number.POSITIVE_INFINITY,
 	});
 }
 
-// Analyze Trace Hook
+export function useTypeGraph() {
+	return useQuery<{
+		nodes: Array<{ id: number; name: string }>;
+		links: Array<{ source: number; target: number; kind: string }>;
+		stats: { count: Record<string, number> };
+		edgeStats: Record<string, { entries: Array<[number, number[]]> }>;
+	}>({
+		queryKey: ["type_graph"],
+		queryFn: async () => invoke("get_type_graph"),
+		staleTime: Number.POSITIVE_INFINITY,
+	});
+}
+
 export function useAnalyzeTrace() {
-	return useQuery({
+	return useQuery<AnalyzeTraceResult>({
 		queryKey: ["analyze_trace"],
 		queryFn: async () => invoke("get_analyze_trace"),
 		staleTime: Number.POSITIVE_INFINITY,
 	});
 }
 
-// Package Scripts Hook
-// Tsconfig Paths Hook
 export function useTsconfigPaths() {
 	return useQuery<string[]>({
 		queryKey: ["tsconfig_paths"],
@@ -171,7 +214,6 @@ export function useTsconfigPaths() {
 	});
 }
 
-// Selected Tsconfig Hook
 export function useSelectedTsconfig() {
 	const queryClient = useQueryClient();
 
@@ -198,7 +240,6 @@ export function useSelectedTsconfig() {
 	};
 }
 
-// Open File Action (not a query, just a mutation)
 export function useOpenFile() {
 	return useMutation({
 		mutationFn: async (path: string) => invoke("open_file", { path }),

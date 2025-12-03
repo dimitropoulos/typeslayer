@@ -7,6 +7,7 @@ import {
 	traceJsonSchema,
 	typesJsonSchema,
 } from "@typeslayer/validate";
+import { createDepthLimits } from "./depth-limits";
 import { getDuplicateNodeModules } from "./get-duplicate-node-modules";
 import { getHotspots } from "./get-hotspots";
 import { getNodeModulePaths } from "./node-module-paths";
@@ -78,15 +79,13 @@ export const analyzeTrace = async ({
 
 	const spans = createSpans(traceFile);
 	const hotPathsTree = createSpanTree(spans, options);
-	const hotSpots = await getHotspots(hotPathsTree, typesFile, options);
-
-	const duplicatePackages = await getDuplicateNodeModules(nodeModulePaths);
 
 	const result: AnalyzeTraceResult = {
 		nodeModulePaths,
 		unterminatedEvents: spans.unclosedStack.reverse(),
-		hotSpots,
-		duplicatePackages,
+		hotSpots: await getHotspots(hotPathsTree, typesFile, options),
+		duplicatePackages: await getDuplicateNodeModules(nodeModulePaths),
+		depthLimits: createDepthLimits(traceFile),
 	};
 	await writeFile(
 		join(traceDir, "analyze-trace.json"),

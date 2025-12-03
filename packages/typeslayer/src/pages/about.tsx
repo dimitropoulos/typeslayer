@@ -39,7 +39,7 @@ export function AboutPage() {
 				</Typography>
 				<Typography variant="body1">
 					for the people pushing the boundaries of TypeScript (or at companies
-					doing it intentionally or not), a tool like this is something we
+					doing so intentionally or not), a tool like this is something we
 					haven't seen before. there were ways to trash <em>hours</em> messing
 					with multi-hundred-megabyte JSON files. and that's not even counting
 					the time required to learn how the TypeScript compiler works so you

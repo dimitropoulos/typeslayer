@@ -28,6 +28,18 @@ pub fn run() {
             let app_data = app_data::AppData::new(&app_handle);
             app.manage(Mutex::new(app_data));
 
+            // Set initial window title based on detected project package.json
+            if let Some(title) = app
+                .state::<Mutex<app_data::AppData>>()
+                .lock()
+                .ok()
+                .and_then(|data| data.compute_window_title())
+            {
+                if let Some(win) = app.get_webview_window("main") {
+                    let _ = win.set_title(&title);
+                }
+            }
+
             // Spawn a lightweight HTTP server to serve runtime outputs
             let outputs_app = app.app_handle().clone();
             spawn(async move {
@@ -87,9 +99,6 @@ pub fn run() {
             app_data::validate_types_json,
             app_data::validate_trace_json,
             app_data::get_trace_json,
-            app_data::get_type_instantiation_limits,
-            app_data::get_recursive_type_related_to_limits,
-            app_data::get_type_related_to_discriminated_type_limits,
             app_data::get_types_json,
             app_data::search_type,
             app_data::get_tsconfig_paths,
@@ -111,6 +120,10 @@ pub fn run() {
             app_data::get_available_editors,
             app_data::get_preferred_editor,
             app_data::set_preferred_editor,
+            app_data::get_extra_tsc_flags,
+            app_data::set_extra_tsc_flags,
+            app_data::get_default_extra_tsc_flags,
+            app_data::set_window_title_from_project,
             files::get_current_dir,
             files::get_project_root,
             files::set_project_root,

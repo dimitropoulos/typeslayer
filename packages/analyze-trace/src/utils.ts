@@ -1,6 +1,17 @@
 import { existsSync } from "node:fs";
 import { stat } from "node:fs/promises";
-import { resolvedType, traceEvent } from "@typeslayer/validate";
+import {
+	event_checktypes__checkCrossProductUnion_DepthLimit,
+	event_checktypes__checkTypeRelatedTo_DepthLimit,
+	event_checktypes__getTypeAtFlowNode_DepthLimit,
+	event_checktypes__instantiateType_DepthLimit,
+	event_checktypes__recursiveTypeRelatedTo_DepthLimit,
+	event_checktypes__removeSubtypes_DepthLimit,
+	event_checktypes__traceUnionsOrIntersectionsTooLarge_DepthLimit,
+	event_checktypes__typeRelatedToDiscriminatedType_DepthLimit,
+	resolvedType,
+	traceEvent,
+} from "@typeslayer/validate";
 import { z } from "zod/v4";
 
 export const absolutePath = z.string().refine(
@@ -143,5 +154,32 @@ export const analyzeTraceResult = z.object({
 	duplicatePackages: z.array(duplicatedPackage),
 	/** Paths to all node modules used in the trace */
 	nodeModulePaths: nodeModulePaths,
+	/** Depth limit events grouped by their event name */
+	depthLimits: z.object({
+		checkCrossProductUnion_DepthLimit: z.array(
+			event_checktypes__checkCrossProductUnion_DepthLimit,
+		),
+		checkTypeRelatedTo_DepthLimit: z.array(
+			event_checktypes__checkTypeRelatedTo_DepthLimit,
+		),
+		getTypeAtFlowNode_DepthLimit: z.array(
+			event_checktypes__getTypeAtFlowNode_DepthLimit,
+		),
+		instantiateType_DepthLimit: z.array(
+			event_checktypes__instantiateType_DepthLimit,
+		),
+		recursiveTypeRelatedTo_DepthLimit: z.array(
+			event_checktypes__recursiveTypeRelatedTo_DepthLimit,
+		),
+		removeSubtypes_DepthLimit: z.array(
+			event_checktypes__removeSubtypes_DepthLimit,
+		),
+		traceUnionsOrIntersectionsTooLarge_DepthLimit: z.array(
+			event_checktypes__traceUnionsOrIntersectionsTooLarge_DepthLimit,
+		),
+		typeRelatedToDiscriminatedType_DepthLimit: z.array(
+			event_checktypes__typeRelatedToDiscriminatedType_DepthLimit,
+		),
+	}),
 });
 export type AnalyzeTraceResult = z.infer<typeof analyzeTraceResult>;

@@ -18,6 +18,9 @@
 			}
 		}
 	},
+	"formatter": {
+		"indentStyle": "tab"
+	},
 	"files": {
 		"maxSize": 18446744073709551615,
 		"includes": [
