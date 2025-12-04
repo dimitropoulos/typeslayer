@@ -127,6 +127,10 @@ jobs:
           fi
           echo "Version match confirmed: $PKG_VER"
 
+      - name: Build @typeslayer/validate (dependency)
+        working-directory: packages/validate
+        run: pnpm build
+
       - name: Build package
         working-directory: packages/analyze-trace
         run: pnpm build
