@@ -1,44 +1,33 @@
 import { Graph } from "@cosmos.gl/graph";
-import { FilterList } from "@mui/icons-material";
+import { FilterList, FitScreen, Pause, PlayArrow } from "@mui/icons-material";
 import {
 	Box,
 	Button,
 	Checkbox,
 	Divider,
 	FormControlLabel,
+	IconButton,
 	Popover,
 	Stack,
 	Switch,
 	TextField,
 	Typography,
 } from "@mui/material";
-import { invoke } from "@tauri-apps/api/core";
-import type { ResolvedType, TypeRegistry } from "@typeslayer/validate";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+	type KeyboardEvent as ReactKeyboardEvent,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
-import { useTypesJson } from "../hooks/tauri-hooks";
-
-type EdgeKind =
-	| "union"
-	| "typeArgument"
-	| "instantiated"
-	| "substitutionBase"
-	| "constraint"
-	| "indexedAccessObject"
-	| "indexedAccessIndex"
-	| "conditionalCheck"
-	| "conditionalExtends"
-	| "conditionalTrue"
-	| "conditionalFalse"
-	| "keyof"
-	| "evolvingArrayElement"
-	| "evolvingArrayFinal"
-	| "reverseMappedSource"
-	| "reverseMappedMapped"
-	| "reverseMappedConstraint"
-	| "alias"
-	| "aliasTypeArgument"
-	| "intersection";
+import {
+	type EdgeKind,
+	type GraphLink,
+	type TypeGraph,
+	useTypeGraph,
+} from "../hooks/tauri-hooks";
+import { useTypeRegistry } from "./award-winners/use-type-registry";
 
 type EdgeConfig = {
 	id: EdgeKind;
@@ -160,23 +149,10 @@ const StatPill = ({ label, value }: { label: string; value: number }) => (
 	</Box>
 );
 
-type CosmosNode = { id: string; name: string };
-type CosmosLink = { source: string; target: string; kind: EdgeKind };
-type GraphData = { nodes: CosmosNode[]; links: CosmosLink[] };
-
-type ForceGraphNode = { id: number; name: string };
-type ForceGraphLink = { source: number; target: number; kind: EdgeKind };
-type GraphStats = { count: Record<string, number> };
-type ForceGraphData = {
-	nodes: ForceGraphNode[];
-	links: ForceGraphLink[];
-	stats: GraphStats;
-};
-
 export const TypeNetwork = () => {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const graphRef = useRef<Graph | null>(null);
-	const cosmosDataRef = useRef<GraphData | null>(null);
+	const cosmosDataRef = useRef<TypeGraph | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [stats, setStats] = useState<{ nodes: number; links: number } | null>(
 		null,
@@ -189,145 +165,191 @@ export const TypeNetwork = () => {
 
 	const [paused, setPaused] = useState(false);
 	const pausedRef = useRef(paused);
-	const [selectedId, setSelectedId] = useState<string | null>(null);
+	const [selectedId, setSelectedId] = useState<number | null>(null);
 	const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 	const selectedIndexRef = useRef<number | null>(null);
 	const handlePointClickRef = useRef<((index: number) => void) | null>(null);
 	const applySelectionVisualsRef = useRef<
 		((index: number | null) => void) | null
 	>(null);
-	const [zoomId, setZoomId] = useState<string>("");
+	const [zoomId, setZoomId] = useState<number | null>(null);
 	const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
 	const [activeFilters, setActiveFilters] = useState<Set<EdgeKind>>(
 		new Set(EDGE_CONFIGS.map((c) => c.id)),
 	);
-	const idToIndexRef = useRef<Map<string, number>>(new Map());
+	const idToIndexRef = useRef<Map<number, number>>(new Map());
 	const kindsBufferRef = useRef<EdgeKind[]>([]);
 	const linkPairsRef = useRef<Float32Array | null>(null);
-	const allLinksRef = useRef<CosmosLink[]>([]);
+	const allLinksRef = useRef<GraphLink[]>([]);
 	const originalPositionsRef = useRef<Float32Array | null>(null);
 	const hiddenIndicesRef = useRef<Set<number>>(new Set());
 	const [showFreeTypes, setShowFreeTypes] = useState(true);
 	const [sidebarWidth, setSidebarWidth] = useState(35); // percentage
 	const [isResizing, setIsResizing] = useState(false);
 	const spaceHoldRef = useRef({ active: false, previous: false });
-	const typesJson = useTypesJson();
-	const typeRegistry: TypeRegistry = new Map<number, ResolvedType>(
-		((typesJson.data ?? []) as ResolvedType[]).map((t) => [t.id, t]),
-	);
+	const typeRegistry = useTypeRegistry();
 
 	useEffect(() => {
 		pausedRef.current = paused;
 	}, [paused]);
 
 	const setSimulationPaused = useCallback((nextPaused: boolean) => {
-		const g = graphRef.current;
-		if (!g) return;
-		if (nextPaused === pausedRef.current) return;
+		const graph = graphRef.current;
+		if (!graph) {
+			return;
+		}
+		if (nextPaused === pausedRef.current) {
+			return;
+		}
 		if (nextPaused) {
-			g.pause?.();
+			graph.pause();
 		} else {
-			g.unpause?.();
+			graph.unpause();
 		}
 		setPaused(nextPaused);
 		pausedRef.current = nextPaused;
 	}, []);
 
-	const applySelectionVisuals = (selectedIndex: number | null) => {
-		const g = graphRef.current as unknown as {
-			setPointColors?: (colors: Float32Array) => void;
-			setPointSizes?: (sizes: Float32Array) => void;
-			setLinkWidths?: (widths: Float32Array) => void;
-			setLinkColors?: (colors: Float32Array) => void;
-			render?: () => void;
-		} | null;
-		const data = cosmosDataRef.current;
-		if (!g || !data) return;
-
-		const n = data.nodes.length;
-		const pointColors = new Float32Array(n * 4);
-		const pointSizes = new Float32Array(n);
-		const hidden = hiddenIndicesRef.current;
-		// Base visuals: neutral grey for all nodes
-		for (let i = 0; i < n; i++) {
-			pointColors[i * 4] = 0.6;
-			pointColors[i * 4 + 1] = 0.6;
-			pointColors[i * 4 + 2] = 0.6;
-			// Respect hidden alpha when showFreeTypes is OFF
-			pointColors[i * 4 + 3] = !showFreeTypes && hidden.has(i) ? 0.0 : 1.0;
-			pointSizes[i] = 3; // base size (scales with zoom)
-		}
-
-		// Build link widths and colors if API exists
-		const linkPairs = linkPairsRef.current;
-		const kindsBuffer = kindsBufferRef.current;
-		const linkCount = linkPairs ? linkPairs.length / 2 : 0;
-		const linkWidths = linkCount ? new Float32Array(linkCount) : null;
-		const linkColors = linkCount ? new Float32Array(linkCount * 4) : null;
-		if (linkWidths) linkWidths.fill(1);
-
-		// Set base link colors from kinds
-		if (linkColors) {
-			for (let i = 0; i < linkCount; i++) {
-				const kind = kindsBuffer[i];
-				const config = EDGE_CONFIG_MAP.get(kind);
-				const [r, g, b] = config?.colorRGB ?? [0.5, 0.5, 0.5];
-				linkColors[i * 4] = r;
-				linkColors[i * 4 + 1] = g;
-				linkColors[i * 4 + 2] = b;
-				linkColors[i * 4 + 3] = 1;
+	const applySelectionVisuals = useCallback(
+		(selectedIndex: number | null) => {
+			const graph = graphRef.current;
+			const data = cosmosDataRef.current;
+			if (!graph || !data) {
+				return;
 			}
-		}
 
-		if (selectedIndex != null) {
-			// Selected node visuals: white, same size
-			pointColors[selectedIndex * 4] = 1.0;
-			pointColors[selectedIndex * 4 + 1] = 1.0;
-			pointColors[selectedIndex * 4 + 2] = 1.0;
-			pointColors[selectedIndex * 4 + 3] = 1.0;
+			const n = data.nodes.length;
+			const pointColors = new Float32Array(n * 4);
+			const pointSizes = new Float32Array(n);
+			const hidden = hiddenIndicesRef.current;
 
-			// Neighbors => much lighter grey; incident links => width*2, full color
-			// Non-incident links => muted (reduce alpha)
-			if (linkPairs) {
+			// Base visuals: neutral grey for all nodes
+			for (let i = 0; i < n; i++) {
+				pointColors[i * 4] = 0.6;
+				pointColors[i * 4 + 1] = 0.6;
+				pointColors[i * 4 + 2] = 0.6;
+				// Respect hidden alpha when showFreeTypes is OFF
+				pointColors[i * 4 + 3] = !showFreeTypes && hidden.has(i) ? 0.0 : 1.0;
+				pointSizes[i] = 3; // base size (scales with zoom)
+			}
+
+			// Build link widths and colors if API exists
+			const linkPairs = linkPairsRef.current;
+			const kindsBuffer = kindsBufferRef.current;
+			const linkCount = linkPairs ? linkPairs.length / 2 : 0;
+			const linkWidths = linkCount ? new Float32Array(linkCount) : null;
+			const linkColors = linkCount ? new Float32Array(linkCount * 4) : null;
+			if (linkWidths) linkWidths.fill(1);
+
+			// Set base link colors from kinds (default to muted)
+			if (linkColors) {
 				for (let i = 0; i < linkCount; i++) {
-					const s = (linkPairs[i * 2] | 0) as number;
-					const t = (linkPairs[i * 2 + 1] | 0) as number;
-					const isIncident = s === selectedIndex || t === selectedIndex;
+					const kind = kindsBuffer[i];
+					const config = EDGE_CONFIG_MAP.get(kind);
+					const [r, g, b] = config?.colorRGB ?? [0.5, 0.5, 0.5];
+					linkColors[i * 4] = r;
+					linkColors[i * 4 + 1] = g;
+					linkColors[i * 4 + 2] = b;
+					linkColors[i * 4 + 3] = 0.3; // alpha
+				}
+			}
 
-					if (isIncident) {
-						const other: number = s === selectedIndex ? t : s;
-						// neighbor color only if not the selected index
-						if (other !== selectedIndex) {
-							// Much lighter grey for neighbors
-							pointColors[other * 4] = 0.9;
-							pointColors[other * 4 + 1] = 0.9;
-							pointColors[other * 4 + 2] = 0.9;
-							// preserve alpha for hidden nodes
-							if (!(!showFreeTypes && hidden.has(other))) {
-								pointColors[other * 4 + 3] = 1.0;
+			if (selectedIndex != null) {
+				// Track which nodes are connected to selected node
+				const connectedIndices = new Set<number>();
+				connectedIndices.add(selectedIndex);
+
+				// Selected node visuals: white, same size
+				pointColors[selectedIndex * 4] = 1.0;
+				pointColors[selectedIndex * 4 + 1] = 1.0;
+				pointColors[selectedIndex * 4 + 2] = 1.0;
+				pointColors[selectedIndex * 4 + 3] = 1.0;
+
+				// Track incident links per neighbor to decide color
+				// neighborLinkColors[neighborIndex] = [r, g, b, linkCount]
+				const neighborLinkColors = new Map<
+					number,
+					{ r: number; g: number; b: number; count: number }
+				>();
+
+				// Neighbors => color from link (if single link) or white (if multiple); incident links => width*2, full opacity
+				// Non-incident links => remain muted (alpha 0.3)
+				if (linkPairs) {
+					for (let i = 0; i < linkCount; i++) {
+						const s = (linkPairs[i * 2] | 0) as number;
+						const t = (linkPairs[i * 2 + 1] | 0) as number;
+						const isIncident = s === selectedIndex || t === selectedIndex;
+
+						if (isIncident) {
+							const other: number = s === selectedIndex ? t : s;
+							connectedIndices.add(other);
+
+							// Track link color for this neighbor
+							if (other !== selectedIndex) {
+								const linkR = linkColors ? linkColors[i * 4] : 1.0;
+								const linkG = linkColors ? linkColors[i * 4 + 1] : 1.0;
+								const linkB = linkColors ? linkColors[i * 4 + 2] : 1.0;
+
+								if (!neighborLinkColors.has(other)) {
+									neighborLinkColors.set(other, {
+										r: linkR,
+										g: linkG,
+										b: linkB,
+										count: 1,
+									});
+								} else {
+									const existing = neighborLinkColors.get(other);
+									if (existing) {
+										existing.count += 1;
+									}
+								}
+							}
+
+							if (linkWidths) linkWidths[i] = 2;
+							// Set incident links to full opacity
+							if (linkColors) {
+								linkColors[i * 4 + 3] = 1.0;
 							}
 						}
-						if (linkWidths) linkWidths[i] = 2;
-						// Keep incident links at full color (alpha already 1)
-					} else {
-						// Mute non-incident links
-						if (linkColors) {
-							linkColors[i * 4 + 3] = 0.15;
+					}
+
+					// Now apply neighbor colors based on link count
+					for (const [neighborIndex, linkInfo] of neighborLinkColors) {
+						if (linkInfo.count === 1) {
+							// Single link: use link color
+							pointColors[neighborIndex * 4] = linkInfo.r;
+							pointColors[neighborIndex * 4 + 1] = linkInfo.g;
+							pointColors[neighborIndex * 4 + 2] = linkInfo.b;
+						} else {
+							// Multiple links: use white
+							pointColors[neighborIndex * 4] = 1.0;
+							pointColors[neighborIndex * 4 + 1] = 1.0;
+							pointColors[neighborIndex * 4 + 2] = 1.0;
 						}
+						pointColors[neighborIndex * 4 + 3] = 1.0;
+					}
+				}
+
+				// Significantly mute non-connected nodes
+				for (let i = 0; i < n; i++) {
+					if (!connectedIndices.has(i)) {
+						pointColors[i * 4 + 3] = 0.15; // Reduce opacity to 15%
 					}
 				}
 			}
-		}
 
-		g.setPointColors?.(pointColors);
-		g.setPointSizes?.(pointSizes);
-		if (linkWidths)
-			(
-				g as unknown as { setLinkWidths?: (w: Float32Array) => void }
-			).setLinkWidths?.(linkWidths);
-		if (linkColors) g.setLinkColors?.(linkColors);
-		g.render?.();
-	};
+			graph.setPointColors(pointColors);
+			graph.setPointSizes(pointSizes);
+			if (linkWidths) {
+				graph.setLinkWidths(linkWidths);
+			}
+			if (linkColors) {
+				graph.setLinkColors(linkColors);
+			}
+			graph.render();
+		},
+		[showFreeTypes],
+	);
 
 	// Keep selectedIndexRef in sync
 	useEffect(() => {
@@ -338,29 +360,27 @@ export const TypeNetwork = () => {
 
 	// Stable click handler using refs to avoid re-creating graph
 	const handlePointClick = (index: number) => {
-		const data = cosmosDataRef.current;
-		if (!data) return;
-		const node = data.nodes[index];
+		const typeGraph = cosmosDataRef.current;
+		if (!typeGraph) {
+			return;
+		}
+		const graph = graphRef.current;
+
 		// Toggle selection if clicking the same node
 		if (selectedIndexRef.current === index) {
 			setSelectedIndex(null);
 			setSelectedId(null);
-			const g0 = graphRef.current as unknown as {
-				unselectPoints?: () => void;
-			} | null;
-			g0?.unselectPoints?.();
+			graph?.unselectPoints();
 			applySelectionVisuals(null);
-			return;
+		} else {
+			const node = typeGraph.nodes[index];
+			setSelectedIndex(index);
+			setSelectedId(node.id);
+			graph?.selectPointByIndex(index, true); // true = also select neighbors
+			applySelectionVisuals(index);
 		}
-		setSelectedIndex(index);
-		setSelectedId(node.id);
-		const g = graphRef.current as unknown as {
-			selectPointByIndex?: (i: number) => void;
-		} | null;
-		g?.selectPointByIndex?.(index);
-		// Do not change zoom when selecting
-		applySelectionVisuals(index);
 	};
+
 	// Keep refs pointing to latest callbacks
 	handlePointClickRef.current = handlePointClick;
 	applySelectionVisualsRef.current = applySelectionVisuals;
@@ -369,42 +389,42 @@ export const TypeNetwork = () => {
 		filters: Set<EdgeKind>,
 		showFreeTypesOverride?: boolean,
 	) => {
-		const g = graphRef.current;
+		const graph = graphRef.current;
 		const cosmosData = cosmosDataRef.current;
 		const allLinks = allLinksRef.current;
-		if (!g || !cosmosData || allLinks.length === 0) return;
+		if (!graph || !cosmosData || allLinks.length === 0) return;
 
 		// Filter links by activeFilters
 		const indexById = idToIndexRef.current;
-		const filteredLinks = allLinks.filter((l) => filters.has(l.kind));
+		const filteredLinks = allLinks.filter((link) => filters.has(link.kind));
 		const pairBuffer: number[] = [];
 		const kindsBuffer: EdgeKind[] = [];
-		for (const l of filteredLinks) {
-			const s = indexById.get(l.source);
-			const t = indexById.get(l.target);
+		for (const link of filteredLinks) {
+			const s = indexById.get(link.source);
+			const t = indexById.get(link.target);
 			if (s !== undefined && t !== undefined) {
 				pairBuffer.push(s, t);
-				kindsBuffer.push(l.kind);
+				kindsBuffer.push(link.kind);
 			}
 		}
 		const linkPairs = new Float32Array(pairBuffer);
-		g.setLinks(linkPairs);
+		graph.setLinks(linkPairs);
 		linkPairsRef.current = linkPairs;
 		kindsBufferRef.current = kindsBuffer;
 
 		// Filter types if showFreeTypes is false
-		let visibleTypeIds: Set<string> | null = null;
+		let visibleTypeIds: Set<number> | null = null;
 		const showFree = showFreeTypesOverride ?? showFreeTypes;
 		if (!showFree) {
-			const tmp = new Set<string>();
-			for (const l of filteredLinks) {
-				tmp.add(l.source);
-				tmp.add(l.target);
+			const tmp = new Set<number>();
+			for (const link of filteredLinks) {
+				tmp.add(link.source);
+				tmp.add(link.target);
 			}
 			visibleTypeIds = tmp;
 		}
 
-		// Rebuild color array
+		// Always rebuild link colors to match current filters and links
 		const arr = new Float32Array(kindsBuffer.length * 4);
 		for (let i = 0; i < kindsBuffer.length; i++) {
 			const kind = kindsBuffer[i];
@@ -413,12 +433,12 @@ export const TypeNetwork = () => {
 			arr[i * 4] = r;
 			arr[i * 4 + 1] = g;
 			arr[i * 4 + 2] = b;
-			arr[i * 4 + 3] = 1;
+			arr[i * 4 + 3] = selectedId ? 0.3 : 1.0; // Default muted if selection active, else full
 		}
-		g.setLinkColors(arr);
+		graph.setLinkColors(arr);
 
 		// Set positions: hide types with no visible links if needed
-		const currentPositions = g.getPointPositions();
+		const currentPositions = graph.getPointPositions();
 		const currentCount = cosmosData.nodes.length;
 
 		if (!showFree) {
@@ -438,7 +458,7 @@ export const TypeNetwork = () => {
 					positions[i * 2 + 1] = currentPositions[i * 2 + 1];
 				}
 			}
-			g.setPointPositions(positions);
+			graph.setPointPositions(positions);
 			hiddenIndicesRef.current = hidden;
 
 			// Also hide points via alpha so they don't render
@@ -450,9 +470,11 @@ export const TypeNetwork = () => {
 				pointColors[i * 4 + 2] = 0.6;
 				pointColors[i * 4 + 3] = isVisible ? 1.0 : 0.0;
 			}
-			(
-				g as unknown as { setPointColors?: (c: Float32Array) => void }
-			).setPointColors?.(pointColors);
+
+			// Only set colors if no selection active; applySelectionVisuals will set them if needed
+			if (!selectedId) {
+				graph.setPointColors(pointColors);
+			}
 		} else if (originalPositionsRef.current) {
 			// Restore all nodes to their simulation positions when showing free types
 			// Restore previously hidden indices to their last-known positions
@@ -464,7 +486,7 @@ export const TypeNetwork = () => {
 					positions[i * 2] = orig[i * 2];
 					positions[i * 2 + 1] = orig[i * 2 + 1];
 				}
-				g.setPointPositions(positions);
+				graph.setPointPositions(positions);
 			}
 			hiddenIndicesRef.current.clear();
 
@@ -476,11 +498,11 @@ export const TypeNetwork = () => {
 				pointColors[i * 4 + 2] = 0.6;
 				pointColors[i * 4 + 3] = 1.0;
 			}
-			(
-				g as unknown as { setPointColors?: (c: Float32Array) => void }
-			).setPointColors?.(pointColors);
+			// Only set colors if no selection active; applySelectionVisuals will set them if needed
+			if (!selectedId) {
+				graph.setPointColors?.(pointColors);
+			}
 		}
-		g.render();
 
 		const visibleNodeCount = showFree
 			? cosmosData.nodes.length
@@ -490,10 +512,15 @@ export const TypeNetwork = () => {
 			links: filteredLinks.length,
 		});
 
-		// Re-apply selection visuals if a node is selected
+		// Re-apply selection visuals if a node is selected (this handles both point and link colors)
 		if (selectedId) {
 			const idx = idToIndexRef.current.get(selectedId);
-			applySelectionVisuals(idx ?? null);
+			if (idx !== undefined) {
+				applySelectionVisuals(idx);
+			}
+		} else {
+			// Only render if no selection is active; applySelectionVisuals will render if active
+			graph.render();
 		}
 
 		// no-op for removed debug view info
@@ -534,32 +561,22 @@ export const TypeNetwork = () => {
 		};
 	}, [setSimulationPaused]);
 
+	const { data: typeGraph } = useTypeGraph();
+
 	useEffect(() => {
 		let graph: Graph | null = null;
 
 		(async () => {
+			if (!typeGraph) return;
+
 			try {
-				await invoke("build_type_graph");
-			} catch (e) {
-				console.warn("build_type_graph failed (continuing):", e);
-			}
-			try {
-				const res = await invoke<ForceGraphData>("get_type_graph");
-				console.log("Graph data received:", res);
+				const { nodes, links, stats } = typeGraph;
 
 				if (!containerRef.current) return;
 
-				const cosmosData: GraphData = {
-					nodes: res.nodes.map((n) => ({ id: String(n.id), name: n.name })),
-					links: res.links.map((l) => ({
-						source: String(l.source),
-						target: String(l.target),
-						kind: l.kind,
-					})),
-				};
-				cosmosDataRef.current = cosmosData;
-				allLinksRef.current = cosmosData.links;
-				setEdgeStats(res.stats.count);
+				cosmosDataRef.current = typeGraph;
+				allLinksRef.current = links;
+				setEdgeStats(stats.count);
 
 				graph = new Graph(containerRef.current, {
 					renderLinks: true,
@@ -571,6 +588,7 @@ export const TypeNetwork = () => {
 					linkWidthScale: 0.55,
 					scaleLinksOnZoom: true,
 					linkColorMode: "rgba",
+					linkOpacity: 1.0, // Ensure links render at full opacity (multiplies with alpha in linkColors)
 					renderHoveredPointRing: true,
 					hoveredPointRingColor: "#4B5BBF",
 					backgroundColor: "#00000000",
@@ -582,10 +600,8 @@ export const TypeNetwork = () => {
 					onBackgroundClick: () => {
 						setSelectedId(null);
 						setSelectedIndex(null);
-						const g = graphRef.current as unknown as {
-							unselectPoints?: () => void;
-						} | null;
-						g?.unselectPoints?.();
+						const graph = graphRef.current;
+						graph?.unselectPoints();
 						applySelectionVisualsRef.current?.(null);
 					},
 					// Keep events object for compatibility with older API shapes
@@ -602,7 +618,7 @@ export const TypeNetwork = () => {
 				});
 				graphRef.current = graph;
 
-				const nodeCount = cosmosData.nodes.length;
+				const nodeCount = nodes.length;
 				// Seed positions near observed settled center to reduce early drift
 				const positions = new Float32Array(nodeCount * 2);
 				const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
@@ -618,19 +634,18 @@ export const TypeNetwork = () => {
 				}
 				graph.setPointPositions(positions);
 
-				const indexById = new Map<string, number>();
-				for (let i = 0; i < nodeCount; i++)
-					indexById.set(cosmosData.nodes[i].id, i);
+				const indexById = new Map<number, number>();
+				for (let i = 0; i < nodeCount; i++) indexById.set(nodes[i].id, i);
 				idToIndexRef.current = indexById;
 
 				const pairBuffer: number[] = [];
 				const kindsBuffer: EdgeKind[] = [];
-				for (const l of cosmosData.links) {
-					const s = indexById.get(l.source);
-					const t = indexById.get(l.target);
+				for (const link of links) {
+					const s = indexById.get(link.source);
+					const t = indexById.get(link.target);
 					if (s !== undefined && t !== undefined) {
 						pairBuffer.push(s, t);
-						kindsBuffer.push(l.kind);
+						kindsBuffer.push(link.kind);
 					}
 				}
 				const linkPairs = new Float32Array(pairBuffer);
@@ -662,29 +677,29 @@ export const TypeNetwork = () => {
 
 				// Render and apply colors after initial frame
 				requestAnimationFrame(() => {
-					const g = graphRef.current;
-					if (g) {
-						g.render();
+					const graph = graphRef.current;
+					if (graph) {
+						graph.render();
 						// No camera recenter to avoid flashing; let simulation settle
 						// Apply colors after render is complete
 						if (colorArray) {
-							g.setLinkColors(colorArray);
+							graph.setLinkColors(colorArray);
 							console.log(
 								"[TypeNetwork] setLinkColors called AFTER render with array of length",
 								colorArray.length,
 							);
-							g.render(); // render again with colors
+							graph.render(); // render again with colors
 						}
 					}
 				});
 
 				setStats({
-					nodes: cosmosData.nodes.length,
-					links: cosmosData.links.length,
+					nodes: nodes.length,
+					links: links.length,
 				});
 				setVisibleStats({
-					nodes: cosmosData.nodes.length,
-					links: cosmosData.links.length,
+					nodes: nodes.length,
+					links: links.length,
 				});
 				setLoading(false);
 			} catch (e) {
@@ -696,7 +711,7 @@ export const TypeNetwork = () => {
 		return () => {
 			graph?.destroy();
 		};
-	}, []);
+	}, [typeGraph]);
 
 	// Handle resize drag
 	useEffect(() => {
@@ -722,6 +737,39 @@ export const TypeNetwork = () => {
 		}
 	}, [isResizing]);
 
+	const onZoomToId = useCallback(
+		(event: ReactKeyboardEvent<HTMLDivElement>) => {
+			if (event.key !== "Enter") {
+				return;
+			}
+			const graph = graphRef.current;
+
+			if (!graph) {
+				return;
+			}
+
+			if (!zoomId) {
+				setSelectedIndex(null);
+				setSelectedId(null);
+				graph.unselectPoints();
+				applySelectionVisuals(null);
+			}
+
+			const index = idToIndexRef.current.get(zoomId ?? -1);
+			if (!index) {
+				return;
+			}
+			graph.zoomToPointByIndex(index, 1.5);
+			setSelectedIndex(index);
+			setSelectedId(zoomId);
+			graph.selectPointByIndex(index, true); // true = also select neighbors
+			applySelectionVisuals(index);
+			graph.pause();
+			setPaused(true);
+		},
+		[zoomId, applySelectionVisuals],
+	);
+
 	return (
 		<Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
 			<Box sx={{ py: 2, px: 4 }}>
@@ -730,16 +778,11 @@ export const TypeNetwork = () => {
 						placeholder="Zoom to Type ID"
 						size="small"
 						value={zoomId}
-						onChange={(e) => setZoomId(e.target.value)}
-						onKeyDown={(e) => {
-							if (e.key === "Enter") {
-								const idx = idToIndexRef.current.get(zoomId);
-								const g = graphRef.current as unknown as {
-									zoomToPointByIndex?: (index: number, scale?: number) => void;
-								} | null;
-								if (g && idx !== undefined) g.zoomToPointByIndex?.(idx, 1.5);
-							}
+						type="number"
+						onChange={(event) => {
+							setZoomId(parseInt(event.target.value, 10) ?? null);
 						}}
+						onKeyDown={onZoomToId}
 					/>
 					<Button
 						variant="outlined"
@@ -748,14 +791,27 @@ export const TypeNetwork = () => {
 					>
 						Filter Links
 					</Button>
-					<Button
-						variant="contained"
+					<IconButton
+						size="small"
 						onClick={() => {
 							setSimulationPaused(!pausedRef.current);
 						}}
+						title={paused ? "Resume" : "Pause"}
 					>
-						{paused ? "Resume" : "Pause"}
-					</Button>
+						{paused ? <PlayArrow /> : <Pause />}
+					</IconButton>
+					<IconButton
+						size="small"
+						onClick={() => {
+							const graph = graphRef.current;
+							if (graph) {
+								graph.fitView();
+							}
+						}}
+						title="Fit View"
+					>
+						<FitScreen />
+					</IconButton>
 
 					<FormControlLabel
 						control={
@@ -943,11 +999,8 @@ export const TypeNetwork = () => {
 								},
 							}}
 						/>
-						{typeRegistry.size > 0 ? (
-							<DisplayRecursiveType
-								id={Number(selectedId)}
-								typeRegistry={typeRegistry}
-							/>
+						{typeRegistry.length > 1 /* the registry always has entry 0 */ ? (
+							<DisplayRecursiveType id={Number(selectedId)} />
 						) : (
 							<Typography variant="body2" color="text.secondary">
 								Loading type details…

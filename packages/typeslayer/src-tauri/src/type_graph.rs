@@ -6,6 +6,8 @@ use crate::app_data::AppData;
 use crate::validate::types_json::TypesJsonSchema;
 use crate::validate::utils::TypeId;
 
+pub const TYPE_GRAPH_FILENAME: &str = "/type-graph.json";
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GraphNode {
@@ -60,29 +62,51 @@ pub struct GraphStats {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EdgeStats {
+    /// Largest source count across entries
+    pub max: usize,
     /// Array of [target_id, [source_ids]] tuples, sorted by source count descending
-    pub entries: Vec<(TypeId, Vec<TypeId>)>,
+    pub links: Vec<(TypeId, Vec<TypeId>, Option<String>)>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TypeGraph {
     nodes: HashMap<TypeId, GraphNode>,
     links: Vec<GraphLink>,
     edge_stats: HashMap<String, EdgeStats>,
+    node_stats: NodeStats,
 }
 
 impl TypeGraph {
+    /// Return a human-readable type name similar to frontend's getHumanReadableName
+    fn human_readable_name(t: &crate::validate::types_json::ResolvedType) -> String {
+        // Literal types: prefer display string when available
+        // Treat single-flag types with a display as literals
+        let is_literal = t.flags.len() == 1;
+        if is_literal {
+            if let Some(d) = &t.display {
+                if !d.is_empty() {
+                    return d.clone();
+                }
+            }
+        }
+
+        if let Some(s) = &t.symbol_name {
+            return s.clone();
+        }
+        if let Some(i) = &t.intrinsic_name {
+            return format!("{}", i);
+        }
+        "<anonymous>".to_string()
+    }
+
     pub fn from_types(types: &TypesJsonSchema) -> Self {
         let mut graph = TypeGraph::default();
 
         // First pass: create nodes
         for t in types.iter() {
             let id = t.id;
-            let name = t
-                .symbol_name
-                .as_ref()
-                .map(|s| s.to_string())
-                .unwrap_or_else(|| "<anonymous>".to_string());
+            let name = TypeGraph::human_readable_name(t);
             graph.nodes.entry(id).or_insert(GraphNode { id, name });
         }
 
@@ -177,13 +201,28 @@ impl TypeGraph {
             }
         }
 
-        // Calculate edge stats: for each edge kind, map targets to their sources
-        graph.calculate_edge_stats();
+        graph.calculate_edge_stats(types);
+        graph.calculate_node_stats(types);
 
         graph
     }
 
-    fn calculate_edge_stats(&mut self) {
+    /// Build a map from type id -> optional path (mimics extractPath)
+    fn build_path_map(types: &TypesJsonSchema) -> HashMap<TypeId, Option<String>> {
+        let mut path_map: HashMap<TypeId, Option<String>> = HashMap::new();
+        for t in types.iter() {
+            let p = t
+                .first_declaration
+                .as_ref()
+                .map(|l| l.path.clone())
+                .or_else(|| t.reference_location.as_ref().map(|l| l.path.clone()))
+                .or_else(|| t.destructuring_pattern.as_ref().map(|l| l.path.clone()));
+            path_map.insert(t.id, p);
+        }
+        path_map
+    }
+
+    fn calculate_edge_stats(&mut self, types: &TypesJsonSchema) {
         // Group links by kind, then by target
         let mut kind_maps: HashMap<String, HashMap<TypeId, Vec<TypeId>>> = HashMap::new();
 
@@ -219,14 +258,120 @@ impl TypeGraph {
                 .push(link.source);
         }
 
+        // Build a map from type id -> optional path
+        let path_map = TypeGraph::build_path_map(types);
+
         // Convert to EdgeStats (sorted by source count)
         for (kind, target_map) in kind_maps {
-            let mut entries: Vec<(TypeId, Vec<TypeId>)> = target_map.into_iter().collect();
+            let mut links: Vec<(TypeId, Vec<TypeId>, Option<String>)> = target_map
+                .into_iter()
+                .map(|(tid, srcs)| {
+                    let p = path_map.get(&tid).cloned().unwrap_or(None);
+                    (tid, srcs, p)
+                })
+                .collect();
             // Sort by number of sources, descending
-            entries.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+            links.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
 
-            self.edge_stats.insert(kind, EdgeStats { entries });
+            let max = links.first().map(|e| e.1.len()).unwrap_or(0);
+            self.edge_stats.insert(kind, EdgeStats { links, max });
         }
+
+        let limit = 20;
+        for (_kind, stats) in self.edge_stats.iter_mut() {
+            if stats.links.len() > limit {
+                stats.links.truncate(limit);
+            }
+            // Ensure max remains accurate after truncation
+            stats.max = stats.links.first().map(|e| e.1.len()).unwrap_or(0);
+        }
+
+        // Ensure every known edge kind is present in `edge_stats` so serialization
+        // always emits the key (empty array when no entries).
+        let all_kinds = [
+            "union",
+            "typeArgument",
+            "instantiated",
+            "substitutionBase",
+            "constraint",
+            "indexedAccessObject",
+            "indexedAccessIndex",
+            "conditionalCheck",
+            "conditionalExtends",
+            "conditionalTrue",
+            "conditionalFalse",
+            "keyof",
+            "evolvingArrayElement",
+            "evolvingArrayFinal",
+            "reverseMappedSource",
+            "reverseMappedMapped",
+            "reverseMappedConstraint",
+            "alias",
+            "aliasTypeArgument",
+            "intersection",
+        ];
+
+        for &k in all_kinds.iter() {
+            self.edge_stats.entry(k.to_string()).or_insert(EdgeStats {
+                links: Vec::new(),
+                max: 0,
+            });
+        }
+    }
+
+    fn calculate_node_stats(&mut self, types: &TypesJsonSchema) {
+        // Helper to compute counts per node for a given accessor
+        fn collect_counts<F>(types: &TypesJsonSchema, accessor: F) -> Vec<(TypeId, String, usize)>
+        where
+            F: Fn(&crate::validate::types_json::ResolvedType) -> Option<&Vec<TypeId>>,
+        {
+            let mut entries: Vec<(TypeId, String, usize)> = Vec::new();
+            for t in types.iter() {
+                let count = accessor(t).map(|v| v.len()).unwrap_or(0);
+                if count > 0 {
+                    let name = TypeGraph::human_readable_name(t);
+                    entries.push((t.id, name, count));
+                }
+            }
+            // Sort descending by count
+            entries.sort_by(|a, b| b.2.cmp(&a.2));
+            entries
+        }
+
+        // Build path map to include in node entries
+        let path_map = TypeGraph::build_path_map(types);
+
+        let type_arguments = collect_counts(types, |t| t.type_arguments.as_ref());
+        let union_types = collect_counts(types, |t| t.union_types.as_ref());
+        let intersection_types = collect_counts(types, |t| t.intersection_types.as_ref());
+        let alias_type_arguments = collect_counts(types, |t| t.alias_type_arguments.as_ref());
+
+        let limit = 100;
+        let build_category = |mut v: Vec<(TypeId, String, usize)>| -> NodeStatCategory {
+            let max = v.first().map(|e| e.2).unwrap_or(0);
+            if v.len() > limit {
+                v.truncate(limit);
+            }
+            // Attach path info from path_map
+            let nodes_with_path: Vec<(TypeId, String, usize, Option<String>)> = v
+                .into_iter()
+                .map(|(id, name, val)| {
+                    let p = path_map.get(&id).cloned().unwrap_or(None);
+                    (id, name, val, p)
+                })
+                .collect();
+            NodeStatCategory {
+                max,
+                nodes: nodes_with_path,
+            }
+        };
+
+        self.node_stats = NodeStats {
+            type_arguments: build_category(type_arguments),
+            union_types: build_category(union_types),
+            intersection_types: build_category(intersection_types),
+            alias_type_arguments: build_category(alias_type_arguments),
+        };
     }
 
     pub fn to_force_graph(&self) -> ForceGraphData {
@@ -282,8 +427,35 @@ impl TypeGraph {
             links,
             stats: GraphStats { count },
             edge_stats: self.edge_stats.clone(),
+            node_stats: self.node_stats.clone(),
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NodeStatCategory {
+    pub max: usize,
+    /// Array of [typeId, name, value]
+    pub nodes: Vec<(TypeId, String, usize, Option<String>)>,
+}
+
+impl Default for NodeStatCategory {
+    fn default() -> Self {
+        Self {
+            max: 0,
+            nodes: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct NodeStats {
+    pub type_arguments: NodeStatCategory,
+    pub union_types: NodeStatCategory,
+    pub intersection_types: NodeStatCategory,
+    pub alias_type_arguments: NodeStatCategory,
 }
 
 // react-force-graph expected shape
@@ -309,6 +481,7 @@ pub struct ForceGraphData {
     pub links: Vec<ForceGraphLink>,
     pub stats: GraphStats,
     pub edge_stats: HashMap<String, EdgeStats>,
+    pub node_stats: NodeStats,
 }
 
 /// Build the in-memory graph from the loaded `types_json` and store in AppData via `State`.
@@ -339,6 +512,17 @@ pub fn build_type_graph(
             .lock()
             .map_err(|_| "AppData mutex poisoned".to_string())?;
         app_data.type_graph = Some(graph);
+
+        // Persist to outputs/type-graph.json for refresh-on-boot
+        let outputs_dir = AppData::get_outputs_dir(&_app);
+        let path =
+            std::path::Path::new(&outputs_dir).join(TYPE_GRAPH_FILENAME.trim_start_matches('/'));
+        let json = serde_json::to_string_pretty(&app_data.type_graph)
+            .map_err(|e| format!("Failed to serialize type_graph: {e}"))?;
+        std::fs::create_dir_all(&outputs_dir)
+            .map_err(|e| format!("Failed to create outputs dir: {e}"))?;
+        std::fs::write(&path, json)
+            .map_err(|e| format!("Failed to write {}: {e}", path.display()))?;
     }
 
     Ok(())

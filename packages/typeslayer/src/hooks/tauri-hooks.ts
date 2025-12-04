@@ -1,8 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import type { AnalyzeTraceResult } from "@typeslayer/analyze-trace/src/utils";
-import type { TypesJsonSchema } from "@typeslayer/validate";
-import type { z } from "zod/v4";
+import type {
+	AbsolutePath,
+	AnalyzeTraceResult,
+} from "@typeslayer/analyze-trace/src/utils";
+import {
+	extractPackageName,
+	type ResolvedType,
+	type TypeId,
+} from "@typeslayer/validate";
+import { friendlyPath } from "../components/utils";
 
 export function useSimplifyPaths() {
 	const queryClient = useQueryClient();
@@ -178,20 +185,81 @@ export function useProjectRoot() {
 }
 
 export function useTypesJson() {
-	return useQuery<z.infer<TypesJsonSchema>>({
+	return useQuery({
 		queryKey: ["types_json"],
-		queryFn: async () => invoke("get_types_json"),
+		queryFn: async () => invoke<ResolvedType[]>("get_types_json"),
 		staleTime: Number.POSITIVE_INFINITY,
 	});
 }
 
+export type GraphNode = { id: number; name: string };
+
+export type EdgeKind =
+	| "union"
+	| "typeArgument"
+	| "instantiated"
+	| "substitutionBase"
+	| "constraint"
+	| "indexedAccessObject"
+	| "indexedAccessIndex"
+	| "conditionalCheck"
+	| "conditionalExtends"
+	| "conditionalTrue"
+	| "conditionalFalse"
+	| "keyof"
+	| "evolvingArrayElement"
+	| "evolvingArrayFinal"
+	| "reverseMappedSource"
+	| "reverseMappedMapped"
+	| "reverseMappedConstraint"
+	| "alias"
+	| "aliasTypeArgument"
+	| "intersection";
+export type GraphLink = {
+	source: number;
+	target: number;
+	kind: EdgeKind;
+};
+export type GraphStats = { count: Record<string, number> };
+export type GraphEdgeEntry = [TypeId, TypeId[], AbsolutePath | null];
+export type GraphEdgeStats = Record<
+	EdgeKind,
+	{
+		max: number;
+		links: GraphEdgeEntry[];
+	}
+>;
+export type NodeGraphStat =
+	| "typeArguments"
+	| "unionTypes"
+	| "intersectionTypes"
+	| "aliasTypeArguments";
+
+export type GraphNodePreviewData = [
+	typeId: TypeId,
+	typeDisplayName: string,
+	typeMetricValue: number,
+	absolutePath: AbsolutePath | null,
+];
+
+export type GraphNodeStats = Record<
+	NodeGraphStat,
+	{
+		max: number;
+		nodes: GraphNodePreviewData[];
+	}
+>;
+
+export type TypeGraph = {
+	nodes: GraphNode[];
+	links: GraphLink[];
+	stats: GraphStats;
+	edgeStats: GraphEdgeStats;
+	nodeStats: GraphNodeStats;
+};
+
 export function useTypeGraph() {
-	return useQuery<{
-		nodes: Array<{ id: number; name: string }>;
-		links: Array<{ source: number; target: number; kind: string }>;
-		stats: { count: Record<string, number> };
-		edgeStats: Record<string, { entries: Array<[number, number[]]> }>;
-	}>({
+	return useQuery<TypeGraph>({
 		queryKey: ["type_graph"],
 		queryFn: async () => invoke("get_type_graph"),
 		staleTime: Number.POSITIVE_INFINITY,
@@ -245,3 +313,30 @@ export function useOpenFile() {
 		mutationFn: async (path: string) => invoke("open_file", { path }),
 	});
 }
+
+export const useFriendlyPackageName = () => {
+	const { data: simplifyPaths } = useSimplifyPaths();
+	const { data: projectRoot } = useProjectRoot();
+
+	if (!simplifyPaths || !projectRoot) {
+		return () => null;
+	}
+
+	return (maybePath: string | null) => {
+		if (!maybePath) {
+			return null;
+		}
+
+		const extracted = extractPackageName(maybePath);
+		if (extracted !== maybePath) {
+			// we were able to extract a package name
+			return extracted;
+		}
+
+		if (!simplifyPaths) {
+			return maybePath;
+		}
+
+		return friendlyPath(maybePath, projectRoot, simplifyPaths);
+	};
+};

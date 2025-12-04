@@ -4,37 +4,27 @@ import {
 	List,
 	ListItem,
 	ListItemText,
+	ListSubheader,
 	Stack,
 	Typography,
 } from "@mui/material";
-import { invoke } from "@tauri-apps/api/core";
 import { openPath } from "@tauri-apps/plugin-opener";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import { Callout } from "../../components/callout";
-import { friendlyPackageName } from "../../components/utils";
-import { useProjectRoot, useSimplifyPaths } from "../../hooks/tauri-hooks";
-import { awards } from "./awards";
+import {
+	useAnalyzeTrace,
+	useProjectRoot,
+	useSimplifyPaths,
+} from "../../hooks/tauri-hooks";
+import { AwardNavItem } from "./award-nav-item";
+import { type AwardId, awards, MaybePathCaption } from "./awards";
 import { InlineBarGraph } from "./inline-bar-graph";
 import { TitleSubtitle } from "./title-subtitle";
 
-export const ShowHotSpots = () => {
-	const [hotSpots, setHotSpots] = useState<
-		Array<{ path?: string; timeMs: number }>
-	>([]);
+const ShowHotSpots = () => {
 	const simplifyPaths = useSimplifyPaths();
 	const projectRoot = useProjectRoot();
-
-	useEffect(() => {
-		(async () => {
-			try {
-				const result: { hotSpots: Array<{ path?: string; timeMs: number }> } =
-					await invoke("get_analyze_trace");
-				setHotSpots(result.hotSpots ?? []);
-			} catch (e) {
-				console.error("Failed to load hot spots", e);
-			}
-		})();
-	}, []);
+	const { data: analyzeTrace } = useAnalyzeTrace();
 
 	const findInPage = useCallback(async (path: string | undefined) => {
 		if (!path) return;
@@ -54,14 +44,10 @@ export const ShowHotSpots = () => {
 		return null;
 	}
 
-	// Type narrowing: we know data exists after the check above
-	const simplifyPathsValue: boolean = simplifyPaths.data;
-	const projectRootValue: string = projectRoot.data;
-
-	console.log("hotSpots", { hotSpots });
+	const hotSpots = analyzeTrace?.hotSpots ?? [];
 
 	const firstHotSpot = hotSpots[0];
-	const Icon = awards.hotSpots.icon;
+	const Icon = awards.perf_hotSpots.icon;
 
 	const hasHotSpots = (
 		<List>
@@ -83,19 +69,13 @@ export const ShowHotSpots = () => {
 									</IconButton>
 								) : null}
 							</Typography>
-							<Stack>
-								<Typography variant="caption">
-									{friendlyPackageName(
-										path ?? "",
-										projectRootValue,
-										simplifyPathsValue,
-									)}
-								</Typography>
+							<Stack gap={0.5}>
+								<MaybePathCaption maybePath={path} />
+								<InlineBarGraph
+									label={`${timeMs.toLocaleString()}ms`}
+									width={`${relativeTime * 100}%`}
+								/>
 							</Stack>
-							<InlineBarGraph
-								label={`${timeMs.toLocaleString()}ms`}
-								width={`${relativeTime * 100}%`}
-							/>
 						</ListItemText>
 					</ListItem>
 				);
@@ -124,4 +104,56 @@ export const ShowHotSpots = () => {
 			{firstHotSpot ? hasHotSpots : noneFound}
 		</Stack>
 	);
+};
+
+const performanceMetrics = ["perf_hotSpots"] satisfies AwardId[];
+type PerformanceMetricsAwardId = (typeof performanceMetrics)[number];
+
+const usePerformanceMetricsValue = () => {
+	const { data: analyzeTrace } = useAnalyzeTrace();
+
+	return useCallback(
+		(awardId: PerformanceMetricsAwardId): number => {
+			switch (awardId) {
+				case "perf_hotSpots": {
+					const hotSpots = analyzeTrace?.hotSpots ?? [];
+					return hotSpots.length;
+				}
+				default:
+					awardId satisfies never;
+					throw new Error(`Unknown award: ${awardId}`);
+			}
+		},
+		[analyzeTrace],
+	);
+};
+
+export const PerformanceMetricsNavItems = () => {
+	const getValue = usePerformanceMetricsValue();
+
+	return (
+		<>
+			<ListSubheader>Performance Metrics</ListSubheader>
+
+			{performanceMetrics.map((awardId) => (
+				<AwardNavItem
+					key={awardId}
+					awardId={awardId}
+					value={getValue(awardId)}
+				/>
+			))}
+		</>
+	);
+};
+
+export const PerformanceMetricsAward = ({
+	awardId,
+}: {
+	awardId: PerformanceMetricsAwardId;
+}) => {
+	if (awardId !== "perf_hotSpots") {
+		throw new Error(`Unknown award: ${awardId}`);
+	}
+
+	return <ShowHotSpots />;
 };

@@ -14,7 +14,6 @@ import {
 import { IconButton, Snackbar } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import type { AbsolutePath } from "@typeslayer/analyze-trace/src/utils";
 import {
 	extractPackageName,
 	type ResolvedType,
@@ -280,22 +279,4 @@ export const extractPath = (resolvedType: ResolvedType) => {
 		return resolvedType.destructuringPattern.path;
 	}
 	return undefined;
-};
-
-export const friendlyPackageName = (
-	absolutePath: AbsolutePath,
-	projectRoot: string | undefined,
-	simplifyPaths: boolean,
-) => {
-	const extracted = extractPackageName(absolutePath);
-	if (extracted !== absolutePath) {
-		// we were able to extract a package name
-		return extracted;
-	}
-
-	if (!simplifyPaths) {
-		return absolutePath;
-	}
-
-	return friendlyPath(absolutePath, projectRoot, simplifyPaths);
 };

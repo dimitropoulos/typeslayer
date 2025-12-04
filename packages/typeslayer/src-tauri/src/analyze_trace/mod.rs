@@ -133,36 +133,36 @@ fn create_depth_limits(trace_file: &Vec<TraceEvent>) -> HashMap<String, Vec<Trac
     // Sort per bucket based on noted criteria
     if let Some(v) = depth_limits.get_mut("checkCrossProductUnion_DepthLimit") {
         v.sort_by(|a, b| {
-            num_arg(a, "size")
-                .partial_cmp(&num_arg(b, "size"))
+            num_arg(b, "size")
+                .partial_cmp(&num_arg(a, "size"))
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
     }
     if let Some(v) = depth_limits.get_mut("checkTypeRelatedTo_DepthLimit") {
         v.sort_by(|a, b| {
-            num_arg(a, "depth")
-                .partial_cmp(&num_arg(b, "depth"))
+            num_arg(b, "depth")
+                .partial_cmp(&num_arg(a, "depth"))
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
     }
     if let Some(v) = depth_limits.get_mut("getTypeAtFlowNode_DepthLimit") {
         v.sort_by(|a, b| {
-            num_arg(a, "flowId")
-                .partial_cmp(&num_arg(b, "flowId"))
+            num_arg(b, "flowId")
+                .partial_cmp(&num_arg(a, "flowId"))
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
     }
     if let Some(v) = depth_limits.get_mut("instantiateType_DepthLimit") {
         v.sort_by(|a, b| {
-            num_arg(a, "instantiationDepth")
-                .partial_cmp(&num_arg(b, "instantiationDepth"))
+            num_arg(b, "instantiationDepth")
+                .partial_cmp(&num_arg(a, "instantiationDepth"))
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
     }
     if let Some(v) = depth_limits.get_mut("recursiveTypeRelatedTo_DepthLimit") {
         v.sort_by(|a, b| {
-            num_arg(a, "depth")
-                .partial_cmp(&num_arg(b, "depth"))
+            num_arg(b, "depth")
+                .partial_cmp(&num_arg(a, "depth"))
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
     }
@@ -173,15 +173,15 @@ fn create_depth_limits(trace_file: &Vec<TraceEvent>) -> HashMap<String, Vec<Trac
         v.sort_by(|a, b| {
             let a_prod = num_arg(a, "sourceSize") * num_arg(a, "targetSize");
             let b_prod = num_arg(b, "sourceSize") * num_arg(b, "targetSize");
-            a_prod
-                .partial_cmp(&b_prod)
+            b_prod
+                .partial_cmp(&a_prod)
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
     }
     if let Some(v) = depth_limits.get_mut("typeRelatedToDiscriminatedType_DepthLimit") {
         v.sort_by(|a, b| {
-            num_arg(a, "numCombinations")
-                .partial_cmp(&num_arg(b, "numCombinations"))
+            num_arg(b, "numCombinations")
+                .partial_cmp(&num_arg(a, "numCombinations"))
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
     }

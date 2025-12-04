@@ -2,17 +2,27 @@
 	"cSpell.words": [
 		"bivariant",
 		"checktypes",
+		"chrono",
+		"cpuprofile",
 		"Dimitri",
 		"hotspot",
 		"Hotspots",
+		"Kabaddi",
+		"Lapce",
+		"layercake",
 		"Millis",
 		"Mitropoulos",
+		"nvim",
 		"perfetto",
 		"speedscope",
+		"subl",
 		"tauri",
 		"toolpad",
+		"treemap",
 		"treemaps",
-		"typeslayer"
+		"typeslayer",
+		"webstorm",
+		"Whatshot"
 	],
 	"editor.codeActionsOnSave": {
 		"source.organizeImports.biome": "always",

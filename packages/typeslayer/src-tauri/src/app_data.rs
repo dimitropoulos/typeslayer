@@ -86,6 +86,7 @@ impl AppData {
         let types_json = Self::init_types_json(&data_dir, &project_root);
         let trace_json = Self::init_trace_json(&data_dir, &project_root);
         let analyze_trace = Self::init_analyze_trace(&data_dir);
+        let type_graph = Self::init_type_graph(&data_dir);
         let cpu_profile = Self::init_cpu_profile(&data_dir);
         let settings = Self::settings_from_cake(&cake);
         let verbose = Self::init_verbose_with(&cake);
@@ -103,7 +104,7 @@ impl AppData {
             verbose,
             cake,
             auth_code,
-            type_graph: None,
+            type_graph,
             process_controller: ProcessController::new(),
         };
         app.discover_tsconfigs();
@@ -497,6 +498,27 @@ impl AppData {
         None
     }
 
+    fn init_type_graph(data_dir: &str) -> Option<crate::type_graph::TypeGraph> {
+        let path = Path::new(data_dir)
+            .join(crate::type_graph::TYPE_GRAPH_FILENAME.trim_start_matches('/'));
+        if path.exists() {
+            match std::fs::read_to_string(&path)
+                .map_err(|e| e.to_string())
+                .and_then(|s| {
+                    serde_json::from_str::<crate::type_graph::TypeGraph>(&s)
+                        .map_err(|e| e.to_string())
+                }) {
+                Ok(parsed) => return Some(parsed),
+                Err(e) => info!(
+                    "Startup type-graph ingestion failed at {}: {}",
+                    path.display(),
+                    e
+                ),
+            }
+        }
+        None
+    }
+
     fn init_cpu_profile(data_dir: &str) -> Option<String> {
         let cpu_profile_path = Path::new(data_dir).join(CPU_PROFILE_FILENAME);
         if cpu_profile_path.exists() {
@@ -512,16 +534,21 @@ impl AppData {
         None
     }
 
-    pub fn compute_window_title(&self) -> Option<String> {
+    pub fn compute_window_title(&self) -> String {
         // self.project_root points to package.json
+        let default_title = "TypeSlayer".to_string();
         let pkg_path = std::path::Path::new(&self.project_root);
-        let contents = std::fs::read_to_string(pkg_path).ok()?;
-        let v: serde_json::Value = serde_json::from_str(&contents).ok()?;
-        let name = v.get("name")?.as_str()?.to_string();
-        if name.is_empty() {
-            None
-        } else {
-            Some(format!("TypeSlayer | {}", name))
+        // Attempt to read and parse the package.json name; fallback to default on any error.
+        match std::fs::read_to_string(pkg_path)
+            .ok()
+            .and_then(|contents| serde_json::from_str::<serde_json::Value>(&contents).ok())
+            .and_then(|v| {
+                v.get("name")
+                    .and_then(|n| n.as_str())
+                    .map(|s| s.to_string())
+            }) {
+            Some(name) if !name.is_empty() => format!("{} | {}", default_title, name),
+            _ => default_title,
         }
     }
 }
@@ -532,9 +559,7 @@ pub async fn set_window_title_from_project(
     state: State<'_, Mutex<AppData>>,
 ) -> Result<(), String> {
     let guard = state.lock().map_err(|_| "state poisoned".to_string())?;
-    let title = guard
-        .compute_window_title()
-        .unwrap_or_else(|| "TypeSlayer".to_string());
+    let title = guard.compute_window_title();
     let win = app
         .get_webview_window("main")
         .ok_or_else(|| "main window not found".to_string())?;
@@ -547,6 +572,7 @@ struct OutputTimestamps {
     types_json: Option<String>,
     trace_json: Option<String>,
     analyze_trace: Option<String>,
+    type_graph: Option<String>,
     cpu_profile: Option<String>,
 }
 
@@ -577,12 +603,15 @@ impl AppData {
         let types_path = data_dir.join(TYPES_JSON_FILENAME.trim_start_matches('/'));
         let trace_path = data_dir.join(TRACE_JSON_FILENAME.trim_start_matches('/'));
         let analyze_path = data_dir.join(ANALYZE_TRACE_FILENAME);
+        let type_graph_path =
+            data_dir.join(crate::type_graph::TYPE_GRAPH_FILENAME.trim_start_matches('/'));
         let cpu_path = data_dir.join(CPU_PROFILE_FILENAME);
 
         let outputs = OutputTimestamps {
             types_json: Self::file_mtime_iso(&types_path),
             trace_json: Self::file_mtime_iso(&trace_path),
             analyze_trace: Self::file_mtime_iso(&analyze_path),
+            type_graph: Self::file_mtime_iso(&type_graph_path),
             cpu_profile: Self::file_mtime_iso(&cpu_path),
         };
 
@@ -639,6 +668,7 @@ impl AppData {
         self.trace_json.clear();
         self.analyze_trace = None;
         self.cpu_profile = None;
+        self.type_graph = None;
 
         self.update_outputs(app);
         Ok(())

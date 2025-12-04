@@ -33,7 +33,7 @@ pub fn run() {
                 .state::<Mutex<app_data::AppData>>()
                 .lock()
                 .ok()
-                .and_then(|data| data.compute_window_title())
+                .map(|data| data.compute_window_title())
             {
                 if let Some(win) = app.get_webview_window("main") {
                     let _ = win.set_title(&title);

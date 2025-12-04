@@ -1,6 +1,34 @@
 import { Chip, Stack, Typography } from "@mui/material";
 import type { ResolvedType } from "@typeslayer/validate";
 
+export const getHumanReadableName = (resolvedType: ResolvedType): string => {
+	const isLiteral =
+		resolvedType.flags.length === 1 &&
+		(resolvedType.flags[0] === "StringLiteral" ||
+			resolvedType.flags[0] === "NumberLiteral" ||
+			resolvedType.flags[0] === "BooleanLiteral" ||
+			resolvedType.flags[0] === "BigIntLiteral");
+	if (isLiteral && typeof resolvedType.display === "string") {
+		return resolvedType.display;
+	}
+
+	if (
+		"symbolName" in resolvedType &&
+		typeof resolvedType.symbolName === "string"
+	) {
+		return resolvedType.symbolName;
+	}
+
+	if (
+		"intrinsicName" in resolvedType &&
+		typeof resolvedType.intrinsicName === "string"
+	) {
+		return resolvedType.intrinsicName;
+	}
+
+	return "<anonymous>";
+};
+
 export function TypeSummary({
 	onClick = () => {},
 	showFlags = false,
@@ -12,27 +40,6 @@ export function TypeSummary({
 }) {
 	const { id, flags } = resolvedType;
 
-	let humanReadable = "<anonymous>";
-	if (
-		"symbolName" in resolvedType &&
-		typeof resolvedType.symbolName === "string"
-	) {
-		humanReadable = resolvedType.symbolName;
-	} else if (
-		"intrinsicName" in resolvedType &&
-		typeof resolvedType.intrinsicName === "string"
-	) {
-		humanReadable = resolvedType.intrinsicName;
-	} else if (
-		flags.length === 1 &&
-		(flags[0] === "StringLiteral" ||
-			flags[0] === "NumberLiteral" ||
-			flags[0] === "BooleanLiteral" ||
-			flags[0] === "BigIntLiteral") &&
-		typeof resolvedType.display === "string"
-	) {
-		humanReadable = resolvedType.display;
-	}
 	return (
 		<Stack
 			direction="row"
@@ -41,7 +48,7 @@ export function TypeSummary({
 			sx={{ cursor: "pointer", alignItems: "center" }}
 		>
 			<Typography color="secondary" sx={{ fontFamily: "monospace" }}>
-				{humanReadable}
+				{getHumanReadableName(resolvedType)}
 			</Typography>
 			<Typography sx={{ fontFamily: "monospace" }}>id:{id}</Typography>
 			{showFlags
@@ -55,6 +62,30 @@ export function TypeSummary({
 						/>
 					))
 				: null}
+		</Stack>
+	);
+}
+
+export function SimpleTypeSummary({
+	onClick = () => {},
+	id,
+	name,
+}: {
+	onClick?: () => void;
+	id: number;
+	name: string;
+}) {
+	return (
+		<Stack
+			direction="row"
+			gap={1}
+			onClick={onClick}
+			sx={{ cursor: "pointer", alignItems: "center" }}
+		>
+			<Typography color="secondary" sx={{ fontFamily: "monospace" }}>
+				{name}
+			</Typography>
+			<Typography sx={{ fontFamily: "monospace" }}>id:{id}</Typography>
 		</Stack>
 	);
 }

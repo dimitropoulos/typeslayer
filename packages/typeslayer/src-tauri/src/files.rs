@@ -30,11 +30,9 @@ pub async fn set_project_root(
 ) -> Result<(), String> {
     let mut data = state.lock().map_err(|e| e.to_string())?;
     data.update_project_root(project_root);
-    // Update window title from backend whenever project root changes
-    if let Some(title) = data.compute_window_title() {
-        if let Some(win) = app.get_webview_window("main") {
-            let _ = win.set_title(&title);
-        }
+
+    if let Some(win) = app.get_webview_window("main") {
+        let _ = win.set_title(&data.compute_window_title());
     }
     Ok(())
 }

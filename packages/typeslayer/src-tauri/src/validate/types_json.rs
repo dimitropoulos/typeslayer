@@ -80,41 +80,50 @@ pub enum Flag {
 
 /// `intrinsicName` in the JSON
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "lowercase")]
 pub enum IntrinsicName {
-    #[serde(rename = "any")]
     Any,
-    #[serde(rename = "error")]
     Error,
-    #[serde(rename = "unresolved")]
     Unresolved,
-    #[serde(rename = "unknown")]
     Unknown,
-    #[serde(rename = "true")]
     True,
-    #[serde(rename = "false")]
     False,
-    #[serde(rename = "never")]
     Never,
-    #[serde(rename = "void")]
     Void,
-    #[serde(rename = "symbol")]
     Symbol,
-    #[serde(rename = "bigint")]
     BigInt,
-    #[serde(rename = "null")]
     Null,
-    #[serde(rename = "undefined")]
     Undefined,
-    #[serde(rename = "intrinsic")]
     Intrinsic,
-    #[serde(rename = "object")]
     Object,
-    #[serde(rename = "boolean")]
     Boolean,
-    #[serde(rename = "number")]
     Number,
-    #[serde(rename = "string")]
     String,
+}
+
+impl std::fmt::Display for IntrinsicName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            IntrinsicName::Any => "any",
+            IntrinsicName::Error => "error",
+            IntrinsicName::Unresolved => "unresolved",
+            IntrinsicName::Unknown => "unknown",
+            IntrinsicName::True => "true",
+            IntrinsicName::False => "false",
+            IntrinsicName::Never => "never",
+            IntrinsicName::Void => "void",
+            IntrinsicName::Symbol => "symbol",
+            IntrinsicName::BigInt => "bigint",
+            IntrinsicName::Null => "null",
+            IntrinsicName::Undefined => "undefined",
+            IntrinsicName::Intrinsic => "intrinsic",
+            IntrinsicName::Object => "object",
+            IntrinsicName::Boolean => "boolean",
+            IntrinsicName::Number => "number",
+            IntrinsicName::String => "string",
+        };
+        write!(f, "{}", s)
+    }
 }
 
 /// Rust equivalent of your Zod `resolvedType` schema.

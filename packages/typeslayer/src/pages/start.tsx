@@ -16,16 +16,18 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import Typography from "@mui/material/Typography";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import type { TypeRegistry } from "@typeslayer/validate";
 import {
 	type PropsWithChildren,
 	useCallback,
 	useEffect,
 	useState,
 } from "react";
+import typeslayerLogo from "../assets/typeslayer.png";
+import typeslayerNightmareLogo from "../assets/typeslayer-nightmare.png";
 import { BigAction } from "../components/big-action";
 import { FlagsCustomizationDialog } from "../components/flags-customization-dialog";
 import { InlineCode } from "../components/inline-code";
@@ -60,9 +62,10 @@ export const Step = ({
 
 export function Start() {
 	const navigate = useNavigate();
+	const queryClient = useQueryClient();
 
 	// Processing state
-	const [processingStep, setProcessingStep] = useState<0 | 1 | 2 | 3>(0);
+	const [processingStep, setProcessingStep] = useState<0 | 1 | 2 | 3 | 4>(0);
 	const [processingError, setProcessingError] = useState<string | null>(null);
 	const [processingErrorDetails, setProcessingErrorDetails] = useState<
 		string | null
@@ -87,6 +90,8 @@ export function Start() {
 	);
 	const [isTyping, setIsTyping] = useState(false);
 	const [isClearingOutputs, setIsClearingOutputs] = useState(false);
+	const [isFading, setIsFading] = useState(false);
+	const [fadePhase, setFadePhase] = useState<0 | 1 | 2>(0);
 
 	const applyProjectRoot = useCallback(
 		async (pkgPath: string) => {
@@ -181,14 +186,11 @@ export function Start() {
 
 			// 1. generate_trace
 			setProcessingStep(0);
-			const traceResult =
-				await invoke<Array<{ id: number; [key: string]: unknown }>>(
-					"generate_trace",
-				);
-			const typeRegistryEntries: Array<[number, unknown]> = traceResult.map(
-				(type) => [type.id, type],
-			);
-			window.typeRegistry = new Map(typeRegistryEntries) as TypeRegistry;
+			await invoke("generate_trace");
+			const trace = await invoke("get_trace_json");
+			queryClient.setQueryData(["trace_json"], trace);
+			const types = await invoke("get_types_json");
+			queryClient.setQueryData(["types_json"], types);
 
 			// 2. generate_cpu_profile
 			setProcessingStep(1);
@@ -197,15 +199,25 @@ export function Start() {
 			// 3. analyze_trace_command
 			setProcessingStep(2);
 			await invoke("analyze_trace_command");
+			const analyzeTrace = await invoke("get_analyze_trace");
+			queryClient.setQueryData(["analyze_trace"], analyzeTrace);
 
-			// done
+			// 4. build relations graph
 			setProcessingStep(3);
+			await invoke("build_type_graph");
+			const graph = await invoke("get_type_graph");
+			queryClient.setQueryData(["type_graph"], graph);
+
+			// done: trigger fade-to-black, animate logo morph over 1000ms, then navigate
+			setProcessingStep(4);
+			setIsFading(true);
+			setFadePhase(1);
+			setTimeout(() => setFadePhase(2), 500);
 			setTimeout(() => {
 				navigate({
-					to: "/award-winners/$awardId",
-					params: { awardId: "largest-union" },
+					to: "/type-network",
 				});
-			}, 400);
+			}, 1500);
 		} catch (e) {
 			const rawMessage = e instanceof Error ? e.message : String(e);
 			const normalizedMessage = normalizeInvokeError(rawMessage);
@@ -227,7 +239,7 @@ export function Start() {
 		} finally {
 			setIsProcessing(false);
 		}
-	}, [localProjectRoot, navigate, projectRoot.set]);
+	}, [localProjectRoot, navigate, projectRoot.set, queryClient]);
 
 	const handleClearOrCancel = useCallback(async () => {
 		setIsClearingOutputs(true);
@@ -272,7 +284,17 @@ export function Start() {
 	const hasStderr = !!processingErrorStderr?.trim();
 
 	return (
-		<Box sx={{ px: 4, overflowY: "auto", maxHeight: "100%", gap: 2, pb: 4 }}>
+		<Box
+			sx={{
+				px: 4,
+				overflowY: "auto",
+				maxHeight: "100%",
+				gap: 2,
+				pb: 4,
+				position: "relative",
+				minHeight: "100%",
+			}}
+		>
 			<h1>Start</h1>
 
 			<Stack gap={3}>
@@ -449,8 +471,14 @@ export function Start() {
 							<BigAction
 								title="Analyze Hot Spots"
 								description="Identify computational hot-spots in your type checking, along with duplicate type packages inclusions, unterminated events."
-								unlocks={["Type Network", "Treemap", "Award Winners"]}
+								unlocks={["Treemap", "Award Winners"]}
 								isLoading={isProcessing && processingStep === 2}
+							/>
+							<BigAction
+								title="Type Graph"
+								description="Create a graph of all types and their relationships to visualize complex type dependencies."
+								unlocks={["Type Network"]}
+								isLoading={isProcessing && processingStep === 3}
 							/>
 						</Stack>
 						<Stack direction="row" gap={2} alignItems="center">
@@ -528,6 +556,58 @@ export function Start() {
 					</Button>
 				</DialogActions>
 			</Dialog>
+
+			{/* Fade-to-black overlay (pane only) with centered logo morph */}
+			<Box
+				sx={{
+					position: "absolute",
+					inset: 0,
+					bgcolor: "black",
+					opacity: isFading ? 1 : 0,
+					pointerEvents: "none",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					transition: (t) =>
+						t.transitions.create("opacity", {
+							duration: 1000,
+							easing: t.transitions.easing.easeInOut,
+						}),
+					zIndex: (t) => t.zIndex.modal + 1,
+				}}
+			>
+				{/* Crossfade TypeSlayer logo -> nightmare over 1000ms (500ms each) */}
+				<Box sx={{ position: "relative", width: "880px", height: "320px" }}>
+					<img
+						src={typeslayerLogo}
+						alt="TypeSlayer"
+						style={{
+							position: "absolute",
+							inset: 0,
+							margin: "auto",
+							width: "100%",
+							height: "100%",
+							objectFit: "contain",
+							transition: "opacity 250ms ease-in",
+						}}
+					/>
+					<img
+						src={typeslayerNightmareLogo}
+						alt="TypeSlayer Nightmare"
+						style={{
+							position: "absolute",
+							inset: 0,
+							margin: "auto",
+							width: "100%",
+							height: "100%",
+							paddingTop: "14px",
+							objectFit: "contain",
+							opacity: fadePhase === 2 ? 1 : 0,
+							transition: "opacity 1000ms ease-in-out",
+						}}
+					/>
+				</Box>
+			</Box>
 		</Box>
 	);
 }

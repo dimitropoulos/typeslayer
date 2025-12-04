@@ -1,11 +1,10 @@
 import { Box, Divider, Stack, TextField, Typography } from "@mui/material";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import type { ResolvedType } from "@typeslayer/validate";
 import { useEffect, useState } from "react";
 import { Callout } from "../components/callout";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
 import { InlineCode } from "../components/inline-code";
-import { useTypesJson } from "../hooks/tauri-hooks";
+import { useTypeRegistry } from "./award-winners/use-type-registry";
 
 export const SearchTypes = () => {
 	const params = useParams({ strict: false });
@@ -23,13 +22,9 @@ export const SearchTypes = () => {
 
 	const numberSearch = Number.parseInt(search, 10);
 
-	const typesJson = useTypesJson();
+	const typeRegistry = useTypeRegistry();
 
-	const typeRegistry = new Map<number, ResolvedType>(
-		((typesJson.data ?? []) as ResolvedType[]).map((t) => [t.id, t]),
-	);
-
-	const typeString = JSON.stringify(typeRegistry.get(numberSearch), null, 2);
+	const typeString = JSON.stringify(typeRegistry[numberSearch], null, 2);
 
 	return (
 		<Box sx={{ px: 4, overflowY: "auto", height: "100%" }}>
@@ -37,7 +32,7 @@ export const SearchTypes = () => {
 				<Stack direction="row" alignItems="baseline" gap={1}>
 					<h1>Search</h1>
 					<Typography color="textDisabled">
-						{typeRegistry.size.toLocaleString()} types
+						{(typeRegistry.length - 1).toLocaleString()} types
 					</Typography>
 				</Stack>
 			</Stack>
@@ -59,7 +54,7 @@ export const SearchTypes = () => {
 					}}
 				/>
 
-				<DisplayRecursiveType id={numberSearch} typeRegistry={typeRegistry} />
+				<DisplayRecursiveType id={numberSearch} />
 
 				{typeString ? (
 					<>

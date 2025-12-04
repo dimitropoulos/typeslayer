@@ -13,9 +13,10 @@ import {
 	type TypographyVariant,
 } from "@mui/material";
 import { invoke } from "@tauri-apps/api/core";
-import type { ResolvedType, TypeRegistry } from "@typeslayer/validate";
+import type { ResolvedType } from "@typeslayer/validate";
 import { type FC, useCallback, useState } from "react";
 import { useProjectRoot, useSimplifyPaths } from "../hooks/tauri-hooks";
+import { useTypeRegistry } from "../pages/award-winners/use-type-registry";
 import { theme } from "../theme";
 import { TypeSummary } from "./type-summary";
 import { friendlyPath } from "./utils";
@@ -36,11 +37,11 @@ function isLocation(v: unknown): v is {
 
 export const DisplayRecursiveType: FC<{
 	id: number;
-	typeRegistry: TypeRegistry;
 	depth?: number;
-}> = ({ id, typeRegistry, depth = 0 }) => {
+}> = ({ id, depth = 0 }) => {
 	const [expanded, setExpanded] = useState(true);
-	const [displayLimit, setDisplayLimit] = useState(500);
+	const [displayLimit, setDisplayLimit] = useState(100);
+	const typeRegistry = useTypeRegistry();
 
 	if (!typeRegistry) {
 		return <Box>[Missing Data]</Box>;
@@ -58,7 +59,11 @@ export const DisplayRecursiveType: FC<{
 		);
 	}
 
-	const resolvedType = typeRegistry.get(id);
+	if (id === 0) {
+		return <Box style={{ marginLeft: depth * 16 }}>[TypeId Not Provided]</Box>;
+	}
+
+	const resolvedType = typeRegistry[id];
 
 	const marginLeft = depth * 16;
 
@@ -66,7 +71,7 @@ export const DisplayRecursiveType: FC<{
 		return <Box style={{ marginLeft }}>[Missing Node: {id}]</Box>;
 	}
 
-	const { flags } = resolvedType;
+	const { flags = [] } = resolvedType;
 
 	const toggleExpanded = () => setExpanded((expanded) => !expanded);
 
@@ -231,11 +236,7 @@ export const DisplayRecursiveType: FC<{
 										return (
 											<Stack key={reactKey}>
 												{String(key)}:
-												<DisplayRecursiveType
-													id={value}
-													typeRegistry={typeRegistry}
-													depth={depth + 2}
-												/>
+												<DisplayRecursiveType id={value} depth={depth + 2} />
 											</Stack>
 										);
 									}
@@ -270,7 +271,7 @@ export const DisplayRecursiveType: FC<{
 										);
 									}
 
-									const cutoff = 500;
+									const cutoff = 100;
 									const currentLimit = Math.min(displayLimit, value.length);
 									const hasMore = value.length > currentLimit;
 									const remaining = value.length - currentLimit;
@@ -284,7 +285,6 @@ export const DisplayRecursiveType: FC<{
 														i
 													}`}
 													id={v as number}
-													typeRegistry={typeRegistry}
 													depth={depth + 2}
 												/>
 											))}
