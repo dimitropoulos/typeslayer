@@ -1,53 +1,53 @@
 {
-	"name": "typeslayer",
-	"version": "0.1.8",
-	"description": "Slay your TypeScript types",
-	"private": false,
-	"type": "module",
-	"keywords": [
-		"typescript",
-		"ts",
-		"tauri",
-		"desktop",
-		"benchmarking",
-		"performance"
-	],
-	"author": "Dimitri Mitropoulos",
-	"license": "MIT",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/dimitropoulos/typeslayer.git",
-		"directory": "packages/typeslayer"
-	},
-	"bugs": {
-		"url": "https://github.com/dimitropoulos/typeslayer/issues"
-	},
-	"homepage": "https://github.com/dimitropoulos/typeslayer#readme",
-	"bin": {
-		"typeslayer": "bin/typeslayer.js"
-	},
-	"files": [
-		"bin",
-		"scripts"
-	],
-	"os": [
-		"linux",
-		"darwin",
-		"win32"
-	],
-	"cpu": [
-		"x64",
-		"arm64"
-	],
-	"engines": {
-		"node": ">=24.0.0"
-	},
-	"scripts": {
-		"postinstall": "node scripts/postinstall.js"
-	},
-	"optionalDependencies": {
-		"@typeslayer/linux-x64": "0.1.8",
-		"@typeslayer/darwin-arm64": "0.1.8",
-		"@typeslayer/win32-x64": "0.1.8"
-	}
+  "name": "typeslayer",
+  "version": "0.1.9",
+  "description": "Slay your TypeScript types",
+  "private": false,
+  "type": "module",
+  "keywords": [
+    "typescript",
+    "ts",
+    "tauri",
+    "desktop",
+    "benchmarking",
+    "performance"
+  ],
+  "author": "Dimitri Mitropoulos",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dimitropoulos/typeslayer.git",
+    "directory": "packages/typeslayer"
+  },
+  "bugs": {
+    "url": "https://github.com/dimitropoulos/typeslayer/issues"
+  },
+  "homepage": "https://github.com/dimitropoulos/typeslayer#readme",
+  "bin": {
+    "typeslayer": "bin/typeslayer.js"
+  },
+  "files": [
+    "bin",
+    "scripts"
+  ],
+  "os": [
+    "linux",
+    "darwin",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js"
+  },
+  "optionalDependencies": {
+    "@typeslayer/linux-x64": "0.1.9",
+    "@typeslayer/darwin-arm64": "0.1.9",
+    "@typeslayer/win32-x64": "0.1.9"
+  }
 }

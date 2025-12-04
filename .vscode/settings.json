@@ -1,48 +1,48 @@
 {
-	"cSpell.words": [
-		"bivariant",
-		"checktypes",
-		"chrono",
-		"cpuprofile",
-		"Dimitri",
-		"hotspot",
-		"Hotspots",
-		"Kabaddi",
-		"Lapce",
-		"layercake",
-		"Millis",
-		"Mitropoulos",
-		"nvim",
-		"perfetto",
-		"speedscope",
-		"subl",
-		"tauri",
-		"toolpad",
-		"treemap",
-		"treemaps",
-		"typeslayer",
-		"webstorm",
-		"Whatshot"
-	],
-	"editor.codeActionsOnSave": {
-		"source.organizeImports.biome": "always",
-		"source.fixAll.biome": "always"
-	},
-	"editor.defaultFormatter": "biomejs.biome",
-	"search.exclude": {
-		"packages/typeslayer/public/**": true
-	},
-	"files.watcherExclude": {
-		"packages/typeslayer/public/**": true
-	},
-	"[json]": {
-		"editor.defaultFormatter": "biomejs.biome"
-	},
-	"[typescript]": {
-		"editor.defaultFormatter": "biomejs.biome"
-	},
-	"[typescriptreact]": {
-		"editor.defaultFormatter": "biomejs.biome"
-	},
-	"rust-analyzer.linkedProjects": ["packages/typeslayer/src-tauri/Cargo.toml"]
+  "cSpell.words": [
+    "bivariant",
+    "checktypes",
+    "chrono",
+    "cpuprofile",
+    "Dimitri",
+    "hotspot",
+    "Hotspots",
+    "Kabaddi",
+    "Lapce",
+    "layercake",
+    "Millis",
+    "Mitropoulos",
+    "nvim",
+    "perfetto",
+    "speedscope",
+    "subl",
+    "tauri",
+    "toolpad",
+    "treemap",
+    "treemaps",
+    "typeslayer",
+    "webstorm",
+    "Whatshot"
+  ],
+  "editor.codeActionsOnSave": {
+    "source.organizeImports.biome": "always",
+    "source.fixAll.biome": "always"
+  },
+  "editor.defaultFormatter": "biomejs.biome",
+  "search.exclude": {
+    "packages/typeslayer/public/**": true
+  },
+  "files.watcherExclude": {
+    "packages/typeslayer/public/**": true
+  },
+  "[json]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "rust-analyzer.linkedProjects": ["packages/typeslayer/src-tauri/Cargo.toml"]
 }

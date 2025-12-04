@@ -1,6 +1,6 @@
 {
-	"compilerOptions": {
-		"outDir": "dist",
-		"strict": true
-	}
+  "compilerOptions": {
+    "outDir": "dist",
+    "strict": true
+  }
 }

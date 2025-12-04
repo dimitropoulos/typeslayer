@@ -95,7 +95,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             auth::validate_auth_code,
-            auth::is_authenticated,
+            auth::is_authorized,
             app_data::validate_types_json,
             app_data::validate_trace_json,
             app_data::get_trace_json,
@@ -109,8 +109,8 @@ pub fn run() {
             app_data::generate_cpu_profile,
             app_data::get_analyze_trace,
             app_data::get_cpu_profile,
-            app_data::get_simplify_paths,
-            app_data::set_simplify_paths,
+            app_data::get_relative_paths,
+            app_data::set_relative_paths,
             app_data::get_prefer_editor_open,
             app_data::set_prefer_editor_open,
             app_data::get_auto_start,

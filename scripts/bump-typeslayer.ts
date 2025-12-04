@@ -11,23 +11,23 @@ const rootDir = join(__dirname, "..");
 const bumpType = process.argv[2];
 
 if (!bumpType || !["patch", "minor", "major"].includes(bumpType)) {
-	console.error("❌ Usage: sync-build-versions.ts <patch|minor|major>");
-	process.exit(1);
+  console.error("❌ Usage: bump-typeslayer.ts <patch|minor|major>");
+  process.exit(1);
 }
 
 function bumpVersion(version: string, type: string): string {
-	const parts = version.split(".");
-	const major = parseInt(parts[0], 10);
-	const minor = parseInt(parts[1], 10);
-	const patch = parseInt(parts[2], 10);
+  const parts = version.split(".");
+  const major = parseInt(parts[0], 10);
+  const minor = parseInt(parts[1], 10);
+  const patch = parseInt(parts[2], 10);
 
-	if (type === "major") {
-		return `${major + 1}.0.0`;
-	} else if (type === "minor") {
-		return `${major}.${minor + 1}.0`;
-	} else {
-		return `${major}.${minor}.${patch + 1}`;
-	}
+  if (type === "major") {
+    return `${major + 1}.0.0`;
+  } else if (type === "minor") {
+    return `${major}.${minor + 1}.0`;
+  } else {
+    return `${major}.${minor}.${patch + 1}`;
+  }
 }
 
 // Read main package version
@@ -40,16 +40,16 @@ mainPackageJson.version = newMainVersion;
 
 // Also update optionalDependencies versions in main package
 if (mainPackageJson.optionalDependencies) {
-	for (const [depName] of Object.entries(
-		mainPackageJson.optionalDependencies,
-	)) {
-		mainPackageJson.optionalDependencies[depName] = newMainVersion;
-	}
+  for (const [depName] of Object.entries(
+    mainPackageJson.optionalDependencies,
+  )) {
+    mainPackageJson.optionalDependencies[depName] = newMainVersion;
+  }
 }
 
 writeFileSync(
-	mainPackageJsonPath,
-	`${JSON.stringify(mainPackageJson, null, "\t")}\n`,
+  mainPackageJsonPath,
+  `${JSON.stringify(mainPackageJson, null, 2)}\n`,
 );
 
 console.log(`📦 Bumped main package: ${oldMainVersion} → ${newMainVersion}`);
@@ -57,21 +57,21 @@ console.log(`📦 Bumped main package: ${oldMainVersion} → ${newMainVersion}`)
 const platforms = ["linux-x64", "darwin-arm64", "win32-x64"];
 
 for (const platform of platforms) {
-	const buildPackageJsonPath = join(rootDir, "npm", platform, "package.json");
+  const buildPackageJsonPath = join(rootDir, "npm", platform, "package.json");
 
-	const buildPackageJson = JSON.parse(
-		readFileSync(buildPackageJsonPath, "utf-8"),
-	);
-	const oldVersion = buildPackageJson.version;
+  const buildPackageJson = JSON.parse(
+    readFileSync(buildPackageJsonPath, "utf-8"),
+  );
+  const oldVersion = buildPackageJson.version;
 
-	buildPackageJson.version = newMainVersion;
-	writeFileSync(
-		buildPackageJsonPath,
-		`${JSON.stringify(buildPackageJson, null, "\t")}\n`,
-	);
-	console.log(
-		`  ✅ @typeslayer/${platform}: ${oldVersion} → ${newMainVersion}`,
-	);
+  buildPackageJson.version = newMainVersion;
+  writeFileSync(
+    buildPackageJsonPath,
+    `${JSON.stringify(buildPackageJson, null, "\t")}\n`,
+  );
+  console.log(
+    `  ✅ @typeslayer/${platform}: ${oldVersion} → ${newMainVersion}`,
+  );
 }
 
 console.log("\n✨ All packages bumped and synced!");

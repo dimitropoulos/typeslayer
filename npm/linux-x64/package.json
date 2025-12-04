@@ -1,26 +1,26 @@
 {
-	"name": "@typeslayer/linux-x64",
-	"version": "0.1.8",
-	"description": "TypeSlayer binary for Linux x64",
-	"private": false,
-	"type": "module",
-	"license": "MIT",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/dimitropoulos/typeslayer.git",
-		"directory": "npm/linux-x64"
-	},
-	"bugs": {
-		"url": "https://github.com/dimitropoulos/typeslayer/issues"
-	},
-	"homepage": "https://github.com/dimitropoulos/typeslayer#readme",
-	"os": [
-		"linux"
-	],
-	"cpu": [
-		"x64"
-	],
-	"files": [
-		"typeslayer"
-	]
+  "name": "@typeslayer/linux-x64",
+  "version": "0.1.9",
+  "description": "TypeSlayer binary for Linux x64",
+  "private": false,
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dimitropoulos/typeslayer.git",
+    "directory": "npm/linux-x64"
+  },
+  "bugs": {
+    "url": "https://github.com/dimitropoulos/typeslayer/issues"
+  },
+  "homepage": "https://github.com/dimitropoulos/typeslayer#readme",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "typeslayer"
+  ]
 }

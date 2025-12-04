@@ -1,37 +1,46 @@
 {
-	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-	"vcs": {
-		"enabled": true,
-		"clientKind": "git",
-		"useIgnoreFile": true
-	},
-	"linter": {
-		"rules": {
-			"complexity": {
-				"noForEach": "off"
-			},
-			"suspicious": {
-				"noConfusingVoidType": "off"
-			},
-			"correctness": {
-				"useHookAtTopLevel": "error"
-			}
-		}
-	},
-	"formatter": {
-		"indentStyle": "tab"
-	},
-	"files": {
-		"maxSize": 18446744073709551615,
-		"includes": [
-			"**/*.ts",
-			"**/*.tsx",
-			"**/*.js",
-			"**/*.json",
-			"!**/public",
-			"!**/dist",
-			"!node_modules",
-			"!**/gen"
-		]
-	}
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "linter": {
+    "rules": {
+      "complexity": {
+        "noForEach": "off"
+      },
+      "suspicious": {
+        "noConfusingVoidType": "off"
+      },
+      "correctness": {
+        "useHookAtTopLevel": "error"
+      },
+      "style": {
+        "useBlockStatements": "error"
+      }
+    }
+  },
+  "formatter": {
+    "indentStyle": "space"
+  },
+  "javascript": {
+    "formatter": {
+      "arrowParentheses": "asNeeded"
+    }
+  },
+
+  "files": {
+    "maxSize": 18446744073709551615,
+    "includes": [
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.json",
+      "!**/public",
+      "!**/dist",
+      "!node_modules",
+      "!**/gen"
+    ]
+  }
 }

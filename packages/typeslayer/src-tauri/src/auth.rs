@@ -67,14 +67,11 @@ And by the way, when you see my dad (Yeah?)
 Tell him that I slit his throat in this dream I had"#;
 
 pub fn is_valid_key(key: &str) -> bool {
-    tracing::info!("is_valid_key: checking key='{}' (len={})", key, key.len());
     if key.len() != 8 {
-        tracing::info!("is_valid_key: key length != 8, invalid");
         return false;
     }
     let encoded_entropy = general_purpose::STANDARD.encode(ENTROPY);
     let valid = encoded_entropy.contains(key);
-    tracing::info!("is_valid_key: result={}", valid);
     valid
 }
 
@@ -85,7 +82,6 @@ pub async fn validate_auth_code(
 ) -> Result<bool, String> {
     let mut data = state.lock().map_err(|e| e.to_string())?;
     let valid = is_valid_key(&code);
-    tracing::info!("validate_auth_code: code='{}' valid={}", code, valid);
     if valid {
         data.auth_code = Some(code.clone());
     }
@@ -93,16 +89,12 @@ pub async fn validate_auth_code(
 }
 
 #[tauri::command]
-pub async fn is_authenticated(state: State<'_, Mutex<AppData>>) -> Result<bool, String> {
+pub async fn is_authorized(state: State<'_, Mutex<AppData>>) -> Result<bool, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
-    tracing::info!("is_authenticated check: auth_code = {:?}", data.auth_code);
-
     if let Some(ref code) = data.auth_code {
         let valid = is_valid_key(code);
-        tracing::info!("is_authenticated: code='{}', valid={}", code, valid);
         Ok(valid)
     } else {
-        tracing::info!("is_authenticated: no auth_code set");
         Ok(false)
     }
 }

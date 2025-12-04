@@ -19,6 +19,8 @@ use std::sync::Mutex;
 use tauri::{AppHandle, Manager, State};
 use tracing::{error, info};
 
+const CONFIG_FILENAME: &str = "typeslayer.toml";
+
 // Static list of known editors (cmd, human-readable name)
 const AVAILABLE_EDITORS: &[(&str, &str)] = &[
     ("code", "VS Code"),
@@ -77,7 +79,7 @@ impl AppData {
         info!("using outputs data_dir: {}", data_dir);
         // Build a single LayerCake and reuse it across init functions
         let mut cake = LayerCake::new(LayerCakeInitArgs {
-            config_filename: "typeslayer.toml",
+            config_filename: CONFIG_FILENAME,
             precedence: [Source::Env, Source::Flag, Source::File],
             env_prefix: "TYPESLAYER_",
         });
@@ -126,7 +128,7 @@ impl AppData {
             }
         }
 
-        cake.resolve_string(ResolveStringArgs {
+        let resolved = cake.resolve_string(ResolveStringArgs {
             env: "PROJECT_ROOT",
             flag: "--project-root",
             file: "project_root",
@@ -136,17 +138,34 @@ impl AppData {
                     .unwrap_or_else(|_| "./package.json".to_string())
             },
             validate: |s| Self::validate_project_root_path(s),
-        })
+        });
+        info!("resolved project_root from config/env/flag: {}", resolved);
+        resolved
     }
 
     fn detect_project_root_from_cwd() -> Option<String> {
         let cwd = std::env::current_dir().ok()?;
         let pkg_path = cwd.join("package.json");
+        info!("checking for package.json in cwd: {}", cwd.display());
         if pkg_path.exists() {
-            Some(pkg_path.to_string_lossy().to_string())
-        } else {
-            None
+            let result = pkg_path.to_string_lossy().to_string();
+            info!("found package.json in cwd: {}", result);
+            return Some(result);
         }
+
+        // Also check PWD environment variable in case cwd was changed
+        if let Ok(pwd) = std::env::var("PWD") {
+            let pwd_path = std::path::Path::new(&pwd).join("package.json");
+            info!("checking for package.json in PWD: {}", pwd);
+            if pwd_path.exists() {
+                let result = pwd_path.to_string_lossy().to_string();
+                info!("found package.json in PWD: {}", result);
+                return Some(result);
+            }
+        }
+
+        info!("no package.json found in cwd or PWD");
+        None
     }
 
     fn validate_project_root_path(s: &str) -> Result<String, String> {
@@ -288,6 +307,7 @@ impl AppData {
         self.selected_tsconfig =
             Self::init_selected_tsconfig_with(&self.cake, &self.tsconfig_paths);
     }
+
     // Blocking helper that runs tsc directly with optional tsconfig
     fn run_typescript_with_flag_blocking(
         project_root: String,
@@ -599,7 +619,7 @@ impl AppData {
         let base_data_dir = app.path().app_data_dir().expect("app_data_dir unavailable");
         let data_dir = base_data_dir.join("outputs");
         let data_dir_str = data_dir.to_string_lossy().to_string();
-        let config_path = base_data_dir.join("typeslayer.toml");
+        let config_path = base_data_dir.join(CONFIG_FILENAME);
         let types_path = data_dir.join(TYPES_JSON_FILENAME.trim_start_matches('/'));
         let trace_path = data_dir.join(TRACE_JSON_FILENAME.trim_start_matches('/'));
         let analyze_path = data_dir.join(ANALYZE_TRACE_FILENAME);
@@ -678,7 +698,7 @@ impl AppData {
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
-    pub simplify_paths: bool,
+    pub relative_paths: bool,
     pub prefer_editor_open: bool,
     pub auto_start: bool,
     pub preferred_editor: Option<String>,
@@ -688,7 +708,7 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            simplify_paths: true,
+            relative_paths: true,
             prefer_editor_open: true,
             auto_start: true,
             preferred_editor: Some("code".to_string()),
@@ -705,10 +725,10 @@ impl Settings {
 
 impl AppData {
     fn settings_from_cake(cake: &LayerCake) -> Settings {
-        let simplify_paths = cake.resolve_bool(ResolveBoolArgs {
-            env: "SIMPLIFY_PATHS",
-            flag: "--simplify-paths",
-            file: "settings.simplifyPaths",
+        let relative_paths = cake.resolve_bool(ResolveBoolArgs {
+            env: "RELATIVE_PATHS",
+            flag: "--relative-paths",
+            file: "settings.relativePaths",
             default: || true,
         });
         let prefer_editor_open = cake.resolve_bool(ResolveBoolArgs {
@@ -744,7 +764,7 @@ impl AppData {
             validate: |s| Ok(s.to_string()),
         });
         Settings {
-            simplify_paths,
+            relative_paths,
             prefer_editor_open,
             auto_start,
             preferred_editor,
@@ -1038,7 +1058,7 @@ pub async fn get_analyze_trace(
 
     // Read from disk and cache
     let data_dir = AppData::get_outputs_dir(&app);
-    let path = Path::new(&data_dir).join("analyze-trace.json");
+    let path = Path::new(&data_dir).join(ANALYZE_TRACE_FILENAME);
     let contents = tokio::fs::read_to_string(&path)
         .await
         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
@@ -1117,19 +1137,19 @@ pub async fn get_cpu_profile_text(state: State<'_, Mutex<AppData>>) -> Result<St
 }
 
 #[tauri::command]
-pub async fn get_simplify_paths(state: State<'_, Mutex<AppData>>) -> Result<bool, String> {
+pub async fn get_relative_paths(state: State<'_, Mutex<AppData>>) -> Result<bool, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
-    Ok(data.settings.simplify_paths)
+    Ok(data.settings.relative_paths)
 }
 
 #[tauri::command]
-pub async fn set_simplify_paths(
+pub async fn set_relative_paths(
     app: AppHandle,
     state: State<'_, Mutex<AppData>>,
     value: bool,
 ) -> Result<(), String> {
     let mut data = state.lock().map_err(|e| e.to_string())?;
-    data.settings.simplify_paths = value;
+    data.settings.relative_paths = value;
     AppData::update_outputs(&data, &app);
     Ok(())
 }

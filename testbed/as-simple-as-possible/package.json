@@ -1,11 +1,11 @@
 {
-	"name": "as-simple-as-possible",
-	"main": "index.ts",
-	"type": "module",
-	"scripts": {
-		"typecheck": "tsc --noEmit"
-	},
-	"devDependencies": {
-		"typescript": "^5.9.3"
-	}
+  "name": "as-simple-as-possible",
+  "main": "index.ts",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
 }

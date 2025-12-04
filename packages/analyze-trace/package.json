@@ -1,27 +1,41 @@
 {
-	"name": "@typeslayer/analyze-trace",
-	"version": "0.1.0",
-	"license": "MIT",
-	"private": false,
-	"type": "module",
-	"engines": {
-		"node": ">=24"
-	},
-	"packageManager": "pnpm@10.6.5",
-	"main": "./dist/index.js",
-	"typings": "./dist/index.d.ts",
-	"bin": {
-		"typeslayer-analyze-trace": "./bin/typeslayer-analyze-trace.mjs"
-	},
-	"scripts": {
-		"build": "tsup",
-		"dev": "tsup --watch"
-	},
-	"dependencies": {
-		"@types/node": "^24.10.1",
-		"@typeslayer/validate": "workspace:*",
-		"tsup": "^8.5.1",
-		"typescript": "^5.9.3",
-		"zod": "^4.1.12"
-	}
+  "name": "@typeslayer/analyze-trace",
+  "version": "0.1.0",
+  "description": "Analyze TypeScript compiler trace events to identify performance bottlenecks",
+  "license": "MIT",
+  "private": false,
+  "type": "module",
+  "repository": "github:dimitropoulos/typeslayer",
+  "homepage": "https://github.com/dimitropoulos/typeslayer#readme",
+  "bugs": "https://github.com/dimitropoulos/typeslayer/issues",
+  "keywords": [
+    "typescript",
+    "performance",
+    "analysis",
+    "trace",
+    "cli"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@10.6.5",
+  "main": "./dist/index.js",
+  "typings": "./dist/index.d.ts",
+  "bin": {
+    "typeslayer-analyze-trace": "./bin/typeslayer-analyze-trace.mjs"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@typeslayer/validate": "workspace:*",
+    "zod": "4.1.13"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "tsup": "8.5.1",
+    "typescript": "5.9.3"
+  }
 }

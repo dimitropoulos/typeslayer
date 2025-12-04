@@ -2,43 +2,45 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type {
-	DuplicatedPackage,
-	DuplicatedPackageInstance,
-	NodeModulePaths,
+  DuplicatedPackage,
+  DuplicatedPackageInstance,
+  NodeModulePaths,
 } from "./utils";
 
 export async function getPackageVersion(packagePath: string) {
-	const packageJsonPath = join(packagePath, "package.json");
-	console.log("packageJsonPath", packageJsonPath);
-	if (!existsSync(packageJsonPath)) {
-		console.warn(
-			`Package.json not found at ${packageJsonPath}. This may not be a node module.`,
-		);
-		return "unknown";
-	}
-	const jsonString = await readFile(packageJsonPath, "utf-8");
-	const jsonObj = JSON.parse(jsonString);
-	return jsonObj.version;
+  const packageJsonPath = join(packagePath, "package.json");
+  console.log("packageJsonPath", packageJsonPath);
+  if (!existsSync(packageJsonPath)) {
+    console.warn(
+      `Package.json not found at ${packageJsonPath}. This may not be a node module.`,
+    );
+    return "unknown";
+  }
+  const jsonString = await readFile(packageJsonPath, "utf-8");
+  const jsonObj = JSON.parse(jsonString);
+  return jsonObj.version;
 }
 
 export const getDuplicateNodeModules = async (
-	nodeModulePaths: NodeModulePaths,
+  nodeModulePaths: NodeModulePaths,
 ) => {
-	const duplicates: DuplicatedPackage[] = [];
-	for (const [packageName, packagePaths] of Object.entries(nodeModulePaths)) {
-		if (packagePaths.length < 2) continue;
-		const instances: DuplicatedPackageInstance[] = [];
-		for (const packagePath of packagePaths) {
-			instances.push({
-				path: packagePath,
-				version: await getPackageVersion(packagePath),
-			});
-		}
-		duplicates.push({
-			name: packageName,
-			instances,
-		});
-	}
+  const duplicates: DuplicatedPackage[] = [];
+  for (const [packageName, packagePaths] of Object.entries(nodeModulePaths)) {
+    if (packagePaths.length < 2) {
+      continue;
+    }
+    const instances: DuplicatedPackageInstance[] = [];
+    for (const packagePath of packagePaths) {
+      instances.push({
+        path: packagePath,
+        version: await getPackageVersion(packagePath),
+      });
+    }
+    duplicates.push({
+      name: packageName,
+      instances,
+    });
+  }
 
-	return duplicates;
+  return duplicates;
 };

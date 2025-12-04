@@ -6,7 +6,7 @@ use crate::app_data::AppData;
 use crate::validate::types_json::TypesJsonSchema;
 use crate::validate::utils::TypeId;
 
-pub const TYPE_GRAPH_FILENAME: &str = "/type-graph.json";
+pub const TYPE_GRAPH_FILENAME: &str = "type-graph.json";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -515,8 +515,7 @@ pub fn build_type_graph(
 
         // Persist to outputs/type-graph.json for refresh-on-boot
         let outputs_dir = AppData::get_outputs_dir(&_app);
-        let path =
-            std::path::Path::new(&outputs_dir).join(TYPE_GRAPH_FILENAME.trim_start_matches('/'));
+        let path = std::path::Path::new(&outputs_dir).join(TYPE_GRAPH_FILENAME);
         let json = serde_json::to_string_pretty(&app_data.type_graph)
             .map_err(|e| format!("Failed to serialize type_graph: {e}"))?;
         std::fs::create_dir_all(&outputs_dir)

@@ -8,8 +8,9 @@ mod types;
 pub use spans::create_spans;
 pub use types::*;
 
-use crate::validate::trace_json::TraceEvent;
-use crate::validate::types_json::TypesJsonSchema;
+use crate::analyze_trace::constants::ANALYZE_TRACE_FILENAME;
+use crate::validate::trace_json::{TRACE_JSON_FILENAME, TraceEvent};
+use crate::validate::types_json::{TYPES_JSON_FILENAME, TypesJsonSchema};
 use serde_json;
 use std::fs;
 use std::path::Path;
@@ -35,7 +36,7 @@ pub fn analyze_trace(
     }
 
     // Read types.json
-    let types_file_path = trace_dir_path.join("types.json");
+    let types_file_path = trace_dir_path.join(TYPES_JSON_FILENAME);
     if !types_file_path.exists() {
         return Err(format!(
             "types.json must exist in {}. first run --generateTrace",
@@ -48,7 +49,7 @@ pub fn analyze_trace(
         .map_err(|e| format!("Failed to parse types.json: {}", e))?;
 
     // Read trace.json
-    let trace_file_path = trace_dir_path.join("trace.json");
+    let trace_file_path = trace_dir_path.join(TRACE_JSON_FILENAME);
     if !trace_file_path.exists() {
         return Err(format!(
             "trace.json must exist in {}. first run --generateTrace",
@@ -86,7 +87,7 @@ pub fn analyze_trace(
     };
 
     // Write result to analyze-trace.json
-    let output_path = trace_dir_path.join("analyze-trace.json");
+    let output_path = trace_dir_path.join(ANALYZE_TRACE_FILENAME);
     let output_json = serde_json::to_string_pretty(&result)
         .map_err(|e| format!("Failed to serialize result: {}", e))?;
     fs::write(&output_path, output_json)

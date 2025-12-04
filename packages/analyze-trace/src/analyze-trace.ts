@@ -2,11 +2,14 @@ import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
-	type TraceJsonSchema,
-	type TypesJsonSchema,
-	traceJsonSchema,
-	typesJsonSchema,
+  TRACE_JSON_FILENAME,
+  type TraceJsonSchema,
+  TYPES_JSON_FILENAME,
+  type TypesJsonSchema,
+  traceJsonSchema,
+  typesJsonSchema,
 } from "@typeslayer/validate";
+import { ANALYZE_TRACE_FILENAME } from "./constants";
 import { createDepthLimits } from "./depth-limits";
 import { getDuplicateNodeModules } from "./get-duplicate-node-modules";
 import { getHotspots } from "./get-hotspots";
@@ -14,83 +17,83 @@ import { getNodeModulePaths } from "./node-module-paths";
 import { createSpans, createSpanTree } from "./spans";
 import type { AnalyzeTraceResult } from "./utils";
 import {
-	type AbsolutePath,
-	type AnalyzeTraceOptions,
-	throwIfNotDirectory,
+  type AbsolutePath,
+  type AnalyzeTraceOptions,
+  throwIfNotDirectory,
 } from "./utils";
 
 export function validateOptions(options: AnalyzeTraceOptions) {
-	if (options.forceMillis < options.skipMillis) {
-		throw new Error("forceMillis cannot be less than skipMillis");
-	}
+  if (options.forceMillis < options.skipMillis) {
+    throw new Error("forceMillis cannot be less than skipMillis");
+  }
 }
 
 const validateTraceDir = async (
-	traceDir: AbsolutePath,
+  traceDir: AbsolutePath,
 ): Promise<{
-	traceFile: TraceJsonSchema;
-	typesFile: TypesJsonSchema;
+  traceFile: TraceJsonSchema;
+  typesFile: TypesJsonSchema;
 }> => {
-	await throwIfNotDirectory(traceDir);
+  await throwIfNotDirectory(traceDir);
 
-	const typesFilePath = join(traceDir, "types.json");
-	if (!existsSync(typesFilePath)) {
-		throw new Error(
-			`types.json must exist in ${traceDir}. first run --generateTrace`,
-		);
-	}
-	const typesFileJson = JSON.parse(await readFile(typesFilePath, "utf8"));
-	const typesFile = typesJsonSchema.parse(typesFileJson);
+  const typesFilePath = join(traceDir, TYPES_JSON_FILENAME);
+  if (!existsSync(typesFilePath)) {
+    throw new Error(
+      `types.json must exist in ${traceDir}. first run --generateTrace`,
+    );
+  }
+  const typesFileJson = JSON.parse(await readFile(typesFilePath, "utf8"));
+  const typesFile = typesJsonSchema.parse(typesFileJson);
 
-	const traceFilePath = join(traceDir, "trace.json");
-	if (!existsSync(traceFilePath)) {
-		throw new Error(
-			`trace.json must exist in ${traceDir}. first run --generateTrace`,
-		);
-	}
-	const traceFileJson = JSON.parse(await readFile(traceFilePath, "utf8"));
-	const traceFile = traceJsonSchema.parse(traceFileJson);
+  const traceFilePath = join(traceDir, TRACE_JSON_FILENAME);
+  if (!existsSync(traceFilePath)) {
+    throw new Error(
+      `trace.json must exist in ${traceDir}. first run --generateTrace`,
+    );
+  }
+  const traceFileJson = JSON.parse(await readFile(traceFilePath, "utf8"));
+  const traceFile = traceJsonSchema.parse(traceFileJson);
 
-	return {
-		traceFile,
-		typesFile,
-	};
+  return {
+    traceFile,
+    typesFile,
+  };
 };
 
 export const defaultOptions: AnalyzeTraceOptions = {
-	forceMillis: 500,
-	skipMillis: 100,
-	expandTypes: true,
-	minSpanParentPercentage: 0.6,
-	importExpressionThreshold: 10,
+  forceMillis: 500,
+  skipMillis: 100,
+  expandTypes: true,
+  minSpanParentPercentage: 0.6,
+  importExpressionThreshold: 10,
 };
 
 export const analyzeTrace = async ({
-	traceDir,
-	options = defaultOptions,
+  traceDir,
+  options = defaultOptions,
 }: {
-	traceDir: AbsolutePath;
-	options?: AnalyzeTraceOptions;
+  traceDir: AbsolutePath;
+  options?: AnalyzeTraceOptions;
 }) => {
-	validateOptions(options);
-	const { traceFile, typesFile } = await validateTraceDir(traceDir);
+  validateOptions(options);
+  const { traceFile, typesFile } = await validateTraceDir(traceDir);
 
-	const nodeModulePaths = getNodeModulePaths(traceFile);
+  const nodeModulePaths = getNodeModulePaths(traceFile);
 
-	const spans = createSpans(traceFile);
-	const hotPathsTree = createSpanTree(spans, options);
+  const spans = createSpans(traceFile);
+  const hotPathsTree = createSpanTree(spans, options);
 
-	const result: AnalyzeTraceResult = {
-		nodeModulePaths,
-		unterminatedEvents: spans.unclosedStack.reverse(),
-		hotSpots: await getHotspots(hotPathsTree, typesFile, options),
-		duplicatePackages: await getDuplicateNodeModules(nodeModulePaths),
-		depthLimits: createDepthLimits(traceFile),
-	};
-	await writeFile(
-		join(traceDir, "analyze-trace.json"),
-		JSON.stringify(result, null, 2),
-	);
+  const result: AnalyzeTraceResult = {
+    nodeModulePaths,
+    unterminatedEvents: spans.unclosedStack.reverse(),
+    hotSpots: await getHotspots(hotPathsTree, typesFile, options),
+    duplicatePackages: await getDuplicateNodeModules(nodeModulePaths),
+    depthLimits: createDepthLimits(traceFile),
+  };
+  await writeFile(
+    join(traceDir, ANALYZE_TRACE_FILENAME),
+    JSON.stringify(result, null, 2),
+  );
 
-	return result;
+  return result;
 };

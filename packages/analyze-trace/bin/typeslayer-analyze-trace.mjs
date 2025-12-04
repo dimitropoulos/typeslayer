@@ -3,7 +3,7 @@
 import { statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import process, { exit } from "node:process";
-import { analyzeTrace, defaultOptions } from "../dist/index.js";
+import { ANALYZE_TRACE_FILENAME, analyzeTrace, defaultOptions } from "../dist/index.js";
 
 const { argv } = process;
 
@@ -36,7 +36,7 @@ try {
 console.log({ traceDir });
 
 analyzeTrace({ traceDir, options: defaultOptions }).then((result) => {
-	const destination = resolve(traceDir, "analyze-trace.json");
+	const destination = resolve(traceDir, ANALYZE_TRACE_FILENAME);
 	writeFileSync(destination, JSON.stringify(result, null, 2), "utf-8");
 	console.log("Analysis result:", result);
 });

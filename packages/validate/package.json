@@ -1,37 +1,52 @@
 {
-	"name": "@typeslayer/validate",
-	"version": "0.1.0",
-	"private": false,
-	"type": "module",
-	"engines": {
-		"node": ">=20"
-	},
-	"packageManager": "pnpm@10.6.5",
-	"exports": {
-		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
-		},
-		"./node": {
-			"types": "./dist/node.d.ts",
-			"import": "./dist/node.js"
-		}
-	},
-	"main": "./dist/index.js",
-	"types": "./dist/index.d.ts",
-	"scripts": {
-		"build": "tsup",
-		"dev": "tsup --watch",
-		"test": "vitest"
-	},
-	"dependencies": {
-		"@types/node": "^24.10.1",
-		"@types/stream-json": "^1.7.8",
-		"stream-chain": "^3.4.0",
-		"stream-json": "^1.9.1",
-		"tsup": "^8.5.1",
-		"typescript": "^5.9.3",
-		"vitest": "^4.0.13",
-		"zod": "^4.1.12"
-	}
+  "name": "@typeslayer/validate",
+  "version": "0.1.0",
+  "description": "Validation schemas and utilities for TypeScript compiler trace analysis",
+  "license": "MIT",
+  "private": false,
+  "type": "module",
+  "repository": "github:dimitropoulos/typeslayer",
+  "homepage": "https://github.com/dimitropoulos/typeslayer#readme",
+  "bugs": "https://github.com/dimitropoulos/typeslayer/issues",
+  "keywords": [
+    "typescript",
+    "performance",
+    "analysis",
+    "validation",
+    "trace"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.6.5",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "stream-chain": "^3.4.0",
+    "stream-json": "^1.9.1",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/stream-json": "^1.7.8",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.15"
+  }
 }

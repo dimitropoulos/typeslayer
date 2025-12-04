@@ -11,7 +11,7 @@ export type ByteMatrix = ByteArray[];
 export type ByteMatrix3D = ByteMatrix[];
 
 export type Mapping<T extends string> = {
-	[key in T extends "asdf" ? never : T]: `${T}${Byte}`;
+  [key in T extends "asdf" ? never : T]: `${T}${Byte}`;
 };
 
 export type Thing1 = Mapping<Byte>;

@@ -1,11 +1,15 @@
-import type { ResolvedType } from "@typeslayer/validate";
+import { createTypeRegistry } from "@typeslayer/validate";
+import { useMemo } from "react";
 import { useTypesJson } from "../../hooks/tauri-hooks";
 
 export const useTypeRegistry = () => {
-	const { data: typesJson } = useTypesJson();
-
-	return [
-		{ id: 0, recursionId: -1, flags: [] } as ResolvedType,
-		...(typesJson ?? []),
-	] as ResolvedType[];
+  const { data: typesJson, isSuccess } = useTypesJson();
+  const typeRegistry = useMemo(
+    () => createTypeRegistry(typesJson ?? []),
+    [typesJson],
+  );
+  if (!isSuccess || !typesJson) {
+    return [];
+  }
+  return typeRegistry;
 };
