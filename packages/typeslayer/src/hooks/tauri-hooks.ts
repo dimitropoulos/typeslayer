@@ -222,6 +222,11 @@ export type GraphLink = {
 };
 export type GraphStats = { count: Record<string, number> };
 export type GraphEdgeEntry = [TypeId, TypeId[], AbsolutePath | null];
+export const GRAPH_EDGE_ENTRY = {
+  TYPEID_INDEX: 0,
+  TARGET_TYPEIDS_INDEX: 1,
+  PATH_INDEX: 2,
+} as const;
 export type GraphEdgeStats = Record<
   EdgeKind,
   {

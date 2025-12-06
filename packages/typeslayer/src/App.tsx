@@ -121,6 +121,7 @@ export function App() {
           sx={{
             listStyle: "none",
             display: "flex",
+            px: 1,
             justifyContent: collapsed ? "center" : "flex-start",
             flex: "0 0 auto",
           }}
@@ -147,12 +148,7 @@ export function App() {
       );
     }
     if (item.kind === "divider") {
-      return (
-        <Divider
-          key={Math.random()}
-          sx={{ mt: 0.5, mb: 1, flex: "0 0 auto" }}
-        />
-      );
+      return <Divider key={Math.random()} sx={{ mt: 0.5, flex: "0 0 auto" }} />;
     }
 
     const segment = item.segment as string | undefined;
@@ -253,7 +249,6 @@ export function App() {
         <Divider />
         <List
           sx={{
-            p: 1,
             width: open ? (collapsed ? collapsedWidth : drawerWidth) : 0,
             height: "100%",
             display: "flex",
@@ -263,6 +258,7 @@ export function App() {
             overflowY: "auto",
             gap: 0,
             marginBottom: 0,
+            py: 1,
           }}
         >
           {NAVIGATION.map((item, index) => renderNavItem(item, index))}

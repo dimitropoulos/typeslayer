@@ -1,8 +1,10 @@
+import { Stack, Typography } from "@mui/material";
+
 export const Integrations = () => {
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>Integrations</h1>
-      <p>Coming Next: how to integrate this on your CI</p>
-    </div>
+    <Stack sx={{ p: 4, gap: 3 }}>
+      <Typography variant="h2">Integrations</Typography>
+      <Typography>Coming Next: how to integrate this on your CI</Typography>
+    </Stack>
   );
 };

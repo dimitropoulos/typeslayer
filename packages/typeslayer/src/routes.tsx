@@ -66,6 +66,12 @@ const typeNetworkRoute = createRoute({
   component: TypeNetwork,
 });
 
+const typeNetworkChildRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/type-network/$typeId",
+  component: TypeNetwork,
+});
+
 const treemapRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/treemap",
@@ -137,6 +143,7 @@ const routeTree = rootRoute.addChildren([
   awardWinnersRoute,
   awardWinnersChildRoute,
   typeNetworkRoute,
+  typeNetworkChildRoute,
   treemapRoute,
   perfettoRoute,
   speedscopeRoute,

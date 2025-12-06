@@ -10,7 +10,7 @@ import {
   Extension,
   FilterListAlt,
   FindReplace,
-  GroupAdd,
+  Input,
   JoinFull,
   JoinInner,
   Key,
@@ -77,13 +77,13 @@ export const awards = {
     route: "most-type-arguments",
   },
   type_aliasTypeArguments: {
-    title: "Alias Type Arguments",
+    title: "Generic Arguments",
     property: "aliasTypeArguments",
     description:
       "Type alias pulling in the greatest number of distinct generic arguments through its resolution layers.",
-    icon: GroupAdd,
-    unit: "aliased type arguments",
-    route: "alias-type-arguments",
+    icon: Input,
+    unit: "generic arguments",
+    route: "generic-arguments",
   },
 
   //
@@ -121,11 +121,11 @@ export const awards = {
     route: "most-instantiated-type",
   },
   relation_aliasTypeArgument: {
-    title: "Alias Type Arguments",
+    title: "Generic Arguments",
     description:
-      "Type involved in the greatest number of alias type-argument relations, useful for understanding alias generic complexity.",
+      'The types most often used as generic arguments.  The TypeScript compiler calls this "alias type-arguments."  There are technically other kinds of types that can show up here, but it\'s mostly generic type arguemnts.',
     unit: "alias type-arguments",
-    icon: GroupAdd,
+    icon: Input,
     route: "aliasTypeArgument",
   },
   relation_conditionalCheck: {

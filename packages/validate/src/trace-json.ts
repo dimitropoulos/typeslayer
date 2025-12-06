@@ -386,7 +386,7 @@ const event_checktypes__getVariancesWorker = z
     name: z.literal("getVariancesWorker"),
     dur: z.number(),
     args: z.object({
-      arity: z.number().int().positive(),
+      arity: z.number().int().nonnegative(),
       id: z.number().int().positive(),
       results: z.object({
         variances: z.array(

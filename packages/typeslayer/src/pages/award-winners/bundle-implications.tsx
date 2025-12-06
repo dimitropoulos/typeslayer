@@ -17,7 +17,7 @@ const DuplicatePackages = () => {
   const duplicatePackages = analyzeTrace?.duplicatePackages ?? [];
   const Icon = awards.bundle_duplicatePackages.icon;
   const noneFound = (
-    <Alert severity="success">
+    <Alert severity="success" sx={{ mx: 1 }}>
       No duplicate packages found.
       <br />
       <br />
@@ -30,7 +30,8 @@ const DuplicatePackages = () => {
   return (
     <Stack
       sx={{
-        p: 3,
+        p: 1,
+        pt: 2,
         gap: 2,
         ...(hasItems
           ? {}

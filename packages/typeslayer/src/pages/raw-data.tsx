@@ -3,11 +3,11 @@ import {
   Alert,
   Box,
   Button,
-  Divider,
   List,
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  ListSubheader,
   Snackbar,
   Stack,
   Typography,
@@ -23,6 +23,7 @@ import {
   TYPES_JSON_FILENAME,
 } from "@typeslayer/validate";
 import { useCallback, useMemo, useState } from "react";
+import { InlineCode } from "../components/inline-code";
 import { serverBaseUrl, useStaticFile } from "../components/utils";
 
 type RawKey = "analyze" | "trace" | "types" | "cpu";
@@ -92,25 +93,27 @@ export const RawData = () => {
 
   return (
     <Stack direction="row" sx={{ height: "100%" }}>
-      <Stack sx={{ px: 1 }}>
-        <List sx={{ width: 220 }}>
-          {(Object.keys(RAW_ITEMS) as RawKey[]).map(key => (
-            <ListItemButton
-              key={key}
-              selected={key === currentKey}
-              onClick={() => setActive(key)}
-            >
-              <ListItemIcon sx={{ minWidth: 38 }}>
-                <Description />
-              </ListItemIcon>
-              <ListItemText primary={RAW_ITEMS[key].title} />
-            </ListItemButton>
-          ))}
-        </List>
-      </Stack>
-
-      <Divider orientation="vertical" />
-
+      <List
+        sx={{
+          minWidth: 260,
+          borderRight: 1,
+          borderColor: "divider",
+        }}
+      >
+        <ListSubheader>Raw Data Files</ListSubheader>
+        {(Object.keys(RAW_ITEMS) as RawKey[]).map(key => (
+          <ListItemButton
+            key={key}
+            selected={key === currentKey}
+            onClick={() => setActive(key)}
+          >
+            <ListItemIcon sx={{ minWidth: 38 }}>
+              <Description />
+            </ListItemIcon>
+            <ListItemText primary={RAW_ITEMS[key].title} />
+          </ListItemButton>
+        ))}
+      </List>
       <RawDataPane key={currentKey} itemKey={currentKey} />
     </Stack>
   );
@@ -189,7 +192,9 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
       }}
     >
       <Stack gap={1}>
-        <Typography variant="h4">{item.title}</Typography>
+        <Typography variant="h4">
+          <InlineCode secondary>{item.title}</InlineCode>
+        </Typography>
         <Typography variant="body2" color="text.secondary">
           {item.description}
         </Typography>

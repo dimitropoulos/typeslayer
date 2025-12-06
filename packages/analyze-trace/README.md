@@ -2,12 +2,9 @@
 
 Analyze TypeScript compiler trace events to identify performance bottlenecks and compilation hot spots.
 
-Initially, this started as a full rewrite of [@typescript/analyze-trace](https://github.com/microsoft/typescript-analyze-trace)*.  That rewrite was successful, new features were added during the development of [TypeSlayer](https://github.com/dimitropoulos/typeslayer).
+Initially, this started as a full rewrite of [@typescript/analyze-trace](https://github.com/microsoft/typescript-analyze-trace)*.  That rewrite was successful, and new features were added during the development of [TypeSlayer](https://github.com/dimitropoulos/typeslayer) (where it was rewritten a second time in Rust).
 
-<sub>
-> \* why did it need a full rewrite?  it's been unmaintained for many years and also I ([dimitropoulos](https://github.com/dimitropoulos)) wanted to know every detail of how it works.  That ended up being very useful because there were some things that are exceedingly interesting (like some of the instantaneous events for limits being hit) that the original tool ([intentionally](https://github.com/microsoft/typescript-analyze-trace/issues/1), in some cases) completely ignores things that are actually quite fundamental to the goal of TypeSlayer
-> also the original was intended as a end-of-the-pipeline CLI tool (giving nice human readable format, but only experimental JSON support) and the rewrite is though of as a middle-of-the-pipeline tool (1st-class JSON support).
-</sub>
+> \* <sub>why did it need a full rewrite?<br /><br />well.. it's been unmaintained for many years and also I <a href="https://github.com/dimitropoulos">dimitropoulos</a> wanted to learn every detail of how it works.  academically speaking, rewrites are great for that.  when I looked deeper, though I saw some exceedingly interesting things (like some of the instantaneous events for type limits) that the original tool completely ignores (<a href="https://github.com/microsoft/typescript-analyze-trace/issues/1">sometimes intentionally</a>), yet some are actually quite fundamental to the goal of TypeSlayer!<br /><br /> also the original was intended as a end-of-the-pipeline CLI tool (giving nice human readable format, but only experimental JSON support) and the rewrite is though of as a middle-of-the-pipeline tool (1st-class JSON support). </sub>
 
 ## CLI Usage
 
@@ -63,21 +60,20 @@ In a perfect world, all events created by TypeScript's trace machinery should be
 
 Type-level limits that were hit during the type checking, including:
 
-- `checkCrossProductUnion_DepthLimit`: triggers `TS(2590) Expression produces a union type that is too complex to represent.`
-- `checkTypeRelatedTo_DepthLimit`: triggers `TS(2859) Excessive complexity comparing types '{0}' and '{1}'.` or `TS(2321) Excessive stack depth comparing types '{0}' and '{1}'.`
-- `getTypeAtFlowNode_DepthLimit`: triggers `TS(2563) The containing function or module body is too large for control flow analysis.`
-- `instantiateType_DepthLimit`: triggers `TS(2589) Type instantiation is excessively deep and possibly infinite.`
-- `recursiveTypeRelatedTo_DepthLimit`: This is not currently considered a hard error by the compiler and therefore
-    does not report to the user (unless you're a [TypeSlayer](https://github.com/dimitropoulos/typeslayer) user 😉).
-- `removeSubtypes_DepthLimit`: triggers `TS(2590) Expression produces a union type that is too complex to represent.`
-- `traceUnionsOrIntersectionsTooLarge_DepthLimit`: This is not currently considered a hard error by the compiler and therefore
-    does not report to the user (unless you're a [TypeSlayer](https://github.com/dimitropoulos/typeslayer) user 😉).
-- `typeRelatedToDiscriminatedType_DepthLimit`: This is not currently considered a hard error by the compiler and therefore
-    does not report to the user (unless you're a [TypeSlayer](https://github.com/dimitropoulos/typeslayer) user 😉).
+| Depth Limit                                     | Error Triggered                                                                                                                                                                             |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `checkCrossProductUnion_DepthLimit`             | triggers `TS(2590) Expression produces a union type that is too complex to represent.`                                                                                                      |
+| `checkTypeRelatedTo_DepthLimit`                 | triggers `TS(2859) Excessive complexity comparing types '{0}' and '{1}'.` or `TS(2321) Excessive stack depth comparing types '{0}' and '{1}'.`                                              |
+| `getTypeAtFlowNode_DepthLimit`                  | triggers `TS(2563) The containing function or module body is too large for control flow analysis.`                                                                                          |
+| `instantiateType_DepthLimit`                    | triggers `TS(2589) Type instantiation is excessively deep and possibly infinite.`                                                                                                           |
+| `recursiveTypeRelatedTo_DepthLimit`             | This is not currently considered a hard error by the compiler and therefore does not report to the user (unless you're a [TypeSlayer](https://github.com/dimitropoulos/typeslayer) user 😉). |
+| `removeSubtypes_DepthLimit`                     | triggers `TS(2590) Expression produces a union type that is too complex to represent.`                                                                                                      |
+| `traceUnionsOrIntersectionsTooLarge_DepthLimit` | This is not currently considered a hard error by the compiler and therefore does not report to the user (unless you're a [TypeSlayer](https://github.com/dimitropoulos/typeslayer) user 😉). |
+| `typeRelatedToDiscriminatedType_DepthLimit`     | This is not currently considered a hard error by the compiler and therefore does not report to the user (unless you're a [TypeSlayer](https://github.com/dimitropoulos/typeslayer) user 😉). |
 
 ### Type Graph
 
-> [!NOTE]
+> _note_:
 > As fate would have it, when [TypeSlayer](https://github.com/dimitropoulos/typeslayer) moved from Node.js to Rust to be a Tauri app, this entire package was _again_ rewritten in Rust.  Since this version was fully up-and-running first, and the original has some issues, I decided to just not delete this and publish it in case others stuck in the Node ecosystem (🪦) find it useful.
 >
 > This particular feature is only in the Rust version.  If you'd like a wasm-build of it or something lemme know.

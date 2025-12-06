@@ -56,9 +56,7 @@ export const SettingsPage = () => {
 
   return (
     <Stack sx={{ p: 4, overflow: "auto", gap: 3 }}>
-      <Typography variant="h5" component="h1">
-        Settings
-      </Typography>
+      <Typography variant="h2">Settings</Typography>
       <FormGroup>
         <FormControlLabel
           label="Relative Paths"
@@ -117,6 +115,9 @@ export const SettingsPage = () => {
                 labelId="editor-preference-label"
                 label="Preferred Editor"
                 disabled={preferredEditor.isLoading}
+                sx={{
+                  width: 200,
+                }}
               >
                 {availableEditors.data.map(([command, label]) => (
                   <MenuItem key={command} value={command}>

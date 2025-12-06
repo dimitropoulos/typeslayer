@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = import.meta.dirname || join(__filename, "..");
 const rootDir = join(__dirname, "..");
 
-const bumpType = process.argv[2];
+const bumpType = process.argv[2] ?? "patch";
 
 if (!bumpType || !["patch", "minor", "major"].includes(bumpType)) {
   console.error("❌ Usage: bump-typeslayer.ts <patch|minor|major>");
@@ -54,6 +54,19 @@ writeFileSync(
 
 console.log(`📦 Bumped main package: ${oldMainVersion} → ${newMainVersion}`);
 
+// Bump workspace packages
+const workspacePackages = ["validate", "analyze-trace"];
+
+for (const pkgName of workspacePackages) {
+  const pkgPath = join(rootDir, "packages", pkgName, "package.json");
+  const pkgJson = JSON.parse(readFileSync(pkgPath, "utf-8"));
+  const oldVersion = pkgJson.version;
+
+  pkgJson.version = newMainVersion;
+  writeFileSync(pkgPath, `${JSON.stringify(pkgJson, null, 2)}\n`);
+  console.log(`  ✅ @typeslayer/${pkgName}: ${oldVersion} → ${newMainVersion}`);
+}
+
 const platforms = ["linux-x64", "darwin-arm64", "win32-x64"];
 
 for (const platform of platforms) {
@@ -67,7 +80,7 @@ for (const platform of platforms) {
   buildPackageJson.version = newMainVersion;
   writeFileSync(
     buildPackageJsonPath,
-    `${JSON.stringify(buildPackageJson, null, "\t")}\n`,
+    `${JSON.stringify(buildPackageJson, null, 2)}\n`,
   );
   console.log(
     `  ✅ @typeslayer/${platform}: ${oldVersion} → ${newMainVersion}`,

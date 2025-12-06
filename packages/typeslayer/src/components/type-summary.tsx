@@ -1,4 +1,6 @@
-import { Chip, Stack, Typography } from "@mui/material";
+import { Hub } from "@mui/icons-material";
+import { Chip, IconButton, Stack, Typography } from "@mui/material";
+import { useNavigate } from "@tanstack/react-router";
 import type { ResolvedType } from "@typeslayer/validate";
 
 export const getHumanReadableName = (resolvedType: ResolvedType): string => {
@@ -30,22 +32,30 @@ export const getHumanReadableName = (resolvedType: ResolvedType): string => {
 };
 
 export function TypeSummary({
-  onClick = () => {},
   showFlags = false,
   resolvedType,
+  suppressActions = false,
 }: {
-  onClick?: () => void;
   showFlags?: boolean;
   resolvedType: ResolvedType;
+  suppressActions?: boolean;
 }) {
   const { id, flags } = resolvedType;
+
+  const navigate = useNavigate();
+  const viewInTypeNetwork = () => {
+    navigate({ to: `/type-network/${id}` });
+  };
 
   return (
     <Stack
       direction="row"
       gap={1}
-      onClick={onClick}
-      sx={{ cursor: "pointer", alignItems: "center" }}
+      sx={{
+        alignItems: "center",
+        "& .viewInTypeNetwork": { visibility: "hidden" },
+        "&:hover .viewInTypeNetwork": { visibility: "visible" },
+      }}
     >
       <Typography color="secondary" sx={{ fontFamily: "monospace" }}>
         {getHumanReadableName(resolvedType)}
@@ -62,30 +72,57 @@ export function TypeSummary({
             />
           ))
         : null}
+      {suppressActions ? null : (
+        <IconButton
+          className="viewInTypeNetwork"
+          size="small"
+          onClick={viewInTypeNetwork}
+        >
+          <Hub />
+        </IconButton>
+      )}
     </Stack>
   );
 }
 
 export function SimpleTypeSummary({
-  onClick = () => {},
   id,
   name,
+  suppressActions = false,
 }: {
-  onClick?: () => void;
   id: number;
   name: string;
+  suppressActions?: boolean;
 }) {
+  const navigate = useNavigate();
+  const viewInTypeNetwork = () => {
+    navigate({ to: `/type-network/${id}` });
+  };
+
   return (
     <Stack
       direction="row"
       gap={1}
-      onClick={onClick}
-      sx={{ cursor: "pointer", alignItems: "center" }}
+      sx={{
+        alignItems: "center",
+        "& .viewInTypeNetwork": { visibility: "hidden" },
+        "&:hover .viewInTypeNetwork": { visibility: "visible" },
+      }}
     >
       <Typography color="secondary" sx={{ fontFamily: "monospace" }}>
         {name}
       </Typography>
       <Typography sx={{ fontFamily: "monospace" }}>id:{id}</Typography>
+
+      {suppressActions ? null : (
+        <IconButton
+          className="viewInTypeNetwork"
+          size="small"
+          onClick={viewInTypeNetwork}
+        >
+          <Hub />
+        </IconButton>
+      )}
     </Stack>
   );
 }

@@ -19,9 +19,7 @@ export function AboutPage() {
     <Box sx={{ px: 4, py: 4, maxWidth: 960, margin: "0 auto" }}>
       <Stack spacing={3} sx={{ overflow: "auto" }}>
         <Box>
-          <Typography variant="h3" component="h1">
-            About TypeSlayer
-          </Typography>
+          <Typography variant="h3">About TypeSlayer</Typography>
           <Typography variant="subtitle1" color="text.secondary">
             Who needs this stupid thing, anyway?
           </Typography>

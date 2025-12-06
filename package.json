@@ -15,7 +15,8 @@
   "scripts": {
     "biome:check": "biome check --write --unsafe",
     "rip-and-tear": "echo \"did you?\"",
-    "bump:typeslayer": "tsx scripts/bump-typeslayer.ts",
+    "bump": "tsx scripts/bump.ts",
+    "tag": "tsx scripts/tag.ts",
     "typecheck": "pnpm --recursive run typecheck"
   },
   "devDependencies": {

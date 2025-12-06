@@ -12,12 +12,13 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { DisplayRecursiveType } from "../../components/display-recursive-type";
+import { ShowMore } from "../../components/show-more";
 import {
   getHumanReadableName,
   SimpleTypeSummary,
   TypeSummary,
 } from "../../components/type-summary";
-import { useTypeGraph } from "../../hooks/tauri-hooks";
+import { GRAPH_EDGE_ENTRY, useTypeGraph } from "../../hooks/tauri-hooks";
 import { AwardNavItem } from "./award-nav-item";
 import {
   AWARD_SELECTOR_COLUMN_WIDTH,
@@ -36,6 +37,7 @@ export function RelationAward({
 }) {
   const { title, description, icon: Icon, unit } = awards[awardId];
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [displayLimit, setDisplayLimit] = useState(100);
   const { data: typeGraph, isLoading } = useTypeGraph();
   const typeRegistry = useTypeRegistry();
 
@@ -60,11 +62,13 @@ export function RelationAward({
   const selectedItem = edgeStats.links[selectedIndex];
 
   const hasItems = edgeStats.links.length > 0;
+  const totalItems =
+    selectedItem?.[GRAPH_EDGE_ENTRY.TARGET_TYPEIDS_INDEX].length;
 
   const noneFound = (
     <Box
       sx={{
-        mt: 1,
+        m: 1,
       }}
     >
       <Alert severity="info">
@@ -86,10 +90,16 @@ export function RelationAward({
       <Stack
         sx={{
           width: AWARD_SELECTOR_COLUMN_WIDTH,
+          background: hasItems ? "#000000" : "transparent",
           flexShrink: 0,
-          p: 3,
+          gap: 2,
+          p: 1,
+          pt: 2,
           overflowY: "auto",
           maxHeight: "100%",
+          minHeight: "100%",
+          borderRight: 1,
+          borderColor: hasItems ? "divider" : "transparent",
         }}
       >
         <TitleSubtitle
@@ -97,41 +107,37 @@ export function RelationAward({
           subtitle={description}
           icon={<Icon fontSize="large" />}
         />
-        <Stack sx={{ my: 2 }}>
-          {hasItems ? (
-            <List>
-              {edgeStats.links.map(([typeId, sourceIds, maybePath], index) => (
-                <ListItemButton
-                  selected={index === selectedIndex}
-                  onClick={event => handleListItemClick(event, index)}
-                  key={typeId}
-                  sx={{ width: "100%" }}
-                >
-                  <ListItemText>
-                    <Stack sx={{ flexGrow: 1 }} gap={0}>
-                      <SimpleTypeSummary
-                        id={typeId}
-                        name={getHumanReadableName(typeRegistry[typeId])}
+        {hasItems ? (
+          <List>
+            {edgeStats.links.map(([typeId, sourceIds, maybePath], index) => (
+              <ListItemButton
+                selected={index === selectedIndex}
+                onClick={event => handleListItemClick(event, index)}
+                key={typeId}
+              >
+                <ListItemText>
+                  <Stack sx={{ flexGrow: 1 }} gap={0}>
+                    <SimpleTypeSummary
+                      id={typeId}
+                      name={getHumanReadableName(typeRegistry[typeId])}
+                      suppressActions
+                    />
+                    <Stack gap={0.5}>
+                      <MaybePathCaption maybePath={maybePath} />
+                      <InlineBarGraph
+                        label={`${sourceIds.length.toLocaleString()} ${unit}`}
+                        width={`${(sourceIds.length / edgeStats.max) * 100}%`}
                       />
-                      <Stack gap={0.5}>
-                        <MaybePathCaption maybePath={maybePath} />
-                        <InlineBarGraph
-                          label={`${sourceIds.length.toLocaleString()} ${unit}`}
-                          width={`${(sourceIds.length / edgeStats.max) * 100}%`}
-                        />
-                      </Stack>
                     </Stack>
-                  </ListItemText>
-                </ListItemButton>
-              ))}
-            </List>
-          ) : (
-            noneFound
-          )}
-        </Stack>
+                  </Stack>
+                </ListItemText>
+              </ListItemButton>
+            ))}
+          </List>
+        ) : (
+          noneFound
+        )}
       </Stack>
-
-      {hasItems ? <Divider orientation="vertical" /> : null}
 
       <Box
         sx={{
@@ -144,25 +150,57 @@ export function RelationAward({
       >
         {hasItems && selectedItem ? (
           <Stack gap={3}>
-            <DisplayRecursiveType id={selectedItem[0]} />
+            <DisplayRecursiveType
+              id={selectedItem[GRAPH_EDGE_ENTRY.TYPEID_INDEX]}
+            />
 
-            {selectedItem && selectedItem[1].length > 0 && (
+            {selectedItem && hasItems && (
               <>
                 <Divider />
                 <Stack gap={1}>
                   <Typography variant="h6">
-                    {selectedItem[1].length.toLocaleString()} {unit}
+                    {selectedItem[
+                      GRAPH_EDGE_ENTRY.TARGET_TYPEIDS_INDEX
+                    ].length.toLocaleString()}{" "}
+                    {unit}
                   </Typography>
-                  <List dense>
-                    {selectedItem[1].map(sourceId => {
-                      const sourceType = typeRegistry[sourceId];
-                      return sourceType ? (
-                        <ListItem key={sourceId}>
-                          <TypeSummary resolvedType={sourceType} />
-                        </ListItem>
-                      ) : null;
-                    })}
+                  <List dense sx={{ backgroundColor: "transparent" }}>
+                    {selectedItem[GRAPH_EDGE_ENTRY.TARGET_TYPEIDS_INDEX]
+                      .slice(0, Math.min(displayLimit, totalItems))
+                      .map(sourceId => {
+                        const sourceType = typeRegistry[sourceId];
+                        return sourceType ? (
+                          <ListItem
+                            key={sourceId}
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                              flexWrap: "nowrap",
+                            }}
+                          >
+                            <TypeSummary resolvedType={sourceType} />
+
+                            <Stack
+                              className="action-buttons"
+                              sx={{
+                                opacity: 0,
+                                pointerEvents: "none",
+                                flexDirection: "row",
+                                gap: 0.5,
+                                flexShrink: 0,
+                              }}
+                            ></Stack>
+                          </ListItem>
+                        ) : null;
+                      })}
                   </List>
+                  <ShowMore
+                    incrementsOf={100}
+                    totalItems={totalItems}
+                    displayLimit={displayLimit}
+                    setDisplayLimit={setDisplayLimit}
+                  />
                 </Stack>
               </>
             )}

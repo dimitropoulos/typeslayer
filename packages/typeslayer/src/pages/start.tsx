@@ -31,10 +31,8 @@ import typeslayerNightmareLogo from "../assets/typeslayer-nightmare.png";
 import { BigAction } from "../components/big-action";
 import { FlagsCustomizationDialog } from "../components/flags-customization-dialog";
 import { InlineCode } from "../components/inline-code";
-import { friendlyPath } from "../components/utils";
 import {
   useProjectRoot,
-  useRelativePaths,
   useSelectedTsconfig,
   useTsconfigPaths,
 } from "../hooks/tauri-hooks";
@@ -86,7 +84,6 @@ export function Start() {
   const projectRoot = useProjectRoot();
   const tsconfigPaths = useTsconfigPaths();
   const selectedTsconfig = useSelectedTsconfig();
-  const relativePaths = useRelativePaths();
 
   const [localProjectRoot, setLocalProjectRoot] = useState<string | undefined>(
     undefined,
@@ -294,13 +291,13 @@ export function Start() {
         maxHeight: "100%",
         gap: 2,
         pb: 4,
+        mt: 4,
         position: "relative",
         minHeight: "100%",
       }}
     >
-      <h1>Start</h1>
-
       <Stack gap={3}>
+        <Typography variant="h2">Start</Typography>
         <Step step={1}>
           <Stack gap={1} sx={{ width: "100%" }}>
             <Typography>
@@ -375,11 +372,7 @@ export function Start() {
                         fontFamily="monospace"
                         color="textSecondary"
                       >
-                        {friendlyPath(
-                          selected,
-                          projectRoot.data,
-                          relativePaths.data,
-                        )}
+                        {selected}
                       </Typography>
                     </Stack>
                   );
@@ -409,11 +402,7 @@ export function Start() {
                           fontFamily="monospace"
                           color="textSecondary"
                         >
-                          {friendlyPath(
-                            path,
-                            projectRoot.data,
-                            relativePaths.data,
-                          )}
+                          {path}
                         </Typography>
                       </Stack>
                     </MenuItem>
