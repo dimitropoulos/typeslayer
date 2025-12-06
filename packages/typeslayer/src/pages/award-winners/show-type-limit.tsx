@@ -1,7 +1,6 @@
 import {
   Alert,
   Box,
-  Divider,
   List,
   ListItemButton,
   ListItemText,
@@ -96,7 +95,7 @@ export const ShowTypeLimit = <L extends LimitType>({
 
   const hasItems = !!first;
   const noneFound = (
-    <Alert severity="success">
+    <Alert severity="success" sx={{ mx: 1 }}>
       {notFound}
       <br />
       <br />
@@ -115,11 +114,16 @@ export const ShowTypeLimit = <L extends LimitType>({
       <Stack
         sx={{
           width: AWARD_SELECTOR_COLUMN_WIDTH,
+          background: hasItems ? "#000000" : "transparent",
           flexShrink: 0,
-          p: 3,
           gap: 2,
+          p: 1,
+          pt: 2,
           overflowY: "auto",
           maxHeight: "100%",
+          minHeight: "100%",
+          borderRight: 1,
+          borderColor: hasItems ? "divider" : "transparent",
         }}
       >
         <TitleSubtitle
@@ -151,7 +155,7 @@ export const ShowTypeLimit = <L extends LimitType>({
                   selected={index === selectedIndex}
                 >
                   <ListItemText>
-                    <TypeSummary resolvedType={resolvedType} />
+                    <TypeSummary resolvedType={resolvedType} suppressActions />
                     <Stack gap={0.5}>
                       <MaybePathCaption maybePath={extractPath(resolvedType)} />
                       {inlineBarGraph(current, first)}
@@ -167,22 +171,18 @@ export const ShowTypeLimit = <L extends LimitType>({
       </Stack>
 
       {hasItems ? (
-        <>
-          <Divider orientation="vertical" />
-
-          <Box
-            sx={{
-              p: 3,
-              overflowY: "auto",
-              maxHeight: "100%",
-              width: "100%",
-              height: "100%",
-            }}
-            ref={scrollContainerRef}
-          >
-            <DisplayRecursiveType id={getTypeId(data[selectedIndex])} />
-          </Box>
-        </>
+        <Box
+          sx={{
+            p: 3,
+            overflowY: "auto",
+            maxHeight: "100%",
+            width: "100%",
+            height: "100%",
+          }}
+          ref={scrollContainerRef}
+        >
+          <DisplayRecursiveType id={getTypeId(data[selectedIndex])} />
+        </Box>
       ) : null}
     </Stack>
   );

@@ -1,25 +1,23 @@
 import {
   FiberManualRecord,
-  FindInPage,
   KeyboardArrowDown,
   KeyboardArrowRight,
 } from "@mui/icons-material";
-import {
-  Box,
-  Button,
-  IconButton,
-  Stack,
-  Typography,
-  type TypographyVariant,
-} from "@mui/material";
+import { Box, Stack, Typography, type TypographyVariant } from "@mui/material";
 import { invoke } from "@tauri-apps/api/core";
 import type { ResolvedType } from "@typeslayer/validate";
 import { type FC, useCallback, useState } from "react";
 import { useProjectRoot, useRelativePaths } from "../hooks/tauri-hooks";
 import { useTypeRegistry } from "../pages/award-winners/use-type-registry";
 import { theme } from "../theme";
+import { ShowMore } from "./show-more";
 import { TypeSummary } from "./type-summary";
 import { friendlyPath } from "./utils";
+
+const propertyTextStyle = {
+  fontFamily: "monospace",
+  fontSize: "0.9rem",
+};
 
 // Type guard for Location objects coming from backend serialization
 function isLocation(v: unknown): v is {
@@ -81,25 +79,205 @@ export const DisplayRecursiveType: FC<{
 
   const toggleExpanded = () => setExpanded(expanded => !expanded);
 
-  const noChildren = (
-    [
-      "BooleanLiteral",
-      "StringLiteral",
-      "BigIntLiteral",
-      "NumberLiteral",
-      "Any",
-      "Undefined",
-      "Null",
-      "Never",
-      "Unknown",
-      "Number",
-      "String",
-      "Boolean",
-      "BigInt",
-      "ESSymbol",
-      "NonPrimitive",
-    ] as const
-  ).some(flag => flags.includes(flag));
+  const children = (
+    Object.entries(resolvedType) as [
+      keyof ResolvedType,
+      ResolvedType[keyof ResolvedType],
+    ][]
+  )
+    .map(([key, value], index) => {
+      const reactKey = `${id}:${String(key)}:${index}`;
+
+      switch (key) {
+        //
+        //  Skip these
+        //
+        case "id":
+        case "flags":
+        case "recursionId":
+        case "symbolName":
+        case "intrinsicName":
+          return null;
+
+        //
+        //  display
+        //
+        case "display": {
+          if (typeof value !== "string") {
+            throw new Error(
+              `Expected display to be a string, got ${typeof value}`,
+            );
+          }
+
+          // skipping these because we use this for the name
+          const skipThese = [
+            "BooleanLiteral",
+            "StringLiteral",
+            "BigIntLiteral",
+            "NumberLiteral",
+          ] as const;
+          if (skipThese.some(flag => flags.includes(flag))) {
+            return null;
+          }
+
+          return (
+            <Box
+              sx={{
+                background: theme.palette.grey[900],
+                borderRadius: 1,
+                px: 1,
+                py: 0.5,
+                border: `1px solid ${theme.palette.divider}`,
+                alignSelf: "flex-start",
+              }}
+              key={reactKey}
+            >
+              <code>
+                {typeof value === "string"
+                  ? value.split("\\").join("")
+                  : String(value)}
+              </code>
+            </Box>
+          );
+        }
+
+        //
+        //  Locations
+        //
+        case "firstDeclaration":
+        case "destructuringPattern":
+        case "referenceLocation": {
+          if (isLocation(value)) {
+            return (
+              <OpenFile
+                key={reactKey}
+                title={`${key}:`}
+                absolutePath={value.path}
+                line={value.start.line}
+                character={value.start.character}
+              />
+            );
+          }
+          return null;
+        }
+
+        //
+        //  TypeId
+        //
+        case "instantiatedType":
+        case "substitutionBaseType":
+        case "constraintType":
+        case "indexedAccessObjectType":
+        case "indexedAccessIndexType":
+        case "conditionalCheckType":
+        case "conditionalExtendsType":
+        case "conditionalTrueType":
+        case "conditionalFalseType":
+        case "keyofType":
+        case "evolvingArrayElementType":
+        case "evolvingArrayFinalType":
+        case "reverseMappedSourceType":
+        case "reverseMappedMappedType":
+        case "reverseMappedConstraintType":
+        case "aliasType":
+          if (value === id) {
+            return null;
+          }
+
+          if (typeof value === "number") {
+            return (
+              <Stack key={reactKey}>
+                <Typography sx={propertyTextStyle}>{String(key)}:</Typography>
+                <DisplayRecursiveType id={value} depth={depth + 2} />
+              </Stack>
+            );
+          }
+          throw new Error(
+            `Expected instantiatedType to be a number, got ${typeof value}`,
+          );
+
+        //
+        //  TypeId[]
+        //
+        case "aliasTypeArguments":
+        case "intersectionTypes":
+        case "typeArguments":
+        case "unionTypes": {
+          if (!Array.isArray(value)) {
+            throw new Error(
+              `Expected unionTypes to be an array, got ${typeof value}`,
+            );
+          }
+          if (!value.every(v => typeof v === "number")) {
+            throw new Error(
+              `Expected all values in unionTypes to be numbers, got ${value
+                .map(v => typeof v)
+                .join(", ")}`,
+            );
+          }
+          if (value.length === 0) {
+            return (
+              <Stack
+                key={reactKey}
+                direction="row"
+                gap={1}
+                fontFamily="monospace"
+              >
+                {key}: <em>none</em>
+              </Stack>
+            );
+          }
+
+          const totalItems = value.length;
+          const currentLimit = Math.min(displayLimit, totalItems);
+
+          const val = (
+            <Stack gap={1} key={reactKey} sx={{ py: 1 }}>
+              {value.slice(0, currentLimit).map((v, i) => (
+                <DisplayRecursiveType
+                  key={`${reactKey}:${
+                    // biome-ignore lint/suspicious/noArrayIndexKey: the sort order is stable and we don't have any other information to use since you can do `string | string | string`, for example.
+                    i
+                  }`}
+                  id={v as number}
+                  depth={depth + 2}
+                />
+              ))}
+              <ShowMore
+                incrementsOf={100}
+                totalItems={totalItems}
+                displayLimit={displayLimit}
+                setDisplayLimit={setDisplayLimit}
+              />
+            </Stack>
+          );
+          return (
+            <Stack key={reactKey}>
+              <Stack display="inline">
+                <Typography display="inline" sx={propertyTextStyle}>
+                  {String(key)}:{" "}
+                </Typography>
+                <Typography display="inline" color="textDisabled">
+                  {value.length.toLocaleString()}
+                </Typography>
+              </Stack>
+              {val}
+            </Stack>
+          );
+        }
+
+        // really not sure what the best way to handle this and why it's not a flag like everything else
+        case "isTuple":
+          return null;
+
+        default:
+          key satisfies never;
+          throw new Error(`Unexpected property ${String(key)} in type ${id}`);
+      }
+    })
+    .filter(x => x !== null);
+
+  const noChildren = children.length === 0;
 
   const TwiddlyGuy = noChildren
     ? FiberManualRecord
@@ -108,243 +286,29 @@ export const DisplayRecursiveType: FC<{
       : KeyboardArrowRight;
 
   return (
-    <Stack gap={1} direction="row">
+    <Stack gap={0.5} direction="row">
       <TwiddlyGuy
         onClick={noChildren ? undefined : toggleExpanded}
         sx={
           noChildren
             ? {
                 cursor: "default",
-                fontSize: "0.5rem",
+                transform: "scale(0.5)",
                 alignSelf: "center",
                 color: theme.palette.text.secondary,
-                mx: 1,
+                pt: "4px",
               }
             : {
                 cursor: "pointer",
-                fontSize: undefined,
+                pt: "4px",
               }
         }
       />
       <Stack>
-        <TypeSummary
-          showFlags
-          onClick={noChildren ? undefined : toggleExpanded}
-          resolvedType={resolvedType}
-        />
+        <TypeSummary showFlags resolvedType={resolvedType} />
         {expanded && !noChildren && (
-          <Stack gap={1}>
-            {(
-              Object.entries(resolvedType) as [
-                keyof ResolvedType,
-                ResolvedType[keyof ResolvedType],
-              ][]
-            ).map(([key, value], index) => {
-              const reactKey = `${id}:${String(key)}:${index}`;
-
-              switch (key) {
-                //
-                //  Skip these
-                //
-                case "id":
-                case "flags":
-                case "recursionId":
-                case "symbolName":
-                case "intrinsicName":
-                  return null;
-
-                //
-                //  display
-                //
-                case "display": {
-                  if (typeof value !== "string") {
-                    throw new Error(
-                      `Expected display to be a string, got ${typeof value}`,
-                    );
-                  }
-
-                  const skipThese = [
-                    "BooleanLiteral",
-                    "StringLiteral",
-                    "BigIntLiteral",
-                    "NumberLiteral",
-                  ] as const;
-
-                  if (skipThese.some(flag => flags.includes(flag))) {
-                    return null;
-                  }
-
-                  return (
-                    <Box
-                      sx={{
-                        background: theme.palette.grey[900],
-                        borderRadius: 1,
-                        px: 1,
-                        py: 0.5,
-                        border: `1px solid ${theme.palette.divider}`,
-                        alignSelf: "flex-start",
-                      }}
-                      key={reactKey}
-                    >
-                      <code>
-                        {typeof value === "string"
-                          ? value.split("\\").join("")
-                          : String(value)}
-                      </code>
-                    </Box>
-                  );
-                }
-
-                //
-                //  Locations
-                //
-                case "firstDeclaration":
-                case "destructuringPattern":
-                case "referenceLocation": {
-                  if (isLocation(value)) {
-                    return (
-                      <OpenFile
-                        key={reactKey}
-                        title={`${key}:`}
-                        absolutePath={value.path}
-                        line={value.start.line}
-                        character={value.start.character}
-                      />
-                    );
-                  }
-                  return null;
-                }
-
-                //
-                //  TypeId
-                //
-                case "instantiatedType":
-                case "substitutionBaseType":
-                case "constraintType":
-                case "indexedAccessObjectType":
-                case "indexedAccessIndexType":
-                case "conditionalCheckType":
-                case "conditionalExtendsType":
-                case "conditionalTrueType":
-                case "conditionalFalseType":
-                case "keyofType":
-                case "evolvingArrayElementType":
-                case "evolvingArrayFinalType":
-                case "reverseMappedSourceType":
-                case "reverseMappedMappedType":
-                case "reverseMappedConstraintType":
-                case "aliasType":
-                  if (value === id) {
-                    return null;
-                  }
-
-                  if (typeof value === "number") {
-                    return (
-                      <Stack key={reactKey}>
-                        {String(key)}:
-                        <DisplayRecursiveType id={value} depth={depth + 2} />
-                      </Stack>
-                    );
-                  }
-                  throw new Error(
-                    `Expected instantiatedType to be a number, got ${typeof value}`,
-                  );
-
-                //
-                //  TypeId[]
-                //
-                case "aliasTypeArguments":
-                case "intersectionTypes":
-                case "typeArguments":
-                case "unionTypes": {
-                  if (!Array.isArray(value)) {
-                    throw new Error(
-                      `Expected unionTypes to be an array, got ${typeof value}`,
-                    );
-                  }
-                  if (!value.every(v => typeof v === "number")) {
-                    throw new Error(
-                      `Expected all values in unionTypes to be numbers, got ${value
-                        .map(v => typeof v)
-                        .join(", ")}`,
-                    );
-                  }
-                  if (value.length === 0) {
-                    return (
-                      <Stack key={reactKey} direction="row" gap={1}>
-                        {key}: <em>none</em>
-                      </Stack>
-                    );
-                  }
-
-                  const cutoff = 100;
-                  const currentLimit = Math.min(displayLimit, value.length);
-                  const hasMore = value.length > currentLimit;
-                  const remaining = value.length - currentLimit;
-
-                  const val = (
-                    <Stack gap={1} key={reactKey} sx={{ py: 1 }}>
-                      {value.slice(0, currentLimit).map((v, i) => (
-                        <DisplayRecursiveType
-                          key={`${reactKey}:${
-                            // biome-ignore lint/suspicious/noArrayIndexKey: the sort order is stable and we don't have any other information to use since you can do `string | string | string`, for example.
-                            i
-                          }`}
-                          id={v as number}
-                          depth={depth + 2}
-                        />
-                      ))}
-                      {hasMore && (
-                        <Stack
-                          direction="row"
-                          gap={2}
-                          alignItems="center"
-                          sx={{ px: 2, pl: 0, mb: 2 }}
-                        >
-                          <Typography>
-                            showing {currentLimit.toLocaleString()} out of{" "}
-                            {value.length.toLocaleString()}
-                          </Typography>
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={() =>
-                              setDisplayLimit(prev => prev + cutoff)
-                            }
-                          >
-                            Show {Math.min(cutoff, remaining).toLocaleString()}{" "}
-                            more
-                          </Button>
-                        </Stack>
-                      )}
-                    </Stack>
-                  );
-                  return (
-                    <Stack key={reactKey}>
-                      <Stack display="inline">
-                        <Typography display="inline">
-                          {String(key)}:{" "}
-                        </Typography>
-                        <Typography display="inline" color="textDisabled">
-                          {value.length.toLocaleString()}
-                        </Typography>
-                      </Stack>
-                      {val}
-                    </Stack>
-                  );
-                }
-
-                // really not sure what the best way to handle this and why it's not a flag like everything else
-                case "isTuple":
-                  return null;
-
-                default:
-                  key satisfies never;
-                  throw new Error(
-                    `Unexpected property ${String(key)} in type ${id}`,
-                  );
-              }
-            })}
+          <Stack gap={1} sx={{ marginTop: 0.5 }}>
+            {children}
           </Stack>
         )}
       </Stack>
@@ -398,12 +362,31 @@ export function OpenFile({
   const exactLocation = `${friendlyPath(absolutePath, projectRoot.data, relativePaths.data)}${lineChar}`;
 
   return (
-    <Stack direction="row" alignItems={"center"} gap={1} key={exactLocation}>
-      {title ? <Typography>{title}</Typography> : null}
-      <IconButton size="small" onClick={findInPage} sx={{ p: 0 }}>
-        <FindInPage />
-      </IconButton>
-      <Typography variant={pathVariant}>{exactLocation}</Typography>
+    <Stack
+      sx={{
+        flexDirection: "row",
+        cursor: "pointer",
+        "&:hover": {
+          textDecoration: "underline",
+          textDecorationColor: t => t.palette.secondary.dark,
+        },
+        alignItems: "center",
+        gap: 1,
+      }}
+      key={exactLocation}
+      onClick={findInPage}
+    >
+      {title ? <Typography sx={propertyTextStyle}>{title}</Typography> : null}
+      <Typography
+        variant={pathVariant}
+        sx={{
+          fontSize: "0.8rem",
+          color: "text.secondary",
+          letterSpacing: -0.25,
+        }}
+      >
+        {exactLocation}
+      </Typography>
     </Stack>
   );
 }

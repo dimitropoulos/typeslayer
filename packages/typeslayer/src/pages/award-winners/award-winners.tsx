@@ -91,32 +91,30 @@ export const AwardWinners = () => {
         display: "flex",
       }}
     >
-      <Stack
+      <List
         sx={{
-          px: 1,
           height: "100%",
           flexShrink: 0,
-          maxWidth: 380,
+          maxWidth: 390,
           overflowY: "auto",
-          backgroundImage:
-            "radial-gradient(circle at 85% 70%, rgba(159,30,30,0.1), transparent 50%)," +
-            "radial-gradient(circle at 30% 20%, rgba(227,179,65,0.025), transparent 60%)",
+          borderRight: 1,
+          borderColor: "divider",
+          pb: 4,
+          "& .MuiListItemButton-root": {
+            whiteSpace: "nowrap",
+          },
         }}
       >
-        <List>
-          <TypeMetricsNavItems />
-          <Divider />
-          <TypeRelationMetricsNavItems />
-          <Divider />
-          <PerformanceMetricsNavItems />
-          <Divider />
-          <TypeLevelLimitsNavItems />
-          <Divider />
-          <BundleImplicationsNavItems />
-        </List>
-      </Stack>
-
-      <Divider orientation="vertical" />
+        <TypeMetricsNavItems />
+        <Divider sx={{ mt: 1 }} />
+        <TypeRelationMetricsNavItems />
+        <Divider sx={{ mt: 1 }} />
+        <PerformanceMetricsNavItems />
+        <Divider sx={{ mt: 1 }} />
+        <TypeLevelLimitsNavItems />
+        <Divider sx={{ mt: 1 }} />
+        <BundleImplicationsNavItems />
+      </List>
 
       <Box
         sx={{

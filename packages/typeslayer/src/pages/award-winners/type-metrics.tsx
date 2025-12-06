@@ -1,7 +1,6 @@
 import {
   Alert,
   Box,
-  Divider,
   List,
   ListItemButton,
   ListItemText,
@@ -100,7 +99,7 @@ export function TypeMetricsAward({ awardId }: { awardId: TypeMetricsAwardId }) {
     | "aliasTypeArguments";
   const { max, nodes } = typeGraph.nodeStats[nodeStat];
 
-  const hasNodes = nodes.length > 0;
+  const hasItems = nodes.length > 0;
 
   const selectedNode: TypeId | undefined = nodes[selectedIndex]?.[0];
 
@@ -115,11 +114,16 @@ export function TypeMetricsAward({ awardId }: { awardId: TypeMetricsAwardId }) {
       <Stack
         sx={{
           width: AWARD_SELECTOR_COLUMN_WIDTH,
+          background: hasItems ? "#000000" : "transparent",
           flexShrink: 0,
           gap: 2,
-          p: 3,
+          p: 1,
+          pt: 2,
           overflowY: "auto",
           maxHeight: "100%",
+          minHeight: "100%",
+          borderRight: 1,
+          borderColor: hasItems ? "divider" : "transparent",
         }}
       >
         <TitleSubtitle
@@ -128,7 +132,7 @@ export function TypeMetricsAward({ awardId }: { awardId: TypeMetricsAwardId }) {
           icon={<Icon fontSize="large" />}
         />
 
-        {hasNodes ? (
+        {hasItems ? (
           <List>
             {nodes.map(([id, name, value, maybePath], index) => {
               return (
@@ -136,13 +140,10 @@ export function TypeMetricsAward({ awardId }: { awardId: TypeMetricsAwardId }) {
                   selected={index === selectedIndex}
                   onClick={event => handleListItemClick(event, index)}
                   key={id}
-                  sx={{
-                    width: "100%",
-                  }}
                 >
                   <ListItemText>
                     <Stack sx={{ flexGrow: 1 }} gap={0}>
-                      <SimpleTypeSummary id={id} name={name} />
+                      <SimpleTypeSummary id={id} name={name} suppressActions />
                       <Stack gap={0.5}>
                         <MaybePathCaption maybePath={maybePath} />
                         <InlineBarGraph
@@ -162,8 +163,6 @@ export function TypeMetricsAward({ awardId }: { awardId: TypeMetricsAwardId }) {
           </Alert>
         )}
       </Stack>
-
-      {hasNodes ? <Divider orientation="vertical" /> : null}
 
       <Box
         sx={{

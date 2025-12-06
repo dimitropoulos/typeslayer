@@ -52,7 +52,7 @@ const ShowHotSpots = () => {
   const Icon = awards.perf_hotSpots.icon;
 
   const hasHotSpots = (
-    <List>
+    <List sx={{ background: "transparent" }}>
       {hotSpots.map(({ path, timeMs }) => {
         const relativeTime = timeMs / firstHotSpot.timeMs;
         const fileName = path?.split("/").slice(-1)[0] ?? "<no file name>";
@@ -88,15 +88,13 @@ const ShowHotSpots = () => {
   const noneFound = (
     <Stack direction="row" alignItems="flex-start">
       <Callout title="No Hot Spots Found">
-        <Typography>
-          No hot spots detected. Did you run analyze-trace?
-        </Typography>
+        <Typography>No hot spots detected.</Typography>
       </Callout>
     </Stack>
   );
 
   return (
-    <Stack sx={{ m: 3, gap: 3 }}>
+    <Stack sx={{ m: 2, gap: 3 }}>
       <TitleSubtitle
         title="Hot Spots"
         subtitle="The most expensive code paths in your application"

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Callout } from "../components/callout";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
 import { InlineCode } from "../components/inline-code";
+import { StatPill } from "../components/stat-pill";
 import { useTypeRegistry } from "./award-winners/use-type-registry";
 
 export const SearchTypes = () => {
@@ -28,13 +29,18 @@ export const SearchTypes = () => {
 
   return (
     <Box sx={{ px: 4, overflowY: "auto", height: "100%" }}>
-      <Stack direction="row" gap={5} alignItems="center">
-        <Stack direction="row" alignItems="baseline" gap={1}>
-          <h1>Search</h1>
-          <Typography color="textDisabled">
-            {(typeRegistry.length - 1).toLocaleString()} types
-          </Typography>
-        </Stack>
+      <Stack
+        sx={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          gap: 1,
+          mt: 4,
+          mb: 2,
+          width: 600,
+        }}
+      >
+        <Typography variant="h2">Search</Typography>
+        <StatPill label="Types" value={typeRegistry.length - 1} />
       </Stack>
       <Stack gap={3}>
         <TextField
@@ -75,7 +81,7 @@ export const SearchTypes = () => {
             </code>
           </>
         ) : (
-          <Callout title="What is this?">
+          <Callout title="What's a type id?">
             <Typography>
               During typechecking, the TypeScript compiler assigns a unique{" "}
               <InlineCode>id</InlineCode> to every type it encounters. To

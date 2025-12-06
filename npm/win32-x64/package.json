@@ -1,6 +1,6 @@
 {
   "name": "@typeslayer/win32-x64",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "TypeSlayer binary for Windows x64",
   "private": false,
   "type": "module",

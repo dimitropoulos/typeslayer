@@ -74,7 +74,7 @@ export const Treemap = () => {
   };
 
   const option: EChartsOption = {
-    backgroundColor: "#000000",
+    backgroundColor: "transparent",
     tooltip: {
       formatter: params => {
         if (Array.isArray(params)) {
@@ -121,7 +121,7 @@ export const Treemap = () => {
           show: true,
           formatter: "{b}",
           color: "#fff",
-          fontSize: 13,
+          fontSize: 14,
         },
         itemStyle: {
           borderColor: "#000000",
@@ -160,8 +160,8 @@ export const Treemap = () => {
 
   return (
     <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
-      <Box sx={{ py: 2, px: 4 }}>
-        <Typography variant="h4">TypeScript Compilation Treemap</Typography>
+      <Box sx={{ p: 1, ml: 2, mt: 3 }}>
+        <Typography variant="h2">Compilation Time Treemap</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           File compilation times visualized by directory and duration
           (milliseconds)

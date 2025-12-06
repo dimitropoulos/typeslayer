@@ -97,6 +97,9 @@ export function BigAction({
             },
           },
         }),
+        ".MuiCardContent-root:last-child": {
+          pb: 2,
+        },
       }}
     >
       {showStopwatch && (
@@ -123,9 +126,7 @@ export function BigAction({
       <CardContent sx={{ flex: "1 0 auto" }}>
         <Stack direction="column" gap={2}>
           <Stack gap={1}>
-            <Typography component="div" variant="h5">
-              {title}
-            </Typography>
+            <Typography variant="h5">{title}</Typography>
             <Typography
               variant="subtitle1"
               component="div"
