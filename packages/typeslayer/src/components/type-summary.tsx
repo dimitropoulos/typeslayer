@@ -3,9 +3,11 @@ import { Chip, IconButton, Stack, Typography } from "@mui/material";
 import { useNavigate } from "@tanstack/react-router";
 import type { ResolvedType } from "@typeslayer/validate";
 
-export const getHumanReadableName = (resolvedType: ResolvedType): string => {
+export const getHumanReadableName = (
+  resolvedType: ResolvedType | undefined,
+): string => {
   const isLiteral =
-    resolvedType.flags.length === 1 &&
+    resolvedType?.flags.length === 1 &&
     (resolvedType.flags[0] === "StringLiteral" ||
       resolvedType.flags[0] === "NumberLiteral" ||
       resolvedType.flags[0] === "BooleanLiteral" ||
@@ -15,6 +17,7 @@ export const getHumanReadableName = (resolvedType: ResolvedType): string => {
   }
 
   if (
+    resolvedType &&
     "symbolName" in resolvedType &&
     typeof resolvedType.symbolName === "string"
   ) {
@@ -22,6 +25,7 @@ export const getHumanReadableName = (resolvedType: ResolvedType): string => {
   }
 
   if (
+    resolvedType &&
     "intrinsicName" in resolvedType &&
     typeof resolvedType.intrinsicName === "string"
   ) {

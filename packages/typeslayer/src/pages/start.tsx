@@ -20,6 +20,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
+import { ANALYZE_TRACE_FILENAME } from "@typeslayer/analyze-trace/src/constants";
+import {
+  CPU_PROFILE_FILENAME,
+  TRACE_JSON_FILENAME,
+  TYPES_JSON_FILENAME,
+} from "@typeslayer/validate";
 import {
   type PropsWithChildren,
   useCallback,
@@ -36,6 +42,7 @@ import {
   useSelectedTsconfig,
   useTsconfigPaths,
 } from "../hooks/tauri-hooks";
+import { TYPE_GRAPH_FILENAME } from "../types/type-graph";
 
 export const Step = ({
   step,
@@ -189,24 +196,41 @@ export function Start() {
       await invoke("generate_trace");
       const trace = await invoke("get_trace_json");
       queryClient.setQueryData(["trace_json"], trace);
+      queryClient.invalidateQueries({
+        queryKey: ["outputs", TRACE_JSON_FILENAME],
+      });
       const types = await invoke("get_types_json");
       queryClient.setQueryData(["types_json"], types);
+      queryClient.invalidateQueries({
+        queryKey: ["outputs", TYPES_JSON_FILENAME],
+      });
 
       // 2. generate_cpu_profile
       setProcessingStep(1);
       await invoke("generate_cpu_profile");
+      queryClient.invalidateQueries({
+        queryKey: ["outputs", CPU_PROFILE_FILENAME],
+      });
 
       // 3. analyze_trace_command
       setProcessingStep(2);
       await invoke("analyze_trace_command");
       const analyzeTrace = await invoke("get_analyze_trace");
       queryClient.setQueryData(["analyze_trace"], analyzeTrace);
+      queryClient.invalidateQueries({
+        queryKey: ["outputs", ANALYZE_TRACE_FILENAME],
+      });
 
       // 4. build relations graph
       setProcessingStep(3);
       await invoke("build_type_graph");
       const graph = await invoke("get_type_graph");
       queryClient.setQueryData(["type_graph"], graph);
+      queryClient.invalidateQueries({
+        queryKey: ["outputs", TYPE_GRAPH_FILENAME],
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
 
       // done: trigger fade-to-black, animate logo morph over 1000ms, then navigate
       setProcessingStep(4);

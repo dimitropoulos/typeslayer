@@ -25,12 +25,8 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
 import { StatPill } from "../components/stat-pill";
-import {
-  type EdgeKind,
-  type GraphLink,
-  type TypeGraph,
-  useTypeGraph,
-} from "../hooks/tauri-hooks";
+import { useTypeGraph } from "../hooks/tauri-hooks";
+import type { EdgeKind, GraphLink, TypeGraph } from "../types/type-graph";
 import { useTypeRegistry } from "./award-winners/use-type-registry";
 
 type EdgeConfig = {

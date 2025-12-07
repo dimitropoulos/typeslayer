@@ -1,4 +1,9 @@
-import { Description } from "@mui/icons-material";
+import {
+  Description,
+  Download,
+  FileCopy,
+  VerifiedUser,
+} from "@mui/icons-material";
 import {
   Alert,
   Box,
@@ -23,10 +28,17 @@ import {
   TYPES_JSON_FILENAME,
 } from "@typeslayer/validate";
 import { useCallback, useMemo, useState } from "react";
+import { Code } from "../components/code";
 import { InlineCode } from "../components/inline-code";
-import { serverBaseUrl, useStaticFile } from "../components/utils";
+import {
+  formatFileSize,
+  serverBaseUrl,
+  useStaticFile,
+} from "../components/utils";
+import { useOutputFileSizes } from "../hooks/tauri-hooks";
+import { TYPE_GRAPH_FILENAME } from "../types/type-graph";
 
-type RawKey = "analyze" | "trace" | "types" | "cpu";
+type RawKey = "analyze" | "trace" | "types" | "cpu" | "graph";
 
 const RAW_ITEMS: Record<
   RawKey,
@@ -75,12 +87,23 @@ const RAW_ITEMS: Record<
     verifyInvoke: "verify_cpu_profile",
     fetchInvoke: "get_cpu_profile_text",
   },
+
+  graph: {
+    title: TYPE_GRAPH_FILENAME,
+    route: "type-graph",
+    filename: TYPE_GRAPH_FILENAME,
+    description:
+      "Type graph representing relationships between types in the TypeScript project.",
+    verifyInvoke: "verify_type_graph",
+    fetchInvoke: "get_type_graph_text",
+  },
 };
 
 export const RawData = () => {
   const params = useParams({ strict: false });
   const navigate = useNavigate();
   const child = (params.fileId as string | undefined) ?? "analyze-trace";
+  const { data: fileSizes } = useOutputFileSizes();
 
   const currentKey: RawKey = useMemo(() => {
     const entry = Object.entries(RAW_ITEMS).find(([, v]) => v.route === child);
@@ -95,7 +118,7 @@ export const RawData = () => {
     <Stack direction="row" sx={{ height: "100%" }}>
       <List
         sx={{
-          minWidth: 260,
+          minWidth: 300,
           borderRight: 1,
           borderColor: "divider",
         }}
@@ -111,6 +134,19 @@ export const RawData = () => {
               <Description />
             </ListItemIcon>
             <ListItemText primary={RAW_ITEMS[key].title} />
+            <Box
+              sx={{
+                marginLeft: 4,
+                fontSize: 13,
+                color: t => t.palette.secondary.main,
+                fontWeight: "bold",
+                fontFamily: "monospace",
+              }}
+            >
+              {fileSizes && fileSizes[RAW_ITEMS[key].filename] !== undefined
+                ? formatFileSize(fileSizes[RAW_ITEMS[key].filename])
+                : "\u00A0".repeat(5)}
+            </Box>
           </ListItemButton>
         ))}
       </List>
@@ -122,6 +158,8 @@ export const RawData = () => {
 const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
   const item = RAW_ITEMS[itemKey];
   const { data: text, isLoading } = useStaticFile(item.filename);
+  const { data: fileSizes } = useOutputFileSizes();
+
   const [toast, setToast] = useState<{
     open: boolean;
     message: string;
@@ -182,6 +220,8 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
     }
   };
 
+  const fileSize = fileSizes ? fileSizes[item.filename] : null;
+
   return (
     <Stack
       sx={{
@@ -192,39 +232,46 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
       }}
     >
       <Stack gap={1}>
-        <Typography variant="h4">
-          <InlineCode secondary>{item.title}</InlineCode>
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {item.description}
-        </Typography>
+        <Stack sx={{ flexDirection: "row", alignItems: "baseline", gap: 1 }}>
+          <Typography variant="h4">
+            <InlineCode secondary>{item.title}</InlineCode>
+          </Typography>
+          {fileSize ? (
+            <Typography color="textSecondary">
+              {fileSize.toLocaleString()} bytes
+            </Typography>
+          ) : null}
+        </Stack>
+        <Typography>{item.description}</Typography>
       </Stack>
 
       <Stack direction="row" gap={2}>
-        <Button variant="contained" onClick={onVerify}>
+        <Button
+          variant="contained"
+          onClick={onVerify}
+          startIcon={<VerifiedUser />}
+        >
           Verify
         </Button>
-        <Button variant="outlined" onClick={onCopy}>
+        <Button variant="outlined" onClick={onCopy} startIcon={<FileCopy />}>
           Copy
         </Button>
-        <Button variant="outlined" onClick={onDownload}>
+        <Button
+          variant="outlined"
+          onClick={onDownload}
+          startIcon={<Download />}
+        >
           Download
         </Button>
       </Stack>
 
-      <Box
-        component="pre"
-        sx={{
-          p: 2,
-          bgcolor: t => t.palette.background.default,
-          borderRadius: 1,
-          overflow: "auto",
-          fontFamily: "monospace",
-          whiteSpace: "pre",
-        }}
-      >
-        {isLoading ? "Loading..." : (text ?? "No data")}
-      </Box>
+      {isLoading ? (
+        <Typography>Loading...</Typography>
+      ) : text ? (
+        <Code value={text} />
+      ) : (
+        <Alert severity="info">File not found.</Alert>
+      )}
       <Snackbar
         anchorOrigin={{ vertical: "top", horizontal: "right" }}
         open={toast.open}

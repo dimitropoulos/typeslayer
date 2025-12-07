@@ -1,7 +1,17 @@
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager, State};
 
-use crate::app_data::AppData;
+use crate::{
+    analyze_trace::constants::ANALYZE_TRACE_FILENAME,
+    app_data::AppData,
+    type_graph::TYPE_GRAPH_FILENAME,
+    validate::{
+        trace_json::TRACE_JSON_FILENAME, types_json::TYPES_JSON_FILENAME,
+        utils::CPU_PROFILE_FILENAME,
+    },
+};
+
+pub const OUTPUTS_DIRECTORY: &str = "outputs";
 
 #[tauri::command]
 pub async fn get_current_dir() -> Result<String, String> {
@@ -35,4 +45,73 @@ pub async fn set_project_root(
         let _ = win.set_title(&data.compute_window_title());
     }
     Ok(())
+}
+
+pub fn get_typeslayer_base_data_dir(
+    base_data_dir: Option<String>,
+    app_handle: Option<&tauri::AppHandle>,
+) -> String {
+    if let Some(dir) = base_data_dir {
+        dir
+    } else if let Ok(env_dir) = std::env::var("TYPESLAYER_DATA_DIR") {
+        env_dir
+    } else if let Some(app) = app_handle {
+        app.path()
+            .app_data_dir()
+            .expect("app_data_dir unavailable")
+            .to_string_lossy()
+            .to_string()
+    } else {
+        #[cfg(target_os = "linux")]
+        {
+            if let Ok(home) = std::env::var("HOME") {
+                return format!("{}/.local/share/typeslayer", home);
+            }
+        }
+        #[cfg(target_os = "macos")]
+        {
+            if let Ok(home) = std::env::var("HOME") {
+                return format!("{}/Library/Application Support/typeslayer", home);
+            }
+        }
+        #[cfg(target_os = "windows")]
+        {
+            if let Ok(appdata) = std::env::var("APPDATA") {
+                return format!("{}\\typeslayer", appdata);
+            }
+        }
+        // Fallback
+        "./typeslayer".to_string()
+    }
+}
+
+#[tauri::command]
+pub async fn get_output_file_sizes(
+    state: State<'_, Mutex<AppData>>,
+) -> Result<std::collections::HashMap<String, u64>, String> {
+    use std::fs;
+
+    let outputs_dir = {
+        let data = state.lock().map_err(|e| e.to_string())?;
+        data.outputs_dir().to_string_lossy().to_string()
+    };
+
+    let filenames = vec![
+        ANALYZE_TRACE_FILENAME,
+        TRACE_JSON_FILENAME,
+        TYPES_JSON_FILENAME,
+        CPU_PROFILE_FILENAME,
+        TYPE_GRAPH_FILENAME,
+    ];
+
+    let mut sizes = std::collections::HashMap::new();
+
+    for filename in filenames {
+        let path = std::path::Path::new(&outputs_dir).join(filename);
+        if let Ok(metadata) = fs::metadata(&path) {
+            sizes.insert(filename.to_string(), metadata.len());
+        }
+    }
+
+    Ok(sizes)
 }

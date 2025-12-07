@@ -2,6 +2,7 @@ import { Box, Divider, Stack, TextField, Typography } from "@mui/material";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Callout } from "../components/callout";
+import { Code } from "../components/code";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
 import { InlineCode } from "../components/inline-code";
 import { StatPill } from "../components/stat-pill";
@@ -28,7 +29,7 @@ export const SearchTypes = () => {
   const typeString = JSON.stringify(typeRegistry[numberSearch], null, 2);
 
   return (
-    <Box sx={{ px: 4, overflowY: "auto", height: "100%" }}>
+    <Box sx={{ px: 4, overflow: "auto", height: "100%" }}>
       <Stack
         sx={{
           flexDirection: "row",
@@ -66,19 +67,7 @@ export const SearchTypes = () => {
           <>
             <Divider />
             <Typography variant="h6">Raw Type Definition</Typography>
-            <code
-              style={{
-                whiteSpace: "pre",
-                background: "#050505",
-                border: "1px solid #333",
-                padding: "8px",
-                overflowY: "hidden",
-                overflowX: "scroll",
-                marginBottom: 24,
-              }}
-            >
-              {typeString}
-            </code>
+            <Code value={typeString} />
           </>
         ) : (
           <Callout title="What's a type id?">

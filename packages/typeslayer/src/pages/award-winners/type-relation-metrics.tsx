@@ -18,7 +18,8 @@ import {
   SimpleTypeSummary,
   TypeSummary,
 } from "../../components/type-summary";
-import { GRAPH_EDGE_ENTRY, useTypeGraph } from "../../hooks/tauri-hooks";
+import { useTypeGraph } from "../../hooks/tauri-hooks";
+import { GRAPH_EDGE_ENTRY } from "../../types/type-graph";
 import { AwardNavItem } from "./award-nav-item";
 import {
   AWARD_SELECTOR_COLUMN_WIDTH,

@@ -39,3 +39,6 @@ tower-http = { version = "0.5", default-features = false, features = ["cors"] }
 base64 = "0.22"
 dirs = "5"
 libc = "0.2"
+rmcp = { version = "0.1", features = ["server", "macros", "transport-io"] }
+schemars = "1"
+once_cell = "1.19"

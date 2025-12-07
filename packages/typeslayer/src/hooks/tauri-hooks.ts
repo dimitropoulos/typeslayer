@@ -1,15 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import type {
-  AbsolutePath,
-  AnalyzeTraceResult,
-} from "@typeslayer/analyze-trace/src/utils";
-import {
-  extractPackageName,
-  type ResolvedType,
-  type TypeId,
-} from "@typeslayer/validate";
+import type { AnalyzeTraceResult } from "@typeslayer/analyze-trace/src/utils";
+import { extractPackageName, type ResolvedType } from "@typeslayer/validate";
 import { friendlyPath } from "../components/utils";
+import type { TypeGraph } from "../types/type-graph";
 
 export function useRelativePaths() {
   const queryClient = useQueryClient();
@@ -192,77 +186,6 @@ export function useTypesJson() {
   });
 }
 
-export type GraphNode = { id: number; name: string };
-
-export type EdgeKind =
-  | "union"
-  | "typeArgument"
-  | "instantiated"
-  | "substitutionBase"
-  | "constraint"
-  | "indexedAccessObject"
-  | "indexedAccessIndex"
-  | "conditionalCheck"
-  | "conditionalExtends"
-  | "conditionalTrue"
-  | "conditionalFalse"
-  | "keyof"
-  | "evolvingArrayElement"
-  | "evolvingArrayFinal"
-  | "reverseMappedSource"
-  | "reverseMappedMapped"
-  | "reverseMappedConstraint"
-  | "alias"
-  | "aliasTypeArgument"
-  | "intersection";
-export type GraphLink = {
-  source: number;
-  target: number;
-  kind: EdgeKind;
-};
-export type GraphStats = { count: Record<string, number> };
-export type GraphEdgeEntry = [TypeId, TypeId[], AbsolutePath | null];
-export const GRAPH_EDGE_ENTRY = {
-  TYPEID_INDEX: 0,
-  TARGET_TYPEIDS_INDEX: 1,
-  PATH_INDEX: 2,
-} as const;
-export type GraphEdgeStats = Record<
-  EdgeKind,
-  {
-    max: number;
-    links: GraphEdgeEntry[];
-  }
->;
-export type NodeGraphStat =
-  | "typeArguments"
-  | "unionTypes"
-  | "intersectionTypes"
-  | "aliasTypeArguments";
-
-export type GraphNodePreviewData = [
-  typeId: TypeId,
-  typeDisplayName: string,
-  typeMetricValue: number,
-  absolutePath: AbsolutePath | null,
-];
-
-export type GraphNodeStats = Record<
-  NodeGraphStat,
-  {
-    max: number;
-    nodes: GraphNodePreviewData[];
-  }
->;
-
-export type TypeGraph = {
-  nodes: GraphNode[];
-  links: GraphLink[];
-  stats: GraphStats;
-  edgeStats: GraphEdgeStats;
-  nodeStats: GraphNodeStats;
-};
-
 export function useTypeGraph() {
   return useQuery<TypeGraph>({
     queryKey: ["type_graph"],
@@ -344,4 +267,71 @@ export const useFriendlyPackageName = () => {
 
     return friendlyPath(maybePath, projectRoot, relativePaths);
   };
+};
+
+// MCP Status Types and Hooks
+export type ToolStatus = "running" | "success" | "error" | "cancelled";
+
+export interface ToolProgress {
+  tool_name: string;
+  status: ToolStatus;
+  progress: number;
+  message?: string;
+  started_at: number;
+}
+
+export interface ToolDefinition {
+  command: string;
+  displayName: string;
+  description: string;
+  parameters: {
+    name: string;
+    optional: boolean;
+    default?: string | number;
+    description: string;
+  }[];
+  returns: Record<string, unknown>;
+}
+
+/// Hook to monitor status of active MCP tools
+export function useMcpServerStatus() {
+  return useQuery<ToolProgress[]>({
+    queryKey: ["mcp_tool_status"],
+    queryFn: async () => invoke<ToolProgress[]>("get_mcp_tool_status"),
+    staleTime: 500, // Update frequently to show live progress
+    refetchInterval: 500,
+  });
+}
+
+/// Generic hook to monitor progress of a specific tool by command
+export function useToolProgress(command: string) {
+  return useQuery<ToolProgress | null>({
+    queryKey: ["mcp_tool_progress", command],
+    queryFn: async () =>
+      invoke<ToolProgress | null>("get_mcp_tool_progress", {
+        tool_name: command,
+      }),
+    staleTime: 500,
+    refetchInterval: 500,
+    enabled: !!command,
+  });
+}
+
+/// Hook to fetch available MCP tool definitions from backend
+export function useAvailableTools() {
+  return useQuery<ToolDefinition[]>({
+    queryKey: ["available_mcp_tools"],
+    queryFn: async () => invoke<ToolDefinition[]>("get_available_mcp_tools"),
+    staleTime: Number.POSITIVE_INFINITY, // Tool definitions don't change during app lifetime
+  });
+}
+
+export const useOutputFileSizes = () => {
+  return useQuery<Record<string, number>>({
+    queryKey: ["get_output_file_sizes"],
+    queryFn: async () =>
+      invoke<Record<string, number>>("get_output_file_sizes"),
+    staleTime: 5000,
+    refetchInterval: 10000,
+  });
 };

@@ -494,6 +494,16 @@ pub fn build_type_graph(
         let app_data = state
             .lock()
             .map_err(|_| "AppData mutex poisoned".to_string())?;
+
+        // Check if both types.json and trace.json exist
+        if app_data.types_json.is_empty() {
+            return Err("Cannot build type graph: types.json is required".to_string());
+        }
+
+        if app_data.trace_json.is_empty() {
+            return Err("Cannot build type graph: trace.json is required".to_string());
+        }
+
         app_data.types_json.clone()
     };
 
@@ -514,8 +524,8 @@ pub fn build_type_graph(
         app_data.type_graph = Some(graph);
 
         // Persist to outputs/type-graph.json for refresh-on-boot
-        let outputs_dir = AppData::get_outputs_dir(&_app);
-        let path = std::path::Path::new(&outputs_dir).join(TYPE_GRAPH_FILENAME);
+        let outputs_dir = app_data.outputs_dir();
+        let path = outputs_dir.join(TYPE_GRAPH_FILENAME);
         let json = serde_json::to_string_pretty(&app_data.type_graph)
             .map_err(|e| format!("Failed to serialize type_graph: {e}"))?;
         std::fs::create_dir_all(&outputs_dir)
@@ -553,4 +563,18 @@ pub fn get_type_graph(
         .map(|g| g.to_force_graph())
         .ok_or_else(|| "type graph unavailable".to_string())?;
     Ok(fg)
+}
+
+#[tauri::command]
+pub fn get_type_graph_text(state: State<'_, std::sync::Mutex<AppData>>) -> Result<String, String> {
+    let app_data = state
+        .lock()
+        .map_err(|_| "AppData mutex poisoned".to_string())?;
+    let fg = app_data
+        .type_graph
+        .as_ref()
+        .ok_or_else(|| "type graph unavailable".to_string())?;
+    let json = serde_json::to_string_pretty(fg)
+        .map_err(|e| format!("Failed to serialize type_graph: {e}"))?;
+    Ok(json)
 }

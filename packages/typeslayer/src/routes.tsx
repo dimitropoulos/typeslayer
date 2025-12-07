@@ -7,7 +7,8 @@ import {
 import { App } from "./App";
 import { AboutPage } from "./pages/about";
 import { AwardWinners } from "./pages/award-winners/award-winners";
-import { Integrations } from "./pages/integrations";
+import { CiCdIntegration } from "./pages/cicd-integration";
+import { Mcp } from "./pages/mcp";
 import { Perfetto } from "./pages/perfetto";
 // analyze-trace page remains but is no longer directly routed
 import { RawData } from "./pages/raw-data";
@@ -108,10 +109,16 @@ const settingsRoute = createRoute({
   component: SettingsPage,
 });
 
-const integrationsRoute = createRoute({
+const mcpRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/integrations",
-  component: Integrations,
+  path: "/mcp/$tab",
+  component: Mcp,
+});
+
+const cicdIntegrationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/cicd-integration",
+  component: CiCdIntegration,
 });
 
 const aboutRoute = createRoute({
@@ -150,7 +157,8 @@ const routeTree = rootRoute.addChildren([
   rawDataRoute,
   rawDataChildRoute,
   settingsRoute,
-  integrationsRoute,
+  mcpRoute,
+  cicdIntegrationsRoute,
   aboutRoute,
 ]);
 

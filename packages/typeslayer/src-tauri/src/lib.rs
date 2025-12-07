@@ -4,8 +4,11 @@ mod auth;
 mod files;
 mod layercake;
 mod log;
+mod mcp_server;
+mod mcp_status;
 mod process_controller;
 mod screenshot;
+mod tools;
 mod treemap;
 mod type_graph;
 mod validate;
@@ -14,6 +17,8 @@ use std::sync::Mutex;
 use tauri::AppHandle;
 use tauri::Manager;
 use tauri::async_runtime::spawn;
+
+pub use mcp_server::run_mcp_server;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -25,8 +30,13 @@ pub fn run() {
         .plugin(tauri_plugin_screenshots::init())
         .setup(|app| {
             let app_handle = app.app_handle().clone();
-            let app_data = app_data::AppData::new(&app_handle);
+            let data_dir = files::get_typeslayer_base_data_dir(None, Some(&app_handle));
+            let app_data = app_data::AppData::new(data_dir);
             app.manage(Mutex::new(app_data));
+
+            // Initialize MCP status tracker
+            let mcp_tracker = mcp_status::McpStatusTracker::new();
+            app.manage(mcp_tracker);
 
             // Set initial window title based on detected project package.json
             if let Some(title) = app
@@ -52,8 +62,12 @@ pub fn run() {
                     Path(name): Path<String>,
                     app: AppHandle,
                 ) -> impl IntoResponse {
-                    let base = app_data::AppData::get_outputs_dir(&app);
-                    let path = std::path::Path::new(&base).join(&name);
+                    let outputs_dir = {
+                        let state: tauri::State<Mutex<app_data::AppData>> = app.state();
+                        let data = state.lock().unwrap();
+                        data.outputs_dir().to_string_lossy().to_string()
+                    };
+                    let path = std::path::Path::new(&outputs_dir).join(&name);
                     match tokio::fs::read(&path).await {
                         Ok(bytes) => {
                             let content_type = if name.ends_with(".json") {
@@ -127,6 +141,7 @@ pub fn run() {
             files::get_current_dir,
             files::get_project_root,
             files::set_project_root,
+            files::get_output_file_sizes,
             app_data::verify_analyze_trace,
             app_data::verify_cpu_profile,
             app_data::get_types_json_text,
@@ -135,8 +150,13 @@ pub fn run() {
             app_data::get_cpu_profile_text,
             type_graph::build_type_graph,
             type_graph::get_type_graph,
+            type_graph::get_type_graph_text,
             app_data::get_treemap_data,
             screenshot::take_screenshot,
+            mcp_status::get_mcp_tool_status,
+            mcp_status::get_mcp_tool_progress,
+            mcp_status::get_mcp_all_tools,
+            mcp_status::get_available_mcp_tools,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

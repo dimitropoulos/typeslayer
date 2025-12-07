@@ -1,17 +1,20 @@
 import {
+  AutoAwesome,
   Biotech,
+  BugReport,
   CameraAlt,
   Dashboard,
   Description,
+  Dvr,
   EmojiEvents,
+  Help,
   Hub,
-  Layers,
   PlayCircle,
   Search,
   Settings,
   Speed,
 } from "@mui/icons-material";
-import { IconButton, Snackbar } from "@mui/material";
+import { IconButton, Snackbar, Stack } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import {
@@ -21,8 +24,9 @@ import {
 } from "@typeslayer/validate";
 import { type FC, type JSX, useState } from "react";
 import dimitropoulosAvatar from "../assets/dimitropoulos.png";
+import { AiMcpProgress } from "../pages/mcp";
 
-const ScreenshotAction: FC<{ collapsed: boolean }> = ({ collapsed }) => {
+const ActionBar: FC<{ collapsed: boolean }> = () => {
   const [screenshotSnackbar, setScreenshotSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -44,29 +48,31 @@ const ScreenshotAction: FC<{ collapsed: boolean }> = ({ collapsed }) => {
       });
     }
   };
+
   return (
-    <>
-      <IconButton
-        onClick={handleScreenshot}
-        size="small"
-        aria-label="Take screenshot"
-        sx={{
-          width: "100%",
-          flexGrow: 1,
-          height: 40,
-          display: "flex",
-          gap: 1,
-          mb: 0.5,
-          borderRadius: 0,
-          bgcolor: t => t.palette.background.paper,
-          border: t => `1px solid ${t.palette.divider}`,
+    <Stack
+      sx={{
+        width: "100%",
+        justifyContent: "center",
+        flexDirection: "row",
+        gap: 0.5,
+        mb: 0.5,
+        "& .MuiIconButton-root": {
+          color: t => t.palette.text.secondary,
           "&:hover": {
-            bgcolor: t => t.palette.action.hover,
+            color: t => t.palette.text.primary,
           },
-        }}
-      >
-        <CameraAlt fontSize="small" />
-        {!collapsed && <span style={{ fontSize: 14 }}>Screenshot</span>}
+        },
+      }}
+    >
+      <IconButton onClick={handleScreenshot} title="take a screenshot">
+        <CameraAlt />
+      </IconButton>
+      <IconButton title="report a bug">
+        <BugReport />
+      </IconButton>
+      <IconButton title="help">
+        <Help />
       </IconButton>
       <Snackbar
         open={screenshotSnackbar.open}
@@ -75,7 +81,7 @@ const ScreenshotAction: FC<{ collapsed: boolean }> = ({ collapsed }) => {
         message={screenshotSnackbar.message}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       />
-    </>
+    </Stack>
   );
 };
 
@@ -140,6 +146,22 @@ export const friendlyPath = (
 
 export const serverBaseUrl = "http://127.0.0.1:4765";
 
+export const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    const kb = Math.round(bytes / 1024);
+    return `${kb} K`;
+  }
+  if (bytes < 1024 * 1024 * 1024) {
+    const mb = Math.round(bytes / (1024 * 1024));
+    return `${mb} M`;
+  }
+  const gb = Math.round(bytes / (1024 * 1024 * 1024));
+  return `${gb} G`;
+};
+
 export const useStaticFile = (fileName: string) => {
   return useQuery<string>({
     queryKey: ["outputs", fileName],
@@ -164,6 +186,7 @@ export type SegmentNavigationItem = {
   segment: string;
   title: string;
   icon: JSX.Element;
+  progress?: JSX.Element;
 };
 
 export type DividerNavigationItem = {
@@ -240,13 +263,20 @@ export const NAVIGATION = [
   },
   {
     kind: "header",
-    title: "Configuration",
+    title: "Integrations",
   },
   {
     kind: "segment",
-    segment: "integrations",
-    title: "Integrations",
-    icon: <Layers />,
+    segment: "mcp/setup",
+    title: "AI MCP Server",
+    icon: <AutoAwesome />,
+    progress: <AiMcpProgress />,
+  },
+  {
+    kind: "segment",
+    segment: "cicd-integration",
+    title: "CI/CD",
+    icon: <Dvr />,
   },
   {
     kind: "segment",
@@ -259,7 +289,7 @@ export const NAVIGATION = [
   },
   {
     kind: "action",
-    action: ScreenshotAction,
+    action: ActionBar,
   },
   {
     kind: "divider",

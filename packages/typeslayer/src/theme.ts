@@ -151,6 +151,20 @@ export const theme: Theme = createTheme({
     `0 0 0 1px ${white}12, 0 42px 98px -40px ${black}FF`,
   ],
   components: {
+    MuiAccordion: {
+      styleOverrides: {
+        root: {
+          border: `1px solid ${divider}`,
+        },
+      },
+    },
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 0,
+        },
+      },
+    },
     MuiSvgIcon: {
       styleOverrides: {
         root: {
@@ -425,9 +439,9 @@ export const theme: Theme = createTheme({
       styleOverrides: {
         tooltip: {
           backdropFilter: "blur(8px)",
-          background: `linear-gradient(160deg, ${doomRed.dark}D9, ${doomRed.darker}D9)`,
+          background: `linear-gradient(160deg, ${doomRed.dark}80, ${doomRed.darker}80)`,
           border: `1px solid ${border.subtleHover}`,
-          fontSize: "0.7rem",
+          fontSize: "0.9rem",
         },
       },
     },

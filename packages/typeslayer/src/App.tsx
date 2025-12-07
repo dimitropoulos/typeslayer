@@ -201,6 +201,7 @@ export function App() {
           {item.icon}
         </ListItemIcon>
         {!collapsed && <ListItemText primary={item.title} />}
+        {!collapsed ? (item.progress ?? null) : null}
       </ListItemButton>
     );
   };
