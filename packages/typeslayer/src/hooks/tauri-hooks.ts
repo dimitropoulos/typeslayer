@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import type { AnalyzeTraceResult } from "@typeslayer/analyze-trace/src/utils";
+import type { AnalyzeTraceResult } from "@typeslayer/analyze-trace/browser";
 import { extractPackageName, type ResolvedType } from "@typeslayer/validate";
 import { friendlyPath } from "../components/utils";
 import type { TypeGraph } from "../types/type-graph";
@@ -128,6 +128,7 @@ export function useExtraTscFlags() {
       invoke("set_extra_tsc_flags", { flags }),
     onSuccess: (_, flags) => {
       queryClient.setQueryData(["extra_tsc_flags"], flags);
+      queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
     },
   });
 
@@ -166,6 +167,7 @@ export function useProjectRoot() {
       queryClient.setQueryData(["project_root"], projectRoot);
       queryClient.invalidateQueries({ queryKey: ["tsconfig_paths"] });
       queryClient.invalidateQueries({ queryKey: ["selected_tsconfig"] });
+      queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
     },
   });
 
@@ -224,6 +226,7 @@ export function useSelectedTsconfig() {
       invoke("set_selected_tsconfig", { tsconfigPath }),
     onSuccess: (_, tsconfigPath) => {
       queryClient.setQueryData(["selected_tsconfig"], tsconfigPath || null);
+      queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
     },
   });
 
@@ -317,7 +320,8 @@ export function useAvailableTools() {
 export function useAvailableResources() {
   return useQuery<ManagedResource[]>({
     queryKey: ["available_mcp_resources"],
-    queryFn: async () => invoke<ManagedResource[]>("get_available_mcp_resources"),
+    queryFn: async () =>
+      invoke<ManagedResource[]>("get_available_mcp_resources"),
     staleTime: Number.POSITIVE_INFINITY, // Resource definitions don't change during app lifetime
   });
 }
@@ -329,5 +333,49 @@ export const useOutputFileSizes = () => {
       invoke<Record<string, number>>("get_output_file_sizes"),
     staleTime: 5000,
     refetchInterval: 10000,
+  });
+};
+
+export const useTscExample = () => {
+  return useQuery<string>({
+    queryKey: ["get_tsc_example_call"],
+    queryFn: async () => invoke<string>("get_tsc_example_call"),
+  });
+};
+
+export interface BugReportFile {
+  name: string;
+  description: string;
+}
+
+export const useBugReportFiles = () => {
+  return useQuery<BugReportFile[]>({
+    queryKey: ["bug_report_files"],
+    queryFn: async () => invoke<BugReportFile[]>("get_bug_report_files"),
+    staleTime: 5000,
+  });
+};
+
+export const useCreateBugReport = () => {
+  const mutation = useMutation({
+    mutationFn: async (params: {
+      description: string;
+      stdout?: string;
+      stderr?: string;
+    }) => invoke<string>("create_bug_report", params),
+  });
+
+  return {
+    submit: mutation.mutateAsync,
+    isSubmitting: mutation.isPending,
+    error: mutation.error,
+  };
+};
+
+export const useDataDir = () => {
+  return useQuery<string>({
+    queryKey: ["data_dir"],
+    queryFn: async () => invoke<string>("get_data_dir"),
+    staleTime: Number.POSITIVE_INFINITY,
   });
 };

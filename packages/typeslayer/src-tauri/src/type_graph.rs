@@ -68,7 +68,7 @@ pub struct EdgeStats {
     pub links: Vec<(TypeId, Vec<TypeId>, Option<String>)>,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TypeGraph {
     nodes: HashMap<TypeId, GraphNode>,
@@ -566,7 +566,9 @@ pub fn get_type_graph(
 }
 
 #[tauri::command]
-pub fn get_type_graph_text(state: State<'_, std::sync::Arc<std::sync::Mutex<AppData>>>) -> Result<String, String> {
+pub fn get_type_graph_text(
+    state: State<'_, std::sync::Arc<std::sync::Mutex<AppData>>>,
+) -> Result<String, String> {
     let app_data = state
         .lock()
         .map_err(|_| "AppData mutex poisoned".to_string())?;

@@ -4,11 +4,18 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Stack,
   TextField,
   Typography,
 } from "@mui/material";
 import { useEffect, useState } from "react";
-import { useExtraTscFlags } from "../hooks/tauri-hooks";
+import {
+  useExtraTscFlags,
+  useProjectRoot,
+  useTscExample,
+} from "../hooks/tauri-hooks";
+import { Code } from "./code";
+import { stripPackageJson } from "./utils";
 
 export type FlagsCustomizationDialogProps = {
   readonly open: boolean;
@@ -27,6 +34,8 @@ export function FlagsCustomizationDialog({
   } = useExtraTscFlags();
   const [localFlags, setLocalFlags] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const { data: projectRoot } = useProjectRoot();
+  const { data: tscExample } = useTscExample();
 
   useEffect(() => {
     if (open && typeof currentFlags === "string") {
@@ -59,13 +68,19 @@ export function FlagsCustomizationDialog({
     }
   };
 
+  const example = tscExample?.replace(/ --[^\s]+/g, match => ` \\\n  ${match}`);
+  const exampleCommand = [
+    `${stripPackageJson(projectRoot ?? "/project/root")}`,
+    `$ ${example}`,
+  ].join("\n");
+
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
       <DialogTitle>Customize TypeScript Compiler Flags</DialogTitle>
       <DialogContent>
         <Typography variant="body2" sx={{ mb: 2 }}>
-          These flags are passed to the TypeScript compiler when generating
-          traces or CPU profiles.
+          these flags are passed to the TypeScript compiler when generating
+          traces or CPU profiles
         </Typography>
         <TextField
           fullWidth
@@ -76,6 +91,21 @@ export function FlagsCustomizationDialog({
           autoFocus
           disabled={isLoading}
         />
+
+        <Typography variant="h6" sx={{ mt: 4, mb: 1 }}>
+          Example
+        </Typography>
+        <Stack sx={{ gap: 2 }}>
+          <Typography>
+            these flags will be used in a command like this:
+          </Typography>
+
+          <Code value={exampleCommand} lang="bash" />
+
+          <Typography>
+            so if you wanna try it yourself, please feel free!
+          </Typography>
+        </Stack>
       </DialogContent>
       <DialogActions>
         <Button onClick={handleResetToDefault} disabled={isSaving || isLoading}>

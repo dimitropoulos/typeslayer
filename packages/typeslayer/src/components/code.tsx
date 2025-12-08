@@ -1,7 +1,7 @@
 import { ContentCopy, Description, Done } from "@mui/icons-material";
 import { Box, type BoxProps, IconButton, Tooltip } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
-import { codeToHtml } from "shiki";
+import { type BundledLanguage, codeToHtml } from "shiki";
 
 export type CodeProps = {
   /** Data to render. Strings are parsed if they look like JSON, otherwise rendered as-is. */
@@ -10,6 +10,9 @@ export type CodeProps = {
   maxHeight?: number | string;
   /** file name or path for the code snippet */
   fileName?: string;
+
+  /** language for syntax highlighting */
+  lang?: BundledLanguage;
 } & BoxProps;
 
 const normalizeValue = (value: unknown) => {
@@ -40,6 +43,7 @@ export const Code = ({
   value,
   maxHeight,
   fileName,
+  lang,
   ...boxProps
 }: CodeProps) => {
   const normalized = useMemo(() => normalizeValue(value), [value]);
@@ -53,7 +57,7 @@ export const Code = ({
     const highlight = async () => {
       try {
         const rendered = await codeToHtml(code, {
-          lang: "json",
+          lang: lang ?? "json",
           theme: "github-dark-high-contrast",
           // make the background transparent
           rootStyle: "background-color: transparent; margin: 0;",
@@ -74,7 +78,7 @@ export const Code = ({
     return () => {
       cancelled = true;
     };
-  }, [code]);
+  }, [code, lang]);
 
   const { sx: boxPropsSx, ...boxPropsRest } = boxProps;
 

@@ -13,7 +13,7 @@ export const StatPill = ({
       alignItems: "baseline",
       gap: 1,
       px: 1.25,
-      py: 0.5,
+      py: 0.25,
       border: t => `1px solid ${t.palette.primary.main}80`,
     }}
   >

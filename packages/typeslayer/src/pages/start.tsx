@@ -1,4 +1,4 @@
-import { Flag, Insights } from "@mui/icons-material";
+import { ContentCopy, Flag, Insights } from "@mui/icons-material";
 import {
   IconButton,
   MenuItem,
@@ -20,7 +20,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import { ANALYZE_TRACE_FILENAME } from "@typeslayer/analyze-trace/src/constants";
+import { ANALYZE_TRACE_FILENAME } from "@typeslayer/analyze-trace/browser";
 import {
   CPU_PROFILE_FILENAME,
   TRACE_JSON_FILENAME,
@@ -35,6 +35,7 @@ import {
 import typeslayerLogo from "../assets/typeslayer.png";
 import typeslayerNightmareLogo from "../assets/typeslayer-nightmare.png";
 import { BigAction } from "../components/big-action";
+import { BugReport } from "../components/bug-report";
 import { FlagsCustomizationDialog } from "../components/flags-customization-dialog";
 import { InlineCode } from "../components/inline-code";
 import {
@@ -64,6 +65,74 @@ export const Step = ({
       </Typography>
       {children}
     </Box>
+  );
+};
+
+const ErrorDialog = ({
+  open,
+  onClose,
+  processingErrorDetails,
+  processingErrorStdout,
+  processingErrorStderr,
+  errorDialogTitle,
+  hasStdout,
+  hasStderr,
+}: {
+  open: boolean;
+  onClose: () => void;
+  processingErrorDetails: string | null;
+  processingErrorStdout: string | null;
+  processingErrorStderr: string | null;
+  errorDialogTitle: string;
+  hasStdout: boolean;
+  hasStderr: boolean;
+}) => {
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth>
+      <DialogTitle>{errorDialogTitle}</DialogTitle>
+      <DialogContent dividers>
+        <Stack gap={2}>
+          {processingErrorDetails && (
+            <Typography color="text.secondary">
+              Detailed compiler output collected from the most recent run.
+            </Typography>
+          )}
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+            }}
+          >
+            <ErrorStreamSection
+              title="STDOUT"
+              content={
+                hasStdout
+                  ? (processingErrorStdout ?? "")
+                  : "No STDOUT output captured."
+              }
+            />
+            <ErrorStreamSection
+              title="STDERR"
+              content={
+                hasStderr
+                  ? (processingErrorStderr ?? "")
+                  : "No STDERR output captured."
+              }
+            />
+          </Box>
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <BugReport
+          stdout={processingErrorStdout || undefined}
+          stderr={processingErrorStderr || undefined}
+          fullButton
+          onClose={onClose}
+        />
+        <Button onClick={onClose}>Close</Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 
@@ -294,15 +363,6 @@ export function Start() {
     }
   }, [isProcessing]);
 
-  const handleCopyErrorDetails = useCallback(() => {
-    if (!processingErrorDetails) {
-      return;
-    }
-    navigator.clipboard
-      .writeText(processingErrorDetails)
-      .catch(error => console.error("Failed to copy error details", error));
-  }, [processingErrorDetails]);
-
   const errorDialogTitle = processingError ?? "Diagnostics failed";
   const hasStdout = !!processingErrorStdout?.trim();
   const hasStderr = !!processingErrorStderr?.trim();
@@ -325,8 +385,8 @@ export function Start() {
         <Step step={1}>
           <Stack gap={1} sx={{ width: "100%" }}>
             <Typography>
-              Locate the <InlineCode secondary>package.json</InlineCode> of the
-              package you'd like to investigate.
+              locate the <InlineCode secondary>package.json</InlineCode> of the
+              package you'd like to investigate
             </Typography>
 
             <Stack direction="row" gap={1} width="100%">
@@ -361,8 +421,9 @@ export function Start() {
           <Stack direction="row" gap={2}>
             <Stack gap={1} sx={{ width: "100%" }}>
               <Typography>
-                Select the <InlineCode secondary>tsconfig.json</InlineCode> to
-                use for type checking.
+                select the <InlineCode secondary>tsconfig.json</InlineCode> to
+                use for type checking (TypeSlayer will run{" "}
+                <InlineCode secondary>tsc</InlineCode> with it)
               </Typography>
 
               <Select
@@ -380,7 +441,7 @@ export function Start() {
                           fontFamily="monospace"
                           color="textSecondary"
                         >
-                          Run <InlineCode secondary>tsc</InlineCode> without the{" "}
+                          run <InlineCode secondary>tsc</InlineCode> without the{" "}
                           <InlineCode secondary>--project</InlineCode> flag
                         </Typography>
                       </Stack>
@@ -410,7 +471,7 @@ export function Start() {
                       fontFamily="monospace"
                       color="textSecondary"
                     >
-                      Run <InlineCode secondary>tsc</InlineCode> without the{" "}
+                      run <InlineCode secondary>tsc</InlineCode> without the{" "}
                       <InlineCode secondary>--project</InlineCode> flag
                     </Typography>
                   </Stack>
@@ -455,7 +516,7 @@ export function Start() {
             {processingError && hasCompositeProjectError(processingError) && (
               <Alert severity="info" sx={{ mb: 1 }}>
                 <Typography variant="body2">
-                  <strong>Tip:</strong> Your project uses composite mode. You
+                  <strong>Tip:</strong> your project uses composite mode. you
                   may need to customize the compiler flags above to remove{" "}
                   <InlineCode secondary>--incremental false</InlineCode>.
                 </Typography>
@@ -482,25 +543,25 @@ export function Start() {
             <Stack sx={{ gap: 2, flexDirection: "row", flexWrap: "wrap" }}>
               <BigAction
                 title="Identify Types"
-                description="Generate event traces and and identification for all types from the TypeScript compiler checking your codebase."
+                description="generates event traces and and identification for all types from the TypeScript compiler checking your codebase"
                 unlocks={["Search Types", "Perfetto"]}
                 isLoading={isProcessing && processingStep === 0}
               />
               <BigAction
                 title="CPU Profile"
-                description="A v8 CPU profile from the TypeScript compiler during type checking.  This can be a critical tool for identifying bottlenecks."
+                description="a v8 CPU profile from the TypeScript compiler during type checking (a critical tool for identifying bottlenecks)"
                 unlocks={["SpeedScope"]}
                 isLoading={isProcessing && processingStep === 1}
               />
               <BigAction
                 title="Analyze Hot Spots"
-                description="Identify computational hot-spots in your type checking, along with duplicate type packages inclusions, unterminated events."
+                description="identifies computational hot-spots in your type checking, duplicate type packages inclusions, and unterminated events"
                 unlocks={["Treemap", "Award Winners"]}
                 isLoading={isProcessing && processingStep === 2}
               />
               <BigAction
                 title="Type Graph"
-                description="Create a graph of all types and their relationships to visualize complex type dependencies."
+                description="creates a graph of all types and their relationships to visualize complex type dependencies"
                 unlocks={["Type Network"]}
                 isLoading={isProcessing && processingStep === 3}
               />
@@ -530,56 +591,16 @@ export function Start() {
           </Stack>
         </Step>
       </Stack>
-      <Dialog
+      <ErrorDialog
+        processingErrorDetails={processingErrorDetails}
+        processingErrorStderr={processingErrorStderr}
+        processingErrorStdout={processingErrorStdout}
+        hasStdout={hasStdout}
+        hasStderr={hasStderr}
+        errorDialogTitle={errorDialogTitle}
         open={isErrorDialogOpen}
         onClose={() => setIsErrorDialogOpen(false)}
-        maxWidth="xl"
-        fullWidth
-      >
-        <DialogTitle>{errorDialogTitle}</DialogTitle>
-        <DialogContent dividers>
-          <Stack gap={2}>
-            {processingErrorDetails && (
-              <Typography color="text.secondary">
-                Detailed compiler output collected from the most recent run.
-              </Typography>
-            )}
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 2,
-              }}
-            >
-              <ErrorStreamSection
-                title="STDOUT"
-                content={
-                  hasStdout
-                    ? (processingErrorStdout ?? "")
-                    : "No STDOUT output captured."
-                }
-              />
-              <ErrorStreamSection
-                title="STDERR"
-                content={
-                  hasStderr
-                    ? (processingErrorStderr ?? "")
-                    : "No STDERR output captured."
-                }
-              />
-            </Box>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setIsErrorDialogOpen(false)}>Close</Button>
-          <Button
-            onClick={handleCopyErrorDetails}
-            disabled={!processingErrorDetails}
-          >
-            Copy
-          </Button>
-        </DialogActions>
-      </Dialog>
+      />
 
       {/* Fade-to-black overlay (pane only) with centered logo morph */}
       <Box
@@ -696,50 +717,69 @@ const ErrorStreamSection = ({
 }: {
   title: string;
   content: string;
-}) => (
-  <Box
-    sx={{
-      flex: 1,
-      minWidth: 0,
-      border: theme => `1px solid ${theme.palette.divider}`,
-      borderRadius: 1,
-      display: "flex",
-      flexDirection: "column",
-      overflow: "hidden",
-    }}
-  >
+}) => {
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(content).catch(err => {
+      console.error("Failed to copy to clipboard:", err);
+    });
+  }, [content]);
+
+  return (
     <Box
       sx={{
-        px: 2,
-        py: 1,
-        bgcolor: theme => theme.palette.background.paper,
-        borderBottom: theme => `1px solid ${theme.palette.divider}`,
-        fontSize: 12,
-        fontWeight: 600,
-        textTransform: "uppercase",
-        letterSpacing: 0.75,
+        flex: 1,
+        minWidth: 0,
+        border: theme => `1px solid ${theme.palette.divider}`,
+        borderRadius: 1,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
       }}
     >
-      {title}
+      <Box
+        sx={{
+          px: 2,
+          py: 1,
+          bgcolor: theme => theme.palette.background.paper,
+          borderBottom: theme => `1px solid ${theme.palette.divider}`,
+          fontSize: 12,
+          fontWeight: 600,
+          textTransform: "uppercase",
+          justifyContent: "space-between",
+          display: "flex",
+          alignItems: "center",
+          letterSpacing: 0.75,
+        }}
+      >
+        {title}
+        <IconButton
+          size="small"
+          onClick={handleCopy}
+          title="Copy to clipboard"
+          sx={{ ml: 1 }}
+        >
+          <ContentCopy fontSize="small" />
+        </IconButton>
+      </Box>
+      <Box
+        component="pre"
+        sx={{
+          m: 0,
+          px: 2,
+          py: 1.5,
+          fontFamily: "monospace",
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-word",
+          overflow: "auto",
+          maxHeight: 320,
+          bgcolor: theme => theme.palette.background.default,
+        }}
+      >
+        {content}
+      </Box>
     </Box>
-    <Box
-      component="pre"
-      sx={{
-        m: 0,
-        px: 2,
-        py: 1.5,
-        fontFamily: "monospace",
-        whiteSpace: "pre-wrap",
-        wordBreak: "break-word",
-        overflow: "auto",
-        maxHeight: 320,
-        bgcolor: theme => theme.palette.background.default,
-      }}
-    >
-      {content}
-    </Box>
-  </Box>
-);
+  );
+};
 
 // Helper to detect composite project incremental error
 const hasCompositeProjectError = (error: string | null) => {

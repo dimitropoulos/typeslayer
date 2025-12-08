@@ -46,7 +46,9 @@ export const AiMcpProgress = ({ variant }: { variant: "button" | "icon" }) => {
           }}
         >
           <TaskAlt color="success" sx={{ verticalAlign: "middle" }} />
-          <Typography color="success">up and running</Typography>
+          <Typography color="success">
+            the TypeSlayer MCP Server is up and running
+          </Typography>
         </Stack>
       );
 
@@ -135,13 +137,14 @@ export const Mcp = () => {
               <Tab
                 key={tab.key}
                 label={
-                  <Stack sx={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
+                  <Stack
+                    sx={{ flexDirection: "row", alignItems: "center", gap: 2 }}
+                  >
                     <Typography>{tab.label}</Typography>
                     {count !== null && (
                       <Box
                         sx={{
-                          borderColor: "primary.main",
-                          color: "primary.main",
+                          color: "secondary.main",
                           fontSize: "1rem",
                           fontWeight: "bold",
                         }}
@@ -529,21 +532,21 @@ const Setup = () => {
   return (
     <Stack spacing={2}>
       <Typography variant="h4" gutterBottom>
-        Quick setup
+        Quick Setup
       </Typography>
 
       <Box component="ol" sx={{ pl: 3, mb: 2, "& li": { mb: 1.5 } }}>
         <li>
           <Typography>
-            Use TypeSlayer's <Link href="/start">Start | Run Diagnostics</Link>
-            module to generate the data that the MCP Server relies on.
+            use TypeSlayer's <Link href="/start">Start | Run Diagnostics</Link>{" "}
+            module to generate the data that the MCP Server relies on
           </Typography>
         </li>
         <li>
           <Stack sx={{ gap: 1, alignItems: "flex-start" }}>
             <Typography>
-              Use this <InlineCode secondary>mcp.json</InlineCode> where your
-              MCP client expects it.
+              use this <InlineCode secondary>mcp.json</InlineCode> where your
+              MCP client expects it
             </Typography>
 
             <ul style={{ marginLeft: "-24px" }}>
@@ -561,12 +564,12 @@ const Setup = () => {
           </Stack>
         </li>
         <li>
-          <Typography>Restart or reload your MCP client.</Typography>
+          <Typography>restart or reload your MCP clien.</Typography>
         </li>
         <li>
           <Typography>
-            Ask your AI to call use TypeSlayer tools to analyze your TypeScript.
-            See prompt examples <Link href="/mcp/prompts">here</Link>.
+            ask your AI to call use TypeSlayer tools to analyze your TypeScript
+            (prompt examples <Link href="/mcp/prompts">here</Link>)
           </Typography>
         </li>
       </Box>

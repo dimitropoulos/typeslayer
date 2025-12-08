@@ -1,15 +1,8 @@
-import {
-  Alert,
-  Box,
-  Button,
-  Container,
-  Snackbar,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { Box, Button, Container, TextField, Typography } from "@mui/material";
 import { invoke } from "@tauri-apps/api/core";
 import { type FC, useCallback, useEffect, useState } from "react";
 import typeslayerLogo from "../assets/typeslayer.png";
+import { useToast } from "../contexts/toast-context";
 
 interface AuthGateProps {
   onAuthorized: () => void;
@@ -17,8 +10,8 @@ interface AuthGateProps {
 
 export const AuthGate: FC<AuthGateProps> = ({ onAuthorized }) => {
   const [code, setCode] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(true);
+  const { showToast } = useToast();
 
   // On mount, check if already authorized via env/flag/config
   useEffect(() => {
@@ -42,19 +35,24 @@ export const AuthGate: FC<AuthGateProps> = ({ onAuthorized }) => {
   }, [onAuthorized]);
 
   const handleSubmit = useCallback(async () => {
-    setError(null);
     try {
       const valid = await invoke<boolean>("validate_auth_code", { code });
       if (valid) {
         onAuthorized();
       } else {
-        setError("Invalid code. Please try again.");
+        showToast({
+          message: "Invalid code. Please try again.",
+          severity: "error",
+        });
       }
     } catch (err) {
-      setError("Validation failed. Please try again.");
+      showToast({
+        message: "Validation failed. Please try again.",
+        severity: "error",
+      });
       console.error(err);
     }
-  }, [code, onAuthorized]);
+  }, [code, onAuthorized, showToast]);
 
   if (checking) {
     return (
@@ -128,15 +126,6 @@ export const AuthGate: FC<AuthGateProps> = ({ onAuthorized }) => {
           </Button>
         </Box>
       </Container>
-      <Snackbar
-        open={!!error}
-        autoHideDuration={4000}
-        onClose={() => setError(null)}
-      >
-        <Alert severity="error" onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

@@ -28,7 +28,7 @@ pub async fn get_current_dir() -> Result<String, String> {
 pub async fn get_project_root(state: State<'_, Arc<Mutex<AppData>>>) -> Result<String, String> {
     state
         .lock()
-        .map(|data| data.project_root.clone())
+        .map(|data| data.project_root.to_string_lossy().to_string())
         .map_err(|e| e.to_string())
 }
 
@@ -39,7 +39,7 @@ pub async fn set_project_root(
     project_root: String,
 ) -> Result<(), String> {
     let mut data = state.lock().map_err(|e| e.to_string())?;
-    data.update_project_root(project_root);
+    data.update_project_root(project_root.into());
 
     if let Some(win) = app.get_webview_window("main") {
         let _ = win.set_title(&data.compute_window_title());
@@ -47,30 +47,34 @@ pub async fn set_project_root(
     Ok(())
 }
 
-pub fn get_typeslayer_base_data_dir() -> String {
+pub fn get_typeslayer_base_data_dir() -> std::path::PathBuf {
     if let Ok(env_dir) = std::env::var("TYPESLAYER_DATA_DIR") {
-        env_dir
+        std::path::PathBuf::from(env_dir)
     } else {
         #[cfg(target_os = "linux")]
         {
             if let Ok(home) = std::env::var("HOME") {
-                return format!("{}/.local/share/typeslayer", home);
+                return std::path::PathBuf::from(format!("{}/.local/share/typeslayer", home));
             }
         }
         #[cfg(target_os = "macos")]
         {
             if let Ok(home) = std::env::var("HOME") {
-                return format!("{}/Library/Application Support/typeslayer", home);
+                return std::path::PathBuf::from(format!(
+                    "{}/Library/Application Support/typeslayer",
+                    home
+                ));
             }
         }
         #[cfg(target_os = "windows")]
         {
             if let Ok(appdata) = std::env::var("APPDATA") {
-                return format!("{}\\typeslayer", appdata);
+                return std::path::PathBuf::from(format!("{}\\typeslayer", appdata));
             }
         }
-        // Fallback
-        "./typeslayer".to_string()
+        std::env::current_dir()
+            .unwrap_or(std::path::PathBuf::from("."))
+            .join("typeslayer")
     }
 }
 

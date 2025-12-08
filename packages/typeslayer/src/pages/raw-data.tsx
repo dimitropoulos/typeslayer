@@ -2,6 +2,7 @@ import {
   Description,
   Download,
   FileCopy,
+  FolderOpen,
   VerifiedUser,
 } from "@mui/icons-material";
 import {
@@ -13,7 +14,6 @@ import {
   ListItemIcon,
   ListItemText,
   ListSubheader,
-  Snackbar,
   Stack,
   Typography,
 } from "@mui/material";
@@ -21,13 +21,14 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { downloadDir } from "@tauri-apps/api/path";
 import { download } from "@tauri-apps/plugin-upload";
-import { ANALYZE_TRACE_FILENAME } from "@typeslayer/analyze-trace/src/constants";
+import { ANALYZE_TRACE_FILENAME } from "@typeslayer/analyze-trace/browser";
 import {
   CPU_PROFILE_FILENAME,
   TRACE_JSON_FILENAME,
   TYPES_JSON_FILENAME,
 } from "@typeslayer/validate";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
+import { CenterLoader } from "../components/center-loader";
 import { Code } from "../components/code";
 import { InlineCode } from "../components/inline-code";
 import {
@@ -35,6 +36,7 @@ import {
   serverBaseUrl,
   useStaticFile,
 } from "../components/utils";
+import { useToast } from "../contexts/toast-context";
 import { useOutputFileSizes } from "../hooks/tauri-hooks";
 import { TYPE_GRAPH_FILENAME } from "../types/type-graph";
 
@@ -159,13 +161,7 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
   const item = RAW_ITEMS[itemKey];
   const { data: text, isLoading } = useStaticFile(item.filename);
   const { data: fileSizes } = useOutputFileSizes();
-
-  const [toast, setToast] = useState<{
-    open: boolean;
-    message: string;
-    severity: "success" | "error";
-    path?: string;
-  }>({ open: false, message: "", severity: "success" });
+  const { showToast } = useToast();
 
   const onCopy = async () => {
     if (!text) {
@@ -173,13 +169,12 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
     }
     try {
       await navigator.clipboard.writeText(text);
-      setToast({
-        open: true,
+      showToast({
         message: "Copied to clipboard",
         severity: "success",
       });
     } catch {
-      setToast({ open: true, message: "Copy failed", severity: "error" });
+      showToast({ message: "Copy failed", severity: "error" });
     }
   };
 
@@ -189,34 +184,35 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
       const dest = `${base}${base.endsWith("/") ? "" : "/"}${item.filename}`;
       const url = `${serverBaseUrl}/outputs/${item.filename}`;
       await download(url, dest);
-      setToast({
-        open: true,
+
+      const handleOpenFile = async () => {
+        try {
+          await invoke("open_file", { path: dest });
+        } catch {
+          showToast({ message: "Failed to open file", severity: "error" });
+        }
+      };
+
+      showToast({
         message: `Downloaded to: ${dest}`,
         severity: "success",
-        path: dest,
+        action: {
+          label: "Open",
+          icon: <FolderOpen />,
+          onClick: handleOpenFile,
+        },
       });
     } catch {
-      setToast({ open: true, message: `Download failed`, severity: "error" });
+      showToast({ message: "Download failed", severity: "error" });
     }
-  }, [item.filename]);
-
-  const onToastClick = useCallback(async () => {
-    if (!toast.path) {
-      return;
-    }
-    try {
-      await invoke("open_file", { path: toast.path });
-    } catch {
-      setToast({ open: true, message: "Open failed", severity: "error" });
-    }
-  }, [toast.path]);
+  }, [item.filename, showToast]);
 
   const onVerify = async () => {
     try {
       await invoke(item.verifyInvoke);
-      setToast({ open: true, message: "Verified: OK", severity: "success" });
+      showToast({ message: "Verified: OK", severity: "success" });
     } catch (_e) {
-      setToast({ open: true, message: "Verify failed", severity: "error" });
+      showToast({ message: "Verify failed", severity: "error" });
     }
   };
 
@@ -266,35 +262,12 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
       </Stack>
 
       {isLoading ? (
-        <Typography>Loading...</Typography>
+        <CenterLoader />
       ) : text ? (
         <Code value={text} />
       ) : (
-        <Alert severity="info">File not found.</Alert>
+        <Alert severity="error">File not found.</Alert>
       )}
-      <Snackbar
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
-        open={toast.open}
-        onClose={() => setToast(t => ({ ...t, open: false }))}
-        autoHideDuration={5000}
-      >
-        <Alert
-          variant="filled"
-          severity={toast.severity}
-          onClick={onToastClick}
-          sx={{ cursor: toast.path ? "pointer" : "default" }}
-        >
-          {toast.message}
-          {toast.path && (
-            <Typography
-              component="span"
-              sx={{ ml: 1, textDecoration: "underline" }}
-            >
-              Open
-            </Typography>
-          )}
-        </Alert>
-      </Snackbar>
     </Stack>
   );
 };

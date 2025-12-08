@@ -2,6 +2,7 @@ import { Box, Divider, Link, Stack, Typography } from "@mui/material";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { MouseEvent } from "react";
 import dimitropoulosAvatar from "../assets/dimitropoulos.png";
+import { MITS_DISCORD } from "../components/constants";
 import { InlineCode } from "../components/inline-code";
 
 export function AboutPage() {
@@ -92,10 +93,8 @@ export function AboutPage() {
               </Link>
               &nbsp;and&nbsp;
               <Link
-                href="https://discord.michigantypescript.com"
-                onClick={createOpenHandler(
-                  "https://discord.michigantypescript.com",
-                )}
+                href={MITS_DISCORD}
+                onClick={createOpenHandler(MITS_DISCORD)}
               >
                 Discord
               </Link>

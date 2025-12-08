@@ -93,14 +93,14 @@ export const awards = {
 
   relation_union: {
     title: "Union Member",
-    description: "The type most frequently referenced in unions.",
+    description: "The type most frequently included in unions.",
     unit: "unions",
     icon: JoinFull,
     route: "union",
   },
   relation_intersection: {
     title: "Intersection Member",
-    description: "The type most frequently referenced in intersections.",
+    description: "The type most frequently included in intersections.",
     unit: "intersections",
     icon: JoinInner,
     route: "intersection",
@@ -243,7 +243,7 @@ export const awards = {
   relation_alias: {
     title: "Aliased As",
     description:
-      "Type most frequently referenced as an alias target, shows which aliases are heavily reused across the codebase.",
+      "Type most frequently used as an alias target, shows which aliases are heavily reused across the codebase.",
     unit: "alias uses",
     icon: AltRoute,
     route: "alias",

@@ -1,21 +1,18 @@
-import {
-  Alert,
-  List,
-  ListItemButton,
-  ListSubheader,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Alert, ListSubheader, Stack, Typography } from "@mui/material";
 import { useCallback } from "react";
+import { CenterLoader } from "../../components/center-loader";
+import { NoData } from "../../components/no-data";
+import { OpenablePath } from "../../components/openable-path";
 import { useAnalyzeTrace } from "../../hooks/tauri-hooks";
 import { AwardNavItem } from "./award-nav-item";
 import { AWARD_SELECTOR_COLUMN_WIDTH, type AwardId, awards } from "./awards";
 import { TitleSubtitle } from "./title-subtitle";
 
 const DuplicatePackages = () => {
-  const { data: analyzeTrace } = useAnalyzeTrace();
+  const { data: analyzeTrace, isLoading } = useAnalyzeTrace();
   const duplicatePackages = analyzeTrace?.duplicatePackages ?? [];
   const Icon = awards.bundle_duplicatePackages.icon;
+
   const noneFound = (
     <Alert severity="success" sx={{ mx: 1 }}>
       No duplicate packages found.
@@ -25,13 +22,57 @@ const DuplicatePackages = () => {
     </Alert>
   );
 
+  const hasData = analyzeTrace !== undefined;
   const hasItems = duplicatePackages.length > 0;
+
+  const items = (
+    <Stack gap={3}>
+      {duplicatePackages.map(({ instances, name }) => (
+        <Stack key={name} sx={{ ml: 3, mr: 6 }}>
+          <Typography
+            variant="h5"
+            sx={{
+              pb: 1,
+              borderBottom: 1,
+              borderBottomColor: "primary.main",
+            }}
+          >
+            {name}
+          </Typography>
+
+          <Stack sx={{}}>
+            {instances.map(({ path, version }) => (
+              <Stack
+                key={path}
+                sx={{
+                  width: "100%",
+                  borderLeft: 5,
+                  borderColor: "primary.main",
+                  pl: 2,
+                  py: 1,
+
+                  "&:hover": {
+                    backgroundColor: "action.hover",
+                  },
+                }}
+              >
+                <Typography color="secondary">v{version}</Typography>
+
+                <OpenablePath absolutePath={path} />
+              </Stack>
+            ))}
+          </Stack>
+        </Stack>
+      ))}
+    </Stack>
+  );
 
   return (
     <Stack
       sx={{
         p: 1,
         pt: 2,
+
         gap: 2,
         ...(hasItems
           ? {}
@@ -44,38 +85,16 @@ const DuplicatePackages = () => {
         icon={<Icon fontSize="large" />}
       />
 
-      {hasItems ? (
-        <Stack gap={3}>
-          {duplicatePackages.length > 0
-            ? duplicatePackages.map(({ instances, name }) => (
-                <Stack key={name}>
-                  <Typography variant="h5" color="primary">
-                    {name}
-                  </Typography>
-
-                  <List>
-                    {instances.map(({ path, version }) => (
-                      <ListItemButton
-                        key={path}
-                        sx={{
-                          width: "100%",
-                        }}
-                      >
-                        <Stack>
-                          <Typography color="secondary">v{version}</Typography>
-                          <Typography variant="caption" sx={{ mr: 2 }}>
-                            {path}
-                          </Typography>
-                        </Stack>
-                      </ListItemButton>
-                    ))}
-                  </List>
-                </Stack>
-              ))
-            : noneFound}
-        </Stack>
+      {isLoading ? (
+        <CenterLoader />
+      ) : hasData ? (
+        hasItems ? (
+          items
+        ) : (
+          noneFound
+        )
       ) : (
-        noneFound
+        <NoData />
       )}
     </Stack>
   );

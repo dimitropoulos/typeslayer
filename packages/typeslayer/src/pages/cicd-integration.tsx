@@ -5,11 +5,11 @@ export const CiCdIntegration = () => {
     <Stack sx={{ p: 4, gap: 3 }}>
       <Typography variant="h2">CI/CD Integration </Typography>
       <Typography>
-        Planned, but not implemented until I get more use-cases on what people
-        would want this for.
+        this is something that's planned, but I don't want to implement it until
+        I get specific use-cases on what exactly people would want this for.
       </Typography>
       <Typography>
-        That said, the fact that you clicked here means you're of of those
+        that said, the fact that you clicked here means you're one of those
         people. <Link href="/about">lemme know..</Link>
       </Typography>
     </Stack>

@@ -1,4 +1,4 @@
-import type { AbsolutePath } from "@typeslayer/analyze-trace/src/utils";
+import type { AbsolutePath } from "@typeslayer/analyze-trace/browser";
 import type { TypeId } from "@typeslayer/validate";
 
 export const TYPE_GRAPH_FILENAME = "type-graph.json";

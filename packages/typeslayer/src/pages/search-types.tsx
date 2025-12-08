@@ -24,7 +24,7 @@ export const SearchTypes = () => {
 
   const numberSearch = Number.parseInt(search, 10);
 
-  const typeRegistry = useTypeRegistry();
+  const { typeRegistry } = useTypeRegistry();
 
   const typeString = JSON.stringify(typeRegistry[numberSearch], null, 2);
 
@@ -41,7 +41,9 @@ export const SearchTypes = () => {
         }}
       >
         <Typography variant="h2">Search</Typography>
-        <StatPill label="Types" value={typeRegistry.length - 1} />
+        {typeRegistry.length > 1 ? (
+          <StatPill label="Types" value={typeRegistry.length - 1} />
+        ) : null}
       </Stack>
       <Stack gap={3}>
         <TextField

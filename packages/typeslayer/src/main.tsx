@@ -8,6 +8,7 @@ import "@fontsource/roboto/400.css";
 import "@fontsource/roboto/500.css";
 import "@fontsource/roboto/700.css";
 import { ThemeProvider } from "@mui/material";
+import { ToastProvider } from "./contexts/toast-context";
 import { theme } from "./theme";
 
 const queryClient = new QueryClient({
@@ -37,8 +38,10 @@ if (!root) {
 ReactDOM.createRoot(root).render(
   <QueryClientProvider client={queryClient}>
     <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <AppRouterProvider />
+      <ToastProvider>
+        <CssBaseline />
+        <AppRouterProvider />
+      </ToastProvider>
     </ThemeProvider>
   </QueryClientProvider>,
 );

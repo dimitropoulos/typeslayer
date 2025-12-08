@@ -23,7 +23,9 @@ import {
 } from "@mui/material";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { CenterLoader } from "../components/center-loader";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
+import { NoData } from "../components/no-data";
 import { StatPill } from "../components/stat-pill";
 import { useTypeGraph } from "../hooks/tauri-hooks";
 import type { EdgeKind, GraphLink, TypeGraph } from "../types/type-graph";
@@ -135,7 +137,6 @@ export const TypeNetwork = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<Graph | null>(null);
   const cosmosDataRef = useRef<TypeGraph | null>(null);
-  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<{ nodes: number; links: number } | null>(
     null,
   );
@@ -169,7 +170,12 @@ export const TypeNetwork = () => {
   const [isResizing, setIsResizing] = useState(false);
   const [graphReady, setGraphReady] = useState(false);
   const spaceHoldRef = useRef({ active: false, previous: false });
-  const typeRegistry = useTypeRegistry();
+  const { typeRegistry, isLoading: isTypeRegistryLoading } = useTypeRegistry();
+  const { data: typeGraph, isLoading: isTypeGraphLoading } = useTypeGraph();
+
+  const isLoading = isTypeGraphLoading || isTypeRegistryLoading;
+
+  const hasData = typeGraph !== undefined && typeRegistry.length > 0;
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -593,8 +599,6 @@ export const TypeNetwork = () => {
     };
   }, [setSimulationPaused]);
 
-  const { data: typeGraph } = useTypeGraph();
-
   useEffect(() => {
     let graph: Graph | null = null;
 
@@ -724,11 +728,9 @@ export const TypeNetwork = () => {
           nodes: nodes.length,
           links: links.length,
         });
-        setLoading(false);
         setGraphReady(true);
       } catch (e) {
         console.error("get_type_graph failed:", e);
-        setLoading(false);
       }
     })();
 
@@ -769,8 +771,8 @@ export const TypeNetwork = () => {
     applyFilters(activeFilters, nextShowFree);
   }, [showFreeTypes, activeFilters, applyFilters]);
 
-  return (
-    <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+  const utilityPanel = (
+    <>
       <Box sx={{ py: 2, px: 4 }}>
         <Stack direction="row" spacing={2} alignItems="flex-end">
           <TextField
@@ -865,7 +867,6 @@ export const TypeNetwork = () => {
             );
           })()}
         </Stack>
-        {loading && <p>Loading graph…</p>}
       </Box>
       <Popover
         open={Boolean(filterAnchor)}
@@ -975,6 +976,12 @@ export const TypeNetwork = () => {
           </Box>
         </Box>
       </Popover>
+    </>
+  );
+
+  const graphView = (
+    <>
+      {utilityPanel}
       <Box sx={{ flex: 1, position: "relative", minHeight: 0 }}>
         <div
           ref={containerRef}
@@ -1025,6 +1032,18 @@ export const TypeNetwork = () => {
           </Box>
         )}
       </Box>
+    </>
+  );
+
+  const noData = (
+    <Box sx={{ my: 2, mr: 2 }}>
+      <NoData />
+    </Box>
+  );
+
+  return (
+    <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+      {isLoading ? <CenterLoader /> : hasData ? graphView : noData}
     </Box>
   );
 };

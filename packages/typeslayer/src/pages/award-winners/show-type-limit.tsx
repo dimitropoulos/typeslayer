@@ -18,7 +18,9 @@ import type {
   EventChecktypes__TypeRelatedToDiscriminatedType_DepthLimit,
 } from "@typeslayer/validate";
 import { type ReactNode, useCallback, useRef, useState } from "react";
+import { CenterLoader } from "../../components/center-loader";
 import { DisplayRecursiveType } from "../../components/display-recursive-type";
+import { NoData } from "../../components/no-data";
 import { TypeSummary } from "../../components/type-summary";
 import { extractPath } from "../../components/utils";
 import {
@@ -69,7 +71,7 @@ export const ShowTypeLimit = <L extends LimitType>({
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const relativePaths = useRelativePaths();
   const projectRoot = useProjectRoot();
-  const typeRegistry = useTypeRegistry();
+  const { typeRegistry, isLoading: isTypeRegistryLoading } = useTypeRegistry();
   const depthLimitKey = getDepthLimitsProperty(awardId);
 
   const { data: analyzeTrace } = useAnalyzeTrace();
@@ -81,20 +83,21 @@ export const ShowTypeLimit = <L extends LimitType>({
     }
   }, []);
 
-  if (
-    relativePaths.isLoading ||
-    projectRoot.isLoading ||
-    relativePaths.data === undefined ||
-    projectRoot.data === undefined
-  ) {
-    return null;
-  }
+  const isLoading =
+    isTypeRegistryLoading || relativePaths.isLoading || projectRoot.isLoading;
 
   const data = (analyzeTrace?.depthLimits[depthLimitKey] || []) as L[];
   const first: L | undefined = data[0];
 
-  const hasItems = !!first;
-  const noneFound = (
+  const hasItems = data.length > 0;
+
+  const hasData =
+    typeRegistry &&
+    relativePaths.data !== undefined &&
+    projectRoot.data !== undefined &&
+    analyzeTrace;
+
+  const nonePresent = (
     <Alert severity="success" sx={{ mx: 1 }}>
       {notFound}
       <br />
@@ -131,42 +134,54 @@ export const ShowTypeLimit = <L extends LimitType>({
           subtitle={awards[awardId].description}
           icon={<Icon fontSize="large" />}
         />
-        {hasItems ? (
-          <List>
-            {data.map((current, index) => {
-              const typeId = getTypeId(current);
-              const resolvedType = typeRegistry[typeId];
-              const key = getKey(current);
 
-              if (!resolvedType) {
+        {isLoading ? (
+          <CenterLoader />
+        ) : hasData ? (
+          hasItems ? (
+            <List>
+              {data.map((current, index) => {
+                const typeId = getTypeId(current);
+                const resolvedType = typeRegistry[typeId];
+                const key = getKey(current);
+
+                if (!resolvedType) {
+                  return (
+                    <ListItemText key={key}>
+                      <Typography color="error">
+                        Type {typeId} not found in type registry
+                      </Typography>
+                    </ListItemText>
+                  );
+                }
+
                 return (
-                  <ListItemText key={key}>
-                    <Typography color="error">
-                      Type {typeId} not found in type registry
-                    </Typography>
-                  </ListItemText>
+                  <ListItemButton
+                    key={key}
+                    onClick={() => handleTypeClick(index)}
+                    selected={index === selectedIndex}
+                  >
+                    <ListItemText>
+                      <TypeSummary
+                        resolvedType={resolvedType}
+                        suppressActions
+                      />
+                      <Stack gap={0.5}>
+                        <MaybePathCaption
+                          maybePath={extractPath(resolvedType)}
+                        />
+                        {inlineBarGraph(current, first)}
+                      </Stack>
+                    </ListItemText>
+                  </ListItemButton>
                 );
-              }
-
-              return (
-                <ListItemButton
-                  key={key}
-                  onClick={() => handleTypeClick(index)}
-                  selected={index === selectedIndex}
-                >
-                  <ListItemText>
-                    <TypeSummary resolvedType={resolvedType} suppressActions />
-                    <Stack gap={0.5}>
-                      <MaybePathCaption maybePath={extractPath(resolvedType)} />
-                      {inlineBarGraph(current, first)}
-                    </Stack>
-                  </ListItemText>
-                </ListItemButton>
-              );
-            })}
-          </List>
+              })}
+            </List>
+          ) : (
+            nonePresent
+          )
         ) : (
-          noneFound
+          <NoData />
         )}
       </Stack>
 

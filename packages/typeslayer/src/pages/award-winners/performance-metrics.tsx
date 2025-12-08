@@ -10,7 +10,8 @@ import {
 } from "@mui/material";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { useCallback } from "react";
-import { Callout } from "../../components/callout";
+import { CenterLoader } from "../../components/center-loader";
+import { NoData } from "../../components/no-data";
 import {
   useAnalyzeTrace,
   useProjectRoot,
@@ -24,7 +25,7 @@ import { TitleSubtitle } from "./title-subtitle";
 const ShowHotSpots = () => {
   const relativePaths = useRelativePaths();
   const projectRoot = useProjectRoot();
-  const { data: analyzeTrace } = useAnalyzeTrace();
+  const { data: analyzeTrace, isLoading } = useAnalyzeTrace();
 
   const findInPage = useCallback(async (path: string | undefined) => {
     if (!path) {
@@ -85,14 +86,6 @@ const ShowHotSpots = () => {
     </List>
   );
 
-  const noneFound = (
-    <Stack direction="row" alignItems="flex-start">
-      <Callout title="No Hot Spots Found">
-        <Typography>No hot spots detected.</Typography>
-      </Callout>
-    </Stack>
-  );
-
   return (
     <Stack sx={{ m: 2, gap: 3 }}>
       <TitleSubtitle
@@ -100,8 +93,7 @@ const ShowHotSpots = () => {
         subtitle="The most expensive code paths in your application"
         icon={<Icon fontSize="large" />}
       />
-
-      {firstHotSpot ? hasHotSpots : noneFound}
+      {isLoading ? <CenterLoader /> : firstHotSpot ? hasHotSpots : <NoData />}
     </Stack>
   );
 };

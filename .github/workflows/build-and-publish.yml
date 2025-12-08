@@ -186,14 +186,14 @@ jobs:
           echo "Checking builds directory..."
           ls -lR npm/
           for platform in linux-x64 darwin-arm64 win32-x64; do
-            cd "npm/$platform" && npm publish --access public && cd ../../
+            cd "npm/$platform" && npm publish --access public --tag latest && cd ../../
           done
 
       - name: Publish main package to npm
         if: startsWith(github.ref, 'refs/tags/typeslayer-v')
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: cd npm/typeslayer && npm publish --access public
+        run: cd npm/typeslayer && npm publish --access public --tag latest
 
       - name: Verify binaries exist before release
         if: startsWith(github.ref, 'refs/tags/typeslayer-v')

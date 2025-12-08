@@ -10,14 +10,28 @@ declare global {
 }
 
 export const useTypeRegistry = () => {
-  const { data: typesJson, isSuccess } = useTypesJson();
+  const { data: typesJson, isSuccess, isLoading } = useTypesJson();
   const typeRegistry = useMemo(() => {
     const tr = createTypeRegistry(typesJson ?? []);
     window.typeRegistry = tr;
     return tr;
   }, [typesJson]);
-  if (!isSuccess || !typesJson) {
-    return [];
+
+  if (isLoading) {
+    return {
+      isLoading: true,
+      typeRegistry: [],
+    };
   }
-  return typeRegistry;
+
+  if (!isSuccess || !typesJson) {
+    return {
+      isLoading: false,
+      typeRegistry: [],
+    };
+  }
+  return {
+    isLoading: false,
+    typeRegistry,
+  };
 };

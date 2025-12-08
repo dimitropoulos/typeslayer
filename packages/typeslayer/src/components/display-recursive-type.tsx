@@ -3,21 +3,15 @@ import {
   KeyboardArrowDown,
   KeyboardArrowRight,
 } from "@mui/icons-material";
-import { Box, Stack, Typography, type TypographyVariant } from "@mui/material";
-import { invoke } from "@tauri-apps/api/core";
+import { Box, Stack, Typography } from "@mui/material";
 import type { ResolvedType } from "@typeslayer/validate";
-import { type FC, useCallback, useState } from "react";
-import { useProjectRoot, useRelativePaths } from "../hooks/tauri-hooks";
+import { type FC, useState } from "react";
 import { useTypeRegistry } from "../pages/award-winners/use-type-registry";
 import { theme } from "../theme";
+import { CenterLoader } from "./center-loader";
+import { OpenablePath, propertyTextStyle } from "./openable-path";
 import { ShowMore } from "./show-more";
 import { TypeSummary } from "./type-summary";
-import { friendlyPath } from "./utils";
-
-const propertyTextStyle = {
-  fontFamily: "monospace",
-  fontSize: "0.9rem",
-};
 
 // Type guard for Location objects coming from backend serialization
 function isLocation(v: unknown): v is {
@@ -45,10 +39,14 @@ export const DisplayRecursiveType: FC<{
 }> = ({ id, depth = 0 }) => {
   const [expanded, setExpanded] = useState(true);
   const [displayLimit, setDisplayLimit] = useState(100);
-  const typeRegistry = useTypeRegistry();
+  const { typeRegistry, isLoading } = useTypeRegistry();
+
+  if (isLoading) {
+    return <CenterLoader />;
+  }
 
   if (!typeRegistry) {
-    return <Box>[Missing Data]</Box>;
+    return <Box>[Missing Data for TypeId]: {id}</Box>;
   }
 
   if (Number.isNaN(id)) {
@@ -149,7 +147,7 @@ export const DisplayRecursiveType: FC<{
         case "referenceLocation": {
           if (isLocation(value)) {
             return (
-              <OpenFile
+              <OpenablePath
                 key={reactKey}
                 title={`${key}:`}
                 absolutePath={value.path}
@@ -315,78 +313,3 @@ export const DisplayRecursiveType: FC<{
     </Stack>
   );
 };
-
-export function OpenFile({
-  absolutePath,
-  line,
-  character,
-  title,
-  pathVariant = "body1",
-}: {
-  absolutePath: string;
-  line?: number;
-  character?: number;
-  title?: string;
-  pathVariant?: TypographyVariant;
-}) {
-  const relativePaths = useRelativePaths();
-  const projectRoot = useProjectRoot();
-  const findInPage = useCallback(async () => {
-    try {
-      // Prefer opening in VS Code via backend; include line/char if present
-      const goto =
-        line !== undefined && character !== undefined
-          ? `${absolutePath}:${line}:${character}`
-          : absolutePath;
-      console.log("Opening file via backend:", goto);
-      await invoke("open_file", { path: goto });
-    } catch (e) {
-      console.error("Failed to open file via backend", e);
-    }
-  }, [absolutePath, line, character]);
-
-  if (
-    relativePaths.isLoading ||
-    projectRoot.isLoading ||
-    relativePaths.data === undefined ||
-    projectRoot.data === undefined
-  ) {
-    return null;
-  }
-
-  const lineChar =
-    line !== undefined && character !== undefined
-      ? `:${line}:${character}`
-      : "";
-
-  const exactLocation = `${friendlyPath(absolutePath, projectRoot.data, relativePaths.data)}${lineChar}`;
-
-  return (
-    <Stack
-      sx={{
-        flexDirection: "row",
-        cursor: "pointer",
-        "&:hover": {
-          textDecoration: "underline",
-          textDecorationColor: t => t.palette.secondary.dark,
-        },
-        alignItems: "center",
-        gap: 1,
-      }}
-      key={exactLocation}
-      onClick={findInPage}
-    >
-      {title ? <Typography sx={propertyTextStyle}>{title}</Typography> : null}
-      <Typography
-        variant={pathVariant}
-        sx={{
-          fontSize: "0.8rem",
-          color: "text.secondary",
-          letterSpacing: -0.25,
-        }}
-      >
-        {exactLocation}
-      </Typography>
-    </Stack>
-  );
-}

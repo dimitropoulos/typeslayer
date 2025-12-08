@@ -9,7 +9,9 @@ import {
 } from "@mui/material";
 import type { TypeId } from "@typeslayer/validate";
 import { useState } from "react";
+import { CenterLoader } from "../../components/center-loader";
 import { DisplayRecursiveType } from "../../components/display-recursive-type";
+import { NoData } from "../../components/no-data";
 import { SimpleTypeSummary } from "../../components/type-summary";
 import { useTypeGraph } from "../../hooks/tauri-hooks";
 import { AwardNavItem } from "./award-nav-item";
@@ -79,11 +81,9 @@ export function TypeMetricsAward({ awardId }: { awardId: TypeMetricsAwardId }) {
   const { title, description, icon: Icon, unit } = awards[awardId];
 
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const { data: typeGraph } = useTypeGraph();
+  const { data: typeGraph, isLoading } = useTypeGraph();
 
-  if (!typeGraph) {
-    return <span>Loading...</span>;
-  }
+  const hasData = typeGraph !== undefined;
 
   const handleListItemClick = (
     _event: React.MouseEvent<HTMLDivElement, MouseEvent>,
@@ -97,9 +97,45 @@ export function TypeMetricsAward({ awardId }: { awardId: TypeMetricsAwardId }) {
     | "intersectionTypes"
     | "typeArguments"
     | "aliasTypeArguments";
-  const { max, nodes } = typeGraph.nodeStats[nodeStat];
+  const { max, nodes } = typeGraph?.nodeStats[nodeStat] ?? {
+    max: 0,
+    nodes: [],
+  };
 
   const hasItems = nodes.length > 0;
+
+  const items = (
+    <List>
+      {nodes.map(([id, name, value, maybePath], index) => {
+        return (
+          <ListItemButton
+            selected={index === selectedIndex}
+            onClick={event => handleListItemClick(event, index)}
+            key={id}
+          >
+            <ListItemText>
+              <Stack sx={{ flexGrow: 1 }} gap={0}>
+                <SimpleTypeSummary id={id} name={name} suppressActions />
+                <Stack gap={0.5}>
+                  <MaybePathCaption maybePath={maybePath} />
+                  <InlineBarGraph
+                    label={`${value.toLocaleString()} ${unit}`}
+                    width={`${(value / max) * 100}%`}
+                  />
+                </Stack>
+              </Stack>
+            </ListItemText>
+          </ListItemButton>
+        );
+      })}
+    </List>
+  );
+
+  const noneFound = (
+    <Alert severity="info">
+      No {unit} found. That's unusual but not impossible.
+    </Alert>
+  );
 
   const selectedNode: TypeId | undefined = nodes[selectedIndex]?.[0];
 
@@ -132,35 +168,16 @@ export function TypeMetricsAward({ awardId }: { awardId: TypeMetricsAwardId }) {
           icon={<Icon fontSize="large" />}
         />
 
-        {hasItems ? (
-          <List>
-            {nodes.map(([id, name, value, maybePath], index) => {
-              return (
-                <ListItemButton
-                  selected={index === selectedIndex}
-                  onClick={event => handleListItemClick(event, index)}
-                  key={id}
-                >
-                  <ListItemText>
-                    <Stack sx={{ flexGrow: 1 }} gap={0}>
-                      <SimpleTypeSummary id={id} name={name} suppressActions />
-                      <Stack gap={0.5}>
-                        <MaybePathCaption maybePath={maybePath} />
-                        <InlineBarGraph
-                          label={`${value.toLocaleString()} ${unit}`}
-                          width={`${(value / max) * 100}%`}
-                        />
-                      </Stack>
-                    </Stack>
-                  </ListItemText>
-                </ListItemButton>
-              );
-            })}
-          </List>
+        {isLoading ? (
+          <CenterLoader />
+        ) : hasData ? (
+          hasItems ? (
+            items
+          ) : (
+            noneFound
+          )
         ) : (
-          <Alert severity="info">
-            No {unit} found. That's unusual but not impossible.
-          </Alert>
+          <NoData />
         )}
       </Stack>
 

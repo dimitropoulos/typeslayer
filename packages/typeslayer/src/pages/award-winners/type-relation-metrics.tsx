@@ -11,7 +11,9 @@ import {
   Typography,
 } from "@mui/material";
 import { useState } from "react";
+import { CenterLoader } from "../../components/center-loader";
 import { DisplayRecursiveType } from "../../components/display-recursive-type";
+import { NoData } from "../../components/no-data";
 import { ShowMore } from "../../components/show-more";
 import {
   getHumanReadableName,
@@ -40,7 +42,7 @@ export function RelationAward({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [displayLimit, setDisplayLimit] = useState(100);
   const { data: typeGraph, isLoading } = useTypeGraph();
-  const typeRegistry = useTypeRegistry();
+  const { typeRegistry } = useTypeRegistry();
 
   const handleListItemClick = (
     _event: React.MouseEvent<HTMLDivElement, MouseEvent>,
@@ -48,23 +50,17 @@ export function RelationAward({
   ) => {
     setSelectedIndex(index);
   };
-
-  if (isLoading) {
-    return <Typography>Loading...</Typography>;
-  }
+  const hasData = typeGraph !== undefined;
 
   const edgeStatProperty = getEdgeStatProperty(awardId);
   const edgeStats = typeGraph?.edgeStats[edgeStatProperty];
 
-  if (!edgeStats) {
-    return <Typography>No type {edgeStatProperty} data available.</Typography>;
-  }
+  const selectedItem = edgeStats?.links[selectedIndex];
 
-  const selectedItem = edgeStats.links[selectedIndex];
-
-  const hasItems = edgeStats.links.length > 0;
-  const totalItems =
-    selectedItem?.[GRAPH_EDGE_ENTRY.TARGET_TYPEIDS_INDEX].length;
+  const hasItems = edgeStats && edgeStats.links.length > 0;
+  const totalItems = selectedItem
+    ? selectedItem[GRAPH_EDGE_ENTRY.TARGET_TYPEIDS_INDEX].length
+    : 0;
 
   const noneFound = (
     <Box
@@ -82,6 +78,35 @@ export function RelationAward({
         Just.. a thing.
       </Alert>
     </Box>
+  );
+
+  const items = (
+    <List>
+      {edgeStats?.links.map(([typeId, sourceIds, maybePath], index) => (
+        <ListItemButton
+          selected={index === selectedIndex}
+          onClick={event => handleListItemClick(event, index)}
+          key={typeId}
+        >
+          <ListItemText>
+            <Stack sx={{ flexGrow: 1 }} gap={0}>
+              <SimpleTypeSummary
+                id={typeId}
+                name={getHumanReadableName(typeRegistry[typeId])}
+                suppressActions
+              />
+              <Stack gap={0.5}>
+                <MaybePathCaption maybePath={maybePath} />
+                <InlineBarGraph
+                  label={`${sourceIds.length.toLocaleString()} ${unit}`}
+                  width={`${(sourceIds.length / edgeStats.max) * 100}%`}
+                />
+              </Stack>
+            </Stack>
+          </ListItemText>
+        </ListItemButton>
+      ))}
+    </List>
   );
 
   return (
@@ -108,35 +133,16 @@ export function RelationAward({
           subtitle={description}
           icon={<Icon fontSize="large" />}
         />
-        {hasItems ? (
-          <List>
-            {edgeStats.links.map(([typeId, sourceIds, maybePath], index) => (
-              <ListItemButton
-                selected={index === selectedIndex}
-                onClick={event => handleListItemClick(event, index)}
-                key={typeId}
-              >
-                <ListItemText>
-                  <Stack sx={{ flexGrow: 1 }} gap={0}>
-                    <SimpleTypeSummary
-                      id={typeId}
-                      name={getHumanReadableName(typeRegistry[typeId])}
-                      suppressActions
-                    />
-                    <Stack gap={0.5}>
-                      <MaybePathCaption maybePath={maybePath} />
-                      <InlineBarGraph
-                        label={`${sourceIds.length.toLocaleString()} ${unit}`}
-                        width={`${(sourceIds.length / edgeStats.max) * 100}%`}
-                      />
-                    </Stack>
-                  </Stack>
-                </ListItemText>
-              </ListItemButton>
-            ))}
-          </List>
+        {isLoading ? (
+          <CenterLoader />
+        ) : hasData ? (
+          hasItems ? (
+            items
+          ) : (
+            noneFound
+          )
         ) : (
-          noneFound
+          <NoData />
         )}
       </Stack>
 

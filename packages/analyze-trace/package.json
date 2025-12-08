@@ -1,6 +1,6 @@
 {
   "name": "@typeslayer/analyze-trace",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "description": "Analyze TypeScript compiler trace events to identify performance bottlenecks",
   "license": "MIT",
   "private": false,
@@ -20,7 +20,17 @@
   },
   "packageManager": "pnpm@10.6.5",
   "main": "./dist/index.js",
-  "typings": "./dist/index.d.ts",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "import": "./dist/browser.js"
+    }
+  },
   "bin": {
     "typeslayer-analyze-trace": "./bin/typeslayer-analyze-trace.mjs"
   },

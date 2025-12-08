@@ -3,6 +3,7 @@ use crate::{
     files::OUTPUTS_DIRECTORY,
     layercake::{LayerCake, LayerCakeInitArgs, ResolveBoolArgs, ResolveStringArgs, Source},
     process_controller::ProcessController,
+    utils::{PACKAGE_JSON_FILENAME, TSCONFIG_FILENAME, make_cli_arg, quote_if_needed},
     validate::{
         trace_json::{TRACE_JSON_FILENAME, parse_trace_json, read_trace_json},
         types_json::{
@@ -14,7 +15,9 @@ use crate::{
 };
 use serde_json::Value;
 use std::fs;
+use std::io::Write;
 use std::path::Path;
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 use tauri::{Manager, State};
@@ -40,39 +43,37 @@ const AVAILABLE_EDITORS: &[(&str, &str)] = &[
     ("lite-xl", "Lite XL"),
 ];
 
+#[derive(Clone)]
 pub struct AppData {
-    pub project_root: String,
+    pub project_root: PathBuf,
     pub types_json: TypesJsonSchema,
     pub trace_json: Vec<crate::validate::trace_json::TraceEvent>,
     pub analyze_trace: Option<crate::analyze_trace::AnalyzeTraceResult>,
     pub cpu_profile: Option<String>,
-    pub tsconfig_paths: Vec<String>,
-    pub selected_tsconfig: Option<String>,
+    pub tsconfig_paths: Vec<PathBuf>,
+    pub selected_tsconfig: Option<PathBuf>,
     pub settings: Settings,
     pub verbose: bool,
     pub cake: LayerCake,
     pub auth_code: Option<String>,
     pub type_graph: Option<crate::type_graph::TypeGraph>,
     pub process_controller: ProcessController,
-    pub data_dir: String,
+    pub data_dir: PathBuf,
 }
 
 impl AppData {
-    pub fn new(data_dir: String) -> Self {
-        info!("using base data_dir: {}", data_dir);
+    pub fn new(data_dir: PathBuf) -> Self {
+        info!("using base data_dir: {}", data_dir.display());
         // Build a single LayerCake and reuse it across init functions
         let mut cake = LayerCake::new(LayerCakeInitArgs {
             config_filename: CONFIG_FILENAME,
             precedence: [Source::Env, Source::Flag, Source::File],
             env_prefix: "TYPESLAYER_",
         });
-        cake.load_config_in_dir(&data_dir);
+        cake.load_config_in_dir(&data_dir.to_string_lossy());
         let project_root = Self::init_project_root_with(&cake);
 
-        let outputs_dir = Path::new(&data_dir)
-            .join(OUTPUTS_DIRECTORY)
-            .to_string_lossy()
-            .to_string();
+        let outputs_dir = data_dir.join(OUTPUTS_DIRECTORY);
         let types_json = Self::init_types_json(&outputs_dir, &project_root);
         let trace_json = Self::init_trace_json(&outputs_dir, &project_root);
         let analyze_trace = Self::init_analyze_trace(&outputs_dir);
@@ -104,18 +105,22 @@ impl AppData {
     }
 
     pub fn outputs_dir(&self) -> std::path::PathBuf {
-        Path::new(&self.data_dir).join(OUTPUTS_DIRECTORY)
+        self.data_dir.join(OUTPUTS_DIRECTORY)
     }
 
-    fn init_project_root_with(cake: &LayerCake) -> String {
+    fn init_project_root_with(cake: &LayerCake) -> PathBuf {
         // If neither env nor CLI flag have been provided, favor the current working directory
         // when it already contains a package.json. This prevents stale typeslayer.toml entries
         // from overriding local runs.
         let no_env_or_flag = !cake.has_env("PROJECT_ROOT") && !cake.has_flag("--project-root");
         if no_env_or_flag {
             if let Some(cwd_pkg) = Self::detect_project_root_from_cwd() {
-                if let Ok(validated) = Self::validate_project_root_path(&cwd_pkg) {
-                    info!("using project_root from current directory: {}", validated);
+                if let Ok(validated) = Self::validate_project_root_path(&cwd_pkg.to_string_lossy())
+                {
+                    info!(
+                        "using project_root from current directory: {}",
+                        validated.display()
+                    );
                     return validated;
                 }
             }
@@ -127,33 +132,37 @@ impl AppData {
             file: "project_root",
             default: || {
                 std::env::current_dir()
-                    .map(|p| p.join("package.json").to_string_lossy().to_string())
+                    .map(|p| p.join(PACKAGE_JSON_FILENAME).to_string_lossy().to_string())
                     .unwrap_or_else(|_| "./package.json".to_string())
             },
-            validate: |s| Self::validate_project_root_path(s),
+            validate: |s| {
+                Self::validate_project_root_path(s).map(|p| p.to_string_lossy().to_string())
+            },
         });
-        info!("resolved project_root from config/env/flag: {}", resolved);
-        resolved
+        let path = PathBuf::from(resolved);
+        info!(
+            "resolved project_root from config/env/flag: {}",
+            path.display()
+        );
+        path
     }
 
-    fn detect_project_root_from_cwd() -> Option<String> {
+    fn detect_project_root_from_cwd() -> Option<PathBuf> {
         let cwd = std::env::current_dir().ok()?;
-        let pkg_path = cwd.join("package.json");
+        let pkg_path = cwd.join(PACKAGE_JSON_FILENAME);
         info!("checking for package.json in cwd: {}", cwd.display());
         if pkg_path.exists() {
-            let result = pkg_path.to_string_lossy().to_string();
-            info!("found package.json in cwd: {}", result);
-            return Some(result);
+            info!("found package.json in cwd: {}", pkg_path.display());
+            return Some(pkg_path);
         }
 
         // Also check PWD environment variable in case cwd was changed
         if let Ok(pwd) = std::env::var("PWD") {
-            let pwd_path = std::path::Path::new(&pwd).join("package.json");
+            let pwd_path = std::path::Path::new(&pwd).join(PACKAGE_JSON_FILENAME);
             info!("checking for package.json in PWD: {}", pwd);
             if pwd_path.exists() {
-                let result = pwd_path.to_string_lossy().to_string();
-                info!("found package.json in PWD: {}", result);
-                return Some(result);
+                info!("found package.json in PWD: {}", pwd_path.display());
+                return Some(pwd_path);
             }
         }
 
@@ -161,22 +170,25 @@ impl AppData {
         None
     }
 
-    fn validate_project_root_path(s: &str) -> Result<String, String> {
+    fn validate_project_root_path(s: &str) -> Result<PathBuf, String> {
         let p = std::path::Path::new(s);
 
-        if p.file_name().map(|f| f == "package.json").unwrap_or(false) {
+        if p.file_name()
+            .map(|f| f == PACKAGE_JSON_FILENAME)
+            .unwrap_or(false)
+        {
             if !p.exists() {
                 return Err(format!("package.json not found at: {}", s));
             }
-            return Ok(p.to_string_lossy().to_string());
+            return Ok(p.to_path_buf());
         }
 
         if p.exists() && p.is_dir() {
-            let pkg_path = p.join("package.json");
+            let pkg_path = p.join(PACKAGE_JSON_FILENAME);
             if !pkg_path.exists() {
                 return Err(format!("package.json not found in directory: {}", s));
             }
-            return Ok(pkg_path.to_string_lossy().to_string());
+            return Ok(pkg_path);
         }
 
         Err(format!(
@@ -215,15 +227,24 @@ impl AppData {
         if code.is_empty() { None } else { Some(code) }
     }
 
-    fn init_selected_tsconfig_with(cake: &LayerCake, tsconfig_paths: &[String]) -> Option<String> {
+    fn init_selected_tsconfig_with(
+        cake: &LayerCake,
+        tsconfig_paths: &[std::path::PathBuf],
+    ) -> Option<PathBuf> {
         let auto_detect = || {
             // Prefer tsconfig.json, then first found tsconfig
             for path in tsconfig_paths.iter() {
-                if path.ends_with("tsconfig.json") {
-                    return path.clone();
+                if path
+                    .file_name()
+                    .map_or(false, |name| name == TSCONFIG_FILENAME)
+                {
+                    return path.to_string_lossy().to_string();
                 }
             }
-            tsconfig_paths.first().cloned().unwrap_or_default()
+            tsconfig_paths
+                .first()
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_default()
         };
 
         let result = cake.resolve_string(ResolveStringArgs {
@@ -232,7 +253,7 @@ impl AppData {
             file: "settings.tsconfig",
             default: auto_detect,
             validate: |s| {
-                if s.is_empty() || tsconfig_paths.contains(&s.to_string()) {
+                if s.is_empty() || tsconfig_paths.iter().any(|p| p.to_string_lossy() == s) {
                     Ok(s.to_string())
                 } else {
                     Err(format!("tsconfig '{}' not found in discovered paths", s))
@@ -243,7 +264,7 @@ impl AppData {
         if result.is_empty() {
             None
         } else {
-            Some(result)
+            Some(PathBuf::from(result))
         }
     }
 
@@ -251,7 +272,8 @@ impl AppData {
         self.tsconfig_paths.clear();
 
         // Get the directory containing the package.json
-        let project_dir = std::path::Path::new(&self.project_root)
+        let project_dir = self
+            .project_root
             .parent()
             .map(|p| p.to_path_buf())
             .unwrap_or_else(|| std::path::PathBuf::from("."));
@@ -262,8 +284,7 @@ impl AppData {
                 if let Ok(file_name) = entry.file_name().into_string() {
                     if file_name.starts_with("tsconfig") && file_name.ends_with(".json") {
                         if let Ok(full_path) = entry.path().canonicalize() {
-                            self.tsconfig_paths
-                                .push(full_path.to_string_lossy().to_string());
+                            self.tsconfig_paths.push(full_path);
                         }
                     }
                 }
@@ -272,8 +293,12 @@ impl AppData {
 
         // Sort with tsconfig.json first
         self.tsconfig_paths.sort_by(|a, b| {
-            let a_is_main = a.ends_with("tsconfig.json");
-            let b_is_main = b.ends_with("tsconfig.json");
+            let a_is_main = a
+                .file_name()
+                .map_or(false, |name| name == TSCONFIG_FILENAME);
+            let b_is_main = b
+                .file_name()
+                .map_or(false, |name| name == TSCONFIG_FILENAME);
             match (a_is_main, b_is_main) {
                 (true, false) => std::cmp::Ordering::Less,
                 (false, true) => std::cmp::Ordering::Greater,
@@ -282,7 +307,7 @@ impl AppData {
         });
     }
 
-    pub fn update_project_root(&mut self, new_root: String) {
+    pub fn update_project_root(&mut self, new_root: PathBuf) {
         self.project_root = new_root;
         let previous_selection = self.selected_tsconfig.clone();
 
@@ -301,31 +326,22 @@ impl AppData {
             Self::init_selected_tsconfig_with(&self.cake, &self.tsconfig_paths);
     }
 
-    // Blocking helper that runs tsc directly with optional tsconfig
-    fn run_typescript_with_flag_blocking(
-        project_root: String,
-        tsconfig_path: Option<String>,
-        outputs_dir: String,
-        flag: String,
-        extra_tsc_flags: String,
-        context: &str,
-        process_controller: ProcessController,
-    ) -> Result<(), String> {
-        fs::create_dir_all(&outputs_dir)
-            .map_err(|e| format!("Failed to create data directory: {e}"))?;
-
-        process_controller.reset_cancel_flag();
-
+    fn get_tsc_call(&self, flag: &str) -> String {
         // Build tsc command
         let mut command_parts = vec!["tsc".to_string()];
 
-        if let Some(tsconfig) = tsconfig_path {
+        if let Some(ref tsconfig) = self.selected_tsconfig {
             command_parts.push("--project".to_string());
-            command_parts.push(tsconfig);
+            command_parts.push(quote_if_needed(&tsconfig.to_string_lossy()));
         }
 
         // Add configurable extra flags
-        let extra_flag_parts: Vec<&str> = extra_tsc_flags.trim().split_whitespace().collect();
+        let extra_flag_parts: Vec<&str> = self
+            .settings
+            .extra_tsc_flags
+            .trim()
+            .split_whitespace()
+            .collect();
         for part in extra_flag_parts {
             command_parts.push(part.to_string());
         }
@@ -336,16 +352,29 @@ impl AppData {
         }
 
         let full_command = command_parts.join(" ");
-        let npm_command = format!("npm exec -- {}", full_command);
+        format!("npm exec -- {}", full_command)
+    }
 
-        let cwd = std::path::Path::new(&project_root)
+    // Blocking helper that runs tsc directly
+    fn run_typescript_with_flag_blocking(&self, flag: String, context: &str) -> Result<(), String> {
+        let outputs_dir = self.outputs_dir().to_string_lossy().to_string();
+
+        fs::create_dir_all(&outputs_dir)
+            .map_err(|e| format!("Failed to create data directory: {e}"))?;
+
+        self.process_controller.reset_cancel_flag();
+
+        let npm_command = self.get_tsc_call(&flag);
+
+        let cwd = self
+            .project_root
             .parent()
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_else(|| "./".to_string());
 
         info!("Executing command: {}", npm_command);
         info!("Working directory: {}", cwd);
-        info!("Outputs directory (outputs_dir): {}", outputs_dir);
+        info!("Outputs directory: {}", outputs_dir);
 
         let mut cmd = Command::new("sh");
         cmd.arg("-c")
@@ -359,15 +388,15 @@ impl AppData {
             .spawn()
             .map_err(|e| format!("Failed to execute command: {e}"))?;
 
-        process_controller.register_process(child.id());
+        self.process_controller.register_process(child.id());
 
         let output = child
             .wait_with_output()
             .map_err(|e| format!("Failed to wait for command completion: {e}"))?;
 
-        let cancelled = process_controller.cancel_requested();
-        process_controller.clear_current_process();
-        process_controller.reset_cancel_flag();
+        let cancelled = self.process_controller.cancel_requested();
+        self.process_controller.clear_current_process();
+        self.process_controller.reset_cancel_flag();
 
         if cancelled {
             return Err("Operation cancelled".to_string());
@@ -426,31 +455,29 @@ impl AppData {
         Ok((types, trace))
     }
 
-    fn init_types_json(outputs_dir: &str, project_root: &str) -> TypesJsonSchema {
+    fn init_types_json(outputs_dir: &Path, project_root: &Path) -> TypesJsonSchema {
         // project_root is now package.json path, get directory
-        let project_dir = std::path::Path::new(project_root)
+        let project_dir = project_root
             .parent()
-            .map(|p| p.to_string_lossy().to_string())
-            .unwrap_or_else(|| "./".to_string());
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| PathBuf::from("."));
 
         let type_paths = [
-            std::path::Path::new(outputs_dir)
-                .join(TYPES_JSON_FILENAME.trim_start_matches('/'))
-                .to_string_lossy()
-                .to_string(),
-            std::path::Path::new(&project_dir)
-                .join(TYPES_JSON_FILENAME.trim_start_matches('/'))
-                .to_string_lossy()
-                .to_string(),
+            outputs_dir.join(TYPES_JSON_FILENAME.trim_start_matches('/')),
+            project_dir.join(TYPES_JSON_FILENAME.trim_start_matches('/')),
         ];
         for p in type_paths.iter() {
-            if Path::new(p).exists() {
+            if p.exists() {
+                let path_str = p.to_string_lossy();
                 match std::fs::read_to_string(p)
                     .map_err(|e| e.to_string())
-                    .and_then(|s| parse_types_json(p, &s))
+                    .and_then(|s| parse_types_json(&path_str, &s))
                 {
                     Ok(parsed) => return parsed,
-                    Err(e) => info!("Startup types.json ingestion failed at {p}: {e}"),
+                    Err(e) => info!(
+                        "Startup types.json ingestion failed at {}: {e}",
+                        p.display()
+                    ),
                 }
             }
         }
@@ -458,41 +485,39 @@ impl AppData {
     }
 
     fn init_trace_json(
-        outputs_dir: &str,
-        project_root: &str,
+        outputs_dir: &Path,
+        project_root: &Path,
     ) -> Vec<crate::validate::trace_json::TraceEvent> {
         // project_root is now package.json path, get directory
-        let project_dir = std::path::Path::new(project_root)
+        let project_dir = project_root
             .parent()
-            .map(|p| p.to_string_lossy().to_string())
-            .unwrap_or_else(|| "./".to_string());
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| PathBuf::from("."));
 
         let trace_paths = [
-            std::path::Path::new(outputs_dir)
-                .join(TRACE_JSON_FILENAME.trim_start_matches('/'))
-                .to_string_lossy()
-                .to_string(),
-            std::path::Path::new(&project_dir)
-                .join(TRACE_JSON_FILENAME.trim_start_matches('/'))
-                .to_string_lossy()
-                .to_string(),
+            outputs_dir.join(TRACE_JSON_FILENAME.trim_start_matches('/')),
+            project_dir.join(TRACE_JSON_FILENAME.trim_start_matches('/')),
         ];
         for p in trace_paths.iter() {
-            if Path::new(p).exists() {
+            if p.exists() {
+                let path_str = p.to_string_lossy();
                 match std::fs::read_to_string(p)
                     .map_err(|e| e.to_string())
-                    .and_then(|s| parse_trace_json(p, &s))
+                    .and_then(|s| parse_trace_json(&path_str, &s))
                 {
                     Ok(parsed) => return parsed,
-                    Err(e) => info!("Startup trace.json ingestion failed at {p}: {e}"),
+                    Err(e) => info!(
+                        "Startup trace.json ingestion failed at {}: {e}",
+                        p.display()
+                    ),
                 }
             }
         }
         Vec::new()
     }
 
-    fn init_analyze_trace(outputs_dir: &str) -> Option<crate::analyze_trace::AnalyzeTraceResult> {
-        let analyze_path = Path::new(outputs_dir).join(ANALYZE_TRACE_FILENAME);
+    fn init_analyze_trace(outputs_dir: &Path) -> Option<crate::analyze_trace::AnalyzeTraceResult> {
+        let analyze_path = outputs_dir.join(ANALYZE_TRACE_FILENAME);
         if analyze_path.exists() {
             match std::fs::read_to_string(&analyze_path)
                 .map_err(|e| e.to_string())
@@ -511,9 +536,8 @@ impl AppData {
         None
     }
 
-    fn init_type_graph(outputs_dir: &str) -> Option<crate::type_graph::TypeGraph> {
-        let path = Path::new(outputs_dir)
-            .join(crate::type_graph::TYPE_GRAPH_FILENAME.trim_start_matches('/'));
+    fn init_type_graph(outputs_dir: &Path) -> Option<crate::type_graph::TypeGraph> {
+        let path = outputs_dir.join(crate::type_graph::TYPE_GRAPH_FILENAME.trim_start_matches('/'));
         if path.exists() {
             match std::fs::read_to_string(&path)
                 .map_err(|e| e.to_string())
@@ -532,8 +556,8 @@ impl AppData {
         None
     }
 
-    fn init_cpu_profile(outputs_dir: &str) -> Option<String> {
-        let cpu_profile_path = Path::new(outputs_dir).join(CPU_PROFILE_FILENAME);
+    fn init_cpu_profile(outputs_dir: &Path) -> Option<String> {
+        let cpu_profile_path = outputs_dir.join(CPU_PROFILE_FILENAME);
         if cpu_profile_path.exists() {
             match std::fs::read_to_string(&cpu_profile_path) {
                 Ok(contents) => return Some(contents),
@@ -550,7 +574,7 @@ impl AppData {
     pub fn compute_window_title(&self) -> String {
         // self.project_root points to package.json
         let default_title = "TypeSlayer".to_string();
-        let pkg_path = std::path::Path::new(&self.project_root);
+        let pkg_path = &self.project_root;
         // Attempt to read and parse the package.json name; fallback to default on any error.
         match std::fs::read_to_string(pkg_path)
             .ok()
@@ -609,8 +633,7 @@ impl AppData {
     }
 
     pub fn update_outputs(&self) {
-        use std::path::Path;
-        let data_dir = Path::new(&self.data_dir);
+        let data_dir = &self.data_dir;
         let outputs_dir = self.outputs_dir();
         let config_path = data_dir.join(CONFIG_FILENAME);
         let types_path = outputs_dir.join(TYPES_JSON_FILENAME.trim_start_matches('/'));
@@ -629,7 +652,7 @@ impl AppData {
         };
 
         let cfg = TypeSlayerConfig {
-            project_root: &self.project_root,
+            project_root: &self.project_root.to_string_lossy(),
             outputs_dir: &outputs_dir.to_string_lossy(),
             verbose: self.verbose,
             settings: &self.settings,
@@ -833,7 +856,11 @@ pub async fn get_tsconfig_paths(
     state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<Vec<String>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
-    Ok(data.tsconfig_paths.clone())
+    Ok(data
+        .tsconfig_paths
+        .iter()
+        .map(|p| p.to_string_lossy().to_string())
+        .collect())
 }
 
 #[tauri::command]
@@ -841,7 +868,10 @@ pub async fn get_selected_tsconfig(
     state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<Option<String>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
-    Ok(data.selected_tsconfig.clone())
+    Ok(data
+        .selected_tsconfig
+        .as_ref()
+        .map(|p| p.to_string_lossy().to_string()))
 }
 
 #[tauri::command]
@@ -858,14 +888,15 @@ pub async fn set_selected_tsconfig(
     }
 
     // Validate that the path exists in discovered tsconfigs
-    if !data.tsconfig_paths.contains(&tsconfig_path) {
+    let path_buf = PathBuf::from(&tsconfig_path);
+    if !data.tsconfig_paths.contains(&path_buf) {
         return Err(format!(
             "tsconfig '{}' not found in discovered paths",
             tsconfig_path
         ));
     }
 
-    data.selected_tsconfig = Some(tsconfig_path);
+    data.selected_tsconfig = Some(path_buf);
     Ok(())
 }
 
@@ -891,31 +922,19 @@ pub async fn clear_outputs(
 pub async fn generate_trace(
     state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<TypesJsonSchema, String> {
-    // Short lock to get values we need
-    let (tsconfig_path, project_root, process_controller, extra_tsc_flags, outputs_dir) = {
+    // Clone the entire AppData to move into the blocking task
+    let app_data_clone = {
         let data = state.lock().map_err(|e| e.to_string())?;
-        (
-            data.selected_tsconfig.clone(),
-            data.project_root.clone(),
-            data.process_controller.clone(),
-            data.settings.extra_tsc_flags.clone(),
-            data.outputs_dir().to_string_lossy().to_string(),
-        )
+        data.clone()
     };
+    let outputs_dir = app_data_clone.outputs_dir().to_string_lossy().to_string();
 
     info!("generate_trace: will write outputs under {}", outputs_dir);
-    let outputs_dir_clone = outputs_dir.clone();
+    let outputs_dir_for_closure = outputs_dir.clone();
     let handle = tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
-        let flag = format!("--generateTrace {}", outputs_dir_clone);
-        AppData::run_typescript_with_flag_blocking(
-            project_root,
-            tsconfig_path,
-            outputs_dir_clone,
-            flag,
-            extra_tsc_flags,
-            "TypeScript compilation with trace generation",
-            process_controller,
-        )
+        let flag = make_cli_arg("--generateTrace", &outputs_dir_for_closure);
+        app_data_clone
+            .run_typescript_with_flag_blocking(flag, "TypeScript compilation with trace generation")
     });
 
     match handle.await {
@@ -945,36 +964,21 @@ pub async fn generate_trace(
 
 #[tauri::command]
 pub async fn generate_cpu_profile(state: State<'_, Arc<Mutex<AppData>>>) -> Result<(), String> {
-    let (tsconfig_path, project_root, process_controller, extra_tsc_flags, outputs_dir) = {
+    let app_data_clone = {
         let data = state.lock().map_err(|e| e.to_string())?;
-        (
-            data.selected_tsconfig.clone(),
-            data.project_root.clone(),
-            data.process_controller.clone(),
-            data.settings.extra_tsc_flags.clone(),
-            data.outputs_dir().to_string_lossy().to_string(),
-        )
+        data.clone()
     };
+    let outputs_dir = app_data_clone.outputs_dir().to_string_lossy().to_string();
 
     info!(
         "generate_cpu_profile: will write profile under {}",
         outputs_dir
     );
-    let outputs_dir_clone = outputs_dir.clone();
+    let outputs_dir_for_closure = outputs_dir.clone();
     let handle = tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
-        let flag = format!(
-            "--generateCpuProfile {}/{}",
-            outputs_dir_clone, CPU_PROFILE_FILENAME
-        );
-        AppData::run_typescript_with_flag_blocking(
-            project_root,
-            tsconfig_path,
-            outputs_dir_clone,
-            flag,
-            extra_tsc_flags,
-            "TypeScript CPU profile run",
-            process_controller,
-        )
+        let generation_path = Path::new(&outputs_dir_for_closure).join(CPU_PROFILE_FILENAME);
+        let flag = make_cli_arg("--generateCpuProfile", &generation_path.to_string_lossy());
+        app_data_clone.run_typescript_with_flag_blocking(flag, "TypeScript CPU profile run")
     });
 
     match handle.await {
@@ -1385,4 +1389,204 @@ pub async fn get_treemap_data(
     let data = state.lock().map_err(|e| e.to_string())?;
     let treemap_data = crate::treemap::build_treemap_from_trace(&data.trace_json)?;
     Ok(treemap_data)
+}
+
+#[tauri::command]
+pub async fn get_tsc_example_call(state: State<'_, Arc<Mutex<AppData>>>) -> Result<String, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    let outputs_dir = data.outputs_dir().to_string_lossy().to_string();
+    let flag = make_cli_arg("--generateTrace", outputs_dir.as_str());
+    Ok(data.get_tsc_call(&flag))
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct BugReportFile {
+    pub name: String,
+    pub description: String,
+}
+
+#[tauri::command]
+pub async fn get_bug_report_files(
+    state: State<'_, Arc<Mutex<AppData>>>,
+) -> Result<Vec<BugReportFile>, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    let mut files = Vec::new();
+
+    let outputs_dir = data.outputs_dir();
+
+    // Check typescript.toml in data directory
+    let typescript_toml_path = data.data_dir.join(CONFIG_FILENAME);
+    if typescript_toml_path.exists() {
+        files.push(BugReportFile {
+            name: "typescript.toml".to_string(),
+            description: "TypeScript configuration".to_string(),
+        });
+    }
+
+    // Check output files only if they exist
+    let output_files = [
+        ("types.json", TYPES_JSON_FILENAME, "Type definitions data"),
+        (
+            "trace.json",
+            TRACE_JSON_FILENAME,
+            "Compilation trace events",
+        ),
+        (
+            "analyze-trace.json",
+            ANALYZE_TRACE_FILENAME,
+            "Trace analysis results",
+        ),
+        (
+            "type-graph.json",
+            crate::type_graph::TYPE_GRAPH_FILENAME,
+            "Type relationship graph",
+        ),
+        (
+            "tsc.cpuprofile",
+            CPU_PROFILE_FILENAME,
+            "TypeScript CPU profile",
+        ),
+    ];
+
+    for (zip_name, filename, description) in output_files {
+        let file_path = outputs_dir.join(filename);
+        if file_path.exists() {
+            files.push(BugReportFile {
+                name: zip_name.to_string(),
+                description: description.to_string(),
+            });
+        }
+    }
+
+    // Check if package.json exists
+    let project_root = &data.project_root;
+    let pkg_json_path = project_root;
+    if pkg_json_path.exists()
+        && pkg_json_path.is_file()
+        && pkg_json_path
+            .file_name()
+            .map(|f| f == PACKAGE_JSON_FILENAME)
+            .unwrap_or(false)
+    {
+        files.push(BugReportFile {
+            name: PACKAGE_JSON_FILENAME.to_string(),
+            description: "Project package configuration".to_string(),
+        });
+    } else if pkg_json_path.is_dir() {
+        let pkg_json_in_dir = pkg_json_path.join(PACKAGE_JSON_FILENAME);
+        if pkg_json_in_dir.exists() {
+            files.push(BugReportFile {
+                name: PACKAGE_JSON_FILENAME.to_string(),
+                description: "Project package configuration".to_string(),
+            });
+        }
+    }
+
+    // Check if selected tsconfig exists
+    if let Some(tsconfig_path) = &data.selected_tsconfig {
+        if tsconfig_path.exists() {
+            let filename = tsconfig_path
+                .file_name()
+                .and_then(|f| f.to_str())
+                .unwrap_or(TSCONFIG_FILENAME);
+            files.push(BugReportFile {
+                name: filename.to_string(),
+                description: "TypeScript compiler configuration".to_string(),
+            });
+        }
+    }
+
+    Ok(files)
+}
+
+#[tauri::command]
+pub async fn create_bug_report(
+    state: State<'_, Arc<Mutex<AppData>>>,
+    description: String,
+    stdout: Option<String>,
+    stderr: Option<String>,
+) -> Result<String, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+
+    // Create bug report zip file
+    let downloads_dir =
+        dirs::download_dir().ok_or_else(|| "Could not find downloads directory".to_string())?;
+
+    let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+    let zip_filename = format!("typeslayer_bug_report_{}.zip", timestamp);
+    let zip_path = downloads_dir.join(&zip_filename);
+
+    // Create the zip file
+    let file = std::fs::File::create(&zip_path)
+        .map_err(|e| format!("Failed to create zip file: {}", e))?;
+
+    let mut zip = zip::ZipWriter::new(file);
+    let options = zip::write::SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated);
+
+    // Add description as a text file
+    zip.start_file("description", options)
+        .map_err(|e| format!("Failed to add description file: {}", e))?;
+    zip.write_all(description.as_bytes())
+        .map_err(|e| format!("Failed to write description: {}", e))?;
+
+    // Add stdout if provided
+    if let Some(stdout_content) = stdout {
+        zip.start_file("stdout", options)
+            .map_err(|e| format!("Failed to add stdout file: {}", e))?;
+        zip.write_all(stdout_content.as_bytes())
+            .map_err(|e| format!("Failed to write stdout: {}", e))?;
+    }
+
+    // Add stderr if provided
+    if let Some(stderr_content) = stderr {
+        zip.start_file("stderr", options)
+            .map_err(|e| format!("Failed to add stderr file: {}", e))?;
+        zip.write_all(stderr_content.as_bytes())
+            .map_err(|e| format!("Failed to write stderr: {}", e))?;
+    }
+
+    // Define the files to include
+    let files_to_include = [
+        CONFIG_FILENAME,
+        TYPES_JSON_FILENAME,
+        TRACE_JSON_FILENAME,
+        ANALYZE_TRACE_FILENAME,
+        crate::type_graph::TYPE_GRAPH_FILENAME,
+        CPU_PROFILE_FILENAME,
+    ];
+
+    let outputs_dir = data.outputs_dir();
+
+    // Add each file to the zip
+    for filename in files_to_include {
+        let file_path = if filename == CONFIG_FILENAME {
+            // typescript.toml is in the data directory
+            data.data_dir.join(filename)
+        } else {
+            // Other files are in the outputs directory
+            outputs_dir.join(filename)
+        };
+
+        if file_path.exists() {
+            let contents = std::fs::read(&file_path)
+                .map_err(|e| format!("Failed to read {}: {}", filename, e))?;
+
+            zip.start_file(filename, options)
+                .map_err(|e| format!("Failed to add {} to zip: {}", filename, e))?;
+            zip.write_all(&contents)
+                .map_err(|e| format!("Failed to write {} to zip: {}", filename, e))?;
+        }
+    }
+
+    zip.finish()
+        .map_err(|e| format!("Failed to finalize zip file: {}", e))?;
+
+    Ok(zip_path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub async fn get_data_dir(state: State<'_, Arc<Mutex<AppData>>>) -> Result<String, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    Ok(data.data_dir.to_string_lossy().to_string())
 }

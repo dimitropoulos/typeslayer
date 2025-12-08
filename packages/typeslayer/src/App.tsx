@@ -21,7 +21,7 @@ import tsNightmareLogo from "./assets/ts-nightmare.png";
 import typeslayerLogo from "./assets/typeslayer.png";
 import typeslayerNightmareLogo from "./assets/typeslayer-nightmare.png";
 import { AuthGate } from "./components/auth-gate";
-import { NAVIGATION, type NavigationItem } from "./components/utils";
+import { NAVIGATION, type NavigationItem } from "./components/navigation";
 
 function AppBrand({
   collapsed,

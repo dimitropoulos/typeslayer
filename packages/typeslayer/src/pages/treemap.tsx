@@ -1,10 +1,19 @@
-import { Box, CircularProgress, Snackbar, Typography } from "@mui/material";
+import { Info } from "@mui/icons-material";
+import {
+  Box,
+  CircularProgress,
+  IconButton,
+  Popover,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useState } from "react";
 import { friendlyPath } from "../components/utils";
+import { useToast } from "../contexts/toast-context";
 import { useProjectRoot, useRelativePaths } from "../hooks/tauri-hooks";
 
 interface TreemapNode {
@@ -17,7 +26,10 @@ interface TreemapNode {
 export const Treemap = () => {
   const relativePaths = useRelativePaths();
   const projectRoot = useProjectRoot();
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const { showToast } = useToast();
+  const [_popoverOpen, _setPopoverOpen] = useState(false);
+  const [popoverAnchorEl, setPopoverAnchorEl] =
+    useState<HTMLButtonElement | null>(null);
 
   const { data, isLoading, error } = useQuery<TreemapNode[]>({
     queryKey: ["treemap_data"],
@@ -73,6 +85,8 @@ export const Treemap = () => {
     return friendlyPath(path, projectRoot.data, relativePaths.data);
   };
 
+  const gridSpacing = 20;
+
   const option: EChartsOption = {
     backgroundColor: "transparent",
     tooltip: {
@@ -92,11 +106,13 @@ export const Treemap = () => {
                 .toFixed(2)
                 .replace(/\B(?=(\d{3})+(?!\d))/g, " ")
             : "0";
-        return `<div style="padding: 8px;">
-					<strong>${info.name}</strong><br/>
-					<span style="color: #000000;">${path}</span><br/>
-					<span>${valueMs} ms</span>
-				</div>`;
+        return `
+          <div style="padding: 8px;">
+            <strong>${info.name}</strong><br/>
+            <span style="color: #000000;">${path}</span><br/>
+            <span>${valueMs} ms</span>
+          </div>
+        `;
       },
     },
     visualMap: {
@@ -108,10 +124,15 @@ export const Treemap = () => {
         colorAlpha: [0.8, 0],
       },
       seriesIndex: 0,
+      padding: 0,
     },
     series: [
       {
         type: "treemap",
+        top: gridSpacing,
+        bottom: gridSpacing,
+        left: gridSpacing,
+        right: gridSpacing,
         breadcrumb: {
           show: false,
         },
@@ -154,14 +175,58 @@ export const Treemap = () => {
     const path = params.data?.path;
     if (path) {
       await navigator.clipboard.writeText(path);
-      setSnackbarOpen(true);
+      showToast({
+        message:
+          "Copied file path to clipboard.\n\nPaste it into Perfetto to learn more.",
+        severity: "success",
+        duration: 4000,
+      });
     }
   };
+
+  const open = Boolean(popoverAnchorEl);
+  const id = open ? "simple-popover" : undefined;
 
   return (
     <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
       <Box sx={{ p: 1, ml: 2, mt: 3 }}>
-        <Typography variant="h2">Compilation Time Treemap</Typography>
+        <Stack direction="row" spacing={1}>
+          <Typography variant="h2">Compilation Time Treemap</Typography>
+          <Popover
+            id={id}
+            open={open}
+            anchorEl={popoverAnchorEl}
+            onClose={() => setPopoverAnchorEl(null)}
+            anchorOrigin={{
+              vertical: "bottom",
+              horizontal: "left",
+            }}
+          >
+            <Box sx={{ fontSize: 16, p: 1, maxWidth: 400 }}>
+              just because a certain file takes longer to compile doesn't
+              necessarily mean it's the root cause of slow compilation times.
+              <br />
+              <br />
+              very often, the problematic type is deeper, and this file is just
+              the starting point...but at least this gives you <em>some</em>{" "}
+              specific place to start.
+              <br />
+              <br />
+              click on a rectangle of interest to get the path. then take that
+              path into perfetto and see if you can glean more information about
+              what's below.
+            </Box>
+          </Popover>
+          <IconButton
+            aria-describedby={id}
+            size="large"
+            onClick={event => {
+              setPopoverAnchorEl(event.currentTarget);
+            }}
+          >
+            <Info />
+          </IconButton>
+        </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           File compilation times visualized by directory and duration
           (milliseconds)
@@ -175,29 +240,6 @@ export const Treemap = () => {
           onEvents={{ click: handleClick }}
         />
       </Box>
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={4000}
-        onClose={() => setSnackbarOpen(false)}
-        sx={{
-          "& .MuiSnackbarContent-root": {
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 14,
-            textAlign: "center",
-          },
-        }}
-        message={
-          <span>
-            Copied file path to clipboard.
-            <br />
-            <br />
-            Paste it into Perfetto to learn more.
-          </span>
-        }
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      />
     </Box>
   );
 };
