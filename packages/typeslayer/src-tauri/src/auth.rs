@@ -1,5 +1,5 @@
 use base64::{Engine as _, engine::general_purpose};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::State;
 
 use crate::app_data::AppData;
@@ -77,7 +77,7 @@ pub fn is_valid_key(key: &str) -> bool {
 
 #[tauri::command]
 pub async fn validate_auth_code(
-    state: State<'_, Mutex<AppData>>,
+    state: State<'_, Arc<Mutex<AppData>>>,
     code: String,
 ) -> Result<bool, String> {
     let mut data = state.lock().map_err(|e| e.to_string())?;
@@ -89,7 +89,7 @@ pub async fn validate_auth_code(
 }
 
 #[tauri::command]
-pub async fn is_authorized(state: State<'_, Mutex<AppData>>) -> Result<bool, String> {
+pub async fn is_authorized(state: State<'_, Arc<Mutex<AppData>>>) -> Result<bool, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     if let Some(ref code) = data.auth_code {
         let valid = is_valid_key(code);

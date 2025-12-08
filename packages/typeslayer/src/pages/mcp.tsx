@@ -22,33 +22,45 @@ import { useState } from "react";
 import { Code } from "../components/code";
 import { InlineCode } from "../components/inline-code";
 import {
+  type ManagedResource,
   type ToolDefinition,
+  useAvailableResources,
   useAvailableTools,
-  useMcpServerStatus,
-  useToolProgress,
+  useMcpToolStatus,
 } from "../hooks/tauri-hooks";
 
-export const AiMcpProgress = () => {
-  const { data: activeTools } = useMcpServerStatus();
+export const AiMcpProgress = ({ variant }: { variant: "button" | "icon" }) => {
+  const { data: activeTools } = useMcpToolStatus();
 
-  // If there are active tools, show progress indicator
-  if (activeTools && activeTools.length > 0) {
-    return (
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-        <CircularProgress
-          enableTrackSlot
-          size={20}
-          variant="determinate"
-          value={activeTools[0]?.progress ?? 0}
-        />
-      </Box>
-    );
+  switch (variant) {
+    case "button":
+      if (activeTools && activeTools.length === 0) {
+        return <CircularProgress enableTrackSlot size={20} />;
+      }
+      return (
+        <Stack
+          sx={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 1,
+          }}
+        >
+          <TaskAlt color="success" sx={{ verticalAlign: "middle" }} />
+          <Typography color="success">up and running</Typography>
+        </Stack>
+      );
+
+    case "icon":
+      if (activeTools && activeTools.length === 0) {
+        return <CircularProgress enableTrackSlot size={20} />;
+      }
+
+      return (
+        <Tooltip title="MCP Server is up and running">
+          <TaskAlt color="success" />
+        </Tooltip>
+      );
   }
-  return (
-    <Tooltip title="MCP Server is up and running">
-      <TaskAlt color="success" />
-    </Tooltip>
-  );
 };
 
 const tabDefinitions = [
@@ -60,15 +72,27 @@ const tabDefinitions = [
 ];
 
 export const Mcp = () => {
-  const { data: activeTools } = useMcpServerStatus();
   const navigate = useNavigate();
   const params = useParams({ from: "/mcp/$tab" as const });
+  const { data: tools } = useAvailableTools();
+  const { data: resources } = useAvailableResources();
 
   const currentTabIndex = tabDefinitions.findIndex(t => t.key === params.tab);
   const tabIndex = currentTabIndex >= 0 ? currentTabIndex : 0;
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     navigate({ to: `/mcp/${tabDefinitions[newValue].key}` });
+  };
+
+  const getTabCount = (tabKey: string) => {
+    switch (tabKey) {
+      case "tools":
+        return tools?.length ?? 0;
+      case "resources":
+        return resources?.length ?? 0;
+      default:
+        return null;
+    }
   };
 
   return (
@@ -81,36 +105,56 @@ export const Mcp = () => {
     >
       <Stack
         sx={{
-          gap: 3,
+          gap: 1,
           maxWidth: "900px",
         }}
       >
-        <Box
+        <Stack
           sx={{
             display: "flex",
-            gap: 2,
+            gap: 1,
+            alignItems: "flex-start",
           }}
         >
-          <Typography variant="h2">AI MCP Integration</Typography>
-          {activeTools && activeTools.length > 0 && (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <AiMcpProgress />
-            </Box>
-          )}
-          <HelpDialog />
-        </Box>
+          <Stack sx={{ display: "flex", flexDirection: "row", gap: 1 }}>
+            <Typography variant="h2">AI MCP Integration</Typography>
+            <HelpDialog />
+          </Stack>
+          <AiMcpProgress variant="button" />
+        </Stack>
 
-        <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
-          <Tabs
-            value={tabIndex}
-            onChange={handleTabChange}
-            aria-label="MCP integration tabs"
-          >
-            {tabDefinitions.map(tab => (
-              <Tab key={tab.key} label={tab.label} />
-            ))}
-          </Tabs>
-        </Box>
+        <Tabs
+          value={tabIndex}
+          onChange={handleTabChange}
+          aria-label="MCP integration tabs"
+          sx={{ borderBottom: 1, borderColor: "divider", marginBottom: 1 }}
+        >
+          {tabDefinitions.map(tab => {
+            const count = getTabCount(tab.key);
+            return (
+              <Tab
+                key={tab.key}
+                label={
+                  <Stack sx={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
+                    <Typography>{tab.label}</Typography>
+                    {count !== null && (
+                      <Box
+                        sx={{
+                          borderColor: "primary.main",
+                          color: "primary.main",
+                          fontSize: "1rem",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {count}
+                      </Box>
+                    )}
+                  </Stack>
+                }
+              />
+            );
+          })}
+        </Tabs>
 
         {params.tab === "setup" && <Setup />}
         {params.tab === "tools" && <McpTools />}
@@ -159,10 +203,10 @@ const ToolCard = ({
 }: {
   tool: ToolDefinition;
 }) => {
-  const { data: progress } = useToolProgress(command);
+  const { data: progress } = useMcpToolStatus();
 
   // Show progress only if this specific tool is running
-  const isRunning = progress?.status === "running";
+  const isRunning = progress?.some(t => t.command === command);
 
   return (
     <Accordion key={command}>
@@ -175,16 +219,7 @@ const ToolCard = ({
           }}
         >
           {isRunning ? (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <CircularProgress
-                size={24}
-                variant="determinate"
-                value={progress?.progress ?? 0}
-              />
-              <Typography variant="caption" color="textSecondary">
-                {progress?.progress}%
-              </Typography>
-            </Box>
+            <CircularProgress size={24} />
           ) : (
             <Tooltip title="not currently running or serving requests">
               <Pause />
@@ -294,17 +329,124 @@ const HelpDialog = () => {
 const defaultMcpJson = {
   servers: {
     TypeSlayer: {
-      command: "typeslayer",
+      command: "npx typeslayer",
       args: ["mcp"],
     },
   },
 };
 
 export const McpResources = () => {
+  const { data: resources, isLoading } = useAvailableResources();
+
+  if (isLoading) {
+    return (
+      <Alert severity="info">
+        <Typography variant="body2">
+          Loading MCP Resources from MCP server...
+        </Typography>
+      </Alert>
+    );
+  }
+
+  if (!resources || resources.length === 0) {
+    return (
+      <Alert severity="warning">
+        <Typography variant="body2">
+          No resources available from the MCP server.
+        </Typography>
+      </Alert>
+    );
+  }
+
   return (
     <Stack spacing={2}>
-      <Typography>MCP Resources - coming soon</Typography>
+      {resources.map(resource => (
+        <ResourceCard key={resource.uri} resource={resource} />
+      ))}
     </Stack>
+  );
+};
+
+const ResourceCard = ({ resource }: { resource: ManagedResource }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [content, setContent] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleToggleExpand = async () => {
+    if (!isExpanded && !content) {
+      setIsLoading(true);
+      setError(null);
+      try {
+        // For now, we'll display a message that resources can be read via MCP
+        // The actual content would be fetched through the MCP interface
+        setContent(
+          `Resource URI: ${resource.uri}\nMIME Type: ${resource.mimeType || "unknown"}\n\nThis resource can be read via the MCP protocol. Content access coming soon via UI.`,
+        );
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to load resource",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    setIsExpanded(!isExpanded);
+  };
+
+  return (
+    <Accordion expanded={isExpanded} onChange={handleToggleExpand}>
+      <AccordionSummary expandIcon={<ExpandMore />}>
+        <Stack
+          sx={{
+            gap: 2,
+            alignItems: "center",
+            flexDirection: "row",
+          }}
+        >
+          <Typography variant="h4">
+            <InlineCode secondary>{resource.name}</InlineCode>
+          </Typography>
+        </Stack>
+      </AccordionSummary>
+      <AccordionDetails>
+        <Stack spacing={2}>
+          <Stack spacing={1}>
+            <Typography variant="h6">Details</Typography>
+            {resource.description && (
+              <Typography>{resource.description}</Typography>
+            )}
+            <Stack direction="row" spacing={1}>
+              <Typography variant="body2" color="textSecondary">
+                URI:
+              </Typography>
+              <InlineCode secondary>{resource.uri}</InlineCode>
+            </Stack>
+            <Stack direction="row" spacing={1}>
+              <Typography variant="body2" color="textSecondary">
+                MIME Type:
+              </Typography>
+              <InlineCode secondary>
+                {resource.mimeType || "unknown"}
+              </InlineCode>
+            </Stack>
+          </Stack>
+
+          {isLoading && <CircularProgress />}
+          {error && (
+            <Alert severity="error">
+              <Typography variant="body2">{error}</Typography>
+            </Alert>
+          )}
+          {content && !isLoading && (
+            <Stack spacing={1}>
+              <Typography variant="h6">Content</Typography>
+              <Code value={content} />
+            </Stack>
+          )}
+        </Stack>
+      </AccordionDetails>
+    </Accordion>
   );
 };
 
@@ -364,102 +506,67 @@ const McpPrompts = () => {
   );
 };
 
+const providerLinks = [
+  {
+    name: "Claude Desktop / Claude Code",
+    url: "https://docs.anthropic.com/claude/docs/model-context-protocol",
+  },
+  {
+    name: "VS Code + GitHub Copilot",
+    url: "https://code.visualstudio.com/docs/copilot/customization/mcp-servers",
+  },
+  {
+    name: "Cursor",
+    url: "https://docs.cursor.com/advanced/model-context-protocol",
+  },
+  {
+    name: "Neovim (avante.nvim)",
+    url: "https://github.com/yetone/avante.nvim#model-context-protocol",
+  },
+];
+
 const Setup = () => {
   return (
     <Stack spacing={2}>
-      <Alert severity="warning">
-        <Typography variant="body2">
-          Run a trace in the TypeSlayer GUI first; the MCP tools read that data.
-        </Typography>
-      </Alert>
-
-      <Typography>
-        Put this into your <InlineCode>mcp.json</InlineCode> (or the MCP config
-        file your client uses). No extra environment variables are required.
-      </Typography>
-
-      <Box sx={{ maxWidth: 400 }}>
-        <Code value={defaultMcpJson} fileName="mcp.json" />
-      </Box>
-
       <Typography variant="h4" gutterBottom>
-        Quick setup (all providers)
+        Quick setup
       </Typography>
+
       <Box component="ol" sx={{ pl: 3, mb: 2, "& li": { mb: 1.5 } }}>
         <li>
           <Typography>
-            Ensure the <InlineCode>typeslayer</InlineCode> binary is on your
-            <InlineCode> PATH</InlineCode> (or reference it with an absolute
-            path in <InlineCode>mcp.json</InlineCode>).
+            Use TypeSlayer's <Link href="/start">Start | Run Diagnostics</Link>
+            module to generate the data that the MCP Server relies on.
           </Typography>
         </li>
         <li>
-          <Typography>
-            Save the above <InlineCode>mcp.json</InlineCode> where your MCP
-            client expects it (see provider links below for locations).
-          </Typography>
+          <Stack sx={{ gap: 1, alignItems: "flex-start" }}>
+            <Typography>
+              Use this <InlineCode secondary>mcp.json</InlineCode> where your
+              MCP client expects it.
+            </Typography>
+
+            <ul style={{ marginLeft: "-24px" }}>
+              {providerLinks.map(({ name, url }) => (
+                <li key={name} style={{ marginBottom: "0px" }}>
+                  <Link href={url} target="_blank" rel="noopener">
+                    {name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <Box sx={{ py: 1 }}>
+              <Code value={defaultMcpJson} fileName="mcp.json" />
+            </Box>
+          </Stack>
         </li>
         <li>
           <Typography>Restart or reload your MCP client.</Typography>
         </li>
         <li>
           <Typography>
-            Ask your AI to call <InlineCode>get_hotspots</InlineCode> (for
-            example, "find hotspots over 500ms").
-          </Typography>
-        </li>
-      </Box>
-
-      <Typography variant="h4" gutterBottom>
-        Provider reference links
-      </Typography>
-      <Box component="ul" sx={{ pl: 3, mb: 1.5 }}>
-        <li>
-          <Typography>
-            Claude Desktop / Claude Code:{" "}
-            <Link
-              href="https://docs.anthropic.com/claude/docs/model-context-protocol"
-              target="_blank"
-              rel="noopener"
-            >
-              MCP setup guide
-            </Link>
-          </Typography>
-        </li>
-        <li>
-          <Typography>
-            VS Code + GitHub Copilot:{" "}
-            <Link
-              href="https://code.visualstudio.com/docs/copilot/customization/mcp-servers"
-              target="_blank"
-              rel="noopener"
-            >
-              MCP servers documentation
-            </Link>
-          </Typography>
-        </li>
-        <li>
-          <Typography>
-            Cursor:{" "}
-            <Link
-              href="https://docs.cursor.com/advanced/model-context-protocol"
-              target="_blank"
-              rel="noopener"
-            >
-              MCP configuration
-            </Link>
-          </Typography>
-        </li>
-        <li>
-          <Typography>
-            Neovim (avante.nvim):{" "}
-            <Link
-              href="https://github.com/yetone/avante.nvim#model-context-protocol"
-              target="_blank"
-              rel="noopener"
-            >
-              MCP setup
-            </Link>
+            Ask your AI to call use TypeSlayer tools to analyze your TypeScript.
+            See prompt examples <Link href="/mcp/prompts">here</Link>.
           </Typography>
         </li>
       </Box>

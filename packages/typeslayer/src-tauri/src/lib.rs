@@ -1,46 +1,39 @@
 mod analyze_trace;
-mod app_data;
+pub mod app_data;
 mod auth;
-mod files;
+pub mod files;
+mod http_server;
 mod layercake;
-mod log;
-mod mcp_server;
-mod mcp_status;
+pub mod log;
+mod mcp;
 mod process_controller;
 mod screenshot;
-mod tools;
 mod treemap;
 mod type_graph;
 mod validate;
 
-use std::sync::Mutex;
-use tauri::AppHandle;
+use std::sync::{Arc, Mutex};
 use tauri::Manager;
-use tauri::async_runtime::spawn;
 
-pub use mcp_server::run_mcp_server;
+pub use http_server::run_http_server;
+pub use mcp::run_mcp_server;
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    log::init();
-
+pub fn run_tauri_app(app_data: Arc<Mutex<app_data::AppData>>) {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
         .plugin(tauri_plugin_upload::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_screenshots::init())
-        .setup(|app| {
-            let app_handle = app.app_handle().clone();
-            let data_dir = files::get_typeslayer_base_data_dir(None, Some(&app_handle));
-            let app_data = app_data::AppData::new(data_dir);
-            app.manage(Mutex::new(app_data));
+        .setup(move |app| {
+            app.manage(app_data);
 
             // Initialize MCP status tracker
-            let mcp_tracker = mcp_status::McpStatusTracker::new();
+            let mcp_tracker = mcp::status::McpStatusTracker::new();
             app.manage(mcp_tracker);
 
             // Set initial window title based on detected project package.json
             if let Some(title) = app
-                .state::<Mutex<app_data::AppData>>()
+                .state::<Arc<Mutex<app_data::AppData>>>()
                 .lock()
                 .ok()
                 .map(|data| data.compute_window_title())
@@ -50,59 +43,6 @@ pub fn run() {
                 }
             }
 
-            // Spawn a lightweight HTTP server to serve runtime outputs
-            let outputs_app = app.app_handle().clone();
-            spawn(async move {
-                use axum::{Router, extract::Path, response::IntoResponse, routing::get};
-                use tower_http::cors::{Any, CorsLayer};
-                // no file service needed; direct read from outputs
-
-                // Explicit handler to set correct content type for known files
-                async fn serve_output(
-                    Path(name): Path<String>,
-                    app: AppHandle,
-                ) -> impl IntoResponse {
-                    let outputs_dir = {
-                        let state: tauri::State<Mutex<app_data::AppData>> = app.state();
-                        let data = state.lock().unwrap();
-                        data.outputs_dir().to_string_lossy().to_string()
-                    };
-                    let path = std::path::Path::new(&outputs_dir).join(&name);
-                    match tokio::fs::read(&path).await {
-                        Ok(bytes) => {
-                            let content_type = if name.ends_with(".json") {
-                                "application/json"
-                            } else {
-                                "application/octet-stream"
-                            };
-                            ([("Content-Type", content_type)], bytes)
-                        }
-                        Err(e) => {
-                            eprintln!("Failed to read {:?}: {}", path, e);
-                            ([("Content-Type", "text/plain")], Vec::new())
-                        }
-                    }
-                }
-
-                let cors = CorsLayer::new().allow_methods(Any).allow_origin(Any);
-                let app_router = Router::new()
-                    .route(
-                        "/outputs/:name",
-                        get({
-                            let app = outputs_app.clone();
-                            move |p| serve_output(p, app.clone())
-                        }),
-                    )
-                    .layer(cors);
-
-                // Bind to localhost fixed port for simplicity
-                let listener = tokio::net::TcpListener::bind("127.0.0.1:4765")
-                    .await
-                    .expect("bind outputs server");
-                if let Err(e) = axum::serve(listener, app_router.into_make_service()).await {
-                    eprintln!("outputs server error: {}", e);
-                }
-            });
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())
@@ -153,10 +93,9 @@ pub fn run() {
             type_graph::get_type_graph_text,
             app_data::get_treemap_data,
             screenshot::take_screenshot,
-            mcp_status::get_mcp_tool_status,
-            mcp_status::get_mcp_tool_progress,
-            mcp_status::get_mcp_all_tools,
-            mcp_status::get_available_mcp_tools,
+            mcp::status::get_mcp_running_tools,
+            mcp::status::get_available_mcp_tools,
+            mcp::status::get_available_mcp_resources,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

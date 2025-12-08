@@ -16,7 +16,7 @@ use serde_json::Value;
 use std::fs;
 use std::path::Path;
 use std::process::{Command, Stdio};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::{Manager, State};
 use tracing::{error, info};
 
@@ -569,7 +569,7 @@ impl AppData {
 #[tauri::command]
 pub async fn set_window_title_from_project(
     app: tauri::AppHandle,
-    state: State<'_, Mutex<AppData>>,
+    state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<(), String> {
     let guard = state.lock().map_err(|_| "state poisoned".to_string())?;
     let title = guard.compute_window_title();
@@ -768,7 +768,7 @@ impl AppData {
 
 #[tauri::command]
 pub async fn validate_types_json(
-    state: State<'_, Mutex<AppData>>,
+    state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<TypesJsonSchema, String> {
     let path = {
         let data = state.lock().map_err(|e| e.to_string())?;
@@ -785,7 +785,7 @@ pub async fn validate_types_json(
 
 #[tauri::command]
 pub async fn validate_trace_json(
-    state: State<'_, Mutex<AppData>>,
+    state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<Vec<crate::validate::trace_json::TraceEvent>, String> {
     let path = {
         let data = state.lock().map_err(|e| e.to_string())?;
@@ -802,20 +802,22 @@ pub async fn validate_trace_json(
 
 #[tauri::command]
 pub async fn get_trace_json(
-    state: State<'_, Mutex<AppData>>,
+    state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<Vec<crate::validate::trace_json::TraceEvent>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     Ok(data.trace_json.clone())
 }
 
 #[tauri::command]
-pub async fn get_types_json(state: State<'_, Mutex<AppData>>) -> Result<TypesJsonSchema, String> {
+pub async fn get_types_json(
+    state: State<'_, Arc<Mutex<AppData>>>,
+) -> Result<TypesJsonSchema, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     Ok(data.types_json.clone())
 }
 
 #[tauri::command]
-pub async fn search_type(state: State<'_, Mutex<AppData>>, id: i64) -> Result<Value, String> {
+pub async fn search_type(state: State<'_, Arc<Mutex<AppData>>>, id: i64) -> Result<Value, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     // types_json contains ResolvedType; we return as JSON Value
     for t in &data.types_json {
@@ -827,14 +829,16 @@ pub async fn search_type(state: State<'_, Mutex<AppData>>, id: i64) -> Result<Va
 }
 
 #[tauri::command]
-pub async fn get_tsconfig_paths(state: State<'_, Mutex<AppData>>) -> Result<Vec<String>, String> {
+pub async fn get_tsconfig_paths(
+    state: State<'_, Arc<Mutex<AppData>>>,
+) -> Result<Vec<String>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     Ok(data.tsconfig_paths.clone())
 }
 
 #[tauri::command]
 pub async fn get_selected_tsconfig(
-    state: State<'_, Mutex<AppData>>,
+    state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<Option<String>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     Ok(data.selected_tsconfig.clone())
@@ -842,7 +846,7 @@ pub async fn get_selected_tsconfig(
 
 #[tauri::command]
 pub async fn set_selected_tsconfig(
-    state: State<'_, Mutex<AppData>>,
+    state: State<'_, Arc<Mutex<AppData>>>,
     tsconfig_path: String,
 ) -> Result<(), String> {
     let mut data = state.lock().map_err(|e| e.to_string())?;
@@ -867,7 +871,7 @@ pub async fn set_selected_tsconfig(
 
 #[tauri::command]
 pub async fn clear_outputs(
-    state: State<'_, Mutex<AppData>>,
+    state: State<'_, Arc<Mutex<AppData>>>,
     cancel_running: bool,
 ) -> Result<(), String> {
     let controller = {
@@ -884,7 +888,9 @@ pub async fn clear_outputs(
 }
 
 #[tauri::command]
-pub async fn generate_trace(state: State<'_, Mutex<AppData>>) -> Result<TypesJsonSchema, String> {
+pub async fn generate_trace(
+    state: State<'_, Arc<Mutex<AppData>>>,
+) -> Result<TypesJsonSchema, String> {
     // Short lock to get values we need
     let (tsconfig_path, project_root, process_controller, extra_tsc_flags, outputs_dir) = {
         let data = state.lock().map_err(|e| e.to_string())?;
@@ -938,7 +944,7 @@ pub async fn generate_trace(state: State<'_, Mutex<AppData>>) -> Result<TypesJso
 }
 
 #[tauri::command]
-pub async fn generate_cpu_profile(state: State<'_, Mutex<AppData>>) -> Result<(), String> {
+pub async fn generate_cpu_profile(state: State<'_, Arc<Mutex<AppData>>>) -> Result<(), String> {
     let (tsconfig_path, project_root, process_controller, extra_tsc_flags, outputs_dir) = {
         let data = state.lock().map_err(|e| e.to_string())?;
         (
@@ -993,7 +999,7 @@ pub async fn generate_cpu_profile(state: State<'_, Mutex<AppData>>) -> Result<()
 
 #[tauri::command]
 pub async fn analyze_trace_command(
-    state: State<'_, Mutex<AppData>>,
+    state: State<'_, Arc<Mutex<AppData>>>,
     options: Option<crate::analyze_trace::AnalyzeTraceOptions>,
 ) -> Result<crate::analyze_trace::AnalyzeTraceResult, String> {
     info!("Starting analyze trace...");
@@ -1039,7 +1045,7 @@ pub async fn analyze_trace_command(
 
 #[tauri::command]
 pub async fn get_analyze_trace(
-    state: State<'_, Mutex<AppData>>,
+    state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<crate::analyze_trace::AnalyzeTraceResult, String> {
     // Serve cached value if present
     {
@@ -1066,13 +1072,15 @@ pub async fn get_analyze_trace(
 }
 
 #[tauri::command]
-pub async fn get_cpu_profile(state: State<'_, Mutex<AppData>>) -> Result<Option<String>, String> {
+pub async fn get_cpu_profile(
+    state: State<'_, Arc<Mutex<AppData>>>,
+) -> Result<Option<String>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     Ok(data.cpu_profile.clone())
 }
 
 #[tauri::command]
-pub async fn verify_analyze_trace(state: State<'_, Mutex<AppData>>) -> Result<(), String> {
+pub async fn verify_analyze_trace(state: State<'_, Arc<Mutex<AppData>>>) -> Result<(), String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     match &data.analyze_trace {
         Some(v) => {
@@ -1088,7 +1096,7 @@ pub async fn verify_analyze_trace(state: State<'_, Mutex<AppData>>) -> Result<()
 }
 
 #[tauri::command]
-pub async fn verify_cpu_profile(state: State<'_, Mutex<AppData>>) -> Result<(), String> {
+pub async fn verify_cpu_profile(state: State<'_, Arc<Mutex<AppData>>>) -> Result<(), String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     match &data.cpu_profile {
         Some(contents) => {
@@ -1103,19 +1111,21 @@ pub async fn verify_cpu_profile(state: State<'_, Mutex<AppData>>) -> Result<(), 
 }
 
 #[tauri::command]
-pub async fn get_types_json_text(state: State<'_, Mutex<AppData>>) -> Result<String, String> {
+pub async fn get_types_json_text(state: State<'_, Arc<Mutex<AppData>>>) -> Result<String, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     serde_json::to_string_pretty(&data.types_json).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn get_trace_json_text(state: State<'_, Mutex<AppData>>) -> Result<String, String> {
+pub async fn get_trace_json_text(state: State<'_, Arc<Mutex<AppData>>>) -> Result<String, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     serde_json::to_string_pretty(&data.trace_json).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn get_analyze_trace_text(state: State<'_, Mutex<AppData>>) -> Result<String, String> {
+pub async fn get_analyze_trace_text(
+    state: State<'_, Arc<Mutex<AppData>>>,
+) -> Result<String, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     match &data.analyze_trace {
         Some(v) => serde_json::to_string_pretty(v).map_err(|e| e.to_string()),
@@ -1124,7 +1134,7 @@ pub async fn get_analyze_trace_text(state: State<'_, Mutex<AppData>>) -> Result<
 }
 
 #[tauri::command]
-pub async fn get_cpu_profile_text(state: State<'_, Mutex<AppData>>) -> Result<String, String> {
+pub async fn get_cpu_profile_text(state: State<'_, Arc<Mutex<AppData>>>) -> Result<String, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     match &data.cpu_profile {
         Some(contents) => serde_json::to_string_pretty(contents).map_err(|e| e.to_string()),
@@ -1133,14 +1143,14 @@ pub async fn get_cpu_profile_text(state: State<'_, Mutex<AppData>>) -> Result<St
 }
 
 #[tauri::command]
-pub async fn get_relative_paths(state: State<'_, Mutex<AppData>>) -> Result<bool, String> {
+pub async fn get_relative_paths(state: State<'_, Arc<Mutex<AppData>>>) -> Result<bool, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     Ok(data.settings.relative_paths)
 }
 
 #[tauri::command]
 pub async fn set_relative_paths(
-    state: State<'_, Mutex<AppData>>,
+    state: State<'_, Arc<Mutex<AppData>>>,
     value: bool,
 ) -> Result<(), String> {
     let mut data = state.lock().map_err(|e| e.to_string())?;
@@ -1150,14 +1160,14 @@ pub async fn set_relative_paths(
 }
 
 #[tauri::command]
-pub async fn get_prefer_editor_open(state: State<'_, Mutex<AppData>>) -> Result<bool, String> {
+pub async fn get_prefer_editor_open(state: State<'_, Arc<Mutex<AppData>>>) -> Result<bool, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     Ok(data.settings.prefer_editor_open)
 }
 
 #[tauri::command]
 pub async fn set_prefer_editor_open(
-    state: State<'_, Mutex<AppData>>,
+    state: State<'_, Arc<Mutex<AppData>>>,
     value: bool,
 ) -> Result<(), String> {
     let mut data = state.lock().map_err(|e| e.to_string())?;
@@ -1167,13 +1177,16 @@ pub async fn set_prefer_editor_open(
 }
 
 #[tauri::command]
-pub async fn get_auto_start(state: State<'_, Mutex<AppData>>) -> Result<bool, String> {
+pub async fn get_auto_start(state: State<'_, Arc<Mutex<AppData>>>) -> Result<bool, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     Ok(data.settings.auto_start)
 }
 
 #[tauri::command]
-pub async fn set_auto_start(state: State<'_, Mutex<AppData>>, value: bool) -> Result<(), String> {
+pub async fn set_auto_start(
+    state: State<'_, Arc<Mutex<AppData>>>,
+    value: bool,
+) -> Result<(), String> {
     let mut data = state.lock().map_err(|e| e.to_string())?;
     data.settings.auto_start = value;
     AppData::update_outputs(&data);
@@ -1181,7 +1194,7 @@ pub async fn set_auto_start(state: State<'_, Mutex<AppData>>, value: bool) -> Re
 }
 
 #[tauri::command]
-pub async fn open_file(state: State<'_, Mutex<AppData>>, path: String) -> Result<(), String> {
+pub async fn open_file(state: State<'_, Arc<Mutex<AppData>>>, path: String) -> Result<(), String> {
     // Extract settings without holding the lock during blocking operations.
     let (prefer_editor, preferred_editor) = {
         let data = state.lock().map_err(|e| e.to_string())?;
@@ -1304,7 +1317,7 @@ pub async fn open_file(state: State<'_, Mutex<AppData>>, path: String) -> Result
 
 #[tauri::command]
 pub async fn get_available_editors(
-    state: State<'_, Mutex<AppData>>,
+    state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<Vec<(String, String)>, String> {
     let _ = state; // unused
     Ok(AVAILABLE_EDITORS
@@ -1315,7 +1328,7 @@ pub async fn get_available_editors(
 
 #[tauri::command]
 pub async fn get_preferred_editor(
-    state: State<'_, Mutex<AppData>>,
+    state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<Option<String>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     Ok(data.settings.preferred_editor.clone())
@@ -1323,7 +1336,7 @@ pub async fn get_preferred_editor(
 
 #[tauri::command]
 pub async fn set_preferred_editor(
-    state: State<'_, Mutex<AppData>>,
+    state: State<'_, Arc<Mutex<AppData>>>,
     editor: String,
 ) -> Result<(), String> {
     let mut data = state.lock().map_err(|e| e.to_string())?;
@@ -1344,7 +1357,7 @@ pub async fn set_preferred_editor(
 }
 
 #[tauri::command]
-pub async fn get_extra_tsc_flags(state: State<'_, Mutex<AppData>>) -> Result<String, String> {
+pub async fn get_extra_tsc_flags(state: State<'_, Arc<Mutex<AppData>>>) -> Result<String, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     Ok(data.settings.extra_tsc_flags.clone())
 }
@@ -1356,7 +1369,7 @@ pub async fn get_default_extra_tsc_flags() -> Result<String, String> {
 
 #[tauri::command]
 pub async fn set_extra_tsc_flags(
-    state: State<'_, Mutex<AppData>>,
+    state: State<'_, Arc<Mutex<AppData>>>,
     flags: String,
 ) -> Result<(), String> {
     let mut data = state.lock().map_err(|e| e.to_string())?;
@@ -1367,7 +1380,7 @@ pub async fn set_extra_tsc_flags(
 
 #[tauri::command]
 pub async fn get_treemap_data(
-    state: State<'_, Mutex<AppData>>,
+    state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<Vec<crate::treemap::TreemapNode>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     let treemap_data = crate::treemap::build_treemap_from_trace(&data.trace_json)?;

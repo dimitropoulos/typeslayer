@@ -269,15 +269,9 @@ export const useFriendlyPackageName = () => {
   };
 };
 
-// MCP Status Types and Hooks
-export type ToolStatus = "running" | "success" | "error" | "cancelled";
-
 export interface ToolProgress {
-  tool_name: string;
-  status: ToolStatus;
-  progress: number;
-  message?: string;
-  started_at: number;
+  command: string;
+  startedAt: number;
 }
 
 export interface ToolDefinition {
@@ -293,27 +287,20 @@ export interface ToolDefinition {
   returns: Record<string, unknown>;
 }
 
-/// Hook to monitor status of active MCP tools
-export function useMcpServerStatus() {
-  return useQuery<ToolProgress[]>({
-    queryKey: ["mcp_tool_status"],
-    queryFn: async () => invoke<ToolProgress[]>("get_mcp_tool_status"),
-    staleTime: 500, // Update frequently to show live progress
-    refetchInterval: 500,
-  });
+export interface ManagedResource {
+  uri: string;
+  name: string;
+  description?: string;
+  mimeType?: string;
 }
 
-/// Generic hook to monitor progress of a specific tool by command
-export function useToolProgress(command: string) {
-  return useQuery<ToolProgress | null>({
-    queryKey: ["mcp_tool_progress", command],
-    queryFn: async () =>
-      invoke<ToolProgress | null>("get_mcp_tool_progress", {
-        tool_name: command,
-      }),
-    staleTime: 500,
+/// Hook to monitor status of active MCP tools
+export function useMcpToolStatus() {
+  return useQuery<ToolProgress[]>({
+    queryKey: ["mcp_tool_status"],
+    queryFn: async () => invoke<ToolProgress[]>("get_tool_status"),
+    staleTime: 500, // Update frequently to show live progress
     refetchInterval: 500,
-    enabled: !!command,
   });
 }
 
@@ -323,6 +310,15 @@ export function useAvailableTools() {
     queryKey: ["available_mcp_tools"],
     queryFn: async () => invoke<ToolDefinition[]>("get_available_mcp_tools"),
     staleTime: Number.POSITIVE_INFINITY, // Tool definitions don't change during app lifetime
+  });
+}
+
+/// Hook to fetch available MCP resources from backend
+export function useAvailableResources() {
+  return useQuery<ManagedResource[]>({
+    queryKey: ["available_mcp_resources"],
+    queryFn: async () => invoke<ManagedResource[]>("get_available_mcp_resources"),
+    staleTime: Number.POSITIVE_INFINITY, // Resource definitions don't change during app lifetime
   });
 }
 

@@ -270,7 +270,7 @@ export const NAVIGATION = [
     segment: "mcp/setup",
     title: "AI MCP Server",
     icon: <AutoAwesome />,
-    progress: <AiMcpProgress />,
+    progress: <AiMcpProgress variant="icon" />,
   },
   {
     kind: "segment",

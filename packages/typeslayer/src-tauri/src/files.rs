@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Manager, State};
 
 use crate::{
@@ -25,7 +25,7 @@ pub async fn get_current_dir() -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn get_project_root(state: State<'_, Mutex<AppData>>) -> Result<String, String> {
+pub async fn get_project_root(state: State<'_, Arc<Mutex<AppData>>>) -> Result<String, String> {
     state
         .lock()
         .map(|data| data.project_root.clone())
@@ -35,7 +35,7 @@ pub async fn get_project_root(state: State<'_, Mutex<AppData>>) -> Result<String
 #[tauri::command]
 pub async fn set_project_root(
     app: AppHandle,
-    state: State<'_, Mutex<AppData>>,
+    state: State<'_, Arc<Mutex<AppData>>>,
     project_root: String,
 ) -> Result<(), String> {
     let mut data = state.lock().map_err(|e| e.to_string())?;
@@ -47,20 +47,9 @@ pub async fn set_project_root(
     Ok(())
 }
 
-pub fn get_typeslayer_base_data_dir(
-    base_data_dir: Option<String>,
-    app_handle: Option<&tauri::AppHandle>,
-) -> String {
-    if let Some(dir) = base_data_dir {
-        dir
-    } else if let Ok(env_dir) = std::env::var("TYPESLAYER_DATA_DIR") {
+pub fn get_typeslayer_base_data_dir() -> String {
+    if let Ok(env_dir) = std::env::var("TYPESLAYER_DATA_DIR") {
         env_dir
-    } else if let Some(app) = app_handle {
-        app.path()
-            .app_data_dir()
-            .expect("app_data_dir unavailable")
-            .to_string_lossy()
-            .to_string()
     } else {
         #[cfg(target_os = "linux")]
         {
@@ -87,7 +76,7 @@ pub fn get_typeslayer_base_data_dir(
 
 #[tauri::command]
 pub async fn get_output_file_sizes(
-    state: State<'_, Mutex<AppData>>,
+    state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<std::collections::HashMap<String, u64>, String> {
     use std::fs;
 

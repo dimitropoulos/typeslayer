@@ -488,7 +488,7 @@ pub struct ForceGraphData {
 #[tauri::command]
 pub fn build_type_graph(
     _app: AppHandle,
-    state: State<'_, std::sync::Mutex<AppData>>,
+    state: State<'_, std::sync::Arc<std::sync::Mutex<AppData>>>,
 ) -> Result<(), String> {
     let types: TypesJsonSchema = {
         let app_data = state
@@ -541,7 +541,7 @@ pub fn build_type_graph(
 #[tauri::command]
 pub fn get_type_graph(
     app: AppHandle,
-    state: State<'_, std::sync::Mutex<AppData>>,
+    state: State<'_, std::sync::Arc<std::sync::Mutex<AppData>>>,
 ) -> Result<ForceGraphData, String> {
     // If not yet built, build once
     let needs_build = {
@@ -566,7 +566,7 @@ pub fn get_type_graph(
 }
 
 #[tauri::command]
-pub fn get_type_graph_text(state: State<'_, std::sync::Mutex<AppData>>) -> Result<String, String> {
+pub fn get_type_graph_text(state: State<'_, std::sync::Arc<std::sync::Mutex<AppData>>>) -> Result<String, String> {
     let app_data = state
         .lock()
         .map_err(|_| "AppData mutex poisoned".to_string())?;

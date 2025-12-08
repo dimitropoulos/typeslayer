@@ -76,8 +76,15 @@ export const Code = ({
     };
   }, [code]);
 
+  const { sx: boxPropsSx, ...boxPropsRest } = boxProps;
+
   return (
-    <Box>
+    <Box
+      sx={{
+        ...boxPropsSx,
+      }}
+      {...boxPropsRest}
+    >
       {fileName && (
         <Box
           sx={{
@@ -104,6 +111,7 @@ export const Code = ({
         component="div"
         sx={{
           p: 2,
+          paddingRight: 5,
           bgcolor: "background.paper",
           border: 1,
           borderColor: "divider",
@@ -112,7 +120,6 @@ export const Code = ({
           maxHeight,
           position: "relative",
         }}
-        {...boxProps}
       >
         <Box sx={{ position: "absolute", top: 8, right: 8 }}>
           <Tooltip title={copied ? "Copied" : "Copy"} placement="left">

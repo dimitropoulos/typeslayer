@@ -184,6 +184,10 @@ export const theme: Theme = createTheme({
           width: "2rem",
           height: "2rem",
         },
+        fontSizeInherit: { // MuiAlert icons
+          width: '1.5rem',
+          height: '1.5rem',
+        }
       },
     },
     MuiListItemIcon: {
