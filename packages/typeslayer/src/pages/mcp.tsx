@@ -260,7 +260,7 @@ const ToolCard = ({
 
           <Stack spacing={1}>
             <Typography variant="h6">Returns</Typography>
-            <Code value={returns} />
+            <Code value={JSON.stringify(returns, null, 2)} />
           </Stack>
         </Stack>
       </AccordionDetails>
@@ -332,8 +332,8 @@ const HelpDialog = () => {
 const defaultMcpJson = {
   servers: {
     TypeSlayer: {
-      command: "npx typeslayer",
-      args: ["mcp"],
+      command: "npx",
+      args: ["typeslayer", "mcp"],
     },
   },
 };
@@ -559,7 +559,10 @@ const Setup = () => {
               ))}
             </ul>
             <Box sx={{ py: 1 }}>
-              <Code value={defaultMcpJson} fileName="mcp.json" />
+              <Code
+                value={JSON.stringify(defaultMcpJson, null, 2)}
+                fileName="mcp.json"
+              />
             </Box>
           </Stack>
         </li>

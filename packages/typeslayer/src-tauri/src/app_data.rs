@@ -354,8 +354,18 @@ impl AppData {
             }
         }
 
-        let full_command = command_parts.join(" ");
-        format!("npm exec -- {}", full_command)
+        let mut full_command = command_parts.join(" ");
+        full_command = format!("npm exec -- {}", full_command);
+
+        if self.settings.max_old_space_size.is_some() {
+            let size = self.settings.max_old_space_size.unwrap();
+            full_command = format!(
+                "NODE_OPTIONS=\"--max-old-space-size={}\" {}",
+                size, full_command
+            );
+        }
+
+        full_command
     }
 
     // Blocking helper that runs tsc directly
@@ -723,6 +733,7 @@ pub struct Settings {
     pub preferred_editor: Option<String>,
     pub extra_tsc_flags: String,
     pub apply_tsc_project_flag: bool,
+    pub max_old_space_size: Option<i32>,
 }
 
 impl Default for Settings {
@@ -734,6 +745,7 @@ impl Default for Settings {
             preferred_editor: Some("code".to_string()),
             extra_tsc_flags: "--noEmit --incremental false --noErrorTruncation".to_string(),
             apply_tsc_project_flag: true,
+            max_old_space_size: None,
         }
     }
 }
@@ -790,6 +802,28 @@ impl AppData {
             file: "settings.applyTscProjectFlag",
             default: || true,
         });
+        let max_old_space_size = {
+            let val = cake.resolve_string(ResolveStringArgs {
+                env: "MAX_OLD_SPACE_SIZE",
+                flag: "--max-old-space-size",
+                file: "settings.maxOldSpaceSize",
+                default: || "".to_string(),
+                validate: |s| {
+                    if s.is_empty() {
+                        Ok(s.to_string())
+                    } else {
+                        s.parse::<i32>()
+                            .map(|_| s.to_string())
+                            .map_err(|e| format!("Invalid maxOldSpaceSize value '{}': {}", s, e))
+                    }
+                },
+            });
+            if val.is_empty() {
+                None
+            } else {
+                Some(val.parse::<i32>().unwrap())
+            }
+        };
         Settings {
             relative_paths,
             prefer_editor_open,
@@ -797,6 +831,7 @@ impl AppData {
             preferred_editor,
             extra_tsc_flags,
             apply_tsc_project_flag,
+            max_old_space_size,
         }
     }
 }
@@ -1932,4 +1967,23 @@ pub async fn upload_type_graph(
     .await?;
 
     Ok("Successfully uploaded type graph".to_string())
+}
+
+#[tauri::command]
+pub async fn get_max_old_space_size(
+    state: State<'_, Arc<Mutex<AppData>>>,
+) -> Result<Option<i32>, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    Ok(data.settings.max_old_space_size)
+}
+
+#[tauri::command]
+pub async fn set_max_old_space_size(
+    state: State<'_, Arc<Mutex<AppData>>>,
+    size: Option<i32>,
+) -> Result<(), String> {
+    let mut data = state.lock().map_err(|e| e.to_string())?;
+    data.settings.max_old_space_size = size;
+    AppData::update_outputs(&data);
+    Ok(())
 }

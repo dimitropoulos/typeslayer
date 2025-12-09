@@ -221,6 +221,14 @@ export function useProjectRoot() {
   };
 }
 
+export function useTraceJson() {
+  return useQuery({
+    queryKey: ["trace_json"],
+    queryFn: async () => invoke<ResolvedType[]>("get_trace_json"),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
 export function useTypesJson() {
   return useQuery({
     queryKey: ["types_json"],
@@ -245,6 +253,14 @@ export function useAnalyzeTrace() {
   });
 }
 
+export function useCpuProfile() {
+  return useQuery<string>({
+    queryKey: ["cpu_profile"],
+    queryFn: async () => invoke<string>("get_cpu_profile"),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
 export function useTsconfigPaths() {
   return useQuery<string[]>({
     queryKey: ["tsconfig_paths"],
@@ -256,11 +272,11 @@ export function useTsconfigPaths() {
 const refreshGenerateTrace = (queryClient: QueryClient) => async () => {
   const trace = await invoke("get_trace_json");
   queryClient.setQueryData(["trace_json"], trace);
-  queryClient.setQueryData(["outputs", TRACE_JSON_FILENAME], trace);
+  queryClient.invalidateQueries({ queryKey: ["outputs", TRACE_JSON_FILENAME] });
 
   const types = await invoke("get_types_json");
   queryClient.setQueryData(["types_json"], types);
-  queryClient.setQueryData(["outputs", TYPES_JSON_FILENAME], types);
+  queryClient.invalidateQueries({ queryKey: ["outputs", TYPES_JSON_FILENAME] });
 
   queryClient.invalidateQueries({ queryKey: ["type_graph"] });
   queryClient.invalidateQueries({
@@ -276,6 +292,7 @@ const refreshGenerateTrace = (queryClient: QueryClient) => async () => {
   queryClient.invalidateQueries({ queryKey: ["outputs", TYPE_GRAPH_FILENAME] });
 
   queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
+  queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
 };
 
 export function useGenerateTrace() {
@@ -314,6 +331,7 @@ export const refreshCpuProfile = (queryClient: QueryClient) => async () => {
   // queryClient.setQueryData(["outputs", CPU_PROFILE_FILENAME], cpuProfile);
 
   queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
+  queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
 };
 
 export function useGenerateCpuProfile() {
@@ -338,9 +356,12 @@ export function useUploadCpuProfile() {
 const refreshAnalyzeTrace = (queryClient: QueryClient) => async () => {
   const analyzeTrace = await invoke("get_analyze_trace");
   queryClient.setQueryData(["analyze_trace"], analyzeTrace);
-  queryClient.setQueryData(["outputs", ANALYZE_TRACE_FILENAME], analyzeTrace);
 
+  queryClient.invalidateQueries({
+    queryKey: ["outputs", ANALYZE_TRACE_FILENAME],
+  });
   queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
+  queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
 };
 
 export function useGenerateAnalyzeTrace() {
@@ -365,9 +386,10 @@ export function useUploadAnalyzeTrace() {
 const refreshTypeGraph = (queryClient: QueryClient) => async () => {
   const typeGraph = await invoke("get_type_graph");
   queryClient.setQueryData(["type_graph"], typeGraph);
-  queryClient.setQueryData(["outputs", TYPE_GRAPH_FILENAME], typeGraph);
 
+  queryClient.invalidateQueries({ queryKey: ["outputs", TYPE_GRAPH_FILENAME] });
   queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
+  queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
 };
 
 export function useGenerateTypeGraph() {
@@ -553,6 +575,73 @@ export const useDataDir = () => {
   return useQuery<string>({
     queryKey: ["data_dir"],
     queryFn: async () => invoke<string>("get_data_dir"),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+};
+
+export const useMaxOldSpaceSize = () => {
+  const queryClient = useQueryClient();
+
+  const query = useQuery<number | null>({
+    queryKey: ["max_old_space_size"],
+    queryFn: async () => invoke<number | null>("get_max_old_space_size"),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (size: number | null) =>
+      invoke("set_max_old_space_size", { size }),
+    onSuccess: (_, size) => {
+      queryClient.setQueryData(["max_old_space_size"], size);
+      queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
+    },
+  });
+
+  return {
+    data: query.data,
+    isLoading: query.isLoading,
+    error: query.error,
+    set: mutation.mutateAsync,
+    isSettingValue: mutation.isPending,
+  };
+};
+
+export const useGetAnalyzeTraceText = () => {
+  return useQuery<string>({
+    queryKey: ["get_analyze_trace_text"],
+    queryFn: async () => invoke<string>("get_analyze_trace_text"),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+};
+
+export const useGetTraceJsonText = () => {
+  return useQuery<string>({
+    queryKey: ["get_trace_json_text"],
+    queryFn: async () => invoke<string>("get_trace_json_text"),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+};
+
+export const useGetTypesJsonText = () => {
+  return useQuery<string>({
+    queryKey: ["get_types_json_text"],
+    queryFn: async () => invoke<string>("get_types_json_text"),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+};
+
+export const useGetTypeGraphText = () => {
+  return useQuery<string>({
+    queryKey: ["get_type_graph_text"],
+    queryFn: async () => invoke<string>("get_type_graph_text"),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+};
+
+export const useGetCpuProfileText = () => {
+  return useQuery<string>({
+    queryKey: ["get_cpu_profile_text"],
+    queryFn: async () => invoke<string>("get_cpu_profile_text"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 };

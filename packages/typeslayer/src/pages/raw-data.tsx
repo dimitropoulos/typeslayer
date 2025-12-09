@@ -59,71 +59,59 @@ type RawKey = "analyze" | "trace" | "types" | "cpu" | "graph";
 const RAW_ITEMS: Record<
   RawKey,
   {
-    title: string;
     route: string;
     filename: string;
     description: string;
     verifyInvoke: string;
-    fetchInvoke: string;
     useRegenerate: () => UseMutationResult<unknown, Error, void, unknown>;
     useUpload: () => UseMutationResult<unknown, Error, string, unknown>;
   }
 > = {
   analyze: {
-    title: ANALYZE_TRACE_FILENAME,
     route: "analyze-trace",
     filename: ANALYZE_TRACE_FILENAME,
     description:
       "Summary insights extracted from trace.json, including hotspots and duplicate packages.",
     verifyInvoke: "verify_analyze_trace",
-    fetchInvoke: "get_analyze_trace_text",
     useRegenerate: useGenerateAnalyzeTrace,
     useUpload: useUploadAnalyzeTrace,
   },
 
   trace: {
-    title: TRACE_JSON_FILENAME,
     route: "trace-json",
     filename: TRACE_JSON_FILENAME,
     description:
       "Raw event trace emitted by the TypeScript compiler during type checking.",
     verifyInvoke: "validate_trace_json",
-    fetchInvoke: "get_trace_json_text",
     useRegenerate: useGenerateTrace,
     useUpload: useUploadTrace,
   },
 
   types: {
-    title: TYPES_JSON_FILENAME,
     route: "types-json",
     filename: TYPES_JSON_FILENAME,
     description: "Resolved types catalog containing metadata for each type id.",
     verifyInvoke: "validate_types_json",
-    fetchInvoke: "get_types_json_text",
     useRegenerate: useGenerateTrace,
     useUpload: useUploadTypes,
   },
 
   cpu: {
-    title: CPU_PROFILE_FILENAME,
     route: "tsc-cpuprofile",
     filename: CPU_PROFILE_FILENAME,
     description:
       "V8 CPU profile generated during the TypeScript compilation run.",
     verifyInvoke: "verify_cpu_profile",
-    fetchInvoke: "get_cpu_profile_text",
     useRegenerate: useGenerateCpuProfile,
     useUpload: useUploadAnalyzeTrace,
   },
 
   graph: {
-    title: TYPE_GRAPH_FILENAME,
     route: "type-graph",
     filename: TYPE_GRAPH_FILENAME,
     description:
       "Type graph representing relationships between types in the TypeScript project.",
     verifyInvoke: "verify_type_graph",
-    fetchInvoke: "get_type_graph_text",
     useRegenerate: useGenerateTypeGraph,
     useUpload: useUploadTypeGraph,
   },
@@ -163,7 +151,7 @@ export const RawData = () => {
             <ListItemIcon sx={{ minWidth: 38 }}>
               <Description />
             </ListItemIcon>
-            <ListItemText primary={RAW_ITEMS[key].title} />
+            <ListItemText primary={RAW_ITEMS[key].filename} />
             <Box
               sx={{
                 marginLeft: 4,
@@ -186,14 +174,8 @@ export const RawData = () => {
 };
 
 const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
-  const {
-    filename,
-    description,
-    title,
-    verifyInvoke,
-    useRegenerate,
-    useUpload,
-  } = RAW_ITEMS[itemKey];
+  const { filename, description, verifyInvoke, useRegenerate, useUpload } =
+    RAW_ITEMS[itemKey];
   const { mutateAsync: regenerate, isPending: isRegenerating } =
     useRegenerate();
   const { mutateAsync: upload, isPending: isUploading } = useUpload();
@@ -284,7 +266,7 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
       <Stack gap={1}>
         <Stack sx={{ flexDirection: "row", alignItems: "baseline", gap: 1 }}>
           <Typography variant="h4">
-            <InlineCode secondary>{title}</InlineCode>
+            <InlineCode secondary>{filename}</InlineCode>
           </Typography>
           {fileSize ? (
             <Typography color="textSecondary">
@@ -336,8 +318,14 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
       </Stack>
 
       {isLoading ? (
-        <CenterLoader />
-      ) : text ? (
+        <Box
+          sx={{
+            backgroundColor: "background.paper",
+          }}
+        >
+          <CenterLoader />
+        </Box>
+      ) : text && typeof text === "string" ? (
         <Code value={text} />
       ) : (
         <Alert severity="error">File not found.</Alert>

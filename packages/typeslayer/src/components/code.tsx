@@ -2,41 +2,18 @@ import { ContentCopy, Description, Done } from "@mui/icons-material";
 import { Box, type BoxProps, IconButton, Tooltip } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { type BundledLanguage, codeToHtml } from "shiki";
+import { ShowMore } from "./show-more";
 
-export type CodeProps = {
-  /** Data to render. Strings are parsed if they look like JSON, otherwise rendered as-is. */
-  value: unknown;
-  /** Optional max height for the code box. */
-  maxHeight?: number | string;
-  /** file name or path for the code snippet */
-  fileName?: string;
+const toDisplayString = (value: string, maxSize: number) => {
+  if (!value || typeof value !== "string") {
+    return "";
+  }
 
-  /** language for syntax highlighting */
-  lang?: BundledLanguage;
-} & BoxProps;
-
-const normalizeValue = (value: unknown) => {
-  if (typeof value !== "string") {
+  if (value.length <= maxSize) {
     return value;
   }
 
-  try {
-    return JSON.parse(value);
-  } catch (_error) {
-    return value;
-  }
-};
-
-const toDisplayString = (value: unknown) => {
-  if (typeof value === "string") {
-    return value;
-  }
-
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch (_error) {
-    return String(value);
-  }
+  return `${value.slice(0, maxSize)}\n...`;
 };
 
 export const Code = ({
@@ -44,12 +21,26 @@ export const Code = ({
   maxHeight,
   fileName,
   lang,
+  maxSize = 1024 * 10,
+  disableSyntaxHighlighting,
   ...boxProps
-}: CodeProps) => {
-  const normalized = useMemo(() => normalizeValue(value), [value]);
-  const code = useMemo(() => toDisplayString(normalized), [normalized]);
+}: {
+  /** Data to render. Strings are parsed if they look like JSON, otherwise rendered as-is. */
+  value: string;
+  /** Optional max height for the code box. */
+  maxHeight?: number | string;
+  /** file name or path for the code snippet */
+  fileName?: string;
+  /** language for syntax highlighting */
+  lang?: BundledLanguage;
+  maxSize?: number;
+  disableSyntaxHighlighting?: boolean;
+} & BoxProps) => {
+  const code = useMemo(() => toDisplayString(value, maxSize), [value, maxSize]);
   const [html, setHtml] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  const overflowed = value.length > maxSize;
 
   useEffect(() => {
     let cancelled = false;
@@ -73,12 +64,17 @@ export const Code = ({
       }
     };
 
+    if (disableSyntaxHighlighting) {
+      setHtml(null);
+      return;
+    }
+
     void highlight();
 
     return () => {
       cancelled = true;
     };
-  }, [code, lang]);
+  }, [code, lang, disableSyntaxHighlighting]);
 
   const { sx: boxPropsSx, ...boxPropsRest } = boxProps;
 
@@ -161,6 +157,14 @@ export const Code = ({
             {code}
           </Box>
         )}
+        {overflowed ? (
+          <ShowMore
+            displayLimit={maxSize}
+            incrementsOf={10}
+            setDisplayLimit={() => {}}
+            totalItems={100}
+          />
+        ) : null}
       </Box>
     </Box>
   );

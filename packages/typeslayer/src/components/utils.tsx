@@ -119,3 +119,8 @@ export const extractPath = (resolvedType: ResolvedType) => {
   }
   return undefined;
 };
+
+export const stripAnsi = (text: string): string => {
+  const esc = String.fromCharCode(27);
+  return text.replace(new RegExp(`${esc}\\[[\\d;]*m`, "g"), "");
+};

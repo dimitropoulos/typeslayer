@@ -1,6 +1,6 @@
 {
   "name": "@typeslayer/validate",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "Validation schemas and utilities for TypeScript compiler trace analysis",
   "license": "MIT",
   "private": false,

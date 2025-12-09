@@ -138,16 +138,14 @@ export function BigAction({
 
           <Stack
             sx={{
-              direction: "column",
+              flexDirection: "row",
               gap: 1,
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <LockReset />
 
-              <Typography>
-                {unlocks.length} Unlock{unlocks.length === 1 ? "" : "s"}
-              </Typography>
+              <Typography>Enables</Typography>
             </Box>
 
             <Stack sx={{ display: "flex", flexDirection: "row", gap: 1 }}>

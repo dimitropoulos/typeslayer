@@ -15,7 +15,7 @@ import { RawData } from "./pages/raw-data";
 import { SearchTypes } from "./pages/search-types";
 import { SettingsPage } from "./pages/settings";
 import { SpeedScope } from "./pages/speedscope";
-import { Start } from "./pages/start";
+import { Start } from "./pages/start/start";
 import { Treemap } from "./pages/treemap";
 import { TypeNetwork } from "./pages/type-network";
 

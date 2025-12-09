@@ -16,6 +16,7 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
+  Stack,
   TextField,
   Typography,
 } from "@mui/material";
@@ -109,7 +110,7 @@ export const BugReport = ({
           startIcon={<BugReportIcon />}
           variant="contained"
         >
-          Submit Bug Report
+          Create Bug Report
         </Button>
       ) : (
         <IconButton title="report a bug" onClick={() => setOpen(true)}>
@@ -126,56 +127,76 @@ export const BugReport = ({
         <DialogTitle>Create Bug Report</DialogTitle>
 
         <DialogContent>
-          <TextField
-            fullWidth
-            multiline
-            rows={2}
-            label="Describe the bug (required)"
-            autoFocus
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-            placeholder="Please describe what you were doing when the bug occurred, what you expected to happen, and what actually happened..."
-            disabled={isSubmitting}
-          />
+          <Stack gap={2}>
+            <TextField
+              fullWidth
+              multiline
+              rows={2}
+              label="Describe the bug (required)"
+              autoFocus
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Please describe what you were doing when the bug occurred, what you expected to happen, and what actually happened..."
+              disabled={isSubmitting}
+            />
 
-          <Typography variant="body2" sx={{ my: 2 }}>
-            the bug report will contain the following files:
-          </Typography>
+            <Typography variant="body2">
+              clicking "Create Bug Report" will create a zip file containing
+              these files:
+            </Typography>
 
-          <List dense>
-            {filesToInclude.map(file => (
-              <ListItem key={file.name} sx={{ gap: 1 }}>
-                <ListItemIcon>
-                  <Description />
-                </ListItemIcon>
-                <ListItemText
-                  primary={file.name}
-                  secondary={file.description}
-                />
-              </ListItem>
-            ))}
-          </List>
+            <List dense sx={{ backgroundColor: "transparent" }}>
+              {filesToInclude.map(file => (
+                <ListItem
+                  key={file.name}
+                  sx={{ gap: 1, "&:hover": { backgroundColor: "black" } }}
+                >
+                  <ListItemIcon>
+                    <Description />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={<InlineCode secondary>{file.name}</InlineCode>}
+                    secondary={file.description}
+                    sx={{
+                      m: 0,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  />
+                </ListItem>
+              ))}
+            </List>
 
-          <Typography variant="body2" sx={{ mt: 2, mb: 2 }}>
-            email these files to{" "}
-            <InlineCode secondary>{supportEmail}</InlineCode>
-            <IconButton
-              size="small"
-              onClick={async () => {
-                await navigator.clipboard.writeText(supportEmail);
-              }}
-              sx={{ ml: 1 }}
-              title="Copy email to clipboard"
-            >
-              <ContentCopy fontSize="small" />
-            </IconButton>
-          </Typography>
+            <Alert severity="info">
+              <Typography variant="body2" gutterBottom>
+                (to protect your privacy) the bug report zip will{" "}
+                <strong>not</strong> be uploaded anywhere automatically: you
+                will need to sent it to me manually.
+              </Typography>
 
-          {error && (
-            <Alert severity="error" sx={{ mt: 2 }}>
-              {error.toString()}
+              <Typography variant="body2">
+                you can email it to{" "}
+                <InlineCode secondary>{supportEmail}</InlineCode>
+                <IconButton
+                  size="small"
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(supportEmail);
+                  }}
+                  sx={{ ml: 1 }}
+                  title="Copy email to clipboard"
+                >
+                  <ContentCopy fontSize="small" />
+                </IconButton>
+              </Typography>
             </Alert>
-          )}
+
+            {error && (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                {error.toString()}
+              </Alert>
+            )}
+          </Stack>
         </DialogContent>
 
         <DialogActions>

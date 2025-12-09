@@ -50,7 +50,7 @@ const HelpDialog = () => {
   );
 };
 
-export const ActionBar: FC<{ collapsed: boolean }> = () => {
+export const ActionBar: FC<{ collapsed: boolean }> = ({ collapsed }) => {
   const { showToast } = useToast();
 
   const handleScreenshot = async () => {
@@ -77,9 +77,8 @@ export const ActionBar: FC<{ collapsed: boolean }> = () => {
       sx={{
         width: "100%",
         justifyContent: "center",
-        flexDirection: "row",
+        flexDirection: collapsed ? "column" : "row",
         gap: 0.5,
-        mb: 0.5,
         "& .MuiIconButton-root": {
           color: t => t.palette.text.secondary,
           "&:hover": {

@@ -8,14 +8,18 @@ import {
   DialogTitle,
   FormControlLabel,
   FormGroup,
+  MenuItem,
+  Select,
+  type SelectChangeEvent,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
-
+import { useCallback } from "react";
 import {
   useApplyTscProjectFlag,
   useExtraTscFlags,
+  useMaxOldSpaceSize,
   useProjectRoot,
   useTscExample,
 } from "../hooks/tauri-hooks";
@@ -27,6 +31,8 @@ export type FlagsCustomizationDialogProps = {
   readonly open: boolean;
   readonly onClose: () => void;
 };
+
+const maxOldSpaceSizeOptions = [512, 1024, 2048, 4096, 8192, 16384];
 
 export function FlagsCustomizationDialog({
   open,
@@ -43,28 +49,56 @@ export function FlagsCustomizationDialog({
   const { data: applyTscProjectFlag, set: setApplyTscProjectFlag } =
     useApplyTscProjectFlag();
 
-  const handleUpdateFlags = async (value: string) => {
-    try {
-      await setFlags(value);
-    } catch (error) {
-      console.error("Failed to update flags:", error);
+  const {
+    data: maxOldSpaceSize,
+    set: setMaxOldSpaceSize,
+    isLoading: maxOldSpaceSizeIsLoading,
+  } = useMaxOldSpaceSize();
+
+  const maxOldSpaceSizeEnabled = Boolean(maxOldSpaceSize);
+  const toggleMaxOldSpaceSize = (enabled: boolean) => {
+    if (enabled) {
+      setMaxOldSpaceSize(maxOldSpaceSizeOptions[3]);
+    } else {
+      setMaxOldSpaceSize(null);
     }
   };
 
-  const handleResetToDefault = async () => {
+  const handleSelectOldSpaceSize = useCallback(
+    async (event: SelectChangeEvent<number>) => {
+      await setMaxOldSpaceSize(event.target.value);
+    },
+    [setMaxOldSpaceSize],
+  );
+
+  const handleUpdateFlags = useCallback(
+    async (value: string) => {
+      try {
+        await setFlags(value);
+      } catch (error) {
+        console.error("Failed to update flags:", error);
+      }
+    },
+    [setFlags],
+  );
+
+  const handleResetToDefault = useCallback(async () => {
     if (defaultFlags) {
       await handleUpdateFlags(defaultFlags);
     }
-  };
+  }, [defaultFlags, handleUpdateFlags]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const target = e.target as HTMLInputElement;
-      handleUpdateFlags(target.value);
-      target.blur();
-    }
-  };
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const target = e.target as HTMLInputElement;
+        handleUpdateFlags(target.value);
+        target.blur();
+      }
+    },
+    [handleUpdateFlags],
+  );
 
   const example = tscExample?.replace(/ --[^\s]+/g, match => ` \\\n  ${match}`);
   const exampleCommand = [
@@ -121,11 +155,54 @@ export function FlagsCustomizationDialog({
             }
             label={
               <span>
-                apply the <InlineCode secondary>--project</InlineCode> flag with
-                my <InlineCode secondary>tsconfig</InlineCode>
+                apply the <InlineCode secondary>--project</InlineCode> flag when
+                I've selected a <InlineCode secondary>tsconfig</InlineCode>
               </span>
             }
           />
+        </FormGroup>
+
+        <FormGroup
+          sx={{
+            mt: 1,
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={maxOldSpaceSizeEnabled}
+                disabled={maxOldSpaceSizeIsLoading}
+                onChange={async e => {
+                  toggleMaxOldSpaceSize(e.target.checked);
+                }}
+              />
+            }
+            label={"give Node.js extra memory"}
+          />
+
+          {maxOldSpaceSizeEnabled ? (
+            <Select<number>
+              size="small"
+              value={maxOldSpaceSize ?? undefined}
+              onChange={handleSelectOldSpaceSize}
+            >
+              {maxOldSpaceSizeOptions.map(size => (
+                <MenuItem
+                  key={size}
+                  value={size}
+                  selected={maxOldSpaceSize === size}
+                >
+                  {size === maxOldSpaceSizeOptions[0]
+                    ? `${size} MiB (default)`
+                    : `${size} MiB`}
+                </MenuItem>
+              ))}
+            </Select>
+          ) : null}
         </FormGroup>
 
         <Typography variant="h6" sx={{ mt: 4, mb: 1 }}>

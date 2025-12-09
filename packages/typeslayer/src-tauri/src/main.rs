@@ -13,6 +13,7 @@ fn main() {
     let is_mcp_mode = args.len() > 1 && args[1] == "mcp";
     if is_mcp_mode {
         // Run as MCP server (STDIO mode) with shared AppData
+        // In MCP mode, stdout is reserved for JSON-RPC protocol, so no HTTP server or GUI
         if let Err(e) = typeslayer_lib::run_mcp_server(app_data) {
             eprintln!("MCP server error: {}", e);
             std::process::exit(1);

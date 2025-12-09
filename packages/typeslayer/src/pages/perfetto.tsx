@@ -19,7 +19,7 @@ export const Perfetto = () => {
       // Wait for iframe to be ready via PING/PONG
       const interval = setInterval(() => {
         perfettoWindow.postMessage("PING", "*");
-      }, 10);
+      }, 100);
 
       const handleMessage = (event: MessageEvent) => {
         if (event.source !== perfettoWindow) {
@@ -46,6 +46,7 @@ export const Perfetto = () => {
       window.addEventListener("message", handleMessage);
     }
   }, [data, isLoading]);
+
   return (
     <iframe
       ref={iframeRef}
