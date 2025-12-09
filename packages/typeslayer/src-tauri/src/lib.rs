@@ -49,9 +49,9 @@ pub fn run_tauri_app(app_data: Arc<Mutex<app_data::AppData>>) {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
-            app_data::analyze_trace_command,
             app_data::clear_outputs,
             app_data::create_bug_report,
+            app_data::generate_analyze_trace,
             app_data::generate_cpu_profile,
             app_data::generate_trace,
             app_data::get_analyze_trace,
@@ -68,6 +68,7 @@ pub fn run_tauri_app(app_data: Arc<Mutex<app_data::AppData>>) {
             app_data::get_preferred_editor,
             app_data::get_relative_paths,
             app_data::get_selected_tsconfig,
+            app_data::get_apply_tsc_project_flag,
             app_data::get_trace_json,
             app_data::get_trace_json_text,
             app_data::get_treemap_data,
@@ -83,7 +84,13 @@ pub fn run_tauri_app(app_data: Arc<Mutex<app_data::AppData>>) {
             app_data::set_preferred_editor,
             app_data::set_relative_paths,
             app_data::set_selected_tsconfig,
+            app_data::set_apply_tsc_project_flag,
             app_data::set_window_title_from_project,
+            app_data::upload_analyze_trace,
+            app_data::upload_cpu_profile,
+            app_data::upload_trace_json,
+            app_data::upload_type_graph,
+            app_data::upload_types_json,
             app_data::validate_trace_json,
             app_data::validate_types_json,
             app_data::verify_analyze_trace,
@@ -98,7 +105,7 @@ pub fn run_tauri_app(app_data: Arc<Mutex<app_data::AppData>>) {
             mcp::status::get_available_mcp_tools,
             mcp::status::get_mcp_running_tools,
             screenshot::take_screenshot,
-            type_graph::build_type_graph,
+            type_graph::generate_type_graph,
             type_graph::get_type_graph,
             type_graph::get_type_graph_text,
         ])

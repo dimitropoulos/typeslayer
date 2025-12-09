@@ -29,6 +29,7 @@ impl McpStatusTracker {
     }
 
     /// Mark a tool as started
+    #[allow(dead_code)]
     pub fn start_tool(&self, tool_name: impl Into<String>) {
         let tool_name = tool_name.into();
         info!("MCP tool started: {}", tool_name);
@@ -48,6 +49,7 @@ impl McpStatusTracker {
     }
 
     /// Mark a tool as finished (remove from running tools)
+    #[allow(dead_code)]
     pub fn end_tool(&self, tool_name: &str) {
         info!("MCP tool completed: {}", tool_name);
         if let Ok(mut tools) = self.tools.lock() {

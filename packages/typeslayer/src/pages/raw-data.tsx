@@ -1,7 +1,9 @@
 import {
+  Autorenew,
   Description,
   Download,
   FileCopy,
+  FileUpload,
   FolderOpen,
   VerifiedUser,
 } from "@mui/icons-material";
@@ -17,9 +19,11 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import type { UseMutationResult } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { downloadDir } from "@tauri-apps/api/path";
+import { open } from "@tauri-apps/plugin-dialog";
 import { download } from "@tauri-apps/plugin-upload";
 import { ANALYZE_TRACE_FILENAME } from "@typeslayer/analyze-trace/browser";
 import {
@@ -37,7 +41,17 @@ import {
   useStaticFile,
 } from "../components/utils";
 import { useToast } from "../contexts/toast-context";
-import { useOutputFileSizes } from "../hooks/tauri-hooks";
+import {
+  useGenerateAnalyzeTrace,
+  useGenerateCpuProfile,
+  useGenerateTrace,
+  useGenerateTypeGraph,
+  useOutputFileSizes,
+  useUploadAnalyzeTrace,
+  useUploadTrace,
+  useUploadTypeGraph,
+  useUploadTypes,
+} from "../hooks/tauri-hooks";
 import { TYPE_GRAPH_FILENAME } from "../types/type-graph";
 
 type RawKey = "analyze" | "trace" | "types" | "cpu" | "graph";
@@ -51,6 +65,8 @@ const RAW_ITEMS: Record<
     description: string;
     verifyInvoke: string;
     fetchInvoke: string;
+    useRegenerate: () => UseMutationResult<unknown, Error, void, unknown>;
+    useUpload: () => UseMutationResult<unknown, Error, string, unknown>;
   }
 > = {
   analyze: {
@@ -61,7 +77,10 @@ const RAW_ITEMS: Record<
       "Summary insights extracted from trace.json, including hotspots and duplicate packages.",
     verifyInvoke: "verify_analyze_trace",
     fetchInvoke: "get_analyze_trace_text",
+    useRegenerate: useGenerateAnalyzeTrace,
+    useUpload: useUploadAnalyzeTrace,
   },
+
   trace: {
     title: TRACE_JSON_FILENAME,
     route: "trace-json",
@@ -70,7 +89,10 @@ const RAW_ITEMS: Record<
       "Raw event trace emitted by the TypeScript compiler during type checking.",
     verifyInvoke: "validate_trace_json",
     fetchInvoke: "get_trace_json_text",
+    useRegenerate: useGenerateTrace,
+    useUpload: useUploadTrace,
   },
+
   types: {
     title: TYPES_JSON_FILENAME,
     route: "types-json",
@@ -78,6 +100,8 @@ const RAW_ITEMS: Record<
     description: "Resolved types catalog containing metadata for each type id.",
     verifyInvoke: "validate_types_json",
     fetchInvoke: "get_types_json_text",
+    useRegenerate: useGenerateTrace,
+    useUpload: useUploadTypes,
   },
 
   cpu: {
@@ -88,6 +112,8 @@ const RAW_ITEMS: Record<
       "V8 CPU profile generated during the TypeScript compilation run.",
     verifyInvoke: "verify_cpu_profile",
     fetchInvoke: "get_cpu_profile_text",
+    useRegenerate: useGenerateCpuProfile,
+    useUpload: useUploadAnalyzeTrace,
   },
 
   graph: {
@@ -98,6 +124,8 @@ const RAW_ITEMS: Record<
       "Type graph representing relationships between types in the TypeScript project.",
     verifyInvoke: "verify_type_graph",
     fetchInvoke: "get_type_graph_text",
+    useRegenerate: useGenerateTypeGraph,
+    useUpload: useUploadTypeGraph,
   },
 };
 
@@ -158,12 +186,22 @@ export const RawData = () => {
 };
 
 const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
-  const item = RAW_ITEMS[itemKey];
-  const { data: text, isLoading } = useStaticFile(item.filename);
+  const {
+    filename,
+    description,
+    title,
+    verifyInvoke,
+    useRegenerate,
+    useUpload,
+  } = RAW_ITEMS[itemKey];
+  const { mutateAsync: regenerate, isPending: isRegenerating } =
+    useRegenerate();
+  const { mutateAsync: upload, isPending: isUploading } = useUpload();
+  const { data: text, isLoading } = useStaticFile(filename);
   const { data: fileSizes } = useOutputFileSizes();
   const { showToast } = useToast();
 
-  const onCopy = async () => {
+  const onCopy = useCallback(async () => {
     if (!text) {
       return;
     }
@@ -176,13 +214,13 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
     } catch {
       showToast({ message: "Copy failed", severity: "error" });
     }
-  };
+  }, [text, showToast]);
 
   const onDownload = useCallback(async () => {
     try {
       const base = await downloadDir();
-      const dest = `${base}${base.endsWith("/") ? "" : "/"}${item.filename}`;
-      const url = `${serverBaseUrl}/outputs/${item.filename}`;
+      const dest = `${base}${base.endsWith("/") ? "" : "/"}${filename}`;
+      const url = `${serverBaseUrl}/outputs/${filename}`;
       await download(url, dest);
 
       const handleOpenFile = async () => {
@@ -205,18 +243,34 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
     } catch {
       showToast({ message: "Download failed", severity: "error" });
     }
-  }, [item.filename, showToast]);
+  }, [filename, showToast]);
 
-  const onVerify = async () => {
+  const onVerify = useCallback(async () => {
     try {
-      await invoke(item.verifyInvoke);
+      await invoke(verifyInvoke);
       showToast({ message: "Verified: OK", severity: "success" });
     } catch (_e) {
       showToast({ message: "Verify failed", severity: "error" });
     }
-  };
+  }, [verifyInvoke, showToast]);
 
-  const fileSize = fileSizes ? fileSizes[item.filename] : null;
+  const fileSize = fileSizes ? fileSizes[filename] : null;
+
+  const uploadFile = useCallback(async () => {
+    try {
+      const selected = await open({
+        multiple: false,
+        filters: [{ name: filename, extensions: ["json"] }],
+      });
+      if (!selected || Array.isArray(selected)) {
+        return;
+      }
+      await upload(selected);
+      showToast({ message: `Uploaded: ${selected}`, severity: "success" });
+    } catch {
+      showToast({ message: "Upload failed", severity: "error" });
+    }
+  }, [upload, showToast, filename]);
 
   return (
     <Stack
@@ -230,7 +284,7 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
       <Stack gap={1}>
         <Stack sx={{ flexDirection: "row", alignItems: "baseline", gap: 1 }}>
           <Typography variant="h4">
-            <InlineCode secondary>{item.title}</InlineCode>
+            <InlineCode secondary>{title}</InlineCode>
           </Typography>
           {fileSize ? (
             <Typography color="textSecondary">
@@ -238,26 +292,46 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
             </Typography>
           ) : null}
         </Stack>
-        <Typography>{item.description}</Typography>
+        <Typography>{description}</Typography>
       </Stack>
 
       <Stack direction="row" gap={2}>
         <Button
-          variant="contained"
+          variant="outlined"
           onClick={onVerify}
           startIcon={<VerifiedUser />}
         >
           Verify
         </Button>
+
+        <Button
+          variant="outlined"
+          onClick={() => regenerate()}
+          startIcon={<Autorenew />}
+          loading={isRegenerating}
+        >
+          Regenerate
+        </Button>
+
         <Button variant="outlined" onClick={onCopy} startIcon={<FileCopy />}>
           Copy
         </Button>
+
         <Button
           variant="outlined"
           onClick={onDownload}
           startIcon={<Download />}
         >
           Download
+        </Button>
+
+        <Button
+          variant="outlined"
+          onClick={uploadFile}
+          startIcon={<FileUpload />}
+          loading={isUploading}
+        >
+          Upload
         </Button>
       </Stack>
 

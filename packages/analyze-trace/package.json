@@ -1,6 +1,6 @@
 {
   "name": "@typeslayer/analyze-trace",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "Analyze TypeScript compiler trace events to identify performance bottlenecks",
   "license": "MIT",
   "private": false,
@@ -40,11 +40,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@typeslayer/validate": "workspace:*",
     "zod": "4.1.13"
   },
   "devDependencies": {
     "@types/node": "24.10.1",
+    "@typeslayer/validate": "workspace:*",
     "tsup": "8.5.1",
     "typescript": "5.9.3"
   }

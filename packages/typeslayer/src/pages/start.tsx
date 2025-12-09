@@ -16,16 +16,9 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import Typography from "@mui/material/Typography";
-import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import { ANALYZE_TRACE_FILENAME } from "@typeslayer/analyze-trace/browser";
-import {
-  CPU_PROFILE_FILENAME,
-  TRACE_JSON_FILENAME,
-  TYPES_JSON_FILENAME,
-} from "@typeslayer/validate";
 import {
   type PropsWithChildren,
   useCallback,
@@ -39,11 +32,14 @@ import { BugReport } from "../components/bug-report";
 import { FlagsCustomizationDialog } from "../components/flags-customization-dialog";
 import { InlineCode } from "../components/inline-code";
 import {
+  useGenerateAnalyzeTrace,
+  useGenerateCpuProfile,
+  useGenerateTrace,
+  useGenerateTypeGraph,
   useProjectRoot,
   useSelectedTsconfig,
   useTsconfigPaths,
 } from "../hooks/tauri-hooks";
-import { TYPE_GRAPH_FILENAME } from "../types/type-graph";
 
 export const Step = ({
   step,
@@ -138,7 +134,6 @@ const ErrorDialog = ({
 
 export function Start() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
 
   // Processing state
   const [processingStep, setProcessingStep] = useState<0 | 1 | 2 | 3 | 4>(0);
@@ -219,6 +214,11 @@ export function Start() {
     [selectedTsconfig.set],
   );
 
+  const { mutateAsync: onGenerateTrace } = useGenerateTrace();
+  const { mutateAsync: onGenerateCpuProfile } = useGenerateCpuProfile();
+  const { mutateAsync: onGenerateAnalyzeTrace } = useGenerateAnalyzeTrace();
+  const { mutateAsync: onGenerateTypeGraph } = useGenerateTypeGraph();
+
   async function locatePackageJson() {
     try {
       const selected = await open({
@@ -262,44 +262,19 @@ export function Start() {
 
       // 1. generate_trace
       setProcessingStep(0);
-      await invoke("generate_trace");
-      const trace = await invoke("get_trace_json");
-      queryClient.setQueryData(["trace_json"], trace);
-      queryClient.invalidateQueries({
-        queryKey: ["outputs", TRACE_JSON_FILENAME],
-      });
-      const types = await invoke("get_types_json");
-      queryClient.setQueryData(["types_json"], types);
-      queryClient.invalidateQueries({
-        queryKey: ["outputs", TYPES_JSON_FILENAME],
-      });
+      await onGenerateTrace();
 
       // 2. generate_cpu_profile
       setProcessingStep(1);
-      await invoke("generate_cpu_profile");
-      queryClient.invalidateQueries({
-        queryKey: ["outputs", CPU_PROFILE_FILENAME],
-      });
+      await onGenerateCpuProfile();
 
-      // 3. analyze_trace_command
+      // 3. generate_analyze_trace
       setProcessingStep(2);
-      await invoke("analyze_trace_command");
-      const analyzeTrace = await invoke("get_analyze_trace");
-      queryClient.setQueryData(["analyze_trace"], analyzeTrace);
-      queryClient.invalidateQueries({
-        queryKey: ["outputs", ANALYZE_TRACE_FILENAME],
-      });
+      await onGenerateAnalyzeTrace();
 
       // 4. build relations graph
       setProcessingStep(3);
-      await invoke("build_type_graph");
-      const graph = await invoke("get_type_graph");
-      queryClient.setQueryData(["type_graph"], graph);
-      queryClient.invalidateQueries({
-        queryKey: ["outputs", TYPE_GRAPH_FILENAME],
-      });
-
-      queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
+      await onGenerateTypeGraph();
 
       // done: trigger fade-to-black, animate logo morph over 1000ms, then navigate
       setProcessingStep(4);
@@ -332,7 +307,15 @@ export function Start() {
     } finally {
       setIsProcessing(false);
     }
-  }, [localProjectRoot, navigate, projectRoot.set, queryClient]);
+  }, [
+    localProjectRoot,
+    navigate,
+    projectRoot.set,
+    onGenerateTrace,
+    onGenerateCpuProfile,
+    onGenerateAnalyzeTrace,
+    onGenerateTypeGraph,
+  ]);
 
   const handleClearOrCancel = useCallback(async () => {
     setIsClearingOutputs(true);

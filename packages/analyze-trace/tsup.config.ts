@@ -10,7 +10,8 @@ export default defineConfig([
     splitting: false,
     sourcemap: true,
     clean: true,
-    external: ["@typeslayer/validate", "zod"],
+    external: ["zod"],
+    noExternal: ["@typeslayer/validate"],
   },
   // Browser-safe build (types only)
   {
@@ -21,6 +22,7 @@ export default defineConfig([
     splitting: false,
     sourcemap: true,
     clean: false,
-    external: ["@typeslayer/validate", "zod"],
+    external: ["zod"],
+    noExternal: ["@typeslayer/validate"],
   },
 ]);

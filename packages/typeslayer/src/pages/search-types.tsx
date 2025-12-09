@@ -1,7 +1,9 @@
 import { Box, Divider, Stack, TextField, Typography } from "@mui/material";
 import { useNavigate, useParams } from "@tanstack/react-router";
+import { TYPES_JSON_FILENAME } from "@typeslayer/validate";
 import { useEffect, useState } from "react";
 import { Callout } from "../components/callout";
+import { CenterLoader } from "../components/center-loader";
 import { Code } from "../components/code";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
 import { InlineCode } from "../components/inline-code";
@@ -24,7 +26,7 @@ export const SearchTypes = () => {
 
   const numberSearch = Number.parseInt(search, 10);
 
-  const { typeRegistry } = useTypeRegistry();
+  const { typeRegistry, isLoading } = useTypeRegistry();
 
   const typeString = JSON.stringify(typeRegistry[numberSearch], null, 2);
 
@@ -63,15 +65,24 @@ export const SearchTypes = () => {
           }}
         />
 
-        <DisplayRecursiveType id={numberSearch} />
+        {isLoading ? (
+          <CenterLoader />
+        ) : (
+          <DisplayRecursiveType id={numberSearch} />
+        )}
 
         {typeString ? (
           <>
             <Divider />
-            <Typography variant="h6">Raw Type Definition</Typography>
+            <Typography variant="h6">
+              Raw Type Definition{" "}
+              <Typography fontSize={10}>
+                (from <InlineCode secondary>{TYPES_JSON_FILENAME}</InlineCode>)
+              </Typography>
+            </Typography>
             <Code value={typeString} />
           </>
-        ) : (
+        ) : isLoading ? null : (
           <Callout title="What's a type id?">
             <Typography>
               During typechecking, the TypeScript compiler assigns a unique{" "}

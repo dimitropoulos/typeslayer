@@ -1,9 +1,22 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import type { AnalyzeTraceResult } from "@typeslayer/analyze-trace/browser";
-import { extractPackageName, type ResolvedType } from "@typeslayer/validate";
+import {
+  ANALYZE_TRACE_FILENAME,
+  type AnalyzeTraceResult,
+} from "@typeslayer/analyze-trace/browser";
+import {
+  extractPackageName,
+  type ResolvedType,
+  TRACE_JSON_FILENAME,
+  TYPES_JSON_FILENAME,
+} from "@typeslayer/validate";
 import { friendlyPath } from "../components/utils";
-import type { TypeGraph } from "../types/type-graph";
+import { TYPE_GRAPH_FILENAME, type TypeGraph } from "../types/type-graph";
 
 export function useRelativePaths() {
   const queryClient = useQueryClient();
@@ -70,6 +83,34 @@ export function useAutoStart() {
     mutationFn: async (value: boolean) => invoke("set_auto_start", { value }),
     onSuccess: (_, value) => {
       queryClient.setQueryData(["auto_start"], value);
+    },
+  });
+
+  return {
+    data: query.data,
+    isLoading: query.isLoading,
+    error: query.error,
+    set: mutation.mutateAsync,
+    isSettingValue: mutation.isPending,
+  };
+}
+
+export function useApplyTscProjectFlag() {
+  const queryClient = useQueryClient();
+
+  const query = useQuery<boolean>({
+    queryKey: ["apply_tsc_project_flag"],
+    queryFn: async () => invoke<boolean>("get_apply_tsc_project_flag"),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (value: boolean) =>
+      invoke("set_apply_tsc_project_flag", { value }),
+    onSuccess: (_, value) => {
+      console.log({ value });
+      queryClient.setQueryData(["apply_tsc_project_flag"], value);
+      queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
     },
   });
 
@@ -209,6 +250,142 @@ export function useTsconfigPaths() {
     queryKey: ["tsconfig_paths"],
     queryFn: async () => invoke<string[]>("get_tsconfig_paths"),
     staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+const refreshGenerateTrace = (queryClient: QueryClient) => async () => {
+  const trace = await invoke("get_trace_json");
+  queryClient.setQueryData(["trace_json"], trace);
+  queryClient.setQueryData(["outputs", TRACE_JSON_FILENAME], trace);
+
+  const types = await invoke("get_types_json");
+  queryClient.setQueryData(["types_json"], types);
+  queryClient.setQueryData(["outputs", TYPES_JSON_FILENAME], types);
+
+  queryClient.invalidateQueries({ queryKey: ["type_graph"] });
+  queryClient.invalidateQueries({
+    queryKey: ["outputs", TYPE_GRAPH_FILENAME],
+  });
+
+  queryClient.invalidateQueries({ queryKey: ["analyze_trace"] });
+  queryClient.invalidateQueries({
+    queryKey: ["outputs", ANALYZE_TRACE_FILENAME],
+  });
+
+  queryClient.invalidateQueries({ queryKey: ["type_graph"] });
+  queryClient.invalidateQueries({ queryKey: ["outputs", TYPE_GRAPH_FILENAME] });
+
+  queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
+};
+
+export function useGenerateTrace() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => invoke("generate_trace"),
+    onSuccess: refreshGenerateTrace(queryClient),
+  });
+}
+
+export function useUploadTrace() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (filePath: string) =>
+      invoke("upload_trace_json", { filePath }),
+    onSuccess: refreshGenerateTrace(queryClient),
+  });
+}
+
+export function useUploadTypes() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (filePath: string) =>
+      invoke("upload_types_json", { filePath }),
+    onSuccess: refreshGenerateTrace(queryClient),
+  });
+}
+
+export const refreshCpuProfile = (queryClient: QueryClient) => async () => {
+  // right now, we don't actually use this in the UI, it's served from the server directly to speedscope
+  // const cpuProfile = await invoke("get_cpu_profile");
+  // queryClient.setQueryData(["cpu_profile"], cpuProfile);
+  // queryClient.setQueryData(["outputs", CPU_PROFILE_FILENAME], cpuProfile);
+
+  queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
+};
+
+export function useGenerateCpuProfile() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => invoke("generate_cpu_profile"),
+    onSuccess: refreshCpuProfile(queryClient),
+  });
+}
+
+export function useUploadCpuProfile() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (filePath: string) =>
+      invoke("upload_cpu_profile", { filePath }),
+    onSuccess: refreshCpuProfile(queryClient),
+  });
+}
+
+const refreshAnalyzeTrace = (queryClient: QueryClient) => async () => {
+  const analyzeTrace = await invoke("get_analyze_trace");
+  queryClient.setQueryData(["analyze_trace"], analyzeTrace);
+  queryClient.setQueryData(["outputs", ANALYZE_TRACE_FILENAME], analyzeTrace);
+
+  queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
+};
+
+export function useGenerateAnalyzeTrace() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => invoke("generate_analyze_trace"),
+    onSuccess: refreshAnalyzeTrace(queryClient),
+  });
+}
+
+export function useUploadAnalyzeTrace() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (filePath: string) =>
+      invoke("upload_analyze_trace", { filePath }),
+    onSuccess: refreshAnalyzeTrace(queryClient),
+  });
+}
+
+const refreshTypeGraph = (queryClient: QueryClient) => async () => {
+  const typeGraph = await invoke("get_type_graph");
+  queryClient.setQueryData(["type_graph"], typeGraph);
+  queryClient.setQueryData(["outputs", TYPE_GRAPH_FILENAME], typeGraph);
+
+  queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
+};
+
+export function useGenerateTypeGraph() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => invoke("generate_type_graph"),
+    onSuccess: refreshTypeGraph(queryClient),
+  });
+}
+
+export function useUploadTypeGraph() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (filePath: string) =>
+      invoke("upload_type_graph", { filePath }),
+    onSuccess: refreshTypeGraph(queryClient),
   });
 }
 

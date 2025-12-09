@@ -330,11 +330,6 @@ impl AppData {
         // Build tsc command
         let mut command_parts = vec!["tsc".to_string()];
 
-        if let Some(ref tsconfig) = self.selected_tsconfig {
-            command_parts.push("--project".to_string());
-            command_parts.push(quote_if_needed(&tsconfig.to_string_lossy()));
-        }
-
         // Add configurable extra flags
         let extra_flag_parts: Vec<&str> = self
             .settings
@@ -346,9 +341,17 @@ impl AppData {
             command_parts.push(part.to_string());
         }
 
+        // add user flags first in case they're using --build (which requires being first)
         let flag_parts: Vec<&str> = flag.trim().split_whitespace().collect();
         for part in flag_parts {
             command_parts.push(part.to_string());
+        }
+
+        if self.settings.apply_tsc_project_flag {
+            if let Some(ref tsconfig) = self.selected_tsconfig {
+                command_parts.push("--project".to_string());
+                command_parts.push(quote_if_needed(&tsconfig.to_string_lossy()));
+            }
         }
 
         let full_command = command_parts.join(" ");
@@ -719,6 +722,7 @@ pub struct Settings {
     pub auto_start: bool,
     pub preferred_editor: Option<String>,
     pub extra_tsc_flags: String,
+    pub apply_tsc_project_flag: bool,
 }
 
 impl Default for Settings {
@@ -729,6 +733,7 @@ impl Default for Settings {
             auto_start: true,
             preferred_editor: Some("code".to_string()),
             extra_tsc_flags: "--noEmit --incremental false --noErrorTruncation".to_string(),
+            apply_tsc_project_flag: true,
         }
     }
 }
@@ -779,12 +784,19 @@ impl AppData {
             default: Settings::default_extra_tsc_flags,
             validate: |s| Ok(s.to_string()),
         });
+        let apply_tsc_project_flag = cake.resolve_bool(ResolveBoolArgs {
+            env: "APPLY_TSC_PROJECT_FLAG",
+            flag: "--apply-tsc-project-flag",
+            file: "settings.applyTscProjectFlag",
+            default: || true,
+        });
         Settings {
             relative_paths,
             prefer_editor_open,
             auto_start,
             preferred_editor,
             extra_tsc_flags,
+            apply_tsc_project_flag,
         }
     }
 }
@@ -1002,7 +1014,7 @@ pub async fn generate_cpu_profile(state: State<'_, Arc<Mutex<AppData>>>) -> Resu
 }
 
 #[tauri::command]
-pub async fn analyze_trace_command(
+pub async fn generate_analyze_trace(
     state: State<'_, Arc<Mutex<AppData>>>,
     options: Option<crate::analyze_trace::AnalyzeTraceOptions>,
 ) -> Result<crate::analyze_trace::AnalyzeTraceResult, String> {
@@ -1043,7 +1055,7 @@ pub async fn analyze_trace_command(
             }
             r
         }
-        Err(e) => Err(format!("analyze_trace_command join error: {}", e)),
+        Err(e) => Err(format!("generate_analyze_trace join error: {}", e)),
     }
 }
 
@@ -1383,6 +1395,25 @@ pub async fn set_extra_tsc_flags(
 }
 
 #[tauri::command]
+pub async fn get_apply_tsc_project_flag(
+    state: State<'_, Arc<Mutex<AppData>>>,
+) -> Result<bool, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    Ok(data.settings.apply_tsc_project_flag)
+}
+
+#[tauri::command]
+pub async fn set_apply_tsc_project_flag(
+    state: State<'_, Arc<Mutex<AppData>>>,
+    value: bool,
+) -> Result<(), String> {
+    let mut data = state.lock().map_err(|e| e.to_string())?;
+    data.settings.apply_tsc_project_flag = value;
+    AppData::update_outputs(&data);
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn get_treemap_data(
     state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<Vec<crate::treemap::TreemapNode>, String> {
@@ -1589,4 +1620,316 @@ pub async fn create_bug_report(
 pub async fn get_data_dir(state: State<'_, Arc<Mutex<AppData>>>) -> Result<String, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     Ok(data.data_dir.to_string_lossy().to_string())
+}
+
+// Helper function for common upload validation and file operations
+async fn upload_file_with_validation<T, F, U>(
+    file_path: &str,
+    dest_filename: &str,
+    parser: F,
+    state_updater: U,
+    state: &State<'_, Arc<Mutex<AppData>>>,
+) -> Result<T, String>
+where
+    T: Clone,
+    F: Fn(&str, &str) -> Result<T, String>,
+    U: Fn(&mut AppData, T) -> (),
+{
+    use std::path::Path;
+
+    let path = Path::new(file_path);
+    if !path.exists() {
+        return Err(format!("File does not exist: {}", file_path));
+    }
+
+    // Read and validate the file
+    let contents = tokio::fs::read_to_string(&path)
+        .await
+        .map_err(|e| format!("Failed to read file: {}", e))?;
+
+    let parsed_data = parser(file_path, &contents)?;
+
+    // Copy file to outputs directory
+    let outputs_dir = {
+        let data = state.lock().map_err(|e| e.to_string())?;
+        data.outputs_dir()
+    };
+
+    tokio::fs::create_dir_all(&outputs_dir)
+        .await
+        .map_err(|e| format!("Failed to create outputs directory: {}", e))?;
+
+    let dest = outputs_dir.join(dest_filename);
+    tokio::fs::copy(&path, &dest)
+        .await
+        .map_err(|e| format!("Failed to copy file: {}", e))?;
+
+    // Update state
+    {
+        let mut data = state.lock().map_err(|e| e.to_string())?;
+        state_updater(&mut data, parsed_data.clone());
+        AppData::update_outputs(&data);
+    }
+
+    Ok(parsed_data)
+}
+
+// Helper to regenerate analyze trace and type graph after upload
+fn regenerate_analysis_after_upload(state: &State<'_, Arc<Mutex<AppData>>>) -> Result<(), String> {
+    let outputs_dir = state
+        .lock()
+        .map_err(|e| e.to_string())?
+        .outputs_dir()
+        .to_string_lossy()
+        .to_string();
+
+    // Regenerate analyze trace
+    let analyze_result = crate::analyze_trace::analyze_trace(&outputs_dir, None);
+    if let Ok(result) = analyze_result {
+        let mut data = state.lock().map_err(|e| e.to_string())?;
+        data.analyze_trace = Some(result);
+    }
+
+    // Generate type graph if both trace and types are available
+    let should_generate_graph = {
+        let data = state.lock().map_err(|e| e.to_string())?;
+        !data.trace_json.is_empty() && !data.types_json.is_empty()
+    };
+
+    if should_generate_graph {
+        let types = {
+            let data = state.lock().map_err(|e| e.to_string())?;
+            data.types_json.clone()
+        };
+
+        let graph = crate::type_graph::TypeGraph::from_types(&types);
+
+        // Store in AppData and persist to disk
+        {
+            let mut data = state.lock().map_err(|e| e.to_string())?;
+            data.type_graph = Some(graph);
+
+            // Persist to outputs/type-graph.json
+            let outputs_dir = data.outputs_dir();
+            let path = outputs_dir.join(crate::type_graph::TYPE_GRAPH_FILENAME);
+            let json = serde_json::to_string_pretty(&data.type_graph)
+                .map_err(|e| format!("Failed to serialize type_graph: {}", e))?;
+
+            std::fs::create_dir_all(&outputs_dir)
+                .map_err(|e| format!("Failed to create outputs directory: {}", e))?;
+            std::fs::write(&path, json)
+                .map_err(|e| format!("Failed to write type-graph.json: {}", e))?;
+        }
+    }
+
+    // Update outputs after regeneration
+    let data = state.lock().map_err(|e| e.to_string())?;
+    AppData::update_outputs(&data);
+    Ok(())
+}
+
+// Helper to find paired trace/types files
+fn find_paired_file(path: &std::path::Path, from: &str, to: &str) -> std::path::PathBuf {
+    let default_name = format!("{}.json", from);
+    let filename = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or(&default_name);
+    let paired_filename = filename.replace(from, to);
+    path.parent()
+        .unwrap_or(std::path::Path::new("."))
+        .join(paired_filename)
+}
+
+#[tauri::command]
+pub async fn upload_trace_json(
+    state: State<'_, Arc<Mutex<AppData>>>,
+    file_path: String,
+) -> Result<String, String> {
+    use std::path::Path;
+
+    let _trace_events = upload_file_with_validation(
+        &file_path,
+        TRACE_JSON_FILENAME,
+        |path, contents| {
+            parse_trace_json(path, contents)
+                .map_err(|e| format!("Invalid trace.json format: {}", e))
+        },
+        |data, parsed| {
+            data.trace_json = parsed;
+            data.analyze_trace = None;
+            data.type_graph = None;
+        },
+        &state,
+    )
+    .await?;
+
+    // Handle paired types file
+    let path = Path::new(&file_path);
+    let types_path = find_paired_file(path, "trace", "types");
+    let found_pair = if types_path.exists() {
+        match upload_file_with_validation(
+            &types_path.to_string_lossy(),
+            TYPES_JSON_FILENAME,
+            |path, contents| {
+                parse_types_json(path, contents)
+                    .map_err(|e| format!("Invalid types.json format: {}", e))
+            },
+            |data, parsed| {
+                data.types_json = parsed;
+            },
+            &state,
+        )
+        .await
+        {
+            Ok(_) => true,
+            Err(_) => false, // Ignore errors for optional paired file
+        }
+    } else {
+        false
+    };
+
+    // Regenerate analyze trace and type graph after upload
+    if let Err(e) = regenerate_analysis_after_upload(&state) {
+        tracing::warn!("Failed to regenerate analysis after trace upload: {}", e);
+    }
+
+    Ok(format!(
+        "Successfully uploaded trace.json{}",
+        if found_pair {
+            " and corresponding types.json"
+        } else {
+            ""
+        }
+    ))
+}
+
+#[tauri::command]
+pub async fn upload_types_json(
+    state: State<'_, Arc<Mutex<AppData>>>,
+    file_path: String,
+) -> Result<String, String> {
+    use std::path::Path;
+
+    let _types_json = upload_file_with_validation(
+        &file_path,
+        TYPES_JSON_FILENAME,
+        |path, contents| {
+            parse_types_json(path, contents)
+                .map_err(|e| format!("Invalid types.json format: {}", e))
+        },
+        |data, parsed| {
+            data.types_json = parsed;
+            data.analyze_trace = None;
+            data.type_graph = None;
+        },
+        &state,
+    )
+    .await?;
+
+    // Handle paired trace file
+    let path = Path::new(&file_path);
+    let trace_path = find_paired_file(path, "types", "trace");
+    let found_pair = if trace_path.exists() {
+        match upload_file_with_validation(
+            &trace_path.to_string_lossy(),
+            TRACE_JSON_FILENAME,
+            |path, contents| {
+                parse_trace_json(path, contents)
+                    .map_err(|e| format!("Invalid trace.json format: {}", e))
+            },
+            |data, parsed| {
+                data.trace_json = parsed;
+            },
+            &state,
+        )
+        .await
+        {
+            Ok(_) => true,
+            Err(_) => false, // Ignore errors for optional paired file
+        }
+    } else {
+        false
+    };
+
+    // Regenerate analyze trace and type graph after upload
+    if let Err(e) = regenerate_analysis_after_upload(&state) {
+        tracing::warn!("Failed to regenerate analysis after types upload: {}", e);
+    }
+
+    Ok(format!(
+        "Successfully uploaded types.json{}",
+        if found_pair {
+            " and corresponding trace.json"
+        } else {
+            ""
+        }
+    ))
+}
+
+#[tauri::command]
+pub async fn upload_cpu_profile(
+    state: State<'_, Arc<Mutex<AppData>>>,
+    file_path: String,
+) -> Result<String, String> {
+    upload_file_with_validation(
+        &file_path,
+        CPU_PROFILE_FILENAME,
+        |_path, contents| {
+            serde_json::from_str::<serde_json::Value>(contents)
+                .map_err(|e| format!("Invalid CPU profile format (not valid JSON): {}", e))?;
+            Ok(contents.to_string())
+        },
+        |data, contents| {
+            data.cpu_profile = Some(contents);
+        },
+        &state,
+    )
+    .await?;
+
+    Ok("Successfully uploaded CPU profile".to_string())
+}
+
+#[tauri::command]
+pub async fn upload_analyze_trace(
+    state: State<'_, Arc<Mutex<AppData>>>,
+    file_path: String,
+) -> Result<String, String> {
+    upload_file_with_validation(
+        &file_path,
+        ANALYZE_TRACE_FILENAME,
+        |_path, contents| {
+            serde_json::from_str::<crate::analyze_trace::AnalyzeTraceResult>(contents)
+                .map_err(|e| format!("Invalid analyze trace format: {}", e))
+        },
+        |data, result| {
+            data.analyze_trace = Some(result);
+        },
+        &state,
+    )
+    .await?;
+
+    Ok("Successfully uploaded analyze trace".to_string())
+}
+
+#[tauri::command]
+pub async fn upload_type_graph(
+    state: State<'_, Arc<Mutex<AppData>>>,
+    file_path: String,
+) -> Result<String, String> {
+    upload_file_with_validation(
+        &file_path,
+        crate::type_graph::TYPE_GRAPH_FILENAME.trim_start_matches('/'),
+        |_path, contents| {
+            serde_json::from_str::<crate::type_graph::TypeGraph>(contents)
+                .map_err(|e| format!("Invalid type graph format: {}", e))
+        },
+        |data, graph| {
+            data.type_graph = Some(graph);
+        },
+        &state,
+    )
+    .await?;
+
+    Ok("Successfully uploaded type graph".to_string())
 }

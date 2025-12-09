@@ -1,20 +1,26 @@
+import { Restore } from "@mui/icons-material";
 import {
   Button,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
+  FormGroup,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+
 import {
+  useApplyTscProjectFlag,
   useExtraTscFlags,
   useProjectRoot,
   useTscExample,
 } from "../hooks/tauri-hooks";
 import { Code } from "./code";
+import { InlineCode } from "./inline-code";
 import { stripPackageJson } from "./utils";
 
 export type FlagsCustomizationDialogProps = {
@@ -32,39 +38,31 @@ export function FlagsCustomizationDialog({
     isLoading,
     defaultFlags,
   } = useExtraTscFlags();
-  const [localFlags, setLocalFlags] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
   const { data: projectRoot } = useProjectRoot();
   const { data: tscExample } = useTscExample();
+  const { data: applyTscProjectFlag, set: setApplyTscProjectFlag } =
+    useApplyTscProjectFlag();
 
-  useEffect(() => {
-    if (open && typeof currentFlags === "string") {
-      setLocalFlags(currentFlags);
-    }
-  }, [open, currentFlags]);
-
-  const handleSave = async () => {
-    setIsSaving(true);
+  const handleUpdateFlags = async (value: string) => {
     try {
-      await setFlags(localFlags);
-      onClose();
+      await setFlags(value);
     } catch (error) {
-      console.error("Failed to save flags:", error);
-    } finally {
-      setIsSaving(false);
+      console.error("Failed to update flags:", error);
     }
   };
 
-  const handleClose = () => {
-    if (typeof currentFlags === "string") {
-      setLocalFlags(currentFlags);
-    }
-    onClose();
-  };
-
-  const handleResetToDefault = () => {
+  const handleResetToDefault = async () => {
     if (defaultFlags) {
-      setLocalFlags(defaultFlags);
+      await handleUpdateFlags(defaultFlags);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const target = e.target as HTMLInputElement;
+      handleUpdateFlags(target.value);
+      target.blur();
     }
   };
 
@@ -75,22 +73,60 @@ export function FlagsCustomizationDialog({
   ].join("\n");
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
       <DialogTitle>Customize TypeScript Compiler Flags</DialogTitle>
       <DialogContent>
         <Typography variant="body2" sx={{ mb: 2 }}>
           these flags are passed to the TypeScript compiler when generating
           traces or CPU profiles
         </Typography>
-        <TextField
-          fullWidth
-          label="Extra TSC Flags"
-          value={localFlags}
-          sx={{ ".MuiInputBase-input": { fontFamily: "monospace" } }}
-          onChange={e => setLocalFlags(e.target.value)}
-          autoFocus
-          disabled={isLoading}
-        />
+
+        <Stack direction="row" gap={2}>
+          <TextField
+            fullWidth
+            label="Extra TSC Flags"
+            key={currentFlags} // Force re-render when currentFlags changes
+            defaultValue={currentFlags ?? ""}
+            sx={{ ".MuiInputBase-input": { fontFamily: "monospace" } }}
+            onBlur={e => handleUpdateFlags(e.target.value)}
+            onKeyDown={handleKeyDown}
+            autoFocus
+            disabled={isLoading}
+          />
+          <Button
+            onClick={handleResetToDefault}
+            disabled={isLoading}
+            variant="outlined"
+            startIcon={<Restore />}
+            sx={{
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+              alignSelf: "end",
+            }}
+          >
+            Reset
+          </Button>
+        </Stack>
+
+        <FormGroup sx={{ mt: 1 }}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={applyTscProjectFlag}
+                disabled={isLoading}
+                onChange={async e => {
+                  await setApplyTscProjectFlag(e.target.checked);
+                }}
+              />
+            }
+            label={
+              <span>
+                apply the <InlineCode secondary>--project</InlineCode> flag with
+                my <InlineCode secondary>tsconfig</InlineCode>
+              </span>
+            }
+          />
+        </FormGroup>
 
         <Typography variant="h6" sx={{ mt: 4, mb: 1 }}>
           Example
@@ -108,15 +144,7 @@ export function FlagsCustomizationDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleResetToDefault} disabled={isSaving || isLoading}>
-          Reset to Default
-        </Button>
-        <Button onClick={handleClose} disabled={isSaving}>
-          Cancel
-        </Button>
-        <Button onClick={handleSave} variant="contained" disabled={isSaving}>
-          {isSaving ? "Saving..." : "Save"}
-        </Button>
+        <Button onClick={onClose}>Close</Button>
       </DialogActions>
     </Dialog>
   );

@@ -486,7 +486,7 @@ pub struct ForceGraphData {
 
 /// Build the in-memory graph from the loaded `types_json` and store in AppData via `State`.
 #[tauri::command]
-pub fn build_type_graph(
+pub fn generate_type_graph(
     _app: AppHandle,
     state: State<'_, std::sync::Arc<std::sync::Mutex<AppData>>>,
 ) -> Result<(), String> {
@@ -551,7 +551,7 @@ pub fn get_type_graph(
         app_data.type_graph.is_none()
     };
     if needs_build {
-        build_type_graph(app.clone(), state.clone())?;
+        generate_type_graph(app.clone(), state.clone())?;
     }
 
     let app_data = state

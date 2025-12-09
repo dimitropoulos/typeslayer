@@ -806,7 +806,7 @@ export const TypeNetwork = () => {
             startIcon={<FilterList />}
             onClick={e => setFilterAnchor(e.currentTarget)}
           >
-            Filter Links
+            Filter Relations
           </Button>
           <IconButton
             onClick={() => {
@@ -862,7 +862,7 @@ export const TypeNetwork = () => {
                 }}
               >
                 <StatPill label="types" value={statsToRender.nodes} />
-                <StatPill label="links" value={statsToRender.links} />
+                <StatPill label="relations" value={statsToRender.links} />
               </Stack>
             );
           })()}
