@@ -1,6 +1,6 @@
 {
   "name": "@typeslayer/validate",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "description": "Validation schemas and utilities for TypeScript compiler trace analysis",
   "license": "MIT",
   "private": false,
@@ -21,20 +21,21 @@
   "packageManager": "pnpm@10.6.5",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
     },
     "./node": {
-      "types": "./dist/node.d.ts",
-      "import": "./dist/node.js"
+      "types": "./dist/node.d.mts",
+      "import": "./dist/node.mjs"
     }
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
+    "build": "tsdown",
+    "dev": "tsdown --watch",
     "typecheck": "tsc --noEmit",
+    "attw": "attw --pack --profile esm-only .",
     "test": "vitest"
   },
   "dependencies": {
@@ -43,9 +44,10 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.2",
     "@types/node": "^24.10.1",
     "@types/stream-json": "^1.7.8",
-    "tsup": "^8.5.1",
+    "tsdown": "^0.17.2",
     "typescript": "^5.9.3",
     "vitest": "^4.0.15"
   }

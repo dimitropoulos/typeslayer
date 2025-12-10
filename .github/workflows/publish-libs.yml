@@ -62,6 +62,10 @@ jobs:
         working-directory: packages/validate
         run: pnpm build
 
+      - name: Are The Types Wrong check
+        working-directory: packages/validate
+        run: pnpm attw
+
       - name: Dry run pack
         working-directory: packages/validate
         run: npm pack --dry-run
@@ -134,6 +138,10 @@ jobs:
       - name: Build package
         working-directory: packages/analyze-trace
         run: pnpm build
+
+      - name: Are The Types Wrong check
+        working-directory: packages/analyze-trace
+        run: pnpm attw
 
       - name: Dry run pack
         working-directory: packages/analyze-trace

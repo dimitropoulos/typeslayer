@@ -1,4 +1,4 @@
-import { defineConfig } from "tsup";
+import { defineConfig } from "tsdown";
 
 export default defineConfig([
   // Main Node.js build
@@ -7,11 +7,8 @@ export default defineConfig([
     format: ["esm"],
     target: "es2024",
     dts: true,
-    splitting: false,
     sourcemap: true,
     clean: true,
-    external: ["zod"],
-    noExternal: ["@typeslayer/validate"],
   },
   // Browser-safe build (types only)
   {
@@ -19,10 +16,7 @@ export default defineConfig([
     format: ["esm"],
     target: "es2024",
     dts: true,
-    splitting: false,
     sourcemap: true,
     clean: false,
-    external: ["zod"],
-    noExternal: ["@typeslayer/validate"],
   },
 ]);

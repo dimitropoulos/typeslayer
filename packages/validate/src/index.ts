@@ -25,7 +25,7 @@ export {
   eventPhase,
   TRACE_JSON_FILENAME,
   type TraceEvent,
-  TraceJsonSchema,
+  type TraceJsonSchema,
   traceEvent,
   traceJsonSchema,
 } from "./trace-json";
@@ -35,7 +35,7 @@ export {
   type ResolvedType,
   resolvedType,
   TYPES_JSON_FILENAME,
-  TypesJsonSchema,
+  type TypesJsonSchema,
   typesJsonSchema,
 } from "./types-json";
 export type { TypeId } from "./utils";
