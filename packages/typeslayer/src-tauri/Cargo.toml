@@ -39,7 +39,7 @@ tower-http = { version = "0.5", default-features = false, features = ["cors"] }
 base64 = "0.22"
 dirs = "5"
 libc = "0.2"
-rmcp = { version = "0.10", features = ["server", "macros", "transport-io"] }
+rmcp = { version = "0.11", features = ["server", "macros", "transport-io"] }
 schemars = "1"
 once_cell = "1.19"
 zip = { version = "6.0.0", default-features = false, features = ["deflate"] }

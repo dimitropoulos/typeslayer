@@ -10,7 +10,7 @@ export const StatPill = ({
   <Box
     sx={{
       display: "flex",
-      alignItems: "baseline",
+      alignItems: "center",
       gap: 1,
       px: 1.25,
       py: 0.25,

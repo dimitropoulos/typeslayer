@@ -1,6 +1,6 @@
 {
   "name": "@typeslayer/validate",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "description": "Validation schemas and utilities for TypeScript compiler trace analysis",
   "license": "MIT",
   "private": false,
@@ -39,8 +39,6 @@
     "test": "vitest"
   },
   "dependencies": {
-    "stream-chain": "^3.4.0",
-    "stream-json": "^1.9.1",
     "zod": "^4.1.13"
   },
   "devDependencies": {

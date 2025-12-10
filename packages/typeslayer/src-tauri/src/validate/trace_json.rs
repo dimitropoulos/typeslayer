@@ -323,14 +323,14 @@ fn validate_event(event: &TraceEvent) -> Result<(), String> {
             if event.s.is_none() {
                 return Err("checkCrossProductUnion_DepthLimit requires scope 's'".to_string());
             }
-            match args_obj.get("types") {
+            match args_obj.get("typeIds") {
                 Some(Value::Array(arr)) => {
                     if arr.is_empty() {
-                        return Err("args.types must be non-empty array".to_string());
+                        return Err("args.typeIds must be non-empty array".to_string());
                     }
                     for t in arr {
                         if !t.is_number() {
-                            return Err("types entries must be numbers".to_string());
+                            return Err("typeIds entries must be numbers".to_string());
                         }
                     }
                 }
@@ -786,7 +786,11 @@ pub fn parse_trace_json(path_label: &str, contents: &str) -> Result<Vec<TraceEve
     for (i, v) in arr.into_iter().enumerate() {
         let ev: TraceEvent = serde_json::from_value(v)
             .map_err(|e| format!("trace.json event[{i}] structural error: {e}"))?;
-        validate_event(&ev).map_err(|e| format!("trace.json event[{i}] validation error: {e}"))?;
+        validate_event(&ev).map_err(|e| {
+            let event_json = serde_json::to_string_pretty(&ev)
+                .unwrap_or_else(|_| "<failed to serialize event>".to_string());
+            format!("trace.json event[{i}] validation error: {e}\nExpected type: {event_json}")
+        })?;
         events.push(ev);
     }
     Ok(events)

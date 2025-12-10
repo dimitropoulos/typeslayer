@@ -13,6 +13,7 @@ import {
   extractPackageName,
   type ResolvedType,
   TRACE_JSON_FILENAME,
+  type TraceJsonSchema,
   TYPES_JSON_FILENAME,
 } from "@typeslayer/validate";
 import { friendlyPath } from "../components/utils";
@@ -224,7 +225,7 @@ export function useProjectRoot() {
 export function useTraceJson() {
   return useQuery({
     queryKey: ["trace_json"],
-    queryFn: async () => invoke<ResolvedType[]>("get_trace_json"),
+    queryFn: async () => invoke<TraceJsonSchema>("get_trace_json"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 }

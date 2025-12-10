@@ -26,18 +26,23 @@ export type EdgeKind =
   | "alias"
   | "aliasTypeArgument"
   | "intersection";
+
 export type GraphLink = {
   source: number;
   target: number;
   kind: EdgeKind;
 };
+
 export type GraphStats = { count: Record<string, number> };
+
 export type GraphEdgeEntry = [TypeId, TypeId[], AbsolutePath | null];
+
 export const GRAPH_EDGE_ENTRY = {
   TYPEID_INDEX: 0,
   TARGET_TYPEIDS_INDEX: 1,
   PATH_INDEX: 2,
 } as const;
+
 export type GraphEdgeStats = Record<
   EdgeKind,
   {
@@ -45,6 +50,7 @@ export type GraphEdgeStats = Record<
     links: GraphEdgeEntry[];
   }
 >;
+
 export type NodeGraphStat =
   | "typeArguments"
   | "unionTypes"

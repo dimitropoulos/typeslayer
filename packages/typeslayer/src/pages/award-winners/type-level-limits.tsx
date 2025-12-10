@@ -172,8 +172,8 @@ export const TypeLevelLimitAward = ({
               width={`${(current.args.size / first.args.size) * 100}%`}
             />
           )}
-          getKey={current => `${current.args.types.join("-")}:${current.ts}`}
-          getTypeId={current => current.args.types[0]}
+          getKey={current => `${current.args.typeIds.join("-")}:${current.ts}`}
+          getTypeId={current => current.args.typeIds[0]}
         />
       );
 

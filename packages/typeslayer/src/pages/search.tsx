@@ -58,15 +58,17 @@ export const SearchTypes = () => {
             const newValue = event.target.value;
             setSearch(newValue);
             if (newValue) {
-              navigate({ to: `/search-types/${newValue}` });
+              navigate({ to: `/search/${newValue}` });
             } else {
-              navigate({ to: "/search-types" });
+              navigate({ to: "/search" });
             }
           }}
         />
 
         {isLoading ? (
-          <CenterLoader />
+          <Box maxWidth={600}>
+            <CenterLoader />
+          </Box>
         ) : (
           <DisplayRecursiveType id={numberSearch} />
         )}

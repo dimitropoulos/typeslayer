@@ -66,15 +66,11 @@ jobs:
         working-directory: packages/validate
         run: pnpm attw
 
-      - name: Dry run pack
-        working-directory: packages/validate
-        run: npm pack --dry-run
-
       - name: Publish @typeslayer/validate
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         working-directory: packages/validate
-        run: npm publish --provenance --access public --tag latest
+        run: pnpm publish --provenance --access public --tag latest --no-git-checks
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
@@ -143,15 +139,11 @@ jobs:
         working-directory: packages/analyze-trace
         run: pnpm attw
 
-      - name: Dry run pack
-        working-directory: packages/analyze-trace
-        run: npm pack --dry-run
-
       - name: Publish @typeslayer/analyze-trace
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         working-directory: packages/analyze-trace
-        run: npm publish --provenance --access public
+        run: pnpm publish --provenance --access public --tag latest --no-git-checks
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1

@@ -11,7 +11,8 @@ import { useQuery } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { StatPill } from "../components/stat-pill";
 import { friendlyPath } from "../components/utils";
 import { useToast } from "../contexts/toast-context";
 import { useProjectRoot, useRelativePaths } from "../hooks/tauri-hooks";
@@ -36,6 +37,47 @@ export const Treemap = () => {
     queryFn: async () => invoke<TreemapNode[]>("get_treemap_data"),
     staleTime: Number.POSITIVE_INFINITY,
   });
+
+  const totalTime = useMemo(() => {
+    if (!data) {
+      return 0;
+    }
+    return data.reduce((acc, node) => acc + node.value, 0);
+  }, [data]);
+
+  const formatPath = useCallback(
+    (path: string | undefined) => {
+      if (!path) {
+        return "";
+      }
+      // Don't try to format the series name or non-path strings
+      if (path === "TypeScript Compilation" || !path.includes("/")) {
+        return path;
+      }
+      return friendlyPath(path, projectRoot.data, relativePaths.data);
+    },
+    [projectRoot.data, relativePaths.data],
+  );
+
+  const handleClick = useCallback(
+    async (params: { data?: TreemapNode; event?: { stop: () => void } }) => {
+      // Stop event propagation to prevent multiple clicks
+      if (params.event) {
+        params.event.stop();
+      }
+      const path = params.data?.path;
+      if (path) {
+        await navigator.clipboard.writeText(path);
+        showToast({
+          message:
+            "Copied file path to clipboard.\n\nPaste it into Perfetto to learn more.",
+          severity: "success",
+          duration: 4000,
+        });
+      }
+    },
+    [showToast],
+  );
 
   if (isLoading || relativePaths.isLoading || projectRoot.isLoading) {
     return (
@@ -73,18 +115,6 @@ export const Treemap = () => {
       </Box>
     );
   }
-
-  const formatPath = (path: string | undefined) => {
-    if (!path) {
-      return "";
-    }
-    // Don't try to format the series name or non-path strings
-    if (path === "TypeScript Compilation" || !path.includes("/")) {
-      return path;
-    }
-    return friendlyPath(path, projectRoot.data, relativePaths.data);
-  };
-
   const gridSpacing = 20;
 
   const option: EChartsOption = {
@@ -110,7 +140,8 @@ export const Treemap = () => {
           <div style="padding: 8px;">
             <strong>${info.name}</strong><br/>
             <span style="color: #000000;">${path}</span><br/>
-            <span>${valueMs} ms</span>
+            <span>${valueMs} ms</span><br/>
+            <span>${(((info.value as number) / totalTime) * 100).toFixed(2)}% of the total time</span>
           </div>
         `;
       },
@@ -164,32 +195,13 @@ export const Treemap = () => {
       },
     ],
   };
-  const handleClick = async (params: {
-    data?: TreemapNode;
-    event?: { stop: () => void };
-  }) => {
-    // Stop event propagation to prevent multiple clicks
-    if (params.event) {
-      params.event.stop();
-    }
-    const path = params.data?.path;
-    if (path) {
-      await navigator.clipboard.writeText(path);
-      showToast({
-        message:
-          "Copied file path to clipboard.\n\nPaste it into Perfetto to learn more.",
-        severity: "success",
-        duration: 4000,
-      });
-    }
-  };
 
   const open = Boolean(popoverAnchorEl);
   const id = open ? "simple-popover" : undefined;
 
   return (
     <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
-      <Box sx={{ p: 1, ml: 2, mt: 3 }}>
+      <Box sx={{ p: 1, mt: 3, mx: 2 }}>
         <Stack direction="row" spacing={1}>
           <Typography variant="h2">Compilation Time Treemap</Typography>
           <Popover
@@ -226,6 +238,10 @@ export const Treemap = () => {
           >
             <Info />
           </IconButton>
+          <span style={{ flexGrow: 1 }}></span>
+          {totalTime > 0 ? (
+            <StatPill label="Seconds" value={Math.round(totalTime / 1000)} />
+          ) : null}
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           File compilation times visualized by directory and duration

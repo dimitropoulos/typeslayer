@@ -67,7 +67,7 @@ export const NAVIGATION = [
   },
   {
     kind: "segment",
-    segment: "search-types",
+    segment: "search",
     title: "Search Types",
     icon: <Search />,
   },

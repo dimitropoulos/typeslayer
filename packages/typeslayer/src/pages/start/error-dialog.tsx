@@ -103,10 +103,31 @@ export const ErrorDialog = ({
   hasStdout: boolean;
   hasStderr: boolean;
 }) => {
+  if (errorDialogTitle && !processingErrorStderr && !processingErrorStdout) {
+    return (
+      <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth>
+        <DialogTitle>Internal Error</DialogTitle>
+        <DialogContent dividers>
+          <ErrorStreamSection
+            title="TypeSlayer System Error"
+            content={errorDialogTitle}
+          />
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth>
-      <DialogTitle>{errorDialogTitle}</DialogTitle>
+      <DialogTitle>Error</DialogTitle>
       <DialogContent dividers>
+        <Stack>
+          <ErrorStreamSection
+            title="TypeSlayer System Error"
+            content={errorDialogTitle}
+          />
+        </Stack>
+
         <Stack gap={2}>
           {processingErrorDetails && (
             <Typography color="text.secondary">

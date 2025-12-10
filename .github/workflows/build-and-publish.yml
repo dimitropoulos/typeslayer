@@ -154,12 +154,6 @@ jobs:
           TYPESLAYER_SKIP_POSTINSTALL: true
         run: pnpm install --frozen-lockfile
 
-      - name: Verify publish contents (dry run)
-        working-directory: packages/typeslayer
-        run: |
-          npm pack --dry-run
-          ls -R ../.. | head -n 50
-
       - name: Extract tag and version
         id: taginfo
         run: |

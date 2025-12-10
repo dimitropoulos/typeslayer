@@ -447,7 +447,7 @@ export const event_checktypes__checkCrossProductUnion_DepthLimit = z
       z.literal(instantScope.process),
     ]),
     args: z.object({
-      types: z.array(typeId),
+      typeIds: z.array(typeId),
       size: z.number().int().positive(),
     }),
   })

@@ -1,6 +1,6 @@
 {
   "name": "@typeslayer/analyze-trace",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "description": "Analyze TypeScript compiler trace events to identify performance bottlenecks",
   "license": "MIT",
   "private": false,
@@ -16,7 +16,7 @@
     "cli"
   ],
   "engines": {
-    "node": ">=24"
+    "node": ">=20"
   },
   "packageManager": "pnpm@10.6.5",
   "main": "./dist/index.mjs",

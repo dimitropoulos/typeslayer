@@ -12,7 +12,7 @@ import { Mcp } from "./pages/mcp";
 import { Perfetto } from "./pages/perfetto";
 // analyze-trace page remains but is no longer directly routed
 import { RawData } from "./pages/raw-data";
-import { SearchTypes } from "./pages/search-types";
+import { SearchTypes } from "./pages/search";
 import { SettingsPage } from "./pages/settings";
 import { SpeedScope } from "./pages/speedscope";
 import { Start } from "./pages/start/start";
@@ -39,13 +39,13 @@ const startChildRoute = createRoute({
 
 const searchTypesRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/search-types",
+  path: "/search",
   component: SearchTypes,
 });
 
 const searchTypesChildRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/search-types/$typeId",
+  path: "/search/$typeId",
   component: SearchTypes,
 });
 

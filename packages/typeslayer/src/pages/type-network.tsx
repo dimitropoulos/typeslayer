@@ -820,8 +820,8 @@ export const TypeNetwork = () => {
             onClick={toggleShowFreeTypes}
             title={
               showFreeTypes
-                ? "show only linked types"
-                : "show all types (including those without links)"
+                ? "only show types with relations"
+                : "show all types (including those without relations)"
             }
           >
             <Share sx={{ transform: "rotate(180deg)" }} />
