@@ -19,11 +19,12 @@ pub fn get_hotspots(
     hot_paths_tree: &EventSpan,
     options: &AnalyzeTraceOptions,
 ) -> Result<Vec<HotSpot>, String> {
-    get_hotspots_worker(hot_paths_tree, None, options)
+    // `hot_paths_tree` is cloned ahead of time so that it can easily be sorted in-place without double-cloning.
+    get_hotspots_worker(&mut hot_paths_tree.clone(), None, options)
 }
 
 fn get_hotspots_worker(
-    span: &EventSpan,
+    span: &mut EventSpan,
     current_file: Option<String>,
     options: &AnalyzeTraceOptions,
 ) -> Result<Vec<HotSpot>, String> {
@@ -41,10 +42,10 @@ fn get_hotspots_worker(
     let mut children: Vec<HotSpot> = Vec::new();
     if !span.children.is_empty() {
         // Sort slow to fast
-        let mut sorted_children = span.children.clone();
+        let sorted_children = &mut span.children;
         sorted_children.sort_by(|a, b| b.duration.partial_cmp(&a.duration).unwrap());
 
-        for child in &sorted_children {
+        for child in sorted_children.iter_mut() {
             children.extend(get_hotspots_worker(
                 child,
                 current_file.clone(),
