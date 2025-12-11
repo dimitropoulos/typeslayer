@@ -12,7 +12,8 @@ use crate::analyze_trace::constants::ANALYZE_TRACE_FILENAME;
 use crate::validate::trace_json::{TRACE_JSON_FILENAME, TraceEvent};
 use crate::validate::types_json::{TYPES_JSON_FILENAME, TypesJsonSchema};
 use serde_json;
-use std::fs;
+use std::fs::{self, File};
+use std::io::{self, BufReader};
 use std::path::Path;
 
 pub fn validate_options(options: &AnalyzeTraceOptions) -> Result<(), String> {
@@ -37,15 +38,17 @@ pub fn analyze_trace(
 
     // Read trace.json
     let trace_file_path = trace_dir_path.join(TRACE_JSON_FILENAME);
-    if !trace_file_path.exists() {
-        return Err(format!(
-            "trace.json must exist in {}. first run --generateTrace",
-            trace_dir
-        ));
-    }
-    let trace_file_content = fs::read_to_string(&trace_file_path)
-        .map_err(|e| format!("Failed to read trace.json: {}", e))?;
-    let trace_file: Vec<TraceEvent> = serde_json::from_str(&trace_file_content)
+    let trace_file = match File::open(&trace_file_path) {
+        Ok(f) => f,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => {
+            return Err(format!(
+                "trace.json must exist in {}. first run --generateTrace",
+                trace_dir
+            ));
+        }
+        Err(e) => return Err(format!("Failed to open trace.json: {}", e)),
+    };
+    let trace_file: Vec<TraceEvent> = serde_json::from_reader(BufReader::new(trace_file))
         .map_err(|e| format!("Failed to parse trace.json: {}", e))?;
 
     // Get node module paths
