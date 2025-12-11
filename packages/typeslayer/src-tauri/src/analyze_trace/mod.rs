@@ -35,19 +35,6 @@ pub fn analyze_trace(
         return Err(format!("{} is not a directory", trace_dir));
     }
 
-    // Read types.json
-    let types_file_path = trace_dir_path.join(TYPES_JSON_FILENAME);
-    if !types_file_path.exists() {
-        return Err(format!(
-            "types.json must exist in {}. first run --generateTrace",
-            trace_dir
-        ));
-    }
-    let types_file_content = fs::read_to_string(&types_file_path)
-        .map_err(|e| format!("Failed to read types.json: {}", e))?;
-    let types_file: TypesJsonSchema = serde_json::from_str(&types_file_content)
-        .map_err(|e| format!("Failed to parse types.json: {}", e))?;
-
     // Read trace.json
     let trace_file_path = trace_dir_path.join(TRACE_JSON_FILENAME);
     if !trace_file_path.exists() {
@@ -69,7 +56,7 @@ pub fn analyze_trace(
     let hot_paths_tree = spans::create_span_tree(parse_result.clone(), &options);
 
     // Get hotspots
-    let hot_spots = hotspots::get_hotspots(&hot_paths_tree, &types_file, &options)?;
+    let hot_spots = hotspots::get_hotspots(&hot_paths_tree, &options)?;
 
     // Get duplicate packages
     let duplicate_packages =

@@ -17,18 +17,14 @@ pub fn create_type_registry(types_file: &TypesJsonSchema) -> TypeRegistry {
 
 pub fn get_hotspots(
     hot_paths_tree: &EventSpan,
-    types_file: &TypesJsonSchema,
     options: &AnalyzeTraceOptions,
 ) -> Result<Vec<HotSpot>, String> {
-    let type_registry = create_type_registry(types_file);
-
-    get_hotspots_worker(hot_paths_tree, None, &type_registry, options)
+    get_hotspots_worker(hot_paths_tree, None, options)
 }
 
 fn get_hotspots_worker(
     span: &EventSpan,
     current_file: Option<String>,
-    type_registry: &TypeRegistry,
     options: &AnalyzeTraceOptions,
 ) -> Result<Vec<HotSpot>, String> {
     let mut current_file = current_file;
@@ -52,7 +48,6 @@ fn get_hotspots_worker(
             children.extend(get_hotspots_worker(
                 child,
                 current_file.clone(),
-                type_registry,
                 options,
             )?);
         }
@@ -60,7 +55,7 @@ fn get_hotspots_worker(
 
     // Check if this is not the root node
     if let EventSpanEvent::TraceEvent(_) = &span.event {
-        if let Some(hot_frame) = make_hot_frame(span, children.clone(), type_registry)? {
+        if let Some(hot_frame) = make_hot_frame(span, children.clone())? {
             return Ok(vec![hot_frame]);
         }
     }
@@ -217,7 +212,6 @@ fn get_hot_type(id: i64, type_registry: &TypeRegistry) -> HotType {
 fn make_hot_frame(
     span: &EventSpan,
     children: Vec<HotSpot>,
-    type_registry: &TypeRegistry,
 ) -> Result<Option<HotSpot>, String> {
     let time_ms = (span.duration / 1000.0).round() as i64;
 
@@ -261,10 +255,7 @@ fn make_hot_frame(
                     description: format!("Compare types {} and {}", source_id, target_id),
                     time_ms,
                     children,
-                    types: Some(vec![
-                        get_hot_type(source_id, type_registry),
-                        get_hot_type(target_id, type_registry),
-                    ]),
+                    types: Some(vec![source_id, target_id]),
                     path: None,
                     start_line: None,
                     start_char: None,
@@ -281,7 +272,7 @@ fn make_hot_frame(
                     description: format!("Determine variance of type {}", id),
                     time_ms,
                     children,
-                    types: Some(vec![get_hot_type(id, type_registry)]),
+                    types: Some(vec![id]),
                     path: None,
                     start_line: None,
                     start_char: None,
