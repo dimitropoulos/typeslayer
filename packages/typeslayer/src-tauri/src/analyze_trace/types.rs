@@ -1,5 +1,4 @@
 use crate::validate::trace_json::TraceEvent;
-use crate::validate::types_json::ResolvedType;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -48,13 +47,6 @@ pub struct ParseResult {
     pub last_span_end: f64,
     pub spans: Vec<EventSpan>,
     pub unclosed_stack: Vec<TraceEvent>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct HotType {
-    pub resolved_type: ResolvedType,
-    pub children: Vec<HotType>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

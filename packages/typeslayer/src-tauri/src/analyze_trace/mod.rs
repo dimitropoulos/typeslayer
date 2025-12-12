@@ -10,7 +10,6 @@ pub use types::*;
 
 use crate::analyze_trace::constants::ANALYZE_TRACE_FILENAME;
 use crate::validate::trace_json::{TRACE_JSON_FILENAME, TraceEvent};
-use crate::validate::types_json::{TYPES_JSON_FILENAME, TypesJsonSchema};
 use serde_json;
 use std::fs::{self, File};
 use std::io::{self, BufReader};

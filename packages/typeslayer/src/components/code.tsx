@@ -2,6 +2,7 @@ import { ContentCopy, Description, Done } from "@mui/icons-material";
 import { Box, type BoxProps, IconButton, Tooltip } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { type BundledLanguage, codeToHtml } from "shiki";
+import { shikiTheme } from "../shikiTheme";
 import { ShowMore } from "./show-more";
 
 const toDisplayString = (value: string, maxSize: number) => {
@@ -47,8 +48,7 @@ export const Code = ({
       try {
         const rendered = await codeToHtml(code, {
           lang: lang ?? "json",
-          theme: "github-dark-high-contrast",
-          // make the background transparent
+          theme: shikiTheme,
           rootStyle: "background-color: transparent; margin: 0;",
         });
 
@@ -110,7 +110,7 @@ export const Code = ({
         sx={{
           p: 2,
           paddingRight: 5,
-          bgcolor: "background.paper",
+          backgroundColor: "#11111190",
           border: 1,
           borderColor: "divider",
           borderRadius: 1,
