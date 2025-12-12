@@ -66,7 +66,7 @@ pub struct HotSpot {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub types: Option<Vec<HotType>>,
+    pub types: Option<Vec<i64>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub start_line: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
