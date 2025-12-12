@@ -15,12 +15,14 @@ export function OpenablePath({
   character,
   title,
   pathVariant = "body1",
+  forceAbsolute,
 }: {
   absolutePath: string;
   line?: number;
   character?: number;
   title?: string;
   pathVariant?: TypographyVariant;
+  forceAbsolute?: boolean;
 }) {
   const relativePaths = useRelativePaths();
   const projectRoot = useProjectRoot();
@@ -52,7 +54,7 @@ export function OpenablePath({
       ? `:${line}:${character}`
       : "";
 
-  const exactLocation = `${friendlyPath(absolutePath, projectRoot.data, relativePaths.data)}${lineChar}`;
+  const exactLocation = `${friendlyPath(absolutePath, projectRoot.data, forceAbsolute ? false : relativePaths.data)}${lineChar}`;
 
   return (
     <Stack

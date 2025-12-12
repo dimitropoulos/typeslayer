@@ -35,6 +35,7 @@ import { useCallback, useMemo } from "react";
 import { CenterLoader } from "../components/center-loader";
 import { Code } from "../components/code";
 import { InlineCode } from "../components/inline-code";
+import { OpenablePath } from "../components/openable-path";
 import {
   formatBytesSize,
   serverBaseUrl,
@@ -42,6 +43,7 @@ import {
 } from "../components/utils";
 import { useToast } from "../contexts/toast-context";
 import {
+  useDataDir,
   useGenerateAnalyzeTrace,
   useGenerateCpuProfile,
   useGenerateTrace,
@@ -182,6 +184,7 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
   const { data: text, isLoading } = useStaticFile(filename);
   const { data: fileSizes } = useOutputFileSizes();
   const { showToast } = useToast();
+  const dataDir = useDataDir();
 
   const onCopy = useCallback(async () => {
     if (!text) {
@@ -273,6 +276,10 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
               {fileSize.toLocaleString()} bytes
             </Typography>
           ) : null}
+          <OpenablePath
+            absolutePath={`${dataDir.data ?? ""}/outputs/${filename}`}
+            forceAbsolute
+          />
         </Stack>
         <Typography>{description}</Typography>
       </Stack>

@@ -14,3 +14,30 @@ pub fn make_cli_arg(flag: &str, path: &str) -> String {
 
 pub const PACKAGE_JSON_FILENAME: &str = "package.json";
 pub const TSCONFIG_FILENAME: &str = "tsconfig.json";
+
+pub fn command_exists(cmd: &str) -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("where")
+            .arg(cmd)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false)
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        use std::process::Stdio;
+
+        std::process::Command::new("command")
+            .arg("-v")
+            .arg(cmd)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false)
+    }
+}

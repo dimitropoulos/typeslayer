@@ -23,7 +23,19 @@ export const Step0Prerequisites = () => {
       >
         prerequisites
       </Button>
-      <Dialog open={open} onClose={toggleDialog} fullWidth maxWidth="md">
+      <Dialog
+        open={open}
+        onClose={toggleDialog}
+        fullWidth
+        maxWidth="md"
+        slotProps={{
+          paper: {
+            sx: {
+              background: "#000000a0",
+            },
+          },
+        }}
+      >
         <DialogTitle>
           <Typography variant="h4">prerequisites</Typography>
         </DialogTitle>

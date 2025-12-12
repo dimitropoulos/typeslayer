@@ -44,7 +44,6 @@ function AppBrand({
 export function App() {
   const muiTheme = useTheme();
   const isMdUp = useMediaQuery(muiTheme.breakpoints.up("md"));
-
   const drawerWidth = 224;
 
   const collapsedWidth = 64;

@@ -87,8 +87,8 @@ const OOMError = ({
           </strong>
         </Typography>
         <Typography>
-          this can actually be <em>good news</em> because it can indicate a
-          genuine problem.. and you're right about to find it!
+          this can actually be <em>good news</em> because it can be a sign that
+          you're about to find a genuine problem, so keep going!
         </Typography>
         <Typography>
           orrrrrrr.. it could be <em>bad news</em> because you work in a project

@@ -76,13 +76,13 @@ importers:
         specifier: 2.5.2
         version: 2.5.2
       '@tauri-apps/plugin-upload':
-        specifier: ^2.3.2
+        specifier: 2.3.2
         version: 2.3.2
       echarts:
-        specifier: ^6.0.0
+        specifier: 6.0.0
         version: 6.0.0
       echarts-for-react:
-        specifier: ^3.0.5
+        specifier: 3.0.5
         version: 3.0.5(echarts@6.0.0)(react@19.2.1)
       react:
         specifier: 19.2.1
@@ -91,10 +91,10 @@ importers:
         specifier: 19.2.1
         version: 19.2.1(react@19.2.1)
       react-window:
-        specifier: ^2.2.3
+        specifier: 2.2.3
         version: 2.2.3(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       shiki:
-        specifier: ^3.19.0
+        specifier: 3.19.0
         version: 3.19.0
     devDependencies:
       '@tauri-apps/cli':

@@ -3,7 +3,9 @@ use crate::{
     files::OUTPUTS_DIRECTORY,
     layercake::{LayerCake, LayerCakeInitArgs, ResolveBoolArgs, ResolveStringArgs, Source},
     process_controller::ProcessController,
-    utils::{PACKAGE_JSON_FILENAME, TSCONFIG_FILENAME, make_cli_arg, quote_if_needed},
+    utils::{
+        PACKAGE_JSON_FILENAME, TSCONFIG_FILENAME, command_exists, make_cli_arg, quote_if_needed,
+    },
     validate::{
         trace_json::{TRACE_JSON_FILENAME, parse_trace_json, read_trace_json},
         types_json::{
@@ -1308,16 +1310,6 @@ pub async fn open_file(state: State<'_, Arc<Mutex<AppData>>>, path: String) -> R
     }
 
     let handle = tauri::async_runtime::spawn_blocking(move || {
-        // Helper to test command availability.
-        fn command_exists(cmd: &str) -> bool {
-            Command::new("sh")
-                .arg("-c")
-                .arg(format!("command -v {cmd} >/dev/null 2>&1"))
-                .status()
-                .map(|s| s.success())
-                .unwrap_or(false)
-        }
-
         if prefer_editor {
             // Built-in available editors list
             let available_editors: Vec<(String, String)> = AVAILABLE_EDITORS
