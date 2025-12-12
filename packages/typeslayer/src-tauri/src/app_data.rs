@@ -14,12 +14,12 @@ use crate::{
     },
 };
 use serde_json::Value;
-use std::fs;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
+use std::{fmt::Display, fs};
 use tauri::{Manager, State};
 use tracing::{error, info};
 
@@ -59,6 +59,28 @@ pub struct AppData {
     pub type_graph: Option<crate::type_graph::TypeGraph>,
     pub process_controller: ProcessController,
     pub data_dir: PathBuf,
+}
+
+struct CommandData {
+    program: String,
+    args: Vec<String>,
+    env: Vec<(String, String)>,
+}
+
+impl Display for CommandData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut env = self
+            .env
+            .iter()
+            .map(|(key, value)| format!("{key}={value}"))
+            .collect::<Vec<_>>()
+            .join(" ");
+        if env != "" {
+            env += " ";
+        }
+
+        write!(f, "{}{} {}", env, self.program, self.args.join(" "))
+    }
 }
 
 impl AppData {
@@ -326,9 +348,9 @@ impl AppData {
             Self::init_selected_tsconfig_with(&self.cake, &self.tsconfig_paths);
     }
 
-    fn get_tsc_call(&self, flag: &str) -> String {
+    fn get_tsc_call(&self, flag: &str) -> CommandData {
         // Build tsc command
-        let mut command_parts = vec!["tsc".to_string()];
+        let mut command_parts = vec!["exec".to_string(), "--".to_string(), "tsc".to_string()];
 
         // Add configurable extra flags
         let extra_flag_parts: Vec<&str> = self
@@ -354,18 +376,20 @@ impl AppData {
             }
         }
 
-        let mut full_command = command_parts.join(" ");
-        full_command = format!("npm exec -- {}", full_command);
-
+        let mut env = Vec::new();
         if self.settings.max_old_space_size.is_some() {
             let size = self.settings.max_old_space_size.unwrap();
-            full_command = format!(
-                "NODE_OPTIONS=\"--max-old-space-size={}\" {}",
-                size, full_command
-            );
+            env.push((
+                "NODE_OPTIONS".to_string(),
+                format!("--max-old-space-size={size}"),
+            ));
         }
 
-        full_command
+        CommandData {
+            program: "npm".to_string(),
+            args: command_parts,
+            env,
+        }
     }
 
     // Blocking helper that runs tsc directly
@@ -377,7 +401,7 @@ impl AppData {
 
         self.process_controller.reset_cancel_flag();
 
-        let npm_command = self.get_tsc_call(&flag);
+        let tsc_command = self.get_tsc_call(&flag);
 
         let cwd = self
             .project_root
@@ -385,14 +409,14 @@ impl AppData {
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_else(|| "./".to_string());
 
-        info!("Executing command: {}", npm_command);
+        info!("Executing command: {}", tsc_command);
         info!("Working directory: {}", cwd);
         info!("Outputs directory: {}", outputs_dir);
 
-        let mut cmd = Command::new("sh");
-        cmd.arg("-c")
-            .arg(&npm_command)
+        let mut cmd = Command::new(tsc_command.program);
+        cmd.args(tsc_command.args)
             .current_dir(&cwd)
+            .envs(tsc_command.env)
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
@@ -1462,7 +1486,7 @@ pub async fn get_tsc_example_call(state: State<'_, Arc<Mutex<AppData>>>) -> Resu
     let data = state.lock().map_err(|e| e.to_string())?;
     let outputs_dir = data.outputs_dir().to_string_lossy().to_string();
     let flag = make_cli_arg("--generateTrace", outputs_dir.as_str());
-    Ok(data.get_tsc_call(&flag))
+    Ok(data.get_tsc_call(&flag).to_string())
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
