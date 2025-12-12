@@ -132,7 +132,7 @@ export const BugReport = ({
               fullWidth
               multiline
               rows={2}
-              label="Describe the bug (required)"
+              label={`Describe the bug${description ? "" : " (required)"}`}
               autoFocus
               value={description}
               onChange={e => setDescription(e.target.value)}
@@ -155,7 +155,7 @@ export const BugReport = ({
                     <Description />
                   </ListItemIcon>
                   <ListItemText
-                    primary={<InlineCode secondary>{file.name}</InlineCode>}
+                    primary={<InlineCode>{file.name}</InlineCode>}
                     secondary={file.description}
                     sx={{
                       m: 0,
@@ -176,8 +176,7 @@ export const BugReport = ({
               </Typography>
 
               <Typography variant="body2">
-                you can email it to{" "}
-                <InlineCode secondary>{supportEmail}</InlineCode>
+                you can email it to <InlineCode>{supportEmail}</InlineCode>
                 <IconButton
                   size="small"
                   onClick={async () => {
@@ -209,7 +208,7 @@ export const BugReport = ({
             disabled={isSubmitting || !description.trim()}
             loading={isSubmitting}
           >
-            Create Bug Report
+            Zip and Download Locally
           </Button>
         </DialogActions>
       </Dialog>

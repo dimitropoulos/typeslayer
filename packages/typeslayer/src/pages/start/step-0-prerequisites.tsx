@@ -32,30 +32,30 @@ export const Step0Prerequisites = () => {
             <Step step={1}>
               <Stack spacing={0.5}>
                 <Typography variant="h5">
-                  plain ol' <InlineCode secondary>tsc</InlineCode> can run
+                  plain ol' <InlineCode>tsc</InlineCode> can run
                 </Typography>
                 <Typography>
                   lots of projects do lots of fancy things. sure. that's fine.
                   that's normal... but ultimately you need to provide TypeSlayer{" "}
                   <em>some way</em> to run{" "}
-                  <InlineCode secondary>tsc --generateTrace</InlineCode> from{" "}
+                  <InlineCode>tsc --generateTrace</InlineCode> from{" "}
                   <em>some place</em> in your project.
                 </Typography>
                 <Typography>
                   if you need to customize, click the <Flag /> icon next to the{" "}
-                  <InlineCode secondary>tsconfig</InlineCode> config section
-                  (step 2 of Start). there you will find an example of exactly
-                  one command that TypeSlayer will construct and run. make sure
-                  it works normally.
+                  <InlineCode>tsconfig</InlineCode> config section (step 2 of
+                  Start). there you will find an example of exactly one command
+                  that TypeSlayer will construct and run. make sure it works
+                  normally.
                 </Typography>
                 <Typography>
                   <em>be wary:</em> caching mechanisms like{" "}
-                  <InlineCode secondary>--build</InlineCode> mode,{" "}
-                  <InlineCode secondary>--incremental</InlineCode> mode, and
-                  composite projects can complicate things. conceptually, you
-                  want to do a <em>cold typecheck</em> (like your CI might, for
-                  example) without any of that stuff so you can really see where
-                  the time is being spent. otherwise, it won't be very useful.
+                  <InlineCode>--build</InlineCode> mode,{" "}
+                  <InlineCode>--incremental</InlineCode> mode, and composite
+                  projects can complicate things. conceptually, you want to do a{" "}
+                  <em>cold typecheck</em> (like your CI might, for example)
+                  without any of that stuff so you can really see where the time
+                  is being spent. otherwise, it won't be very useful.
                 </Typography>
               </Stack>
             </Step>{" "}
@@ -66,8 +66,8 @@ export const Step0Prerequisites = () => {
                 </Typography>
                 <Typography>
                   you need to do all the things like{" "}
-                  <InlineCode secondary>npm install</InlineCode> or prebuild any
-                  required assets.
+                  <InlineCode>npm install</InlineCode> or prebuild any required
+                  assets.
                 </Typography>
               </Stack>
             </Step>
@@ -78,8 +78,8 @@ export const Step0Prerequisites = () => {
                   TypeScript's internal tooling simply can't do a full type
                   analysis if there are errors. counter-intuitively, though,
                   ignoring the error via{" "}
-                  <InlineCode secondary>@ts-expect-error</InlineCode> is fine
-                  because it's marked and handled separately.
+                  <InlineCode>@ts-expect-error</InlineCode> is fine because it's
+                  marked and handled separately.
                 </Typography>
               </Stack>
             </Step>
@@ -87,8 +87,8 @@ export const Step0Prerequisites = () => {
               did you notice all three of the above steps are basically saying
               the same thing in three different ways? your project needs to have
               some place where you can run{" "}
-              <InlineCode secondary>tsc --generateTrace</InlineCode> and process
-              all your code without errors.
+              <InlineCode>tsc --generateTrace</InlineCode> and process all your
+              code without errors.
             </Alert>
             <Step step={4}>
               <Stack spacing={0.5}>

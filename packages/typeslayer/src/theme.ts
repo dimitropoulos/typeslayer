@@ -282,6 +282,15 @@ export const theme: Theme = createTheme({
         },
       },
     },
+    MuiTab: {
+      styleOverrides: {
+        root: {
+          "&.Mui-selected": {
+            color: white,
+          },
+        },
+      },
+    },
     MuiTextField: {
       defaultProps: {
         variant: "standard",
@@ -363,6 +372,13 @@ export const theme: Theme = createTheme({
             backgroundImage: `linear-gradient(120deg, ${doomRed.main}FF, ${doomRed.darker}FF)`,
           },
         },
+        text: {
+          background: "none",
+          boxShadow: "none",
+          "&:hover": {
+            background: `${doomRed.main}1A`,
+          },
+        },
         outlined: {
           background: "transparent",
           boxShadow: "none",
@@ -413,6 +429,13 @@ export const theme: Theme = createTheme({
           lineHeight: "32px",
           color: doomYellow.light,
           background: black,
+        },
+      },
+    },
+    MuiAlertTitle: {
+      styleOverrides: {
+        root: {
+          fontWeight: 700,
         },
       },
     },

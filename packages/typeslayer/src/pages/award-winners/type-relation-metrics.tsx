@@ -14,7 +14,7 @@ import { useState } from "react";
 import { CenterLoader } from "../../components/center-loader";
 import { DisplayRecursiveType } from "../../components/display-recursive-type";
 import { NoData } from "../../components/no-data";
-import { ShowMore } from "../../components/show-more";
+import { ShowMoreChildren } from "../../components/show-more-children";
 import {
   getHumanReadableName,
   SimpleTypeSummary,
@@ -40,7 +40,6 @@ export function RelationAward({
 }) {
   const { title, description, icon: Icon, unit } = awards[awardId];
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [displayLimit, setDisplayLimit] = useState(100);
   const { data: typeGraph, isLoading } = useTypeGraph();
   const { typeRegistry } = useTypeRegistry();
 
@@ -58,9 +57,6 @@ export function RelationAward({
   const selectedItem = edgeStats?.links[selectedIndex];
 
   const hasItems = edgeStats && edgeStats.links.length > 0;
-  const totalItems = selectedItem
-    ? selectedItem[GRAPH_EDGE_ENTRY.TARGET_TYPEIDS_INDEX].length
-    : 0;
 
   const noneFound = (
     <Box
@@ -172,42 +168,38 @@ export function RelationAward({
                     {unit}
                   </Typography>
                   <List dense sx={{ backgroundColor: "transparent" }}>
-                    {selectedItem[GRAPH_EDGE_ENTRY.TARGET_TYPEIDS_INDEX]
-                      .slice(0, Math.min(displayLimit, totalItems))
-                      .map(sourceId => {
-                        const sourceType = typeRegistry[sourceId];
-                        return sourceType ? (
-                          <ListItem
-                            key={sourceId}
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 1,
-                              flexWrap: "nowrap",
-                            }}
-                          >
-                            <TypeSummary resolvedType={sourceType} />
-
-                            <Stack
-                              className="action-buttons"
+                    <ShowMoreChildren incrementsOf={50}>
+                      {selectedItem[GRAPH_EDGE_ENTRY.TARGET_TYPEIDS_INDEX].map(
+                        sourceId => {
+                          const sourceType = typeRegistry[sourceId];
+                          return sourceType ? (
+                            <ListItem
+                              key={sourceId}
                               sx={{
-                                opacity: 0,
-                                pointerEvents: "none",
-                                flexDirection: "row",
-                                gap: 0.5,
-                                flexShrink: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                                flexWrap: "nowrap",
                               }}
-                            ></Stack>
-                          </ListItem>
-                        ) : null;
-                      })}
+                            >
+                              <TypeSummary resolvedType={sourceType} />
+
+                              <Stack
+                                className="action-buttons"
+                                sx={{
+                                  opacity: 0,
+                                  pointerEvents: "none",
+                                  flexDirection: "row",
+                                  gap: 0.5,
+                                  flexShrink: 0,
+                                }}
+                              ></Stack>
+                            </ListItem>
+                          ) : null;
+                        },
+                      )}
+                    </ShowMoreChildren>
                   </List>
-                  <ShowMore
-                    incrementsOf={100}
-                    totalItems={totalItems}
-                    displayLimit={displayLimit}
-                    setDisplayLimit={setDisplayLimit}
-                  />
                 </Stack>
               </>
             )}

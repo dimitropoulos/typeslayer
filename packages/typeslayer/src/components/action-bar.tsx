@@ -32,7 +32,7 @@ const HelpDialog = () => {
           <Typography>
             {" "}
             if you have questions or need help, check out the{" "}
-            <InlineCode secondary>#typeslayer</InlineCode> channel on the{" "}
+            <InlineCode>#typeslayer</InlineCode> channel on the{" "}
             <Link href={MITS_DISCORD}>Michigan TypeScript Discord</Link> or send
             a bug report: <BugReport onClose={handleClose} />
           </Typography>

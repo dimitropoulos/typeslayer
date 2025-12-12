@@ -1,6 +1,6 @@
 {
   "name": "@typeslayer/darwin-arm64",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "description": "TypeSlayer binary for macOS arm64",
   "private": false,
   "type": "module",

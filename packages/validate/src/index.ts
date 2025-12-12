@@ -35,7 +35,9 @@ export {
   type ResolvedType,
   resolvedType,
   TYPES_JSON_FILENAME,
+  type TypeRelationInfo,
   type TypesJsonSchema,
+  typeRelationInfo,
   typesJsonSchema,
 } from "./types-json";
 export type { TypeId } from "./utils";

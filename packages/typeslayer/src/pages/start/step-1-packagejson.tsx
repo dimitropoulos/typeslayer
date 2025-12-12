@@ -81,8 +81,8 @@ export const Step1PackageJson = () => {
     <Step step={1}>
       <Stack gap={1} sx={{ width: "100%" }}>
         <Typography>
-          locate the <InlineCode secondary>package.json</InlineCode> of the
-          package you'd like to investigate
+          locate the <InlineCode>package.json</InlineCode> of the package you'd
+          like to investigate
         </Typography>
 
         <Stack direction="row" gap={1} width="100%">

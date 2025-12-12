@@ -189,21 +189,30 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: cd npm/typeslayer && npm publish --access public --tag latest
 
-      - name: Verify binaries exist before release
+      - name: Rename all release artifacts with version
         if: startsWith(github.ref, 'refs/tags/typeslayer-v')
         run: |
+          TAG_REF="${GITHUB_REF#refs/tags/}"
+          VER="${TAG_REF#typeslayer-v}"
           echo "Checking binaries for release..."
           ls -lh npm/linux-x64/typeslayer
           ls -lh npm/darwin-arm64/typeslayer
           ls -lh npm/win32-x64/typeslayer.exe
-          
-          # Rename binaries for release with platform in filename
-          mv npm/linux-x64/typeslayer npm/linux-x64/typeslayer-linux-x64
-          mv npm/darwin-arm64/typeslayer npm/darwin-arm64/typeslayer-darwin-arm64
-          mv npm/win32-x64/typeslayer.exe npm/win32-x64/typeslayer-win32-x64.exe
-          
-          # Prepare Linux bundles for release
+
+          # Rename binaries for release with version and platform in filename
+          mv npm/linux-x64/typeslayer npm/linux-x64/typeslayer-$VER-linux-x64
+          mv npm/darwin-arm64/typeslayer npm/darwin-arm64/typeslayer-$VER.darwin-arm64
+          mv npm/win32-x64/typeslayer.exe npm/win32-x64/typeslayer-$VER-win32-x64.exe
+
+          # Rename Linux bundles for release with version in filename
           if [ -d "release-assets/linux" ]; then
+            for f in release-assets/linux/*; do
+              case "$f" in
+                *.rpm) mv "$f" "release-assets/linux/typeslayer-$VER-linux-x86_64.rpm" ;;
+                *.deb) mv "$f" "release-assets/linux/typeslayer_$VER_amd64.deb" ;;
+                *.AppImage) mv "$f" "release-assets/linux/typeslayer_$VER_amd64.AppImage" ;;
+              esac
+            done
             echo "Linux installer bundles available for release:"
             ls -lh release-assets/linux/
           fi
@@ -217,9 +226,9 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            npm/linux-x64/typeslayer-linux-x64
-            npm/darwin-arm64/typeslayer-darwin-arm64
-            npm/win32-x64/typeslayer-win32-x64.exe
+            npm/linux-x64/typeslayer-${{ steps.taginfo.outputs.version }}-linux-x64
+            npm/darwin-arm64/typeslayer-${{ steps.taginfo.outputs.version }}.darwin-arm64
+            npm/win32-x64/typeslayer-${{ steps.taginfo.outputs.version }}-win32-x64.exe
             release-assets/linux/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

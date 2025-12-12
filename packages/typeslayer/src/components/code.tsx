@@ -8,11 +8,9 @@ const toDisplayString = (value: string, maxSize: number) => {
   if (!value || typeof value !== "string") {
     return "";
   }
-
   if (value.length <= maxSize) {
     return value;
   }
-
   return `${value.slice(0, maxSize)}\n...`;
 };
 

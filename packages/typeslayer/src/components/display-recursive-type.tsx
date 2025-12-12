@@ -10,7 +10,7 @@ import { useTypeRegistry } from "../pages/award-winners/use-type-registry";
 import { theme } from "../theme";
 import { CenterLoader } from "./center-loader";
 import { OpenablePath, propertyTextStyle } from "./openable-path";
-import { ShowMore } from "./show-more";
+import { ShowMoreChildren } from "./show-more-children";
 import { TypeSummary } from "./type-summary";
 
 // Type guard for Location objects coming from backend serialization
@@ -38,7 +38,6 @@ export const DisplayRecursiveType: FC<{
   depth?: number;
 }> = ({ id, depth = 0 }) => {
   const [expanded, setExpanded] = useState(true);
-  const [displayLimit, setDisplayLimit] = useState(100);
   const { typeRegistry, isLoading } = useTypeRegistry();
 
   if (isLoading) {
@@ -226,29 +225,6 @@ export const DisplayRecursiveType: FC<{
             );
           }
 
-          const totalItems = value.length;
-          const currentLimit = Math.min(displayLimit, totalItems);
-
-          const val = (
-            <Stack gap={1} key={reactKey} sx={{ py: 1 }}>
-              {value.slice(0, currentLimit).map((v, i) => (
-                <DisplayRecursiveType
-                  key={`${reactKey}:${
-                    // biome-ignore lint/suspicious/noArrayIndexKey: the sort order is stable and we don't have any other information to use since you can do `string | string | string`, for example.
-                    i
-                  }`}
-                  id={v as number}
-                  depth={depth + 2}
-                />
-              ))}
-              <ShowMore
-                incrementsOf={100}
-                totalItems={totalItems}
-                displayLimit={displayLimit}
-                setDisplayLimit={setDisplayLimit}
-              />
-            </Stack>
-          );
           return (
             <Stack key={reactKey}>
               <Stack display="inline">
@@ -259,7 +235,20 @@ export const DisplayRecursiveType: FC<{
                   {value.length.toLocaleString()}
                 </Typography>
               </Stack>
-              {val}
+              <Stack gap={1} key={reactKey} sx={{ py: 1 }}>
+                <ShowMoreChildren incrementsOf={50}>
+                  {value.map((v, i) => (
+                    <DisplayRecursiveType
+                      key={`${reactKey}:${
+                        // biome-ignore lint/suspicious/noArrayIndexKey: the sort order is stable and we don't have any other information to use since you can do `string | string | string`, for example.
+                        i
+                      }`}
+                      id={v as number}
+                      depth={depth + 2}
+                    />
+                  ))}
+                </ShowMoreChildren>
+              </Stack>
             </Stack>
           );
         }

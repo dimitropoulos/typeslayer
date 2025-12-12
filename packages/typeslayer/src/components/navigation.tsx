@@ -1,5 +1,6 @@
 import {
   AutoAwesome,
+  AutoStories,
   Biotech,
   Dashboard,
   Description,
@@ -126,6 +127,12 @@ export const NAVIGATION = [
     segment: "cicd-integration",
     title: "CI/CD Integration",
     icon: <Dvr />,
+  },
+  {
+    kind: "segment",
+    segment: "docs",
+    title: "Docs",
+    icon: <AutoStories />,
   },
   {
     kind: "segment",

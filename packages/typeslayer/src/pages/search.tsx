@@ -79,7 +79,7 @@ export const SearchTypes = () => {
             <Typography variant="h6">
               Raw Type Definition{" "}
               <Typography fontSize={10}>
-                (from <InlineCode secondary>{TYPES_JSON_FILENAME}</InlineCode>)
+                (from <InlineCode>{TYPES_JSON_FILENAME}</InlineCode>)
               </Typography>
             </Typography>
             <Code value={typeString} />
@@ -88,8 +88,8 @@ export const SearchTypes = () => {
           <Callout title="What's a type id?">
             <Typography>
               During typechecking, the TypeScript compiler assigns a unique{" "}
-              <InlineCode>id</InlineCode> to every type it encounters. To
-              interact with the TypeSlayer, you'll find yourself using these
+              <InlineCode primary>id</InlineCode> to every type it encounters.
+              To interact with the TypeSlayer, you'll find yourself using these
               identifiers a lot.
             </Typography>
             <Typography>
@@ -101,9 +101,9 @@ export const SearchTypes = () => {
               Also, as strange as this may sound, almost every TypeScript
               codebase has many distinct types that share the same name.
               Consider a codebase that names generic parameters{" "}
-              <InlineCode>T</InlineCode>. The TypeScript compiler will assign a
-              different <InlineCode>id</InlineCode> to each of these types, even
-              though they all have the same name.
+              <InlineCode primary>T</InlineCode>. The TypeScript compiler will
+              assign a different <InlineCode primary>id</InlineCode> to each of
+              these types, even though they all have the same name.
             </Typography>
           </Callout>
         )}

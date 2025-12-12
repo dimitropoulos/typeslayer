@@ -1,7 +1,6 @@
 import { Flag } from "@mui/icons-material";
 import {
-  Box,
-  IconButton,
+  Button,
   MenuItem,
   Select,
   type SelectChangeEvent,
@@ -32,65 +31,34 @@ export const Step2Tsconfig = () => {
       <Stack direction="row" gap={2}>
         <Stack gap={1} sx={{ width: "100%" }}>
           <Typography>
-            select the <InlineCode secondary>tsconfig.json</InlineCode> to use
-            for type checking (TypeSlayer will run{" "}
-            <InlineCode secondary>tsc</InlineCode> with it)
+            select the <InlineCode>tsconfig.json</InlineCode> to use for type
+            checking (TypeSlayer will run <InlineCode>tsc</InlineCode> with it)
           </Typography>
-
-          <Select
-            value={selectedTsconfig.data ?? ""}
-            onChange={onTsconfigChange}
-            displayEmpty
-            sx={{ maxWidth: 800 }}
-            renderValue={selected => {
-              if (!selected) {
+          <Stack direction="row" gap={1}>
+            <Select
+              value={selectedTsconfig.data ?? ""}
+              onChange={onTsconfigChange}
+              displayEmpty
+              sx={{ maxWidth: 800 }}
+              renderValue={selected => {
+                if (!selected) {
+                  return (
+                    <Stack>
+                      <Typography>&lt;no tsconfig&gt;</Typography>
+                      <Typography
+                        variant="caption"
+                        fontFamily="monospace"
+                        color="textSecondary"
+                      >
+                        run <InlineCode>tsc</InlineCode> without the{" "}
+                        <InlineCode>--project</InlineCode> flag
+                      </Typography>
+                    </Stack>
+                  );
+                }
+                // Extract just the filename for display
+                const filename = selected.split("/").pop() || selected;
                 return (
-                  <Stack>
-                    <Typography>&lt;no tsconfig&gt;</Typography>
-                    <Typography
-                      variant="caption"
-                      fontFamily="monospace"
-                      color="textSecondary"
-                    >
-                      run <InlineCode secondary>tsc</InlineCode> without the{" "}
-                      <InlineCode secondary>--project</InlineCode> flag
-                    </Typography>
-                  </Stack>
-                );
-              }
-              // Extract just the filename for display
-              const filename = selected.split("/").pop() || selected;
-              return (
-                <Stack>
-                  <Typography>{filename}</Typography>
-                  <Typography
-                    variant="caption"
-                    fontFamily="monospace"
-                    color="textSecondary"
-                  >
-                    {selected}
-                  </Typography>
-                </Stack>
-              );
-            }}
-          >
-            <MenuItem value="">
-              <Stack>
-                <Typography>&lt;no tsconfig&gt;</Typography>
-                <Typography
-                  variant="caption"
-                  fontFamily="monospace"
-                  color="textSecondary"
-                >
-                  run <InlineCode secondary>tsc</InlineCode> without the{" "}
-                  <InlineCode secondary>--project</InlineCode> flag
-                </Typography>
-              </Stack>
-            </MenuItem>
-            {(tsconfigPaths.data ?? []).map(path => {
-              const filename = path.split("/").pop() || path;
-              return (
-                <MenuItem key={path} value={path}>
                   <Stack>
                     <Typography>{filename}</Typography>
                     <Typography
@@ -98,27 +66,58 @@ export const Step2Tsconfig = () => {
                       fontFamily="monospace"
                       color="textSecondary"
                     >
-                      {path}
+                      {selected}
                     </Typography>
                   </Stack>
-                </MenuItem>
-              );
-            })}
-          </Select>
+                );
+              }}
+            >
+              <MenuItem value="">
+                <Stack>
+                  <Typography>&lt;no tsconfig&gt;</Typography>
+                  <Typography
+                    variant="caption"
+                    fontFamily="monospace"
+                    color="textSecondary"
+                  >
+                    run <InlineCode>tsc</InlineCode> without the{" "}
+                    <InlineCode>--project</InlineCode> flag
+                  </Typography>
+                </Stack>
+              </MenuItem>
+              {(tsconfigPaths.data ?? []).map(path => {
+                const filename = path.split("/").pop() || path;
+                return (
+                  <MenuItem key={path} value={path}>
+                    <Stack>
+                      <Typography>{filename}</Typography>
+                      <Typography
+                        variant="caption"
+                        fontFamily="monospace"
+                        color="textSecondary"
+                      >
+                        {path}
+                      </Typography>
+                    </Stack>
+                  </MenuItem>
+                );
+              })}
+            </Select>
+            <Button
+              onClick={() => setIsFlagsDialogOpen(true)}
+              title="Customize Compiler Flags"
+              variant="text"
+              startIcon={<Flag fontSize="large" />}
+              sx={{ px: 2 }}
+            >
+              Customize Flags
+            </Button>
+            <FlagsCustomizationDialog
+              open={isFlagsDialogOpen}
+              onClose={() => setIsFlagsDialogOpen(false)}
+            />
+          </Stack>
         </Stack>
-        <Box sx={{ alignSelf: "flex-end" }}>
-          <IconButton
-            onClick={() => setIsFlagsDialogOpen(true)}
-            title="Customize Compiler Flags"
-            sx={{ mb: 1.125 }}
-          >
-            <Flag fontSize="large" sx={{ minWidth: 25 }} />
-          </IconButton>
-          <FlagsCustomizationDialog
-            open={isFlagsDialogOpen}
-            onClose={() => setIsFlagsDialogOpen(false)}
-          />
-        </Box>
       </Stack>
     </Step>
   );

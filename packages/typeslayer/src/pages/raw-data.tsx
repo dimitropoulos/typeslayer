@@ -36,7 +36,7 @@ import { CenterLoader } from "../components/center-loader";
 import { Code } from "../components/code";
 import { InlineCode } from "../components/inline-code";
 import {
-  formatFileSize,
+  formatBytesSize,
   serverBaseUrl,
   useStaticFile,
 } from "../components/utils";
@@ -162,7 +162,7 @@ export const RawData = () => {
               }}
             >
               {fileSizes && fileSizes[RAW_ITEMS[key].filename] !== undefined
-                ? formatFileSize(fileSizes[RAW_ITEMS[key].filename])
+                ? formatBytesSize(fileSizes[RAW_ITEMS[key].filename])
                 : "\u00A0".repeat(5)}
             </Box>
           </ListItemButton>
@@ -266,7 +266,7 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
       <Stack gap={1}>
         <Stack sx={{ flexDirection: "row", alignItems: "baseline", gap: 1 }}>
           <Typography variant="h4">
-            <InlineCode secondary>{filename}</InlineCode>
+            <InlineCode>{filename}</InlineCode>
           </Typography>
           {fileSize ? (
             <Typography color="textSecondary">

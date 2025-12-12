@@ -8,6 +8,7 @@ import { App } from "./App";
 import { AboutPage } from "./pages/about";
 import { AwardWinners } from "./pages/award-winners/award-winners";
 import { CiCdIntegration } from "./pages/cicd-integration";
+import { DocsPage } from "./pages/docs";
 import { Mcp } from "./pages/mcp";
 import { Perfetto } from "./pages/perfetto";
 // analyze-trace page remains but is no longer directly routed
@@ -121,6 +122,12 @@ const cicdIntegrationsRoute = createRoute({
   component: CiCdIntegration,
 });
 
+const docsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/docs",
+  component: DocsPage,
+});
+
 const aboutRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/about",
@@ -156,9 +163,10 @@ const routeTree = rootRoute.addChildren([
   speedscopeRoute,
   rawDataRoute,
   rawDataChildRoute,
-  settingsRoute,
   mcpRoute,
   cicdIntegrationsRoute,
+  settingsRoute,
+  docsRoute,
   aboutRoute,
 ]);
 

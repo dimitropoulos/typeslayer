@@ -84,7 +84,7 @@ export function AboutPage() {
           <Box sx={{ display: "flex", flexDirection: "column", marginLeft: 0 }}>
             <span style={{ lineHeight: 1.25 }}>Dimitri Mitropoulos</span>
             <span style={{ fontSize: 12 }}>
-              <InlineCode secondary>dimitropoulos</InlineCode>&nbsp;on&nbsp;
+              <InlineCode>dimitropoulos</InlineCode>&nbsp;on&nbsp;
               <Link
                 href="https://github.com/dimitropoulos"
                 onClick={createOpenHandler("https://github.com/dimitropoulos")}

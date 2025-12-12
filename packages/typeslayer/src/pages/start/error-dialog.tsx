@@ -13,6 +13,7 @@ import {
 import { useCallback } from "react";
 import { BugReport } from "../../components/bug-report";
 import { stripAnsi } from "../../components/utils";
+import { ErrorHelper } from "./error-helper";
 
 const ErrorStreamSection = ({
   title,
@@ -87,23 +88,19 @@ const ErrorStreamSection = ({
 export const ErrorDialog = ({
   open,
   onClose,
-  processingErrorDetails,
   processingErrorStdout,
   processingErrorStderr,
-  errorDialogTitle,
-  hasStdout,
-  hasStderr,
+  processingError,
 }: {
   open: boolean;
   onClose: () => void;
-  processingErrorDetails: string | null;
   processingErrorStdout: string | null;
   processingErrorStderr: string | null;
-  errorDialogTitle: string;
-  hasStdout: boolean;
-  hasStderr: boolean;
+  processingError: string | null;
 }) => {
-  if (errorDialogTitle && !processingErrorStderr && !processingErrorStdout) {
+  const errorDialogTitle = processingError ?? "Diagnostics failed";
+
+  if (!processingErrorStderr && !processingErrorStdout) {
     return (
       <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth>
         <DialogTitle>Internal Error</DialogTitle>
@@ -121,43 +118,25 @@ export const ErrorDialog = ({
     <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth>
       <DialogTitle>Error</DialogTitle>
       <DialogContent dividers>
-        <Stack>
-          <ErrorStreamSection
-            title="TypeSlayer System Error"
-            content={errorDialogTitle}
-          />
-        </Stack>
-
         <Stack gap={2}>
-          {processingErrorDetails && (
-            <Typography color="text.secondary">
-              Detailed compiler output collected from the most recent run.
-            </Typography>
-          )}
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 2,
-            }}
-          >
+          <Typography variant="h5">{"TypeSlayer System Error"}</Typography>
+          <ErrorHelper
+            processingError={errorDialogTitle}
+            processingErrorStderr={processingErrorStderr}
+            processingErrorStdout={processingErrorStdout}
+          />
+          {processingErrorStdout ? (
             <ErrorStreamSection
               title="STDOUT"
-              content={
-                hasStdout
-                  ? (processingErrorStdout ?? "")
-                  : "No STDOUT output captured."
-              }
+              content={processingErrorStdout}
             />
+          ) : null}
+          {processingErrorStderr ? (
             <ErrorStreamSection
               title="STDERR"
-              content={
-                hasStderr
-                  ? (processingErrorStderr ?? "")
-                  : "No STDERR output captured."
-              }
+              content={processingErrorStderr}
             />
-          </Box>
+          ) : null}
         </Stack>
       </DialogContent>
       <DialogActions>

@@ -1,5 +1,5 @@
 import { Insights } from "@mui/icons-material";
-import { Alert, Button, Stack, Typography } from "@mui/material";
+import { Alert, Button, Stack } from "@mui/material";
 import { useNavigate } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
 import {
@@ -9,7 +9,6 @@ import {
   useState,
 } from "react";
 import { BigAction } from "../../components/big-action";
-import { InlineCode } from "../../components/inline-code";
 import {
   useGenerateAnalyzeTrace,
   useGenerateCpuProfile,
@@ -31,9 +30,6 @@ export const Step3Diagnostics = ({
   // Processing state
   const [processingStep, setProcessingStep] = useState<0 | 1 | 2 | 3 | 4>(0);
   const [processingError, setProcessingError] = useState<string | null>(null);
-  const [processingErrorDetails, setProcessingErrorDetails] = useState<
-    string | null
-  >(null);
   const [processingErrorStdout, setProcessingErrorStdout] = useState<
     string | null
   >(null);
@@ -54,7 +50,6 @@ export const Step3Diagnostics = ({
   const processTypes = useCallback(async () => {
     setIsProcessing(true);
     setProcessingError(null);
-    setProcessingErrorDetails(null);
     setProcessingErrorStdout(null);
     setProcessingErrorStderr(null);
     setIsErrorDialogOpen(false);
@@ -91,15 +86,13 @@ export const Step3Diagnostics = ({
       const normalizedMessage = normalizeInvokeError(rawMessage);
       if (normalizedMessage.toLowerCase().includes("cancel")) {
         setProcessingError(null);
-        setProcessingErrorDetails(null);
         setProcessingErrorStdout(null);
         setProcessingErrorStderr(null);
         setProcessingStep(0);
       } else {
-        const { summary, details, stdout, stderr } =
+        const { summary, stdout, stderr } =
           splitCompilerError(normalizedMessage);
         setProcessingError(summary);
-        setProcessingErrorDetails(details);
         setProcessingErrorStdout(stdout);
         setProcessingErrorStderr(stderr);
         setIsErrorDialogOpen(true);
@@ -122,7 +115,6 @@ export const Step3Diagnostics = ({
     try {
       await invoke("clear_outputs", { cancelRunning: isProcessing });
       setProcessingError(null);
-      setProcessingErrorDetails(null);
       setProcessingErrorStdout(null);
       setProcessingErrorStderr(null);
       setIsErrorDialogOpen(false);
@@ -134,10 +126,8 @@ export const Step3Diagnostics = ({
       console.error("Failed to clear outputs:", error);
       const rawMessage = error instanceof Error ? error.message : String(error);
       const normalizedMessage = normalizeInvokeError(rawMessage);
-      const { summary, details, stdout, stderr } =
-        splitCompilerError(normalizedMessage);
+      const { summary, stdout, stderr } = splitCompilerError(normalizedMessage);
       setProcessingError(summary);
-      setProcessingErrorDetails(details);
       setProcessingErrorStdout(stdout);
       setProcessingErrorStderr(stderr);
       setIsErrorDialogOpen(true);
@@ -146,36 +136,21 @@ export const Step3Diagnostics = ({
     }
   }, [isProcessing]);
 
-  const errorDialogTitle = processingError ?? "Diagnostics failed";
-  const hasStdout = !!processingErrorStdout?.trim();
-  const hasStderr = !!processingErrorStderr?.trim();
-
   return (
     <>
       <Step step={3}>
         <Stack flexDirection="column" gap={2}>
-          {processingError && hasCompositeProjectError(processingError) && (
-            <Alert severity="info" sx={{ mb: 1 }}>
-              <Typography variant="body2">
-                <strong>Tip:</strong> your project uses composite mode. you may
-                need to customize the compiler flags above to remove{" "}
-                <InlineCode secondary>--incremental false</InlineCode>.
-              </Typography>
-            </Alert>
-          )}
           {processingError && (
             <Alert
               severity="error"
               action={
-                processingErrorDetails || hasStdout || hasStderr ? (
-                  <Button
-                    size="small"
-                    color="inherit"
-                    onClick={() => setIsErrorDialogOpen(true)}
-                  >
-                    View details
-                  </Button>
-                ) : undefined
+                <Button
+                  size="small"
+                  color="inherit"
+                  onClick={() => setIsErrorDialogOpen(true)}
+                >
+                  View details
+                </Button>
               }
             >
               {processingError}
@@ -232,12 +207,9 @@ export const Step3Diagnostics = ({
         </Stack>
       </Step>
       <ErrorDialog
-        processingErrorDetails={processingErrorDetails}
         processingErrorStderr={processingErrorStderr}
         processingErrorStdout={processingErrorStdout}
-        hasStdout={hasStdout}
-        hasStderr={hasStderr}
-        errorDialogTitle={errorDialogTitle}
+        processingError={processingError}
         open={isErrorDialogOpen}
         onClose={() => setIsErrorDialogOpen(false)}
       />
@@ -297,14 +269,4 @@ const splitCompilerError = (message: string): CompilerErrorParts => {
     stdout: normalizedStdout || null,
     stderr: normalizedStderr || null,
   };
-};
-
-// Helper to detect composite project incremental error
-const hasCompositeProjectError = (error: string | null) => {
-  if (!error) {
-    return false;
-  }
-  return error.includes(
-    "Composite projects may not disable incremental compilation",
-  );
 };

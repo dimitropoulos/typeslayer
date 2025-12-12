@@ -240,7 +240,10 @@ export const Treemap = () => {
           </IconButton>
           <span style={{ flexGrow: 1 }}></span>
           {totalTime > 0 ? (
-            <StatPill label="Seconds" value={Math.round(totalTime / 1000)} />
+            <StatPill
+              label="milliseconds"
+              value={Math.round(totalTime / 1000)}
+            />
           ) : null}
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>

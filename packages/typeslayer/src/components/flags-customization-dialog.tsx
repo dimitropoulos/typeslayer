@@ -25,14 +25,28 @@ import {
 } from "../hooks/tauri-hooks";
 import { Code } from "./code";
 import { InlineCode } from "./inline-code";
-import { stripPackageJson } from "./utils";
+import { formatBytesSize, stripPackageJson } from "./utils";
 
 export type FlagsCustomizationDialogProps = {
   readonly open: boolean;
   readonly onClose: () => void;
 };
 
-const maxOldSpaceSizeOptions = [512, 1024, 2048, 4096, 8192, 16384];
+const mibibyte = 1024 * 1024;
+
+const maxOldSpaceSizeOptions = [
+  { value: 512, label: "" },
+  { value: 1024, label: "" },
+  { value: 2048, label: "(the Node.js default)" }, // https://github.com/nodejs/node/blob/main/deps/v8/src/heap/heap.cc#L415-L417
+  { value: 4096, label: "" },
+  { value: 8192, label: "" },
+  { value: 12288, label: "bro.." },
+  { value: 16384, label: "BRO." },
+  { value: 24576, label: "!?!?!" },
+  { value: 32768, label: "time to get a new CTO" },
+  { value: 49152, label: "burn this thing down to bedrock" },
+  { value: 65535, label: "(voids your TypeScript warranty)" },
+];
 
 export function FlagsCustomizationDialog({
   open,
@@ -58,7 +72,7 @@ export function FlagsCustomizationDialog({
   const maxOldSpaceSizeEnabled = Boolean(maxOldSpaceSize);
   const toggleMaxOldSpaceSize = (enabled: boolean) => {
     if (enabled) {
-      setMaxOldSpaceSize(maxOldSpaceSizeOptions[3]);
+      setMaxOldSpaceSize(maxOldSpaceSizeOptions[3].value);
     } else {
       setMaxOldSpaceSize(null);
     }
@@ -107,15 +121,22 @@ export function FlagsCustomizationDialog({
   ].join("\n");
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="lg"
+      fullWidth
+      slotProps={{
+        paper: {
+          sx: {
+            background: "#000000a0",
+          },
+        },
+      }}
+    >
       <DialogTitle>Customize TypeScript Compiler Flags</DialogTitle>
-      <DialogContent>
-        <Typography variant="body2" sx={{ mb: 2 }}>
-          these flags are passed to the TypeScript compiler when generating
-          traces or CPU profiles
-        </Typography>
-
-        <Stack direction="row" gap={2}>
+      <DialogContent dividers>
+        <Stack sx={{ flexDirection: "row", gap: 2, mt: 1 }}>
           <TextField
             fullWidth
             label="Extra TSC Flags"
@@ -142,7 +163,7 @@ export function FlagsCustomizationDialog({
           </Button>
         </Stack>
 
-        <FormGroup sx={{ mt: 1 }}>
+        <FormGroup sx={{ my: 1 }}>
           <FormControlLabel
             control={
               <Checkbox
@@ -155,8 +176,8 @@ export function FlagsCustomizationDialog({
             }
             label={
               <span>
-                apply the <InlineCode secondary>--project</InlineCode> flag when
-                I've selected a <InlineCode secondary>tsconfig</InlineCode>
+                apply the <InlineCode>--project</InlineCode> flag when I've
+                selected a <InlineCode>tsconfig</InlineCode>
               </span>
             }
           />
@@ -190,15 +211,13 @@ export function FlagsCustomizationDialog({
               value={maxOldSpaceSize ?? undefined}
               onChange={handleSelectOldSpaceSize}
             >
-              {maxOldSpaceSizeOptions.map(size => (
+              {maxOldSpaceSizeOptions.map(({ value, label }) => (
                 <MenuItem
-                  key={size}
-                  value={size}
-                  selected={maxOldSpaceSize === size}
+                  key={value}
+                  value={value}
+                  selected={maxOldSpaceSize === value}
                 >
-                  {size === maxOldSpaceSizeOptions[0]
-                    ? `${size} MiB (default)`
-                    : `${size} MiB`}
+                  {`${formatBytesSize(value * mibibyte)} ${label}`}
                 </MenuItem>
               ))}
             </Select>
@@ -210,14 +229,11 @@ export function FlagsCustomizationDialog({
         </Typography>
         <Stack sx={{ gap: 2 }}>
           <Typography>
-            these flags will be used in a command like this:
+            this is literally what TypeSlayer will run. to debug a problem, you
+            should start by trying to run it yourself from the same location
           </Typography>
 
           <Code value={exampleCommand} lang="bash" />
-
-          <Typography>
-            so if you wanna try it yourself, please feel free!
-          </Typography>
         </Stack>
       </DialogContent>
       <DialogActions>

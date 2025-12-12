@@ -6,14 +6,24 @@ import {
   DialogTitle,
   Link,
   Stack,
+  Tab,
+  Tabs,
   Typography,
 } from "@mui/material";
-import type { ResolvedType } from "@typeslayer/validate";
+import {
+  type ResolvedType,
+  type TypeRelationInfo,
+  typeRelationInfo,
+} from "@typeslayer/validate";
+import { type SyntheticEvent, useCallback, useState } from "react";
 import { useTraceJson, useTypeGraph } from "../hooks/tauri-hooks";
 import { useTypeRegistry } from "../pages/award-winners/use-type-registry";
+import type { EdgeKind, GraphLink } from "../types/type-graph";
 import { CenterLoader } from "./center-loader";
 import { Code } from "./code";
 import { InlineCode } from "./inline-code";
+import { ShowMoreChildren } from "./show-more-children";
+import { TabLabel } from "./tab-label";
 import { TypeSummary } from "./type-summary";
 
 const LastDitchEffort = ({ typeId }: { typeId: number }) => {
@@ -88,14 +98,147 @@ const LastDitchEffort = ({ typeId }: { typeId: number }) => {
       <Code value={JSON.stringify(events, null, 2)} />
       <Typography sx={{ mt: 2 }}>
         Now, what you shoudl do next is take the timestamp (the{" "}
-        <InlineCode secondary>ts</InlineCode> field) of any of the events
-        returned above, and look at that time in{" "}
+        <InlineCode>ts</InlineCode> field) of any of the events returned above,
+        and look at that time in{" "}
         <Link href="/perfetto">the Perfetto module</Link>.
       </Typography>
       <Typography>
         there, you'll see what other sorts of things TypeScript was doing at
         that time (and what file it was checking).
       </Typography>
+    </Stack>
+  );
+};
+
+const kindToTypesRelationInfo = (kind: EdgeKind): TypeRelationInfo => {
+  switch (kind) {
+    case "typeArgument":
+      return typeRelationInfo.typeArguments;
+
+    case "union":
+      return typeRelationInfo.unionTypes;
+
+    case "intersection":
+      return typeRelationInfo.intersectionTypes;
+
+    case "aliasTypeArgument":
+      return typeRelationInfo.aliasTypeArguments;
+
+    case "instantiated":
+      return typeRelationInfo.instantiatedType;
+
+    case "substitutionBase":
+      return typeRelationInfo.substitutionBaseType;
+
+    case "constraint":
+      return typeRelationInfo.constraintType;
+
+    case "indexedAccessObject":
+      return typeRelationInfo.indexedAccessObjectType;
+
+    case "indexedAccessIndex":
+      return typeRelationInfo.indexedAccessIndexType;
+
+    case "conditionalCheck":
+      return typeRelationInfo.conditionalCheckType;
+
+    case "conditionalExtends":
+      return typeRelationInfo.conditionalExtendsType;
+
+    case "conditionalTrue":
+      return typeRelationInfo.conditionalTrueType;
+
+    case "conditionalFalse":
+      return typeRelationInfo.conditionalFalseType;
+
+    case "keyof":
+      return typeRelationInfo.keyofType;
+
+    case "alias":
+      return typeRelationInfo.aliasType;
+
+    case "evolvingArrayElement":
+      return typeRelationInfo.evolvingArrayElementType;
+
+    case "evolvingArrayFinal":
+      return typeRelationInfo.evolvingArrayFinalType;
+
+    case "reverseMappedSource":
+      return typeRelationInfo.reverseMappedSourceType;
+
+    case "reverseMappedMapped":
+      return typeRelationInfo.reverseMappedMappedType;
+
+    case "reverseMappedConstraint":
+      return typeRelationInfo.reverseMappedConstraintType;
+    default:
+      kind satisfies never;
+      return "<error>" as never;
+  }
+};
+
+const TargetsTabs = ({ targets }: { targets: GraphLink[] }) => {
+  const { typeRegistry } = useTypeRegistry();
+
+  const targetsByKind = Object.entries(
+    targets.reduce(
+      (acc, node) => {
+        acc[node.kind] = (acc[node.kind] ?? []).concat(node);
+        return acc;
+      },
+      {} as Record<EdgeKind, GraphLink[]>,
+    ),
+  ) as [EdgeKind, GraphLink[]][];
+
+  const [selectedTab, setSelectedTab] = useState<EdgeKind | undefined>(
+    targetsByKind[0][0],
+  );
+
+  const handleTabChange = useCallback(
+    (_event: SyntheticEvent, value: EdgeKind) => {
+      setSelectedTab(value);
+    },
+    [],
+  );
+
+  return (
+    <Stack>
+      <Tabs onChange={handleTabChange} value={selectedTab}>
+        {targetsByKind.map(([kind, nodes]) => (
+          <Tab
+            label={
+              <TabLabel
+                label={kindToTypesRelationInfo(kind).title}
+                count={nodes.length}
+              />
+            }
+            key={kind}
+            value={kind}
+          />
+        ))}
+      </Tabs>
+      <Stack sx={{ mt: 1 }}>
+        <ShowMoreChildren incrementsOf={50}>
+          {targets
+            .filter(({ kind }) => kind === selectedTab)
+            .map(({ source }) => {
+              const resolvedType = typeRegistry?.[source];
+              if (!resolvedType) {
+                return (
+                  <Typography key={source} color="error">
+                    Could not find type with id {source} in registry
+                  </Typography>
+                );
+              }
+
+              return (
+                <Stack key={source} sx={{ gap: 1, flexDirection: "row" }}>
+                  <TypeSummary resolvedType={resolvedType} key={source} />
+                </Stack>
+              );
+            })}
+        </ShowMoreChildren>
+      </Stack>
     </Stack>
   );
 };
@@ -110,7 +253,6 @@ export const TypeRelationsDialog = ({
   const { id: typeId } = resolvedType;
 
   const { data: typeGraph, isLoading } = useTypeGraph();
-  const { typeRegistry } = useTypeRegistry();
 
   const targets = typeGraph?.links.filter(node => node.target === typeId) ?? [];
 
@@ -120,7 +262,7 @@ export const TypeRelationsDialog = ({
   return (
     <Dialog open onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-        types related to{" "}
+        <em>types related to</em>{" "}
         <TypeSummary resolvedType={resolvedType} suppressActions />
       </DialogTitle>
       <DialogContent dividers>
@@ -128,29 +270,11 @@ export const TypeRelationsDialog = ({
           <CenterLoader />
         ) : (
           <Stack gap={0.5}>
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              {targets.length} type{targets.length === 1 ? "" : "s"} referenced
-              by this type:
-            </Typography>
-            {targets.length === 0
-              ? noneFound
-              : targets?.map(({ source, kind }) => {
-                  const resolvedType = typeRegistry?.[source];
-                  if (!resolvedType) {
-                    return (
-                      <Typography key={source} color="error">
-                        Could not find type with id {source} in registry
-                      </Typography>
-                    );
-                  }
-
-                  return (
-                    <Stack key={source} sx={{ gap: 1, flexDirection: "row" }}>
-                      <Typography>{kind}:</Typography>
-                      <TypeSummary resolvedType={resolvedType} key={source} />
-                    </Stack>
-                  );
-                })}
+            {targets.length === 0 ? (
+              noneFound
+            ) : (
+              <TargetsTabs targets={targets} />
+            )}
           </Stack>
         )}
       </DialogContent>

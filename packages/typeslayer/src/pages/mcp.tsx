@@ -18,9 +18,10 @@ import {
   Typography,
 } from "@mui/material";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { useState } from "react";
+import { type SyntheticEvent, useState } from "react";
 import { Code } from "../components/code";
 import { InlineCode } from "../components/inline-code";
+import { TabLabel } from "../components/tab-label";
 import {
   type ManagedResource,
   type ToolDefinition,
@@ -82,7 +83,7 @@ export const Mcp = () => {
   const currentTabIndex = tabDefinitions.findIndex(t => t.key === params.tab);
   const tabIndex = currentTabIndex >= 0 ? currentTabIndex : 0;
 
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: SyntheticEvent, newValue: number) => {
     navigate({ to: `/mcp/${tabDefinitions[newValue].key}` });
   };
 
@@ -136,24 +137,7 @@ export const Mcp = () => {
             return (
               <Tab
                 key={tab.key}
-                label={
-                  <Stack
-                    sx={{ flexDirection: "row", alignItems: "center", gap: 2 }}
-                  >
-                    <Typography>{tab.label}</Typography>
-                    {count !== null && (
-                      <Box
-                        sx={{
-                          color: "secondary.main",
-                          fontSize: "1rem",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {count}
-                      </Box>
-                    )}
-                  </Stack>
-                }
+                label={<TabLabel label={tab.label} count={count} />}
               />
             );
           })}
@@ -229,7 +213,7 @@ const ToolCard = ({
             </Tooltip>
           )}
           <Typography variant="h4">
-            <InlineCode secondary>{command}</InlineCode>
+            <InlineCode>{command}</InlineCode>
           </Typography>
         </Stack>
       </AccordionSummary>
@@ -245,7 +229,7 @@ const ToolCard = ({
             {parameters.map(param => (
               <Stack key={param.name} sx={{ mb: 1 }}>
                 <Stack direction="row" spacing={1}>
-                  <InlineCode secondary>{param.name}</InlineCode>
+                  <InlineCode>{param.name}</InlineCode>
                   <Typography color="textSecondary">
                     {param.optional
                       ? `optional, default: ${param.default}`
@@ -408,7 +392,7 @@ const ResourceCard = ({ resource }: { resource: ManagedResource }) => {
           }}
         >
           <Typography variant="h4">
-            <InlineCode secondary>{resource.name}</InlineCode>
+            <InlineCode>{resource.name}</InlineCode>
           </Typography>
         </Stack>
       </AccordionSummary>
@@ -423,15 +407,13 @@ const ResourceCard = ({ resource }: { resource: ManagedResource }) => {
               <Typography variant="body2" color="textSecondary">
                 URI:
               </Typography>
-              <InlineCode secondary>{resource.uri}</InlineCode>
+              <InlineCode>{resource.uri}</InlineCode>
             </Stack>
             <Stack direction="row" spacing={1}>
               <Typography variant="body2" color="textSecondary">
                 MIME Type:
               </Typography>
-              <InlineCode secondary>
-                {resource.mimeType || "unknown"}
-              </InlineCode>
+              <InlineCode>{resource.mimeType || "unknown"}</InlineCode>
             </Stack>
           </Stack>
 
@@ -545,8 +527,8 @@ const Setup = () => {
         <li>
           <Stack sx={{ gap: 1, alignItems: "flex-start" }}>
             <Typography>
-              use this <InlineCode secondary>mcp.json</InlineCode> where your
-              MCP client expects it
+              use this <InlineCode>mcp.json</InlineCode> where your MCP client
+              expects it
             </Typography>
 
             <ul style={{ marginLeft: "-24px" }}>

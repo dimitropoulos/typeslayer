@@ -71,7 +71,7 @@ export const friendlyPath = (
 
 export const serverBaseUrl = "http://127.0.0.1:4765";
 
-export const formatFileSize = (bytes: number): string => {
+export const formatBytesSize = (bytes: number): string => {
   const kibibyte = 1024;
   if (bytes < kibibyte) {
     return `${bytes} B`;

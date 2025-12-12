@@ -23,17 +23,21 @@ const colors = [
 
 type Color = (typeof colors)[number];
 
-export type TwoColors<
-  A extends Color = Color,
-  B extends Color = Color,
-> = `${A}-${B}`;
-export type FourColors<
-  C extends TwoColors = TwoColors,
-  D extends TwoColors = TwoColors,
-> = `${C}/${D}`;
+export type Palette<
+  Primary extends Color = Color,
+  Secondary extends Color = Color,
+> = `${Primary}-${Secondary}`;
 
-export type Z = FourColors<"red-blue", "yellow-green">;
+export type FullPalette<
+  Dark extends Palette = Palette,
+  Light extends Palette = Palette,
+> = `${Dark}|${Light}`;
+
+export type Z = FullPalette<"red-blue", "yellow-green">;
 //          ^?
 
 // @ts-expect-error
-export type Y = FourColors;
+export const fullPalette = (lightDarkPalette: FullPalette) => {
+  // do stuff
+  console.log(lightDarkPalette);
+};

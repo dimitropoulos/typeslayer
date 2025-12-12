@@ -3,7 +3,7 @@
 import { statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import process, { exit } from "node:process";
-import { ANALYZE_TRACE_FILENAME, analyzeTrace, defaultOptions } from "../dist/index.js";
+import { ANALYZE_TRACE_FILENAME, analyzeTrace, defaultOptions } from "../dist/index.mjs";
 
 const { argv } = process;
 

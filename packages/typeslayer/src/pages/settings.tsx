@@ -124,16 +124,16 @@ export const SettingsPage = () => {
           <Typography variant="body2" color="textSecondary" lineHeight={2}>
             For example, if your project root is
             <br />
-            <InlineCode>{projectRootDisplay}</InlineCode>
+            <InlineCode primary>{projectRootDisplay}</InlineCode>
             <br />
             and you have a file at
             <br />
-            <InlineCode>{projectRootDisplay}/</InlineCode>
-            <InlineCode secondary>src/index.ts</InlineCode>
+            <InlineCode primary>{projectRootDisplay}/</InlineCode>
+            <InlineCode>src/index.ts</InlineCode>
             <br />
             that file's path will be displayed as
             <br />
-            <InlineCode secondary>src/index.ts</InlineCode>
+            <InlineCode>src/index.ts</InlineCode>
           </Typography>
         </FormGroup>
       </Setting>
@@ -222,7 +222,7 @@ export const SettingsPage = () => {
           <Button size="small" variant="outlined" onClick={handleOpenDataDir}>
             Open
           </Button>
-          <InlineCode>
+          <InlineCode primary>
             {dataDir.isLoading ? "Loading..." : dataDir.data || "Not set"}
           </InlineCode>
         </Stack>
