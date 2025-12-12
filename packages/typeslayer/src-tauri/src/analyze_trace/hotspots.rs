@@ -54,14 +54,10 @@ fn get_hotspots_worker(
         }
     }
 
-    // Check if this is not the root node
-    if let EventSpanEvent::TraceEvent(_) = &span.event {
-        if let Some(hot_frame) = make_hot_frame(span, children.clone())? {
-            return Ok(vec![hot_frame]);
-        }
+    match make_hot_frame(span, children) {
+        Ok(hotspot) => Ok(vec![hotspot]),
+        Err(children) => Ok(children),
     }
-
-    Ok(children)
 }
 
 fn get_hot_type(id: i64, type_registry: &TypeRegistry) -> HotType {
@@ -213,7 +209,7 @@ fn get_hot_type(id: i64, type_registry: &TypeRegistry) -> HotType {
 fn make_hot_frame(
     span: &EventSpan,
     children: Vec<HotSpot>,
-) -> Result<Option<HotSpot>, String> {
+) -> Result<HotSpot, Vec<HotSpot>> {
     let time_ms = (span.duration / 1000.0).round() as i64;
 
     if let EventSpanEvent::TraceEvent(event) = &span.event {
@@ -226,7 +222,7 @@ fn make_hot_frame(
                     .unwrap_or("");
                 let normalized_path = Path::new(file_path).to_string_lossy().to_string();
 
-                Ok(Some(HotSpot {
+                Ok(HotSpot {
                     description: format!("Check file {}", normalized_path),
                     time_ms,
                     path: Some(normalized_path),
@@ -238,7 +234,7 @@ fn make_hot_frame(
                     end_line: None,
                     end_char: None,
                     end_offset: None,
-                }))
+                })
             }
             "structuredTypeRelatedTo" => {
                 let source_id = event
@@ -252,7 +248,7 @@ fn make_hot_frame(
                     .and_then(|v| v.as_i64())
                     .unwrap_or(-1);
 
-                Ok(Some(HotSpot {
+                Ok(HotSpot {
                     description: format!("Compare types {} and {}", source_id, target_id),
                     time_ms,
                     children,
@@ -264,12 +260,12 @@ fn make_hot_frame(
                     end_line: None,
                     end_char: None,
                     end_offset: None,
-                }))
+                })
             }
             "getVariancesWorker" => {
                 let id = event.args.get("id").and_then(|v| v.as_i64()).unwrap_or(-1);
 
-                Ok(Some(HotSpot {
+                Ok(HotSpot {
                     description: format!("Determine variance of type {}", id),
                     time_ms,
                     children,
@@ -281,7 +277,7 @@ fn make_hot_frame(
                     end_line: None,
                     end_char: None,
                     end_offset: None,
-                }))
+                })
             }
             "checkExpression" | "checkVariableDeclaration" => {
                 let path = event
@@ -290,7 +286,7 @@ fn make_hot_frame(
                     .and_then(|v| v.as_str())
                     .map(|p| Path::new(p).to_string_lossy().to_string());
 
-                Ok(Some(HotSpot {
+                Ok(HotSpot {
                     description: event.name.clone(),
                     time_ms,
                     path,
@@ -302,11 +298,11 @@ fn make_hot_frame(
                     end_line: None,
                     end_char: None,
                     end_offset: None,
-                }))
+                })
             }
-            _ => Ok(None),
+            _ => Err(children),
         }
     } else {
-        Ok(None)
+        Err(children)
     }
 }
