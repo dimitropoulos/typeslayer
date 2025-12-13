@@ -8,6 +8,30 @@ import { useCallback, useState } from "react";
 import { InlineCode } from "../../components/inline-code";
 import { Step } from "./step";
 
+export const step4 = (
+  <Step step={4}>
+    <Stack spacing={0.5}>
+      <Typography variant="h5">
+        mindset: after a build, all code is "your code"
+      </Typography>
+      <Typography>
+        the point of a tool like this is to diagnose performance problems...{" "}
+        <em>and it's perfectly possible your project doesn't have any!</em> but
+        if there <em>are</em> problems, those problems can come from anywhere in
+        your total build.{" "}
+      </Typography>
+      <Typography>
+        so, if you find yourself thinking "but I just want to look at{" "}
+        <em>my types</em> not all any of the 3rd party types": consider that
+        when building and/or typechecking your project there literally is no
+        such thing as "3rd party". if you pull in a dependency that has
+        problems.. <em>now it's your problem, too</em>. try to think about
+        things holistically.
+      </Typography>
+    </Stack>
+  </Step>
+);
+
 export const Step0Prerequisites = () => {
   const [open, setOpen] = useState(false);
   const toggleDialog = useCallback(() => {
@@ -102,31 +126,7 @@ export const Step0Prerequisites = () => {
               <InlineCode>tsc --generateTrace</InlineCode> and process all your
               code without errors.
             </Alert>
-            <Step step={4}>
-              <Stack spacing={0.5}>
-                <Typography variant="h5">
-                  mindset: after a build, all code is "your code"
-                </Typography>
-                <Typography>
-                  the point of a tool like this is to diagnose performance
-                  problems...{" "}
-                  <em>
-                    and it's perfectly possible your project doesn't have any!
-                  </em>{" "}
-                  but if there <em>are</em> problems, those problems can come
-                  from anywhere in your total build.{" "}
-                </Typography>
-                <Typography>
-                  so, if you find yourself thinking "but I just want to look at{" "}
-                  <em>my types</em> not all any of the 3rd party types":
-                  consider that when building and/or typechecking your project
-                  there literally is no such thing as "3rd party". if you pull
-                  in a dependency that has problems..{" "}
-                  <em>now it's your problem, too</em>. try to think about things
-                  holistically.
-                </Typography>
-              </Stack>
-            </Step>
+            {step4}
           </Stack>
         </DialogContent>
         <DialogActions>

@@ -1,56 +1,76 @@
-import { ExpandMore } from "@mui/icons-material";
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
+  Box,
+  Divider,
   Link,
+  List,
+  ListItemButton,
+  ListItemText,
+  ListSubheader,
   Stack,
   Typography,
 } from "@mui/material";
-import type { ReactNode } from "react";
+import { useState } from "react";
 import { Code } from "../components/code";
 import { InlineCode } from "../components/inline-code";
-
-const DocItem = ({
-  title,
-  description,
-}: {
-  title: ReactNode;
-  description: ReactNode;
-}) => {
-  return (
-    <Accordion>
-      <AccordionSummary expandIcon={<ExpandMore />}>
-        <Typography variant="h6">{title}</Typography>
-      </AccordionSummary>
-      <AccordionDetails>
-        <Typography>{description}</Typography>
-      </AccordionDetails>
-    </Accordion>
-  );
-};
+import { step4 } from "./start/step-0-prerequisites";
 
 export const DocsPage = () => {
   const docItems = [
     {
       id: "my-code",
-      title: '"but I just want to see my code"',
+      title: (
+        <Typography variant="h6">"but I just want to see my code"</Typography>
+      ),
       description: (
         <Stack gap={1}>
+          <Typography gutterBottom>
+            here's a reminder from step 4 of the prerequisites in{" "}
+            <Link href="/start">Start</Link>
+          </Typography>
+          {step4}
+          <Divider sx={{ my: 2 }} />
           <Typography>
-            in the context of diagnosing performance problems this is definitely
-            wrongthink. please do see the{" "}
-            <Link href="/start">Start page prerequisites</Link> for the reasons
-            why.
+            in the context of diagnosing performance problems wanting to filter
+            by "your code" is definitely wrongthink.
           </Typography>
           <Typography>
             if you don't believe me, I won't try to save you from yourself...
             some TypeSlayer users have skirted around things by adding{" "}
             <InlineCode>skipLibCheck</InlineCode> and/or{" "}
             <InlineCode>skipDefaultLibCheck</InlineCode> to their{" "}
-            <InlineCode>tsconfig.json</InlineCode>.
+            <InlineCode>tsconfig.json</InlineCode> (or via the corresponding
+            command line flags).
           </Typography>
           <Typography>but again, it's your funeral...</Typography>
+          <Typography>
+            think of it this way{" "}
+            <small>(I'm from Michigan, so excuse the car analogy)</small>: if
+            you were on a team making the engine for a car, and you were trying
+            to understand the gas mileage of the vehicle, would you go about
+            this by taking a prototype of the car and removing all the seats,
+            doors, and exterior panels? like... because you just make the engine
+            so that's all you need to look at... right? see what I mean?
+          </Typography>
+          <Typography>
+            and, feel free to tell me why I'm wrong, I can take it. I'd actually
+            be curious to hear your thoughts. maybe there is a legit use-case
+            I'm totally missing.
+          </Typography>
+          <Typography>
+            usually people say "well I can't control what's going on in 3rd
+            party dependencies" to which I say: refer to the prior point from
+            the prerequisites about there being no such thing as 3rd party code
+            by the time of typechecking.
+          </Typography>
+          <Typography>
+            but for another thing, you{" "}
+            <em>
+              very much are in <strong>direct</strong> control of it
+            </em>{" "}
+            unless of course someone is holding you against your will to force
+            dependencies into your project, to which I'd say your priority
+            should be to get out of that abusive relationship.
+          </Typography>
         </Stack>
       ),
     },
@@ -262,27 +282,73 @@ export const DocsPage = () => {
     },
   ];
 
+  const [selectedPage, setSelectedPage] = useState(0);
+  const [hoveredPage, setHoveredPage] = useState<number | null>(null);
+  const activeIndex = hoveredPage !== null ? hoveredPage : selectedPage;
+  const selected = docItems[hoveredPage !== null ? hoveredPage : selectedPage];
+
   return (
     <Stack
       sx={{
-        p: 4,
-        overflow: "auto",
-        gap: 3,
-        maxHeight: "100%",
-        minHeight: "100%",
+        minWidth: 500,
+        minHeight: 500,
+        alignItems: "flex-start",
+        flexGrow: 1,
+        flexDirection: "row",
+        height: "100%",
+        display: "flex",
       }}
     >
-      <Typography variant="h2">Docs</Typography>
-
-      <Stack maxWidth={500}>
-        {docItems.map(item => (
-          <DocItem
-            key={item.id}
-            title={item.title}
-            description={item.description}
-          />
+      <List
+        sx={{
+          minWidth: 425,
+          maxWidth: 425,
+          whiteSpace: "nowrap",
+          overflow: "auto",
+          height: "100%",
+          borderRight: 1,
+          borderColor: "divider",
+        }}
+      >
+        <ListSubheader>Docs</ListSubheader>
+        {docItems.map(({ id, title }, index) => (
+          <ListItemButton
+            key={id}
+            onClick={() => setSelectedPage(index)}
+            onMouseEnter={() => setHoveredPage(index)}
+            onMouseLeave={() => setHoveredPage(null)}
+            selected={activeIndex === index}
+            sx={{
+              ...(activeIndex ? {} : {}),
+            }}
+          >
+            <ListItemText>
+              <Typography variant="h6">{title}</Typography>
+            </ListItemText>
+          </ListItemButton>
         ))}
-      </Stack>
+      </List>
+
+      <Box
+        sx={{
+          flexGrow: 1,
+          height: "100%",
+          overflow: "auto",
+          px: 4,
+          py: 4,
+          maxWidth: 700,
+        }}
+      >
+        <Box
+          sx={{
+            mb: 2,
+            "&> h6": { fontSize: "1.5rem !important", color: "text.primary" },
+          }}
+        >
+          {selected.title}
+        </Box>
+        {selected.description}
+      </Box>
     </Stack>
   );
 };

@@ -81,12 +81,12 @@ export const RenderPlayground = () => {
 export const AwardWinners = () => {
   return (
     <Stack
-      direction="row"
       sx={{
         minWidth: 500,
         minHeight: 500,
         alignItems: "flex-start",
         flexGrow: 1,
+        flexDirection: "row",
         height: "100%",
         display: "flex",
       }}

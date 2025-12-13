@@ -102,6 +102,38 @@ const OOMError = ({
   );
 };
 
+export const BlewYerLoad = ({
+  processingErrorStderr,
+}: {
+  processingErrorStderr: string | null;
+}) => {
+  if (!processingErrorStderr) {
+    return null;
+  }
+  if (!processingErrorStderr.includes("Maximum call stack size exceeded")) {
+    return null;
+  }
+  return (
+    <Alert severity="error" sx={{ maxWidth }}>
+      <AlertTitle>
+        you've hit the maximum call stack size limit in TypeScript!
+      </AlertTitle>
+      <Stack sx={{ gap: 1 }}>
+        <Typography>
+          what happened here is <InlineCode>tsc</InlineCode> ran out of memory
+          while typechecking your project.
+        </Typography>
+        <Typography>
+          one thing you can try to do is remove the{" "}
+          <InlineCode>--noErrorTruncation</InlineCode> flag that's enabled by
+          default in TypeSlayer. it's there to help you debug but it can also
+          make TypeScript use more memory.
+        </Typography>
+      </Stack>
+    </Alert>
+  );
+};
+
 export const ErrorHelper = ({
   processingError: _,
   processingErrorStderr,
@@ -115,6 +147,7 @@ export const ErrorHelper = ({
     <>
       <CompositeProjectsError processingErrorStdout={processingErrorStdout} />
       <OOMError processingErrorStderr={processingErrorStderr} />
+      <BlewYerLoad processingErrorStderr={processingErrorStderr} />
     </>
   );
 };

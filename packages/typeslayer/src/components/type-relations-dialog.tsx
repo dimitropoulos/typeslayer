@@ -75,7 +75,9 @@ const LastDitchEffort = ({ typeId }: { typeId: number }) => {
   if (events.length === 0) {
     return (
       <Stack gap={1}>
-        <Typography>that's tough.</Typography>
+        <Typography>
+          no types found with relations to <InlineCode>{typeId}</InlineCode>.
+        </Typography>
         <Typography>
           that means that TypeScript didn't record any more information about
           this type other than that it exists in your code.
