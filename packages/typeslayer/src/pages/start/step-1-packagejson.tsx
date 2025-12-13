@@ -7,51 +7,34 @@ import { Step } from "./step";
 
 export const Step1PackageJson = () => {
   const projectRoot = useProjectRoot();
-  const [localProjectRoot, setLocalProjectRoot] = useState<string | undefined>(
-    undefined,
-  );
-  const [isTyping, setIsTyping] = useState(false);
+  const [localProjectRoot, setLocalProjectRoot] = useState<string>("");
 
+  // handle update from server on mount
   useEffect(() => {
-    if (projectRoot.data && !isTyping) {
+    if (localProjectRoot === "" && projectRoot.data) {
       setLocalProjectRoot(projectRoot.data);
     }
-  }, [projectRoot.data, isTyping]);
-
-  // Debounced project root validation
-  useEffect(() => {
-    if (!localProjectRoot || localProjectRoot === projectRoot.data) {
-      setIsTyping(false);
-      return;
-    }
-
-    setIsTyping(true);
-    const timer = setTimeout(async () => {
-      try {
-        await projectRoot.set(localProjectRoot);
-      } catch (error) {
-        console.error("Failed to set project root:", error);
-      } finally {
-        setIsTyping(false);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [localProjectRoot, projectRoot.data, projectRoot.set]);
+  }, [localProjectRoot, projectRoot.data]);
 
   const applyProjectRoot = useCallback(
     async (pkgPath: string) => {
+      // allow the user to type whether or not it's valid
       setLocalProjectRoot(pkgPath);
+
       try {
         await projectRoot.set(pkgPath);
       } catch (error) {
         console.error("Failed to set project root:", error);
-        throw error;
-      } finally {
-        setIsTyping(false);
       }
     },
     [projectRoot.set],
+  );
+
+  const onChange = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      await applyProjectRoot(event.target.value);
+    },
+    [applyProjectRoot],
   );
 
   const locatePackageJson = useCallback(async () => {
@@ -93,20 +76,8 @@ export const Step1PackageJson = () => {
             size="small"
             placeholder="path to package.json"
             variant="outlined"
-            value={localProjectRoot ?? ""}
-            onChange={e => {
-              setLocalProjectRoot(e.target.value);
-            }}
-            onKeyDown={async event => {
-              if (event.key === "Enter" && localProjectRoot) {
-                event.preventDefault();
-                try {
-                  await applyProjectRoot(localProjectRoot);
-                } catch (error) {
-                  console.error("Failed to apply project root:", error);
-                }
-              }
-            }}
+            value={localProjectRoot}
+            onChange={onChange}
             fullWidth
           />
         </Stack>

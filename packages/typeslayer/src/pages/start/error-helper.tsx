@@ -129,6 +129,18 @@ export const BlewYerLoad = ({
           default in TypeSlayer. it's there to help you debug but it can also
           make TypeScript use more memory.
         </Typography>
+        <Typography>
+          another thing you can try is increasing the call stack size limit.
+          TypeSlayer actually has an option for it but it had to be hidden
+          because there's currently no way to pass{" "}
+          <InlineCode>--stack-size</InlineCode> in the{" "}
+          <InlineCode>NODE_OPTIONS</InlineCode> environment variable from a
+          command like <InlineCode>pnpm exec</InlineCode>, so to do this you'll
+          have to call <InlineCode>node</InlineCode> yourself, pointing at the
+          right <InlineCode>tsc</InlineCode>. This is admittedly a bit of a
+          shame to have to do because it opens the door to a whole new world of
+          potential issues, but it's worth a shot.
+        </Typography>
       </Stack>
     </Alert>
   );

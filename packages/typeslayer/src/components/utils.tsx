@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import {
   extractPackageName,
   type ResolvedType,
@@ -93,20 +92,6 @@ export const formatBytesSize = (bytes: number): string => {
   return `${gib} GiB`;
 };
 
-export const useStaticFile = (fileName: string) => {
-  return useQuery<string>({
-    queryKey: ["outputs", fileName],
-    queryFn: async () => {
-      const response = await fetch(`${serverBaseUrl}/outputs/${fileName}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch ${fileName}: ${response.statusText}`);
-      }
-      return response.text();
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
-};
-
 export const extractPath = (resolvedType: ResolvedType) => {
   if (resolvedType.firstDeclaration?.path) {
     return resolvedType.firstDeclaration.path;
@@ -123,4 +108,42 @@ export const extractPath = (resolvedType: ResolvedType) => {
 export const stripAnsi = (text: string): string => {
   const esc = String.fromCharCode(27);
   return text.replace(new RegExp(`${esc}\\[[\\d;]*m`, "g"), "");
+};
+
+export const processTscExample = ({
+  tscExample,
+  projectRoot,
+}: {
+  tscExample: string | undefined;
+  projectRoot: string | undefined;
+}): string => {
+  if (!tscExample) {
+    return "<error>";
+  }
+  if (!projectRoot) {
+    return tscExample;
+  }
+
+  // it might start with NODE_OPTIONS, so we need to extract that temporarily
+  // it might look like:
+  // - `NODE_OPTIONS='--max-old-space-size=4096'`
+  // - `NODE_OPTIONS='--other-thing'`
+  // - `NODE_OPTIONS='--max-old-space-size=4096 --other-thing'`
+  const nodeOptions = tscExample.match(
+    /^NODE_OPTIONS=(?:'[^']*'|--[^\s]+(?:\s--[^\s]+)*)/,
+  );
+  const nodeOptionsStr = nodeOptions?.[0] ?? "";
+  const strippedTscExample = tscExample.replace(nodeOptionsStr, "");
+
+  const example = strippedTscExample.replace(
+    / --[^\s]+/g,
+    match => ` \\\n  ${match}`,
+  );
+  console.log({ tscExample, nodeOptionsStr, strippedTscExample, example });
+  return projectRoot
+    ? [
+        `${stripPackageJson(projectRoot)}`,
+        `$ ${nodeOptionsStr ? `${nodeOptionsStr} ` : ""}${example}`,
+      ].join("\n")
+    : "<error>";
 };

@@ -128,6 +128,12 @@ const docsRoute = createRoute({
   component: DocsPage,
 });
 
+const docsChildRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/docs/$docId",
+  component: DocsPage,
+});
+
 const aboutRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/about",
@@ -167,6 +173,7 @@ const routeTree = rootRoute.addChildren([
   cicdIntegrationsRoute,
   settingsRoute,
   docsRoute,
+  docsChildRoute,
   aboutRoute,
 ]);
 

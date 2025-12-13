@@ -7,22 +7,18 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { useQuery } from "@tanstack/react-query";
-import { invoke } from "@tauri-apps/api/core";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useCallback, useMemo, useState } from "react";
 import { StatPill } from "../components/stat-pill";
 import { friendlyPath } from "../components/utils";
 import { useToast } from "../contexts/toast-context";
-import { useProjectRoot, useRelativePaths } from "../hooks/tauri-hooks";
-
-interface TreemapNode {
-  name: string;
-  value: number;
-  path?: string;
-  children?: TreemapNode[];
-}
+import {
+  type TreemapNode,
+  useProjectRoot,
+  useRelativePaths,
+  useTreemap,
+} from "../hooks/tauri-hooks";
 
 export const Treemap = () => {
   const relativePaths = useRelativePaths();
@@ -32,11 +28,7 @@ export const Treemap = () => {
   const [popoverAnchorEl, setPopoverAnchorEl] =
     useState<HTMLButtonElement | null>(null);
 
-  const { data, isLoading, error } = useQuery<TreemapNode[]>({
-    queryKey: ["treemap_data"],
-    queryFn: async () => invoke<TreemapNode[]>("get_treemap_data"),
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  const { data, isLoading, error } = useTreemap();
 
   const totalTime = useMemo(() => {
     if (!data) {

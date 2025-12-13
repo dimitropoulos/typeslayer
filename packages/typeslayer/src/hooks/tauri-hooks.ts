@@ -16,21 +16,20 @@ import {
   type TraceJsonSchema,
   TYPES_JSON_FILENAME,
 } from "@typeslayer/validate";
-import { friendlyPath } from "../components/utils";
+import { friendlyPath, serverBaseUrl } from "../components/utils";
 import { TYPE_GRAPH_FILENAME, type TypeGraph } from "../types/type-graph";
 
 export function useRelativePaths() {
   const queryClient = useQueryClient();
 
-  const query = useQuery<boolean>({
+  const query = useQuery({
     queryKey: ["relative_paths"],
-    queryFn: async () => invoke<boolean>("get_relative_paths"),
+    queryFn: () => invoke<boolean>("get_relative_paths"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 
   const mutation = useMutation({
-    mutationFn: async (value: boolean) =>
-      invoke("set_relative_paths", { value }),
+    mutationFn: (value: boolean) => invoke("set_relative_paths", { value }),
     onSuccess: (_, value) => {
       queryClient.setQueryData(["relative_paths"], value);
     },
@@ -48,15 +47,14 @@ export function useRelativePaths() {
 export function usePreferEditorOpen() {
   const queryClient = useQueryClient();
 
-  const query = useQuery<boolean>({
+  const query = useQuery({
     queryKey: ["prefer_editor_open"],
-    queryFn: async () => invoke<boolean>("get_prefer_editor_open"),
+    queryFn: () => invoke<boolean>("get_prefer_editor_open"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 
   const mutation = useMutation({
-    mutationFn: async (value: boolean) =>
-      invoke("set_prefer_editor_open", { value }),
+    mutationFn: (value: boolean) => invoke("set_prefer_editor_open", { value }),
     onSuccess: (_, value) => {
       queryClient.setQueryData(["prefer_editor_open"], value);
     },
@@ -74,14 +72,14 @@ export function usePreferEditorOpen() {
 export function useAutoStart() {
   const queryClient = useQueryClient();
 
-  const query = useQuery<boolean>({
+  const query = useQuery({
     queryKey: ["auto_start"],
-    queryFn: async () => invoke<boolean>("get_auto_start"),
+    queryFn: () => invoke<boolean>("get_auto_start"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 
   const mutation = useMutation({
-    mutationFn: async (value: boolean) => invoke("set_auto_start", { value }),
+    mutationFn: (value: boolean) => invoke("set_auto_start", { value }),
     onSuccess: (_, value) => {
       queryClient.setQueryData(["auto_start"], value);
     },
@@ -99,19 +97,20 @@ export function useAutoStart() {
 export function useApplyTscProjectFlag() {
   const queryClient = useQueryClient();
 
-  const query = useQuery<boolean>({
+  const query = useQuery({
     queryKey: ["apply_tsc_project_flag"],
-    queryFn: async () => invoke<boolean>("get_apply_tsc_project_flag"),
+    queryFn: () => invoke<boolean>("get_apply_tsc_project_flag"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 
   const mutation = useMutation({
-    mutationFn: async (value: boolean) =>
+    mutationFn: (value: boolean) =>
       invoke("set_apply_tsc_project_flag", { value }),
-    onSuccess: (_, value) => {
-      console.log({ value });
-      queryClient.setQueryData(["apply_tsc_project_flag"], value);
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
+    },
+    onSuccess: (_, value) => {
+      queryClient.setQueryData(["apply_tsc_project_flag"], value);
     },
   });
 
@@ -127,14 +126,14 @@ export function useApplyTscProjectFlag() {
 export function usePreferredEditor() {
   const queryClient = useQueryClient();
 
-  const query = useQuery<string | null>({
+  const query = useQuery({
     queryKey: ["preferred_editor"],
-    queryFn: async () => invoke<string | null>("get_preferred_editor"),
+    queryFn: () => invoke<string | null>("get_preferred_editor"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 
   const mutation = useMutation({
-    mutationFn: async (editor: string | null) =>
+    mutationFn: (editor: string | null) =>
       invoke("set_preferred_editor", { editor }),
     onSuccess: (_, editor) => {
       queryClient.setQueryData(["preferred_editor"], editor);
@@ -153,24 +152,25 @@ export function usePreferredEditor() {
 export function useExtraTscFlags() {
   const queryClient = useQueryClient();
 
-  const query = useQuery<string>({
+  const query = useQuery({
     queryKey: ["extra_tsc_flags"],
-    queryFn: async () => invoke<string>("get_extra_tsc_flags"),
+    queryFn: () => invoke<string>("get_extra_tsc_flags"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 
-  const defaultQuery = useQuery<string>({
+  const defaultQuery = useQuery({
     queryKey: ["default_extra_tsc_flags"],
-    queryFn: async () => invoke<string>("get_default_extra_tsc_flags"),
+    queryFn: () => invoke<string>("get_default_extra_tsc_flags"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 
   const mutation = useMutation({
-    mutationFn: async (flags: string) =>
-      invoke("set_extra_tsc_flags", { flags }),
+    mutationFn: (flags: string) => invoke("set_extra_tsc_flags", { flags }),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
+    },
     onSuccess: (_, flags) => {
       queryClient.setQueryData(["extra_tsc_flags"], flags);
-      queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
     },
   });
 
@@ -185,10 +185,10 @@ export function useExtraTscFlags() {
 }
 
 export function useAvailableEditors() {
-  return useQuery<Array<[string, string]>>({
+  return useQuery({
     queryKey: ["available_editors"],
-    queryFn: async () =>
-      invoke<Array<[string, string]>>("get_available_editors"),
+    queryFn: () =>
+      invoke<[command: string, label: string][]>("get_available_editors"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 }
@@ -196,20 +196,22 @@ export function useAvailableEditors() {
 export function useProjectRoot() {
   const queryClient = useQueryClient();
 
-  const query = useQuery<string>({
+  const query = useQuery({
     queryKey: ["project_root"],
-    queryFn: async () => invoke<string>("get_project_root"),
+    queryFn: () => invoke<string>("get_project_root"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 
   const mutation = useMutation({
-    mutationFn: async (projectRoot: string) =>
+    mutationFn: (projectRoot: string) =>
       invoke("set_project_root", { projectRoot }),
-    onSuccess: (_, projectRoot) => {
-      queryClient.setQueryData(["project_root"], projectRoot);
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["tsconfig_paths"] });
       queryClient.invalidateQueries({ queryKey: ["selected_tsconfig"] });
       queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
+    },
+    onSuccess: (_, projectRoot) => {
+      queryClient.setQueryData(["project_root"], projectRoot);
     },
   });
 
@@ -225,7 +227,7 @@ export function useProjectRoot() {
 export function useTraceJson() {
   return useQuery({
     queryKey: ["trace_json"],
-    queryFn: async () => invoke<TraceJsonSchema>("get_trace_json"),
+    queryFn: () => invoke<TraceJsonSchema>("get_trace_json"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 }
@@ -233,39 +235,39 @@ export function useTraceJson() {
 export function useTypesJson() {
   return useQuery({
     queryKey: ["types_json"],
-    queryFn: async () => invoke<ResolvedType[]>("get_types_json"),
+    queryFn: () => invoke<ResolvedType[]>("get_types_json"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 }
 
 export function useTypeGraph() {
-  return useQuery<TypeGraph>({
+  return useQuery({
     queryKey: ["type_graph"],
-    queryFn: async () => invoke("get_type_graph"),
+    queryFn: () => invoke<TypeGraph>("get_type_graph"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 }
 
 export function useAnalyzeTrace() {
-  return useQuery<AnalyzeTraceResult>({
+  return useQuery({
     queryKey: ["analyze_trace"],
-    queryFn: async () => invoke("get_analyze_trace"),
+    queryFn: () => invoke<AnalyzeTraceResult>("get_analyze_trace"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 }
 
 export function useCpuProfile() {
-  return useQuery<string>({
+  return useQuery({
     queryKey: ["cpu_profile"],
-    queryFn: async () => invoke<string>("get_cpu_profile"),
+    queryFn: () => invoke<string>("get_cpu_profile"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 }
 
 export function useTsconfigPaths() {
-  return useQuery<string[]>({
+  return useQuery({
     queryKey: ["tsconfig_paths"],
-    queryFn: async () => invoke<string[]>("get_tsconfig_paths"),
+    queryFn: () => invoke<string[]>("get_tsconfig_paths"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 }
@@ -300,8 +302,8 @@ export function useGenerateTrace() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => invoke("generate_trace"),
-    onSuccess: refreshGenerateTrace(queryClient),
+    mutationFn: () => invoke("generate_trace"),
+    onSettled: refreshGenerateTrace(queryClient),
   });
 }
 
@@ -309,9 +311,8 @@ export function useUploadTrace() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (filePath: string) =>
-      invoke("upload_trace_json", { filePath }),
-    onSuccess: refreshGenerateTrace(queryClient),
+    mutationFn: (filePath: string) => invoke("upload_trace_json", { filePath }),
+    onSettled: refreshGenerateTrace(queryClient),
   });
 }
 
@@ -319,9 +320,8 @@ export function useUploadTypes() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (filePath: string) =>
-      invoke("upload_types_json", { filePath }),
-    onSuccess: refreshGenerateTrace(queryClient),
+    mutationFn: (filePath: string) => invoke("upload_types_json", { filePath }),
+    onSettled: refreshGenerateTrace(queryClient),
   });
 }
 
@@ -339,8 +339,8 @@ export function useGenerateCpuProfile() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => invoke("generate_cpu_profile"),
-    onSuccess: refreshCpuProfile(queryClient),
+    mutationFn: () => invoke("generate_cpu_profile"),
+    onSettled: refreshCpuProfile(queryClient),
   });
 }
 
@@ -348,9 +348,9 @@ export function useUploadCpuProfile() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (filePath: string) =>
+    mutationFn: (filePath: string) =>
       invoke("upload_cpu_profile", { filePath }),
-    onSuccess: refreshCpuProfile(queryClient),
+    onSettled: refreshCpuProfile(queryClient),
   });
 }
 
@@ -369,8 +369,8 @@ export function useGenerateAnalyzeTrace() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => invoke("generate_analyze_trace"),
-    onSuccess: refreshAnalyzeTrace(queryClient),
+    mutationFn: () => invoke("generate_analyze_trace"),
+    onSettled: refreshAnalyzeTrace(queryClient),
   });
 }
 
@@ -378,9 +378,9 @@ export function useUploadAnalyzeTrace() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (filePath: string) =>
+    mutationFn: (filePath: string) =>
       invoke("upload_analyze_trace", { filePath }),
-    onSuccess: refreshAnalyzeTrace(queryClient),
+    onSettled: refreshAnalyzeTrace(queryClient),
   });
 }
 
@@ -397,8 +397,8 @@ export function useGenerateTypeGraph() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => invoke("generate_type_graph"),
-    onSuccess: refreshTypeGraph(queryClient),
+    mutationFn: () => invoke("generate_type_graph"),
+    onSettled: refreshTypeGraph(queryClient),
   });
 }
 
@@ -406,27 +406,28 @@ export function useUploadTypeGraph() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (filePath: string) =>
-      invoke("upload_type_graph", { filePath }),
-    onSuccess: refreshTypeGraph(queryClient),
+    mutationFn: (filePath: string) => invoke("upload_type_graph", { filePath }),
+    onSettled: refreshTypeGraph(queryClient),
   });
 }
 
 export function useSelectedTsconfig() {
   const queryClient = useQueryClient();
 
-  const query = useQuery<string | null>({
+  const query = useQuery({
     queryKey: ["selected_tsconfig"],
-    queryFn: async () => invoke<string | null>("get_selected_tsconfig"),
+    queryFn: () => invoke<string | null>("get_selected_tsconfig"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 
   const mutation = useMutation({
-    mutationFn: async (tsconfigPath: string) =>
+    mutationFn: (tsconfigPath: string) =>
       invoke("set_selected_tsconfig", { tsconfigPath }),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
+    },
     onSuccess: (_, tsconfigPath) => {
       queryClient.setQueryData(["selected_tsconfig"], tsconfigPath || null);
-      queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
     },
   });
 
@@ -441,7 +442,7 @@ export function useSelectedTsconfig() {
 
 export function useOpenFile() {
   return useMutation({
-    mutationFn: async (path: string) => invoke("open_file", { path }),
+    mutationFn: (path: string) => invoke("open_file", { path }),
   });
 }
 
@@ -499,47 +500,45 @@ export interface ManagedResource {
 
 /// Hook to monitor status of active MCP tools
 export function useMcpToolStatus() {
-  return useQuery<ToolProgress[]>({
+  return useQuery({
     queryKey: ["mcp_tool_status"],
-    queryFn: async () => invoke<ToolProgress[]>("get_tool_status"),
-    staleTime: 500, // Update frequently to show live progress
-    refetchInterval: 500,
+    queryFn: () => invoke<ToolProgress[]>("get_tool_status"),
+    staleTime: 60_000, // Update frequently to show live progress
+    refetchInterval: 60_000, // todo: make this faster later
   });
 }
 
 /// Hook to fetch available MCP tool definitions from backend
 export function useAvailableTools() {
-  return useQuery<ToolDefinition[]>({
+  return useQuery({
     queryKey: ["available_mcp_tools"],
-    queryFn: async () => invoke<ToolDefinition[]>("get_available_mcp_tools"),
+    queryFn: () => invoke<ToolDefinition[]>("get_available_mcp_tools"),
     staleTime: Number.POSITIVE_INFINITY, // Tool definitions don't change during app lifetime
   });
 }
 
 /// Hook to fetch available MCP resources from backend
 export function useAvailableResources() {
-  return useQuery<ManagedResource[]>({
+  return useQuery({
     queryKey: ["available_mcp_resources"],
-    queryFn: async () =>
-      invoke<ManagedResource[]>("get_available_mcp_resources"),
+    queryFn: () => invoke<ManagedResource[]>("get_available_mcp_resources"),
     staleTime: Number.POSITIVE_INFINITY, // Resource definitions don't change during app lifetime
   });
 }
 
 export const useOutputFileSizes = () => {
-  return useQuery<Record<string, number>>({
+  return useQuery({
     queryKey: ["get_output_file_sizes"],
-    queryFn: async () =>
-      invoke<Record<string, number>>("get_output_file_sizes"),
+    queryFn: () => invoke<Record<string, number>>("get_output_file_sizes"),
     staleTime: 5000,
     refetchInterval: 10000,
   });
 };
 
 export const useTscExample = () => {
-  return useQuery<string>({
+  return useQuery({
     queryKey: ["get_tsc_example_call"],
-    queryFn: async () => invoke<string>("get_tsc_example_call"),
+    queryFn: () => invoke<string>("get_tsc_example_call"),
   });
 };
 
@@ -549,9 +548,9 @@ export interface BugReportFile {
 }
 
 export const useBugReportFiles = () => {
-  return useQuery<BugReportFile[]>({
+  return useQuery({
     queryKey: ["bug_report_files"],
-    queryFn: async () => invoke<BugReportFile[]>("get_bug_report_files"),
+    queryFn: () => invoke<BugReportFile[]>("get_bug_report_files"),
     staleTime: 5000,
   });
 };
@@ -573,9 +572,9 @@ export const useCreateBugReport = () => {
 };
 
 export const useDataDir = () => {
-  return useQuery<string>({
+  return useQuery({
     queryKey: ["data_dir"],
-    queryFn: async () => invoke<string>("get_data_dir"),
+    queryFn: () => invoke<string>("get_data_dir"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 };
@@ -583,18 +582,20 @@ export const useDataDir = () => {
 export const useMaxOldSpaceSize = () => {
   const queryClient = useQueryClient();
 
-  const query = useQuery<number | null>({
+  const query = useQuery({
     queryKey: ["max_old_space_size"],
-    queryFn: async () => invoke<number | null>("get_max_old_space_size"),
+    queryFn: () => invoke<number | null>("get_max_old_space_size"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 
   const mutation = useMutation({
-    mutationFn: async (size: number | null) =>
+    mutationFn: (size: number | null) =>
       invoke("set_max_old_space_size", { size }),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
+    },
     onSuccess: (_, size) => {
       queryClient.setQueryData(["max_old_space_size"], size);
-      queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
     },
   });
 
@@ -608,41 +609,99 @@ export const useMaxOldSpaceSize = () => {
 };
 
 export const useGetAnalyzeTraceText = () => {
-  return useQuery<string>({
+  return useQuery({
     queryKey: ["get_analyze_trace_text"],
-    queryFn: async () => invoke<string>("get_analyze_trace_text"),
+    queryFn: () => invoke<string>("get_analyze_trace_text"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 };
 
 export const useGetTraceJsonText = () => {
-  return useQuery<string>({
+  return useQuery({
     queryKey: ["get_trace_json_text"],
-    queryFn: async () => invoke<string>("get_trace_json_text"),
+    queryFn: () => invoke<string>("get_trace_json_text"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 };
 
 export const useGetTypesJsonText = () => {
-  return useQuery<string>({
+  return useQuery({
     queryKey: ["get_types_json_text"],
-    queryFn: async () => invoke<string>("get_types_json_text"),
+    queryFn: () => invoke<string>("get_types_json_text"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 };
 
 export const useGetTypeGraphText = () => {
-  return useQuery<string>({
+  return useQuery({
     queryKey: ["get_type_graph_text"],
-    queryFn: async () => invoke<string>("get_type_graph_text"),
+    queryFn: () => invoke<string>("get_type_graph_text"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 };
 
 export const useGetCpuProfileText = () => {
-  return useQuery<string>({
+  return useQuery({
     queryKey: ["get_cpu_profile_text"],
-    queryFn: async () => invoke<string>("get_cpu_profile_text"),
+    queryFn: () => invoke<string>("get_cpu_profile_text"),
     staleTime: Number.POSITIVE_INFINITY,
   });
+};
+
+export interface TreemapNode {
+  name: string;
+  value: number;
+  path?: string;
+  children?: TreemapNode[];
+}
+
+export const useTreemap = () => {
+  return useQuery({
+    queryKey: ["treemap_data"],
+    queryFn: () => invoke<TreemapNode[]>("get_treemap_data"),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+};
+
+// technically not tauri but yolo
+export const useStaticFile = (fileName: string) => {
+  return useQuery({
+    queryKey: ["outputs", fileName],
+    queryFn: async () => {
+      const response = await fetch(`${serverBaseUrl}/outputs/${fileName}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ${fileName}: ${response.statusText}`);
+      }
+      return response.text();
+    },
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+};
+
+export const useMaxStackSize = () => {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ["max_stack_size"],
+    queryFn: () => invoke<number | null>("get_max_stack_size"),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  const mutation = useMutation({
+    mutationFn: (size: number | null) => invoke("set_max_stack_size", { size }),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
+    },
+    onSuccess: (_, size) => {
+      queryClient.setQueryData(["max_stack_size"], size);
+    },
+  });
+
+  return {
+    data: query.data,
+    isLoading: query.isLoading,
+    error: query.error,
+    set: mutation.mutateAsync,
+    isSettingValue: mutation.isPending,
+  };
 };

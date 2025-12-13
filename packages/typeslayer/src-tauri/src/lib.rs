@@ -1,7 +1,6 @@
 mod analyze_trace;
 pub mod app_data;
 mod auth;
-pub mod files;
 mod http_server;
 mod layercake;
 pub mod log;
@@ -62,12 +61,16 @@ pub fn run_tauri_app(app_data: Arc<Mutex<app_data::AppData>>) {
             app_data::get_bug_report_files,
             app_data::get_cpu_profile,
             app_data::get_cpu_profile_text,
+            app_data::get_current_dir,
             app_data::get_data_dir,
             app_data::get_default_extra_tsc_flags,
             app_data::get_extra_tsc_flags,
             app_data::get_max_old_space_size,
+            app_data::get_max_stack_size,
+            app_data::get_output_file_sizes,
             app_data::get_prefer_editor_open,
             app_data::get_preferred_editor,
+            app_data::get_project_root,
             app_data::get_relative_paths,
             app_data::get_selected_tsconfig,
             app_data::get_trace_json,
@@ -83,8 +86,10 @@ pub fn run_tauri_app(app_data: Arc<Mutex<app_data::AppData>>) {
             app_data::set_auto_start,
             app_data::set_extra_tsc_flags,
             app_data::set_max_old_space_size,
+            app_data::set_max_stack_size,
             app_data::set_prefer_editor_open,
             app_data::set_preferred_editor,
+            app_data::set_project_root,
             app_data::set_relative_paths,
             app_data::set_selected_tsconfig,
             app_data::set_window_title_from_project,
@@ -99,10 +104,6 @@ pub fn run_tauri_app(app_data: Arc<Mutex<app_data::AppData>>) {
             app_data::verify_cpu_profile,
             auth::is_authorized,
             auth::validate_auth_code,
-            files::get_current_dir,
-            files::get_output_file_sizes,
-            files::get_project_root,
-            files::set_project_root,
             mcp::status::get_available_mcp_resources,
             mcp::status::get_available_mcp_tools,
             mcp::status::get_mcp_running_tools,

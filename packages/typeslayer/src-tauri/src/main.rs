@@ -4,7 +4,7 @@
 use std::sync::{Arc, Mutex};
 
 fn main() -> Result<(), String> {
-    let data_dir = typeslayer_lib::files::get_typeslayer_base_data_dir();
+    let data_dir = typeslayer_lib::app_data::get_typeslayer_base_data_dir();
 
     // Create AppData as the root of our application (single instance shared by all components)
     let app_data = Arc::new(Mutex::new(typeslayer_lib::app_data::AppData::new(

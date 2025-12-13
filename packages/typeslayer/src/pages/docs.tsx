@@ -1,3 +1,4 @@
+import { Pause } from "@mui/icons-material";
 import {
   Box,
   Divider,
@@ -9,6 +10,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { Code } from "../components/code";
 import { InlineCode } from "../components/inline-code";
@@ -280,12 +282,119 @@ export const DocsPage = () => {
         </Stack>
       ),
     },
+    {
+      id: "type-network-moving",
+      title: (
+        <Typography variant="h6">
+          why does the Type Network keep moving?
+        </Typography>
+      ),
+      description: (
+        <Stack gap={1}>
+          <Typography>
+            the Type Network is a thing called a "force directed graph". it's a
+            way of visualizing a graph where the nodes (in this case, your
+            types) are connected by edges (in this case, the relationships
+            between your types) via a physics simulation. the nodes are
+            positioned based on the strength of the connections between them.
+          </Typography>
+          <Typography>
+            the reason it's always moving is that the layout of the nodes is
+            constantly being updated based on the strength of the connections
+            between the nodes. the layout algorithm is designed to minimize the
+            overall energy of the system, which means that the nodes are
+            constantly moving towards a more stable configuration.
+          </Typography>
+          <Typography>
+            eventually, the nodes will settle into a stable configuration
+            (unless you change the filters, which will cause new/different
+            forces to be in play, and thus get everything moving again).
+          </Typography>
+          <Typography>
+            if that makes you wonder: "why can't you just have it start on the
+            stable layout", then consider that it's <em>a live simulation</em>,
+            which means that the to display the stable equilibrium state for a
+            given set of filters you'd have to wait for the simulation to run
+            until it reaches a stable state, which could take a while. so while
+            it's equalizing... you might as well just see it in action. and
+            that's exactly what it does.
+          </Typography>
+          <Divider />
+          <Typography>
+            if you want to stop the movement, you can click on the{" "}
+            <Pause fontSize="small" /> (pause) icon in the top right corner of
+            the Type Network view. this will lock the current layout and prevent
+            the nodes from moving.
+          </Typography>
+          <Typography>
+            you can also hold your spacebar down to pause the movement of the
+            nodes temporarily.
+          </Typography>
+        </Stack>
+      ),
+    },
+    {
+      id: "testing-libraries",
+      title: (
+        <Typography variant="h6">
+          how is testing a library different?
+        </Typography>
+      ),
+      description: (
+        <Stack gap={1}>
+          <Typography>
+            benchmarking the performance of types is actually quite akin to any
+            other kid of performance testing. if I have a function in my
+            library, let's say, and I want to test that function's performance..
+            what do I do? how do I do that? well.. I have to call the function.
+            right?
+          </Typography>
+          <Typography>
+            the "meta" of this whole "TypeScript types performance" thing is
+            ultimately thinking about types as functions. for example a type
+            with no generics is sorta like a function with no parameters. a type
+            with one generic is sorta like a function with one parameter. and so
+            on. that's what people mean when they say "type-level programming".
+          </Typography>
+          <Typography>
+            so... to observe the real-world performance of your types, you have
+            to make sure you're actually "calling" them, like a user might.
+          </Typography>
+          <Typography>
+            in the simplest of terms, that could mean making sure that
+            TypeSlayer is being passed the unit tests for your library, since
+            there is where you're actually calling your library's types.
+          </Typography>
+          <Typography>
+            but in more broad terms,{" "}
+            <strong>
+              it might be best to test your library by running TypeSlayer on a
+              different real-world project that uses your library.
+            </strong>{" "}
+            that way you can ensure you're getting an accurate picture of how
+            your types perform in a real-world scenario (exactly like you would
+            want to do with any other kind of performance testing).
+          </Typography>
+        </Stack>
+      ),
+    },
   ];
 
-  const [selectedPage, setSelectedPage] = useState(0);
+  const params = useParams({ strict: false });
+  const navigate = useNavigate();
+
+  let routeDerivedIndex = 0;
+  if (params.docId) {
+    const index = docItems.findIndex(({ id }) => id === params.docId);
+    if (index !== -1) {
+      routeDerivedIndex = index;
+    }
+  }
+
   const [hoveredPage, setHoveredPage] = useState<number | null>(null);
-  const activeIndex = hoveredPage !== null ? hoveredPage : selectedPage;
-  const selected = docItems[hoveredPage !== null ? hoveredPage : selectedPage];
+  const activeIndex = hoveredPage !== null ? hoveredPage : routeDerivedIndex;
+  const selected =
+    docItems[hoveredPage !== null ? hoveredPage : routeDerivedIndex];
 
   return (
     <Stack
@@ -314,10 +423,10 @@ export const DocsPage = () => {
         {docItems.map(({ id, title }, index) => (
           <ListItemButton
             key={id}
-            onClick={() => setSelectedPage(index)}
+            onClick={() => navigate({ to: `/docs/${id}` })}
             onMouseEnter={() => setHoveredPage(index)}
             onMouseLeave={() => setHoveredPage(null)}
-            selected={activeIndex === index}
+            selected={routeDerivedIndex === index}
             sx={{
               ...(activeIndex ? {} : {}),
             }}

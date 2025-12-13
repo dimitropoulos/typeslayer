@@ -57,6 +57,7 @@ pub mod resources {
         ]
     }
 
+    #[allow(dead_code)]
     pub fn read_output_resource(
         uri: &str,
         app_data: Arc<Mutex<AppData>>,
@@ -110,12 +111,14 @@ pub mod resources {
 }
 
 /// Get available resources
+#[allow(dead_code)]
 pub fn list_resources(_app_data: Arc<Mutex<AppData>>) -> Vec<ManagedResource> {
     info!("MCP: Listing available resources");
     resources::get_output_resources()
 }
 
 /// Read a specific resource by URI
+#[allow(dead_code)]
 pub fn read_resource(uri: &str, app_data: Arc<Mutex<AppData>>) -> Result<(String, String), String> {
     info!("MCP: Reading resource: {}", uri);
     let content = resources::read_output_resource(uri, app_data)?;

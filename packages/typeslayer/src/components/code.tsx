@@ -22,6 +22,7 @@ export const Code = ({
   lang,
   maxSize = 1024 * 10,
   disableSyntaxHighlighting,
+  copyThisInstead,
   ...boxProps
 }: {
   /** Data to render. Strings are parsed if they look like JSON, otherwise rendered as-is. */
@@ -34,6 +35,7 @@ export const Code = ({
   lang?: BundledLanguage;
   maxSize?: number;
   disableSyntaxHighlighting?: boolean;
+  copyThisInstead?: string | undefined;
 } & BoxProps) => {
   const code = useMemo(() => toDisplayString(value, maxSize), [value, maxSize]);
   const [html, setHtml] = useState<string | null>(null);
@@ -126,7 +128,7 @@ export const Code = ({
               aria-label="copy code"
               onClick={async () => {
                 try {
-                  await navigator.clipboard.writeText(code);
+                  await navigator.clipboard.writeText(copyThisInstead ?? code);
                   setCopied(true);
                   setTimeout(() => setCopied(false), 1200);
                 } catch (_error) {

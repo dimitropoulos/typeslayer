@@ -5,11 +5,7 @@ use shlex::Quoter;
 pub fn quote_if_needed(s: &str) -> String {
     // Equivalent to the now deprecated try_quote.
     // Should never panic since the only error is only possible with `allow_nul(false)`
-    Quoter::new()
-        .allow_nul(true)
-        .quote(s)
-        .unwrap()
-        .into_owned()
+    Quoter::new().allow_nul(true).quote(s).unwrap().into_owned()
 }
 
 /// takes in a string flag and a string path and makes it a cli arg, handing quoting if the arg contains spaces
@@ -20,6 +16,7 @@ pub fn make_cli_arg(flag: &str, path: &str) -> String {
 
 pub const PACKAGE_JSON_FILENAME: &str = "package.json";
 pub const TSCONFIG_FILENAME: &str = "tsconfig.json";
+pub const OUTPUTS_DIRECTORY: &str = "outputs";
 
 pub fn command_exists(cmd: &str) -> bool {
     #[cfg(target_os = "windows")]

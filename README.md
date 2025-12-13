@@ -49,7 +49,7 @@ I wanted to make it easy for others to put up PRs at their companies all like "I
 
 ## Data / Security
 
-TypeSlayer supports Linux x64, macOS ARM64 (Apple Silicon), and Windows x64.  Please note that next year is the year of the Linux desktop.
+TypeSlayer supports Linux x64 (glibc 2.39+), macOS ARM64 (Apple Silicon), and Windows x64.  Please note that next year is the year of the Linux desktop.
 
 TypeSlayer currently does not collect any analytics - although it probably will try to collect "someone somewhere ran it at XYZ timestamp" data in the future.  all data is stored:
 

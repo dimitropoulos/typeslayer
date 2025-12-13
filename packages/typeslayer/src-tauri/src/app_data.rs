@@ -1,10 +1,11 @@
 use crate::{
     analyze_trace::constants::ANALYZE_TRACE_FILENAME,
-    files::OUTPUTS_DIRECTORY,
     layercake::{LayerCake, LayerCakeInitArgs, ResolveBoolArgs, ResolveStringArgs, Source},
     process_controller::ProcessController,
+    type_graph::TYPE_GRAPH_FILENAME,
     utils::{
-        PACKAGE_JSON_FILENAME, TSCONFIG_FILENAME, command_exists, make_cli_arg, quote_if_needed,
+        OUTPUTS_DIRECTORY, PACKAGE_JSON_FILENAME, TSCONFIG_FILENAME, command_exists, make_cli_arg,
+        quote_if_needed,
     },
     validate::{
         trace_json::{TRACE_JSON_FILENAME, parse_trace_json, read_trace_json},
@@ -248,6 +249,41 @@ impl AppData {
         ))
     }
 
+    fn set_project_root(&mut self, new_root: PathBuf) -> Result<(), String> {
+        if !new_root.exists() {
+            self.selected_tsconfig = None;
+            self.tsconfig_paths = vec![];
+            self.project_root = PathBuf::from(".");
+            return Err(format!(
+                "project_root path does not exist: {}",
+                new_root.display()
+            ));
+        }
+
+        self.project_root = new_root;
+
+        let package_manager = Self::find_package_manager(&self.project_root)?;
+        self.package_manager = package_manager;
+
+        let previous_selection = self.selected_tsconfig.clone();
+
+        self.discover_tsconfigs()?;
+
+        // Try to keep previous selection if it still exists
+        if let Some(prev) = previous_selection {
+            if self.tsconfig_paths.contains(&prev) {
+                self.selected_tsconfig = Some(prev);
+                return Ok(());
+            }
+        }
+
+        // Otherwise, auto-detect
+        self.selected_tsconfig =
+            Self::init_selected_tsconfig_with(&self.cake, &self.tsconfig_paths);
+
+        Ok(())
+    }
+
     fn init_verbose_with(cake: &LayerCake) -> bool {
         cake.resolve_bool(ResolveBoolArgs {
             env: "VERBOSE",
@@ -359,6 +395,14 @@ impl AppData {
     }
 
     pub fn update_project_root(&mut self, new_root: PathBuf) -> Result<(), String> {
+        if !new_root.exists() {
+            self.selected_tsconfig = None;
+            return Err(format!(
+                "project_root path does not exist: {}",
+                new_root.display()
+            ));
+        }
+
         self.project_root = new_root;
 
         let package_manager = Self::find_package_manager(&self.project_root)?;
@@ -417,6 +461,14 @@ impl AppData {
         }
 
         // Only here to satisfy lifetimes. Super let when?
+        let max_stack_size_string: String;
+        if let Some(size) = self.settings.max_stack_size {
+            args.push("--stack-size");
+            max_stack_size_string = size.to_string();
+            args.push(&max_stack_size_string);
+        }
+
+        // Only here to satisfy lifetimes. Super let when?
         let tsconfig_string: String;
         if self.settings.apply_tsc_project_flag {
             if let Some(ref tsconfig) = self.selected_tsconfig {
@@ -458,7 +510,7 @@ impl AppData {
         let cwd = self
             .project_root
             .parent()
-            .unwrap_or_else(|| Path::new("./"));
+            .ok_or_else(|| "project_root must be a package.json file")?;
 
         info!("Executing command: {}", tsc_command);
         info!("Working directory: {:?}", cwd);
@@ -840,6 +892,7 @@ pub struct Settings {
     pub extra_tsc_flags: String,
     pub apply_tsc_project_flag: bool,
     pub max_old_space_size: Option<i32>,
+    pub max_stack_size: Option<i32>,
 }
 
 impl Default for Settings {
@@ -852,6 +905,7 @@ impl Default for Settings {
             extra_tsc_flags: "--noEmit --incremental false --noErrorTruncation".to_string(),
             apply_tsc_project_flag: true,
             max_old_space_size: None,
+            max_stack_size: None,
         }
     }
 }
@@ -930,6 +984,29 @@ impl AppData {
                 Some(val.parse::<i32>().unwrap())
             }
         };
+
+        let max_stack_size = {
+            let val = cake.resolve_string(ResolveStringArgs {
+                env: "MAX_STACK_SIZE",
+                flag: "--max-stack-size",
+                file: "settings.maxStackSize",
+                default: || "".to_string(),
+                validate: |s| {
+                    if s.is_empty() {
+                        Ok(s.to_string())
+                    } else {
+                        s.parse::<i32>()
+                            .map(|_| s.to_string())
+                            .map_err(|e| format!("Invalid maxStackSize value '{}': {}", s, e))
+                    }
+                },
+            });
+            if val.is_empty() {
+                None
+            } else {
+                Some(val.parse::<i32>().unwrap())
+            }
+        };
         Settings {
             relative_paths,
             prefer_editor_open,
@@ -938,6 +1015,7 @@ impl AppData {
             extra_tsc_flags,
             apply_tsc_project_flag,
             max_old_space_size,
+            max_stack_size,
         }
     }
 }
@@ -2082,4 +2160,115 @@ pub async fn set_max_old_space_size(
     data.settings.max_old_space_size = size;
     AppData::update_outputs(&data);
     Ok(())
+}
+
+#[tauri::command]
+pub async fn get_max_stack_size(
+    state: State<'_, Arc<Mutex<AppData>>>,
+) -> Result<Option<i32>, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    Ok(data.settings.max_stack_size)
+}
+
+#[tauri::command]
+pub async fn set_max_stack_size(
+    state: State<'_, Arc<Mutex<AppData>>>,
+    size: Option<i32>,
+) -> Result<(), String> {
+    let mut data = state.lock().map_err(|e| e.to_string())?;
+    data.settings.max_stack_size = size;
+    AppData::update_outputs(&data);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_project_root(state: State<'_, Arc<Mutex<AppData>>>) -> Result<String, String> {
+    state
+        .lock()
+        .map(|data| data.project_root.to_string_lossy().to_string())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn set_project_root(
+    state: State<'_, Arc<Mutex<AppData>>>,
+    project_root: String,
+) -> Result<(), String> {
+    let mut data = state.lock().map_err(|e| e.to_string())?;
+    let path_buf = std::path::PathBuf::from(project_root.clone());
+    data.set_project_root(path_buf)?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_current_dir() -> Result<String, String> {
+    if let Ok(user_cwd) = std::env::var("USER_CWD") {
+        return Ok(user_cwd);
+    }
+
+    std::env::current_dir()
+        .map(|path| path.to_string_lossy().to_string())
+        .map_err(|e| e.to_string())
+}
+
+pub fn get_typeslayer_base_data_dir() -> std::path::PathBuf {
+    if let Ok(env_dir) = std::env::var("TYPESLAYER_DATA_DIR") {
+        std::path::PathBuf::from(env_dir)
+    } else {
+        #[cfg(target_os = "linux")]
+        {
+            if let Ok(home) = std::env::var("HOME") {
+                return std::path::PathBuf::from(format!("{}/.local/share/typeslayer", home));
+            }
+        }
+        #[cfg(target_os = "macos")]
+        {
+            if let Ok(home) = std::env::var("HOME") {
+                return std::path::PathBuf::from(format!(
+                    "{}/Library/Application Support/typeslayer",
+                    home
+                ));
+            }
+        }
+        #[cfg(target_os = "windows")]
+        {
+            if let Ok(appdata) = std::env::var("APPDATA") {
+                return std::path::PathBuf::from(format!("{}\\typeslayer", appdata));
+            }
+        }
+        std::env::current_dir()
+            .unwrap_or(std::path::PathBuf::from("."))
+            .join("typeslayer")
+    }
+}
+
+#[tauri::command]
+pub async fn get_output_file_sizes(
+    state: State<'_, Arc<Mutex<AppData>>>,
+) -> Result<std::collections::HashMap<String, u64>, String> {
+    use std::fs;
+
+    let outputs_dir = {
+        let data = state.lock().map_err(|e| e.to_string())?;
+        data.outputs_dir().to_string_lossy().to_string()
+    };
+
+    let filenames = vec![
+        ANALYZE_TRACE_FILENAME,
+        TRACE_JSON_FILENAME,
+        TYPES_JSON_FILENAME,
+        CPU_PROFILE_FILENAME,
+        TYPE_GRAPH_FILENAME,
+    ];
+
+    let mut sizes = std::collections::HashMap::new();
+
+    for filename in filenames {
+        let path = std::path::Path::new(&outputs_dir).join(filename);
+        if let Ok(metadata) = fs::metadata(&path) {
+            sizes.insert(filename.to_string(), metadata.len());
+        }
+    }
+
+    Ok(sizes)
 }

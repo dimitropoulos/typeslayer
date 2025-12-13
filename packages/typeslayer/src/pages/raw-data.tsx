@@ -36,11 +36,7 @@ import { CenterLoader } from "../components/center-loader";
 import { Code } from "../components/code";
 import { InlineCode } from "../components/inline-code";
 import { OpenablePath } from "../components/openable-path";
-import {
-  formatBytesSize,
-  serverBaseUrl,
-  useStaticFile,
-} from "../components/utils";
+import { formatBytesSize, serverBaseUrl } from "../components/utils";
 import { useToast } from "../contexts/toast-context";
 import {
   useDataDir,
@@ -49,6 +45,7 @@ import {
   useGenerateTrace,
   useGenerateTypeGraph,
   useOutputFileSizes,
+  useStaticFile,
   useUploadAnalyzeTrace,
   useUploadTrace,
   useUploadTypeGraph,

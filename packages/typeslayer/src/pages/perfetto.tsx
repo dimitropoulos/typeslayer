@@ -1,6 +1,6 @@
 import { TRACE_JSON_FILENAME } from "@typeslayer/validate";
 import { useEffect, useRef } from "react";
-import { useStaticFile } from "../components/utils";
+import { useStaticFile } from "../hooks/tauri-hooks";
 
 export const Perfetto = () => {
   const { data, isLoading } = useStaticFile(TRACE_JSON_FILENAME);

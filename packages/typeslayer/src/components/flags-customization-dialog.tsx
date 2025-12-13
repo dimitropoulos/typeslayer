@@ -20,33 +20,53 @@ import {
   useApplyTscProjectFlag,
   useExtraTscFlags,
   useMaxOldSpaceSize,
+  useMaxStackSize,
   useProjectRoot,
   useTscExample,
 } from "../hooks/tauri-hooks";
 import { Code } from "./code";
 import { InlineCode } from "./inline-code";
-import { formatBytesSize, stripPackageJson } from "./utils";
+import { formatBytesSize, processTscExample } from "./utils";
 
 export type FlagsCustomizationDialogProps = {
   readonly open: boolean;
   readonly onClose: () => void;
 };
 
-const mibibyte = 1024 * 1024;
+const kibibyte = 1024;
+const mibibyte = 1024 * kibibyte;
 
+/** in MiB */
 const maxOldSpaceSizeOptions = [
   { value: 512, label: "" },
   { value: 1024, label: "" },
   { value: 2048, label: "(the Node.js default)" }, // https://github.com/nodejs/node/blob/main/deps/v8/src/heap/heap.cc#L415-L417
   { value: 4096, label: "" },
   { value: 8192, label: "" },
-  { value: 12288, label: "bro.." },
-  { value: 16384, label: "BRO." },
-  { value: 24576, label: "!?!?!" },
-  { value: 32768, label: "time to get a new CTO" },
-  { value: 49152, label: "burn this thing down to bedrock" },
+  { value: 12288, label: "(bro..)" },
+  { value: 16384, label: "(BRO.)" },
+  { value: 24576, label: "(!?!?!)" },
+  { value: 32768, label: "(time to get a new CTO)" },
+  { value: 49152, label: "(burn this thing down to bedrock)" },
   { value: 65535, label: "(voids your TypeScript warranty)" },
 ];
+
+/** in KiB */
+const maxStackSizeOptions = [
+  { value: 512, label: "" },
+  { value: 984, label: "(the Node.js default)" },
+  {
+    value: 2048,
+    label: "(the fact that you have to do this at all is sorta worrying)",
+  },
+  { value: 4096, label: "(why wasn't doubling the default enough? srsly?)" },
+  {
+    value: 16384,
+    label: "(looks like someone's getting a segfault for Christmas.)",
+  },
+];
+
+const STILL_CANT_PASS_NODE_OPTIONS_AS_AN_ENV_VAR_OR_AT_LEAST_HAVE_SOME_WAY_TO_PASS_THEM_AS_A_COMMAND_LINE_ARGUMENT_TO_A_PACKAGE_MANAGER = true;
 
 export function FlagsCustomizationDialog({
   open,
@@ -78,11 +98,33 @@ export function FlagsCustomizationDialog({
     }
   };
 
-  const handleSelectOldSpaceSize = useCallback(
+  const handleSelectMaxOldStackSize = useCallback(
     async (event: SelectChangeEvent<number>) => {
       await setMaxOldSpaceSize(event.target.value);
     },
     [setMaxOldSpaceSize],
+  );
+
+  const {
+    data: maxStackSize,
+    set: setMaxStackSize,
+    isLoading: maxStackSizeIsLoading,
+  } = useMaxStackSize();
+
+  const maxStackSizeEnabled = Boolean(maxStackSize);
+  const toggleMaxStackSize = (enabled: boolean) => {
+    if (enabled) {
+      setMaxStackSize(maxStackSizeOptions[2].value);
+    } else {
+      setMaxStackSize(null);
+    }
+  };
+
+  const handleSelectMaxStackSize = useCallback(
+    async (event: SelectChangeEvent<number>) => {
+      await setMaxStackSize(event.target.value);
+    },
+    [setMaxStackSize],
   );
 
   const handleUpdateFlags = useCallback(
@@ -113,12 +155,6 @@ export function FlagsCustomizationDialog({
     },
     [handleUpdateFlags],
   );
-
-  const example = tscExample?.replace(/ --[^\s]+/g, match => ` \\\n  ${match}`);
-  const exampleCommand = [
-    `${stripPackageJson(projectRoot ?? "/project/root")}`,
-    `$ ${example}`,
-  ].join("\n");
 
   return (
     <Dialog
@@ -209,7 +245,8 @@ export function FlagsCustomizationDialog({
             <Select<number>
               size="small"
               value={maxOldSpaceSize ?? undefined}
-              onChange={handleSelectOldSpaceSize}
+              onChange={handleSelectMaxOldStackSize}
+              sx={{ "& .MuiSelect-select": { py: "3px !important" } }}
             >
               {maxOldSpaceSizeOptions.map(({ value, label }) => (
                 <MenuItem
@@ -224,6 +261,50 @@ export function FlagsCustomizationDialog({
           ) : null}
         </FormGroup>
 
+        {STILL_CANT_PASS_NODE_OPTIONS_AS_AN_ENV_VAR_OR_AT_LEAST_HAVE_SOME_WAY_TO_PASS_THEM_AS_A_COMMAND_LINE_ARGUMENT_TO_A_PACKAGE_MANAGER ? null : (
+          <FormGroup
+            sx={{
+              mt: 1,
+              display: "flex",
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 2,
+            }}
+          >
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={maxStackSizeEnabled}
+                  disabled={maxStackSizeIsLoading}
+                  onChange={async e => {
+                    toggleMaxStackSize(e.target.checked);
+                  }}
+                />
+              }
+              label={"give Node.js a bigger stack"}
+            />
+
+            {maxStackSizeEnabled ? (
+              <Select<number>
+                size="small"
+                value={maxStackSize ?? undefined}
+                onChange={handleSelectMaxStackSize}
+                sx={{ "& .MuiSelect-select": { py: "3px !important" } }}
+              >
+                {maxStackSizeOptions.map(({ value, label }) => (
+                  <MenuItem
+                    key={value}
+                    value={value}
+                    selected={maxStackSize === value}
+                  >
+                    {`${formatBytesSize(value * kibibyte)} ${label}`}
+                  </MenuItem>
+                ))}
+              </Select>
+            ) : null}
+          </FormGroup>
+        )}
+
         <Typography variant="h6" sx={{ mt: 4, mb: 1 }}>
           Example
         </Typography>
@@ -233,7 +314,14 @@ export function FlagsCustomizationDialog({
             should start by trying to run it yourself from the same location
           </Typography>
 
-          <Code value={exampleCommand} lang="bash" />
+          <Code
+            value={processTscExample({
+              tscExample,
+              projectRoot,
+            })}
+            copyThisInstead={tscExample}
+            lang="bash"
+          />
         </Stack>
       </DialogContent>
       <DialogActions>
