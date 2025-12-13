@@ -39,7 +39,7 @@ pub async fn set_project_root(
     project_root: String,
 ) -> Result<(), String> {
     let mut data = state.lock().map_err(|e| e.to_string())?;
-    data.update_project_root(project_root.into());
+    data.update_project_root(project_root.into())?;
 
     if let Some(win) = app.get_webview_window("main") {
         let _ = win.set_title(&data.compute_window_title());

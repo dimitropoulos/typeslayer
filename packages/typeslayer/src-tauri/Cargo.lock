@@ -5627,6 +5627,7 @@ dependencies = [
  "schemars 1.1.0",
  "serde",
  "serde_json",
+ "shlex",
  "tauri",
  "tauri-build",
  "tauri-plugin-clipboard-manager",

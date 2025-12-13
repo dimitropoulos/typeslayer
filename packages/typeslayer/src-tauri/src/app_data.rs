@@ -15,13 +15,19 @@ use crate::{
         utils::CPU_PROFILE_FILENAME,
     },
 };
+use serde::Deserialize;
 use serde_json::Value;
-use std::io::Write;
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::{fmt::Display, fs};
+use std::{
+    fs::File,
+    io::{BufReader, Write},
+};
 use tauri::{Manager, State};
 use tracing::{error, info};
 
@@ -45,6 +51,38 @@ const AVAILABLE_EDITORS: &[(&str, &str)] = &[
     ("lite-xl", "Lite XL"),
 ];
 
+struct TSCCommand {
+    shell: String,     // The shell, e.g. `sh` or `cmd`
+    shell_arg: String, // A arg for the shell like `-c` or `/c`.
+    command: String,
+    env: Vec<(String, String)>,
+}
+
+impl Display for TSCCommand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Assumes POSIX-style environment. Can be adapted for Windows if needed.
+        let mut env = self
+            .env
+            .iter()
+            .map(|(key, value)| format!("{key}={}", quote_if_needed(&value)))
+            .collect::<Vec<_>>()
+            .join(" ");
+        if env != "" {
+            env += " ";
+        }
+
+        write!(f, "{}{}", env, self.command)
+    }
+}
+
+#[derive(Clone)]
+pub enum PackageManager {
+    Bun,
+    NPM,
+    PNPM,
+    Yarn,
+}
+
 #[derive(Clone)]
 pub struct AppData {
     pub project_root: PathBuf,
@@ -54,6 +92,7 @@ pub struct AppData {
     pub cpu_profile: Option<String>,
     pub tsconfig_paths: Vec<PathBuf>,
     pub selected_tsconfig: Option<PathBuf>,
+    pub package_manager: PackageManager,
     pub settings: Settings,
     pub verbose: bool,
     pub cake: LayerCake,
@@ -63,30 +102,15 @@ pub struct AppData {
     pub data_dir: PathBuf,
 }
 
-struct CommandData {
-    program: String,
-    args: Vec<String>,
-    env: Vec<(String, String)>,
-}
-
-impl Display for CommandData {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut env = self
-            .env
-            .iter()
-            .map(|(key, value)| format!("{key}={value}"))
-            .collect::<Vec<_>>()
-            .join(" ");
-        if env != "" {
-            env += " ";
-        }
-
-        write!(f, "{}{} {}", env, self.program, self.args.join(" "))
-    }
+// The format of a package.json file with only what we care about.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PackageJSON {
+    package_manager: Option<String>,
 }
 
 impl AppData {
-    pub fn new(data_dir: PathBuf) -> Self {
+    pub fn new(data_dir: PathBuf) -> Result<Self, String> {
         info!("using base data_dir: {}", data_dir.display());
         // Build a single LayerCake and reuse it across init functions
         let mut cake = LayerCake::new(LayerCakeInitArgs {
@@ -107,8 +131,11 @@ impl AppData {
         let verbose = Self::init_verbose_with(&cake);
         let auth_code = Self::init_auth_code_with(&cake);
 
+        let package_manager = Self::find_package_manager(&project_root)?;
+
         let mut app = Self {
             project_root,
+            package_manager,
             types_json,
             trace_json,
             analyze_trace,
@@ -123,9 +150,9 @@ impl AppData {
             process_controller: ProcessController::new(),
             data_dir,
         };
-        app.discover_tsconfigs();
+        app.discover_tsconfigs()?;
         app.selected_tsconfig = Self::init_selected_tsconfig_with(&app.cake, &app.tsconfig_paths);
-        app
+        Ok(app)
     }
 
     pub fn outputs_dir(&self) -> std::path::PathBuf {
@@ -292,7 +319,7 @@ impl AppData {
         }
     }
 
-    fn discover_tsconfigs(&mut self) {
+    fn discover_tsconfigs(&mut self) -> Result<(), String> {
         self.tsconfig_paths.clear();
 
         // Get the directory containing the package.json
@@ -303,14 +330,12 @@ impl AppData {
             .unwrap_or_else(|| std::path::PathBuf::from("."));
 
         // Search for tsconfig*.json files in the project directory and subdirectories
-        if let Ok(entries) = fs::read_dir(&project_dir) {
-            for entry in entries.flatten() {
-                if let Ok(file_name) = entry.file_name().into_string() {
-                    if file_name.starts_with("tsconfig") && file_name.ends_with(".json") {
-                        if let Ok(full_path) = entry.path().canonicalize() {
-                            self.tsconfig_paths.push(full_path);
-                        }
-                    }
+        let entries =
+            fs::read_dir(&project_dir).map_err(|e| format!("Could not read dir {}", e))?;
+        for entry in entries.flatten() {
+            if let Ok(file_name) = entry.file_name().into_string() {
+                if file_name.starts_with("tsconfig") && file_name.ends_with(".json") {
+                    self.tsconfig_paths.push(entry.path());
                 }
             }
         }
@@ -329,52 +354,76 @@ impl AppData {
                 _ => a.cmp(b),
             }
         });
+
+        Ok(())
     }
 
-    pub fn update_project_root(&mut self, new_root: PathBuf) {
+    pub fn update_project_root(&mut self, new_root: PathBuf) -> Result<(), String> {
         self.project_root = new_root;
+
+        let package_manager = Self::find_package_manager(&self.project_root)?;
+        self.package_manager = package_manager;
+
         let previous_selection = self.selected_tsconfig.clone();
 
-        self.discover_tsconfigs();
+        self.discover_tsconfigs()?;
 
         // Try to keep previous selection if it still exists
         if let Some(prev) = previous_selection {
             if self.tsconfig_paths.contains(&prev) {
                 self.selected_tsconfig = Some(prev);
-                return;
+                return Ok(());
             }
         }
 
         // Otherwise, auto-detect
         self.selected_tsconfig =
             Self::init_selected_tsconfig_with(&self.cake, &self.tsconfig_paths);
+
+        Ok(())
     }
 
-    fn get_tsc_call(&self, flag: &str) -> CommandData {
-        // Build tsc command
-        let mut command_parts = vec!["exec".to_string(), "--".to_string(), "tsc".to_string()];
+    fn get_tsc_call(&self, user_flags: &str) -> Result<TSCCommand, String> {
+        let shell;
+        let shell_arg;
+        if cfg!(target_os = "windows") {
+            shell = "cmd".to_string();
+            shell_arg = "/c";
+        } else {
+            shell = "sh".to_string();
+            shell_arg = "-c";
+        };
 
-        // Add configurable extra flags
-        let extra_flag_parts: Vec<&str> = self
-            .settings
-            .extra_tsc_flags
-            .trim()
-            .split_whitespace()
-            .collect();
-        for part in extra_flag_parts {
-            command_parts.push(part.to_string());
+        let mut args = vec![];
+        match self.package_manager {
+            PackageManager::Bun => args.extend(["bun", "x"]),
+            PackageManager::NPM => args.extend(["npm", "exec"]),
+            PackageManager::PNPM => args.extend(["pnpm", "exec"]),
+            PackageManager::Yarn => args.extend(["yarn"]),
+        };
+
+        #[cfg(target_os = "windows")]
+        args.push("\"--\""); // this is absolutely insane that this is required on windows.  how.  just HOW.
+        #[cfg(not(target_os = "windows"))]
+        args.push("--");
+        args.push("tsc");
+
+        if self.settings.extra_tsc_flags != "" {
+            args.push(&self.settings.extra_tsc_flags);
         }
 
-        // add user flags first in case they're using --build (which requires being first)
-        let flag_parts: Vec<&str> = flag.trim().split_whitespace().collect();
-        for part in flag_parts {
-            command_parts.push(part.to_string());
+        if user_flags != "" {
+            args.push(user_flags);
         }
 
+        // Only here to satisfy lifetimes. Super let when?
+        let tsconfig_string: String;
         if self.settings.apply_tsc_project_flag {
             if let Some(ref tsconfig) = self.selected_tsconfig {
-                command_parts.push("--project".to_string());
-                command_parts.push(quote_if_needed(&tsconfig.to_string_lossy()));
+                args.push("--project");
+
+                tsconfig_string = quote_if_needed(&tsconfig.to_string_lossy().to_string());
+                args.push(&tsconfig_string);
             }
         }
 
@@ -387,11 +436,12 @@ impl AppData {
             ));
         }
 
-        CommandData {
-            program: "npm".to_string(),
-            args: command_parts,
+        Ok(TSCCommand {
+            shell,
+            shell_arg: shell_arg.to_string(),
+            command: args.join(" "),
             env,
-        }
+        })
     }
 
     // Blocking helper that runs tsc directly
@@ -403,21 +453,29 @@ impl AppData {
 
         self.process_controller.reset_cancel_flag();
 
-        let tsc_command = self.get_tsc_call(&flag);
+        let tsc_command = self.get_tsc_call(&flag)?;
 
         let cwd = self
             .project_root
             .parent()
-            .map(|p| p.to_string_lossy().to_string())
-            .unwrap_or_else(|| "./".to_string());
+            .unwrap_or_else(|| Path::new("./"));
 
         info!("Executing command: {}", tsc_command);
-        info!("Working directory: {}", cwd);
+        info!("Working directory: {:?}", cwd);
         info!("Outputs directory: {}", outputs_dir);
 
-        let mut cmd = Command::new(tsc_command.program);
-        cmd.args(tsc_command.args)
-            .current_dir(&cwd)
+        let mut cmd = Command::new(tsc_command.shell);
+        cmd.arg(tsc_command.shell_arg);
+
+        // raw_arg makes sure a command like `npx tsc --project "foo bar"` is interpreted by the shell.
+        // The default with `.arg`, on Windows, is more like `npx tsc --project "\"foo bar\""` but shell quoting is more complicated.
+        #[cfg(target_os = "windows")]
+        cmd.raw_arg(format!("\"{}\"", tsc_command.command));
+
+        #[cfg(not(target_os = "windows"))]
+        cmd.arg(tsc_command.command);
+
+        cmd.current_dir(&cwd)
             .envs(tsc_command.env)
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
@@ -495,7 +553,6 @@ impl AppData {
     }
 
     fn init_types_json(outputs_dir: &Path, project_root: &Path) -> TypesJsonSchema {
-        // project_root is now package.json path, get directory
         let project_dir = project_root
             .parent()
             .map(|p| p.to_path_buf())
@@ -527,7 +584,6 @@ impl AppData {
         outputs_dir: &Path,
         project_root: &Path,
     ) -> Vec<crate::validate::trace_json::TraceEvent> {
-        // project_root is now package.json path, get directory
         let project_dir = project_root
             .parent()
             .map(|p| p.to_path_buf())
@@ -747,6 +803,30 @@ impl AppData {
 
         self.update_outputs();
         Ok(())
+    }
+
+    fn find_package_manager(project_root: &Path) -> Result<PackageManager, String> {
+        let package_json = File::open(project_root)
+            .map_err(|e| format!("could not open {}: {e}", project_root.to_string_lossy()))?;
+        let package_json: PackageJSON =
+            serde_json::from_reader(BufReader::new(package_json)).map_err(|e| format!("{e}"))?;
+
+        match package_json.package_manager {
+            Some(package_manager) => {
+                let package_manager = package_manager
+                    .split("@")
+                    .next()
+                    .unwrap_or(&package_manager);
+                match package_manager {
+                    "npm" => Ok(PackageManager::NPM),
+                    "pnpm" => Ok(PackageManager::PNPM),
+                    "yarn" => Ok(PackageManager::Yarn),
+                    "bun" => Ok(PackageManager::Bun),
+                    _ => Err(format!("Unsupported packageManager {package_manager}")),
+                }
+            }
+            None => Ok(PackageManager::NPM),
+        }
     }
 }
 
@@ -1478,7 +1558,7 @@ pub async fn get_tsc_example_call(state: State<'_, Arc<Mutex<AppData>>>) -> Resu
     let data = state.lock().map_err(|e| e.to_string())?;
     let outputs_dir = data.outputs_dir().to_string_lossy().to_string();
     let flag = make_cli_arg("--generateTrace", outputs_dir.as_str());
-    Ok(data.get_tsc_call(&flag).to_string())
+    Ok(data.get_tsc_call(&flag)?.to_string())
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]

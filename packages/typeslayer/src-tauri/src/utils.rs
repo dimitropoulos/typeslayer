@@ -1,11 +1,15 @@
 use std::process::Stdio;
 
+use shlex::Quoter;
+
 pub fn quote_if_needed(s: &str) -> String {
-    if s.contains(' ') {
-        format!("\"{}\"", s)
-    } else {
-        s.to_string()
-    }
+    // Equivalent to the now deprecated try_quote.
+    // Should never panic since the only error is only possible with `allow_nul(false)`
+    Quoter::new()
+        .allow_nul(true)
+        .quote(s)
+        .unwrap()
+        .into_owned()
 }
 
 /// takes in a string flag and a string path and makes it a cli arg, handing quoting if the arg contains spaces
