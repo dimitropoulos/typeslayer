@@ -402,6 +402,9 @@ impl AppData {
             PackageManager::Yarn => args.extend(["yarn"]),
         };
 
+        #[cfg(target_os = "windows")]
+        args.push("\"--\""); // this is absolutely insane that this is required on windows.  how.  just HOW.
+        #[cfg(not(target_os = "windows"))]
         args.push("--");
         args.push("tsc");
 
@@ -550,7 +553,6 @@ impl AppData {
     }
 
     fn init_types_json(outputs_dir: &Path, project_root: &Path) -> TypesJsonSchema {
-        // project_root is now package.json path, get directory
         let project_dir = project_root
             .parent()
             .map(|p| p.to_path_buf())
@@ -582,7 +584,6 @@ impl AppData {
         outputs_dir: &Path,
         project_root: &Path,
     ) -> Vec<crate::validate::trace_json::TraceEvent> {
-        // project_root is now package.json path, get directory
         let project_dir = project_root
             .parent()
             .map(|p| p.to_path_buf())
