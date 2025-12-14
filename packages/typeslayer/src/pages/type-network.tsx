@@ -22,24 +22,25 @@ import {
   Typography,
 } from "@mui/material";
 import { useNavigate, useParams } from "@tanstack/react-router";
+import type { TypeId } from "@typeslayer/validate";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CenterLoader } from "../components/center-loader";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
 import { NoData } from "../components/no-data";
 import { StatPill } from "../components/stat-pill";
 import { useTypeGraph } from "../hooks/tauri-hooks";
-import type { EdgeKind, GraphLink, TypeGraph } from "../types/type-graph";
+import type { GraphLink, LinkKind } from "../types/type-graph";
 import { useTypeRegistry } from "./award-winners/use-type-registry";
 
 type EdgeConfig = {
-  id: EdgeKind;
+  id: LinkKind;
   colorRGB: [number, number, number];
   color: string;
   label: string;
 };
 
 // Ranking provided by user, highest to lowest
-const EDGE_RANKING: EdgeKind[] = [
+const EDGE_RANKING: LinkKind[] = [
   "union",
   "intersection",
   "typeArgument",
@@ -67,12 +68,12 @@ const EDGE_RANKING: EdgeKind[] = [
 // Next 3: Y, M, C
 // Next groups of 3: high-visibility tertiary variants
 const EDGE_COLORS_HEX: string[] = [
-  "#ff0000", // R
-  "#00ff00", // G
-  "#0000ff", // B
-  "#ffff00", // Y
-  "#ff00ff", // M
-  "#00ffff", // C
+  "#ff0000", // red
+  "#00ff00", // green
+  "#0000ff", // blue
+  "#ffff00", // yellow
+  "#ff00ff", // majenta
+  "#00ffff", // cyan
   "#ff8000", // orange
   "#8000ff", // violet
   "#00ff80", // spring green
@@ -89,7 +90,7 @@ const EDGE_COLORS_HEX: string[] = [
   "#00bfFF", // sky
 ];
 
-const EDGE_LABELS: Record<EdgeKind, string> = {
+const EDGE_LABELS: Record<LinkKind, string> = {
   union: "Union",
   intersection: "Intersection",
   typeArgument: "Type Argument",
@@ -136,7 +137,6 @@ export const TypeNetwork = () => {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<Graph | null>(null);
-  const cosmosDataRef = useRef<TypeGraph | null>(null);
   const [stats, setStats] = useState<{ nodes: number; links: number } | null>(
     null,
   );
@@ -144,23 +144,21 @@ export const TypeNetwork = () => {
     nodes: number;
     links: number;
   } | null>(null);
-  const [edgeStats, setEdgeStats] = useState<Record<string, number>>({});
 
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(paused);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const selectedIndexRef = useRef<number | null>(null);
   const handlePointClickRef = useRef<((index: number) => void) | null>(null);
   const applySelectionVisualsRef = useRef<
     ((index: number | null) => void) | null
   >(null);
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
-  const [activeFilters, setActiveFilters] = useState<Set<EdgeKind>>(
+  const [activeFilters, setActiveFilters] = useState<Set<LinkKind>>(
     new Set(EDGE_CONFIGS.map(c => c.id)),
   );
   const idToIndexRef = useRef<Map<number, number>>(new Map());
-  const kindsBufferRef = useRef<EdgeKind[]>([]);
+  const kindsBufferRef = useRef<LinkKind[]>([]);
   const linkPairsRef = useRef<Float32Array | null>(null);
   const allLinksRef = useRef<GraphLink[]>([]);
   const originalPositionsRef = useRef<Float32Array | null>(null);
@@ -213,30 +211,27 @@ export const TypeNetwork = () => {
       return;
     }
 
-    if (!graphReady || !graphRef.current || !cosmosDataRef.current) {
+    if (!graphReady || !graphRef.current || !typeGraph) {
       return;
     }
 
     const typeId = Number.parseInt(selectedTypeId, 10);
-    const index = idToIndexRef.current.get(typeId);
-
-    if (index !== undefined) {
+    if (typeId !== undefined) {
       setSelectedId(typeId);
-      setSelectedIndex(index);
-      applySelectionVisualsRef.current?.(index);
-      graphRef.current.zoomToPointByIndex(index, 1.5);
+      setSelectedIndex(typeId);
+      applySelectionVisualsRef.current?.(typeId);
+      graphRef.current.zoomToPointByIndex(typeId, 1.5);
     }
-  }, [selectedTypeId, graphReady]);
+  }, [selectedTypeId, graphReady, typeGraph]);
 
   const applySelectionVisuals = useCallback(
     (selectedIndex: number | null) => {
       const graph = graphRef.current;
-      const data = cosmosDataRef.current;
-      if (!graph || !data) {
+      if (!graph || !typeGraph) {
         return;
       }
 
-      const n = data.nodes.length;
+      const n = typeGraph.nodes;
       const pointColors = new Float32Array(n * 4);
       const pointSizes = new Float32Array(n);
       const hidden = hiddenIndicesRef.current;
@@ -375,13 +370,8 @@ export const TypeNetwork = () => {
       }
       graph.render();
     },
-    [showFreeTypes],
+    [showFreeTypes, typeGraph],
   );
-
-  // Keep selectedIndexRef in sync
-  useEffect(() => {
-    selectedIndexRef.current = selectedIndex;
-  }, [selectedIndex]);
 
   const focusNode = useCallback(() => {
     if (selectedIndex === null || !graphReady || !graphRef.current) {
@@ -398,44 +388,41 @@ export const TypeNetwork = () => {
   // (callbacks refs are assigned after declarations)
 
   // Stable click handler using refs to avoid re-creating graph
-  const handlePointClick = (index: number) => {
-    const typeGraph = cosmosDataRef.current;
-    if (!typeGraph) {
-      return;
-    }
+  const handlePointClick = useCallback(
+    (typeId: TypeId) => {
+      if (!typeGraph) {
+        return;
+      }
 
-    // Toggle selection if clicking the same node
-    if (selectedIndexRef.current === index) {
-      navigate({ to: "/type-network" });
-    } else {
-      const node = typeGraph.nodes[index];
-      navigate({ to: `/type-network/${node.id}` });
-    }
-  };
+      // Toggle selection if clicking the same node
+      if (selectedIndex === typeId) {
+        navigate({ to: "/type-network" });
+      } else {
+        navigate({ to: `/type-network/${typeId}` });
+      }
+    },
+    [typeGraph, navigate, selectedIndex],
+  );
 
   // Keep refs pointing to latest callbacks
   handlePointClickRef.current = handlePointClick;
   applySelectionVisualsRef.current = applySelectionVisuals;
 
   const applyFilters = useCallback(
-    (filters: Set<EdgeKind>, showFreeTypesOverride?: boolean) => {
+    (filters: Set<LinkKind>, showFreeTypesOverride?: boolean) => {
       const graph = graphRef.current;
-      const cosmosData = cosmosDataRef.current;
       const allLinks = allLinksRef.current;
-      if (!graph || !cosmosData || allLinks.length === 0) {
+      if (!graph || !typeGraph || allLinks.length === 0) {
         return;
       }
 
       // Filter links by activeFilters
-      const indexById = idToIndexRef.current;
       const filteredLinks = allLinks.filter(link => filters.has(link.kind));
       const pairBuffer: number[] = [];
-      const kindsBuffer: EdgeKind[] = [];
+      const kindsBuffer: LinkKind[] = [];
       for (const link of filteredLinks) {
-        const s = indexById.get(link.source);
-        const t = indexById.get(link.target);
-        if (s !== undefined && t !== undefined) {
-          pairBuffer.push(s, t);
+        if (link.source !== undefined && link.target !== undefined) {
+          pairBuffer.push(link.source, link.target);
           kindsBuffer.push(link.kind);
         }
       }
@@ -471,7 +458,7 @@ export const TypeNetwork = () => {
 
       // Set positions: hide types with no visible links if needed
       const currentPositions = graph.getPointPositions();
-      const currentCount = cosmosData.nodes.length;
+      const currentCount = typeGraph.nodes;
 
       if (!showFree) {
         // Hide nodes without links in current filter
@@ -480,8 +467,7 @@ export const TypeNetwork = () => {
         const positions = new Float32Array(currentCount * 2);
         const hidden = new Set<number>();
         for (let i = 0; i < currentCount; i++) {
-          const id = cosmosData.nodes[i].id;
-          if (!visibleTypeIds || !visibleTypeIds.has(id)) {
+          if (!visibleTypeIds || !visibleTypeIds.has(i)) {
             positions[i * 2] = 1e6;
             positions[i * 2 + 1] = 1e6;
             hidden.add(i);
@@ -537,7 +523,7 @@ export const TypeNetwork = () => {
       }
 
       const visibleNodeCount = showFree
-        ? cosmosData.nodes.length
+        ? typeGraph.nodes
         : (visibleTypeIds?.size ?? 0);
       setVisibleStats({
         nodes: visibleNodeCount,
@@ -557,7 +543,7 @@ export const TypeNetwork = () => {
 
       // no-op for removed debug view info
     },
-    [selectedId, showFreeTypes, applySelectionVisuals],
+    [selectedId, showFreeTypes, applySelectionVisuals, typeGraph],
   );
 
   useEffect(() => {
@@ -610,15 +596,13 @@ export const TypeNetwork = () => {
       setGraphReady(false);
 
       try {
-        const { nodes, links, stats } = typeGraph;
+        const { nodes, links } = typeGraph;
 
         if (!containerRef.current) {
           return;
         }
 
-        cosmosDataRef.current = typeGraph;
         allLinksRef.current = links;
-        setEdgeStats(stats.count);
 
         graph = new Graph(containerRef.current, {
           renderLinks: true,
@@ -643,7 +627,7 @@ export const TypeNetwork = () => {
         });
         graphRef.current = graph;
 
-        const nodeCount = nodes.length;
+        const nodeCount = nodes;
         // Seed positions near observed settled center to reduce early drift
         const positions = new Float32Array(nodeCount * 2);
         const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
@@ -659,19 +643,11 @@ export const TypeNetwork = () => {
         }
         graph.setPointPositions(positions);
 
-        const indexById = new Map<number, number>();
-        for (let i = 0; i < nodeCount; i++) {
-          indexById.set(nodes[i].id, i);
-        }
-        idToIndexRef.current = indexById;
-
         const pairBuffer: number[] = [];
-        const kindsBuffer: EdgeKind[] = [];
+        const kindsBuffer: LinkKind[] = [];
         for (const link of links) {
-          const s = indexById.get(link.source);
-          const t = indexById.get(link.target);
-          if (s !== undefined && t !== undefined) {
-            pairBuffer.push(s, t);
+          if (link.source !== undefined && link.target !== undefined) {
+            pairBuffer.push(link.source, link.target);
             kindsBuffer.push(link.kind);
           }
         }
@@ -721,11 +697,11 @@ export const TypeNetwork = () => {
         });
 
         setStats({
-          nodes: nodes.length,
+          nodes: nodes,
           links: links.length,
         });
         setVisibleStats({
-          nodes: nodes.length,
+          nodes: nodes,
           links: links.length,
         });
         setGraphReady(true);
@@ -890,7 +866,8 @@ export const TypeNetwork = () => {
         >
           <Stack sx={{ px: 2, py: 1, overflowY: "auto", gap: 1 }}>
             {EDGE_CONFIGS.map(
-              config => [config, edgeStats[config.id] ?? 0] as const,
+              config =>
+                [config, typeGraph?.stats.count[config.id] ?? 0] as const,
             )
               .sort((a, b) => b[1] - a[1])
               .map(([config, count], index, arr) => {
@@ -966,7 +943,7 @@ export const TypeNetwork = () => {
               variant="outlined"
               size="small"
               onClick={() => {
-                const none = new Set<EdgeKind>();
+                const none = new Set<LinkKind>();
                 setActiveFilters(none);
                 applyFilters(none, showFreeTypes);
               }}

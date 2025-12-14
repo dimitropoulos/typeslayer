@@ -123,6 +123,9 @@ export const DocsPage = () => {
             to cheat a bit: when it's a literal value (like a string literal,
             number literal, boolean literal, etc.), TypeSlayer will, we just
             show you the literal value <em>as though it were the name</em>.
+            unfortunately, this trick doesn't work with template literal types
+            because their display values are not recorded by TypeScript in the
+            trace files - it'd be super sweet if they were though.
           </Typography>
           <Typography>
             but sometimes, try as one might, there's just no material way to

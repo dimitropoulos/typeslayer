@@ -18,7 +18,7 @@ import {
 import { type SyntheticEvent, useCallback, useState } from "react";
 import { useTraceJson, useTypeGraph } from "../hooks/tauri-hooks";
 import { useTypeRegistry } from "../pages/award-winners/use-type-registry";
-import type { EdgeKind, GraphLink } from "../types/type-graph";
+import type { GraphLink, LinkKind } from "../types/type-graph";
 import { CenterLoader } from "./center-loader";
 import { Code } from "./code";
 import { InlineCode } from "./inline-code";
@@ -112,7 +112,7 @@ const LastDitchEffort = ({ typeId }: { typeId: number }) => {
   );
 };
 
-const kindToTypesRelationInfo = (kind: EdgeKind): TypeRelationInfo => {
+const kindToTypesRelationInfo = (kind: LinkKind): TypeRelationInfo => {
   switch (kind) {
     case "typeArgument":
       return typeRelationInfo.typeArguments;
@@ -188,16 +188,16 @@ const TargetsTabs = ({ targets }: { targets: GraphLink[] }) => {
         acc[node.kind] = (acc[node.kind] ?? []).concat(node);
         return acc;
       },
-      {} as Record<EdgeKind, GraphLink[]>,
+      {} as Record<LinkKind, GraphLink[]>,
     ),
-  ) as [EdgeKind, GraphLink[]][];
+  ) as [LinkKind, GraphLink[]][];
 
-  const [selectedTab, setSelectedTab] = useState<EdgeKind | undefined>(
+  const [selectedTab, setSelectedTab] = useState<LinkKind | undefined>(
     targetsByKind[0][0],
   );
 
   const handleTabChange = useCallback(
-    (_event: SyntheticEvent, value: EdgeKind) => {
+    (_event: SyntheticEvent, value: LinkKind) => {
       setSelectedTab(value);
     },
     [],

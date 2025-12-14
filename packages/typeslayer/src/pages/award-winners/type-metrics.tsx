@@ -106,7 +106,7 @@ export function TypeMetricsAward({ awardId }: { awardId: TypeMetricsAwardId }) {
 
   const items = (
     <List>
-      {nodes.map(([id, name, value, maybePath], index) => {
+      {nodes.map(({ id, name, value, path }, index) => {
         return (
           <ListItemButton
             selected={index === selectedIndex}
@@ -117,7 +117,7 @@ export function TypeMetricsAward({ awardId }: { awardId: TypeMetricsAwardId }) {
               <Stack sx={{ flexGrow: 1 }} gap={0}>
                 <SimpleTypeSummary id={id} name={name} suppressActions />
                 <Stack gap={0.5}>
-                  <MaybePathCaption maybePath={maybePath} />
+                  <MaybePathCaption maybePath={path} />
                   <InlineBarGraph
                     label={`${value.toLocaleString()} ${unit}`}
                     width={`${(value / max) * 100}%`}
@@ -137,7 +137,7 @@ export function TypeMetricsAward({ awardId }: { awardId: TypeMetricsAwardId }) {
     </Alert>
   );
 
-  const selectedNode: TypeId | undefined = nodes[selectedIndex]?.[0];
+  const selectedNode: TypeId | undefined = nodes[selectedIndex]?.id;
 
   return (
     <Stack

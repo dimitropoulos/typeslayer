@@ -91,9 +91,9 @@ pub type NodeModulePaths = HashMap<String, Vec<String>>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnalyzeTraceResult {
-    pub node_module_paths: NodeModulePaths,
-    pub unterminated_events: Vec<TraceEvent>,
-    pub hot_spots: Vec<HotSpot>,
-    pub duplicate_packages: Vec<DuplicatedPackage>,
     pub depth_limits: std::collections::HashMap<String, Vec<TraceEvent>>,
+    pub duplicate_packages: Vec<DuplicatedPackage>,
+    pub hot_spots: Vec<HotSpot>,
+    pub unterminated_events: Vec<TraceEvent>,
+    pub node_module_paths: NodeModulePaths,
 }

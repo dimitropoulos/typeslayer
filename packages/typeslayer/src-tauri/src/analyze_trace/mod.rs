@@ -68,11 +68,11 @@ pub fn analyze_trace(
     let depth_limits = create_depth_limits(&trace_file);
 
     let result = AnalyzeTraceResult {
-        node_module_paths,
-        unterminated_events: parse_result.unclosed_stack.into_iter().rev().collect(),
-        hot_spots,
-        duplicate_packages,
         depth_limits,
+        duplicate_packages,
+        hot_spots,
+        unterminated_events: parse_result.unclosed_stack.into_iter().rev().collect(),
+        node_module_paths,
     };
 
     // Write result to analyze-trace.json

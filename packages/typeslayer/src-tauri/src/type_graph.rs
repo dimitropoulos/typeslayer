@@ -1,23 +1,18 @@
-use serde::{Deserialize, Serialize};
+use serde::ser::Error as _;
+use serde::{Deserialize, Serialize, Serializer};
+use serde_json::value::RawValue;
 use std::collections::HashMap;
 use tauri::{AppHandle, State};
 
 use crate::app_data::AppData;
-use crate::validate::types_json::TypesJsonSchema;
+use crate::validate::types_json::{Flag, TypesJsonSchema};
 use crate::validate::utils::TypeId;
 
 pub const TYPE_GRAPH_FILENAME: &str = "type-graph.json";
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Eq, PartialEq, Hash, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct GraphNode {
-    pub id: TypeId,
-    pub name: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum EdgeKind {
+pub enum LinkKind {
     // one to many
     AliasTypeArgument,
     Intersection,
@@ -43,167 +38,153 @@ pub enum EdgeKind {
     Alias,
 }
 
+impl LinkKind {
+    pub fn values() -> &'static [LinkKind] {
+        use LinkKind::*;
+        &[
+            AliasTypeArgument,
+            Intersection,
+            TypeArgument,
+            Union,
+            Instantiated,
+            SubstitutionBase,
+            Constraint,
+            IndexedAccessObject,
+            IndexedAccessIndex,
+            ConditionalCheck,
+            ConditionalExtends,
+            ConditionalTrue,
+            ConditionalFalse,
+            Keyof,
+            EvolvingArrayElement,
+            EvolvingArrayFinal,
+            ReverseMappedSource,
+            ReverseMappedMapped,
+            ReverseMappedConstraint,
+            Alias,
+        ]
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GraphLink {
     pub source: TypeId,
     pub target: TypeId,
-    pub kind: EdgeKind,
+    pub kind: LinkKind,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct GraphStats {
-    pub count: HashMap<String, usize>,
+    pub count: HashMap<LinkKind, usize>,
 }
 
-/// Stats for a specific edge kind: ordered list of (target_id, [source_ids])
-/// Ordered by number of sources (most connected first)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+fn serialize_compact_typeids<S>(vec: &Vec<usize>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    // Make a compact JSON array like "[1,2,3]"
+    let s = serde_json::to_string(vec).map_err(S::Error::custom)?;
+    // Wrap it as raw JSON so pretty-printing won't reformat it
+    let raw = RawValue::from_string(s).map_err(S::Error::custom)?;
+    raw.serialize(serializer)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct EdgeStats {
+pub struct LinkStatLink {
+    pub target_id: TypeId,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+    #[serde(serialize_with = "serialize_compact_typeids")]
+    pub source_ids: Vec<TypeId>,
+}
+
+/// Stats for a specific link kind: ordered list of (target_id, [source_ids])
+/// Ordered by number of sources (most connected first)
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct LinkStats {
     /// Largest source count across entries
     pub max: usize,
-    /// Array of [target_id, [source_ids]] tuples, sorted by source count descending
-    pub links: Vec<(TypeId, Vec<TypeId>, Option<String>)>,
+    /// sorted by source_ids count descending
+    pub links: Vec<LinkStatLink>,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize, Clone)]
+type GraphLinkStats = HashMap<LinkKind, LinkStats>;
+
+#[derive(Eq, PartialEq, Hash, Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum NodeStatKind {
+    TypeArguments,
+    UnionTypes,
+    IntersectionTypes,
+    AliasTypeArguments,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NodeStatNode {
+    pub id: TypeId,
+    pub name: String,
+    pub value: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct NodeStatCategory {
+    pub max: usize,
+    pub nodes: Vec<NodeStatNode>,
+}
+
+type GraphNodeStats = HashMap<NodeStatKind, NodeStatCategory>;
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TypeGraph {
-    nodes: HashMap<TypeId, GraphNode>,
-    links: Vec<GraphLink>,
-    edge_stats: HashMap<String, EdgeStats>,
-    node_stats: NodeStats,
+    pub nodes: usize,
+    pub link_stats: GraphLinkStats,
+    pub node_stats: GraphNodeStats,
+    pub links: Vec<GraphLink>,
+    pub stats: GraphStats,
+}
+
+/// Return a human-readable type name similar to frontend's getHumanReadableName
+fn human_readable_name(t: &crate::validate::types_json::ResolvedType) -> String {
+    let is_literal = t.flags.iter().any(|f| {
+        matches!(
+            f,
+            Flag::StringLiteral | Flag::NumberLiteral | Flag::BooleanLiteral | Flag::BigIntLiteral
+        )
+    });
+    if is_literal {
+        if let Some(d) = &t.display {
+            if !d.is_empty() {
+                return d.clone();
+            }
+        }
+    }
+
+    if let Some(s) = &t.symbol_name {
+        return s.clone();
+    }
+    if let Some(i) = &t.intrinsic_name {
+        return format!("{}", i);
+    }
+    "<anonymous>".to_string()
 }
 
 impl TypeGraph {
-    /// Return a human-readable type name similar to frontend's getHumanReadableName
-    fn human_readable_name(t: &crate::validate::types_json::ResolvedType) -> String {
-        // Literal types: prefer display string when available
-        // Treat single-flag types with a display as literals
-        let is_literal = t.flags.len() == 1;
-        if is_literal {
-            if let Some(d) = &t.display {
-                if !d.is_empty() {
-                    return d.clone();
-                }
-            }
-        }
-
-        if let Some(s) = &t.symbol_name {
-            return s.clone();
-        }
-        if let Some(i) = &t.intrinsic_name {
-            return format!("{}", i);
-        }
-        "<anonymous>".to_string()
-    }
-
     pub fn from_types(types: &TypesJsonSchema) -> Self {
         let mut graph = TypeGraph::default();
-
-        // First pass: create nodes
-        for t in types.iter() {
-            let id = t.id;
-            let name = TypeGraph::human_readable_name(t);
-            graph.nodes.entry(id).or_insert(GraphNode { id, name });
-        }
-
-        // Helper to add edge if both endpoints exist
-        let mut add_edge = |source: TypeId, target: TypeId, kind: EdgeKind| {
-            if graph.nodes.contains_key(&source) && graph.nodes.contains_key(&target) {
-                graph.links.push(GraphLink {
-                    source,
-                    target,
-                    kind,
-                });
-            }
-        };
-
-        // Second pass: add links for supported relations
-        for t in types.iter() {
-            let src = t.id;
-
-            if let Some(union) = &t.union_types {
-                for &target in union.iter() {
-                    add_edge(src, target, EdgeKind::Union);
-                }
-            }
-
-            if let Some(type_args) = &t.type_arguments {
-                for &target in type_args.iter() {
-                    add_edge(src, target, EdgeKind::TypeArgument);
-                }
-            }
-
-            if let Some(inst) = t.instantiated_type {
-                add_edge(src, inst, EdgeKind::Instantiated);
-            }
-
-            // Additional single TypeId relationships
-            if let Some(target) = t.substitution_base_type {
-                add_edge(src, target, EdgeKind::SubstitutionBase);
-            }
-            if let Some(target) = t.constraint_type {
-                add_edge(src, target, EdgeKind::Constraint);
-            }
-            if let Some(target) = t.indexed_access_object_type {
-                add_edge(src, target, EdgeKind::IndexedAccessObject);
-            }
-            if let Some(target) = t.indexed_access_index_type {
-                add_edge(src, target, EdgeKind::IndexedAccessIndex);
-            }
-            if let Some(target) = t.conditional_check_type {
-                add_edge(src, target, EdgeKind::ConditionalCheck);
-            }
-            if let Some(target) = t.conditional_extends_type {
-                add_edge(src, target, EdgeKind::ConditionalExtends);
-            }
-            if let Some(target) = t.conditional_true_type {
-                add_edge(src, target, EdgeKind::ConditionalTrue);
-            }
-            if let Some(target) = t.conditional_false_type {
-                add_edge(src, target, EdgeKind::ConditionalFalse);
-            }
-            if let Some(target) = t.keyof_type {
-                add_edge(src, target, EdgeKind::Keyof);
-            }
-            if let Some(target) = t.evolving_array_element_type {
-                add_edge(src, target, EdgeKind::EvolvingArrayElement);
-            }
-            if let Some(target) = t.evolving_array_final_type {
-                add_edge(src, target, EdgeKind::EvolvingArrayFinal);
-            }
-            if let Some(target) = t.reverse_mapped_source_type {
-                add_edge(src, target, EdgeKind::ReverseMappedSource);
-            }
-            if let Some(target) = t.reverse_mapped_mapped_type {
-                add_edge(src, target, EdgeKind::ReverseMappedMapped);
-            }
-            if let Some(target) = t.reverse_mapped_constraint_type {
-                add_edge(src, target, EdgeKind::ReverseMappedConstraint);
-            }
-            if let Some(target) = t.alias_type {
-                add_edge(src, target, EdgeKind::Alias);
-            }
-
-            // Array relationships
-            if let Some(alias_args) = &t.alias_type_arguments {
-                for &target in alias_args.iter() {
-                    add_edge(src, target, EdgeKind::AliasTypeArgument);
-                }
-            }
-            if let Some(intersection) = &t.intersection_types {
-                for &target in intersection.iter() {
-                    add_edge(src, target, EdgeKind::Intersection);
-                }
-            }
-        }
-
-        graph.calculate_edge_stats(types);
+        graph.calculate_nodes(types);
+        graph.calculate_links(types);
+        graph.calculate_link_stats(types);
         graph.calculate_node_stats(types);
-
+        graph.calculate_counts();
         graph
     }
 
@@ -222,101 +203,128 @@ impl TypeGraph {
         path_map
     }
 
-    fn calculate_edge_stats(&mut self, types: &TypesJsonSchema) {
-        // Group links by kind, then by target
-        let mut kind_maps: HashMap<String, HashMap<TypeId, Vec<TypeId>>> = HashMap::new();
+    fn calculate_nodes(&mut self, types: &TypesJsonSchema) {
+        self.nodes = types.len();
+    }
 
-        for link in &self.links {
-            let kind_str = match link.kind {
-                EdgeKind::Union => "union",
-                EdgeKind::TypeArgument => "typeArgument",
-                EdgeKind::Instantiated => "instantiated",
-                EdgeKind::SubstitutionBase => "substitutionBase",
-                EdgeKind::Constraint => "constraint",
-                EdgeKind::IndexedAccessObject => "indexedAccessObject",
-                EdgeKind::IndexedAccessIndex => "indexedAccessIndex",
-                EdgeKind::ConditionalCheck => "conditionalCheck",
-                EdgeKind::ConditionalExtends => "conditionalExtends",
-                EdgeKind::ConditionalTrue => "conditionalTrue",
-                EdgeKind::ConditionalFalse => "conditionalFalse",
-                EdgeKind::Keyof => "keyof",
-                EdgeKind::EvolvingArrayElement => "evolvingArrayElement",
-                EdgeKind::EvolvingArrayFinal => "evolvingArrayFinal",
-                EdgeKind::ReverseMappedSource => "reverseMappedSource",
-                EdgeKind::ReverseMappedMapped => "reverseMappedMapped",
-                EdgeKind::ReverseMappedConstraint => "reverseMappedConstraint",
-                EdgeKind::Alias => "alias",
-                EdgeKind::AliasTypeArgument => "aliasTypeArgument",
-                EdgeKind::Intersection => "intersection",
-            };
+    fn calculate_links(&mut self, types: &TypesJsonSchema) {
+        // TypeIds start at 1
+        let last_type_id = self.nodes;
+        // Helper to add link if both endpoints exist
+        let mut add_link = |source: TypeId, target: TypeId, kind: LinkKind| {
+            let source_exists = source <= last_type_id;
+            let target_exists = target <= last_type_id;
+            if source_exists && target_exists {
+                self.links.push(GraphLink {
+                    source,
+                    target,
+                    kind: kind.clone(),
+                });
+            }
+        };
 
-            kind_maps
-                .entry(kind_str.to_string())
-                .or_insert_with(HashMap::new)
-                .entry(link.target)
-                .or_insert_with(Vec::new)
-                .push(link.source);
+        // Second pass: add links for supported relations
+        for t in types.iter() {
+            let src = t.id;
+
+            // Single relationships
+            for (opt_target, kind) in [
+                (t.instantiated_type, LinkKind::Instantiated),
+                (t.substitution_base_type, LinkKind::SubstitutionBase),
+                (t.constraint_type, LinkKind::Constraint),
+                (t.indexed_access_object_type, LinkKind::IndexedAccessObject),
+                (t.indexed_access_index_type, LinkKind::IndexedAccessIndex),
+                (t.conditional_check_type, LinkKind::ConditionalCheck),
+                (t.conditional_extends_type, LinkKind::ConditionalExtends),
+                (t.conditional_true_type, LinkKind::ConditionalTrue),
+                (t.conditional_false_type, LinkKind::ConditionalFalse),
+                (t.keyof_type, LinkKind::Keyof),
+                (
+                    t.evolving_array_element_type,
+                    LinkKind::EvolvingArrayElement,
+                ),
+                (t.evolving_array_final_type, LinkKind::EvolvingArrayFinal),
+                (t.reverse_mapped_source_type, LinkKind::ReverseMappedSource),
+                (t.reverse_mapped_mapped_type, LinkKind::ReverseMappedMapped),
+                (
+                    t.reverse_mapped_constraint_type,
+                    LinkKind::ReverseMappedConstraint,
+                ),
+                (t.alias_type, LinkKind::Alias),
+            ] {
+                if let Some(target) = opt_target {
+                    add_link(src, target, kind);
+                }
+            }
+
+            // Array relationships
+            for (opt_targets, kind) in [
+                (t.alias_type_arguments.as_ref(), LinkKind::AliasTypeArgument),
+                (t.intersection_types.as_ref(), LinkKind::Intersection),
+                (t.union_types.as_ref(), LinkKind::Union),
+                (t.type_arguments.as_ref(), LinkKind::TypeArgument),
+            ] {
+                if let Some(targets) = opt_targets {
+                    for &target in targets {
+                        add_link(src, target, kind.clone());
+                    }
+                }
+            }
         }
+    }
 
-        // Build a map from type id -> optional path
+    fn calculate_link_stats(&mut self, types: &TypesJsonSchema) {
+        let mut link_stats_by_type_id: HashMap<LinkKind, HashMap<TypeId, Vec<TypeId>>> =
+            HashMap::new();
         let path_map = TypeGraph::build_path_map(types);
 
-        // Convert to EdgeStats (sorted by source count)
-        for (kind, target_map) in kind_maps {
-            let mut links: Vec<(TypeId, Vec<TypeId>, Option<String>)> = target_map
+        // 1. loop through all the links and for each LinkKind and append to an internal hashmap by TypeId (target) -> Vec<TypeId> (sources)
+        // 2. transform the HashMap<TypeId, Vec<TypeId>> to a Vec<LinkStatLink>
+        // 3. sort the Vec<LinkStatLink> by the length of the sources vector descending
+        // 4. limit the Vec<LinkStatLink> to the top 100 entries
+        // 5. record the maximum length of the sources (the first entry's source_ids length)
+
+        // 1.
+        for link in &self.links {
+            let kind = &link.kind;
+            let target_id = link.target;
+            let source_id = link.source;
+            let sources = link_stats_by_type_id
+                .entry(kind.clone())
+                .or_insert_with(HashMap::new)
+                .entry(target_id)
+                .or_insert_with(Vec::new);
+            sources.push(source_id);
+        }
+
+        // 2.
+        let mut link_stats: HashMap<LinkKind, LinkStats> = HashMap::new();
+        for (kind, by_type_id) in link_stats_by_type_id {
+            let mut links: Vec<LinkStatLink> = by_type_id
                 .into_iter()
-                .map(|(tid, srcs)| {
-                    let p = path_map.get(&tid).cloned().unwrap_or(None);
-                    (tid, srcs, p)
+                .map(|(target_id, source_ids)| LinkStatLink {
+                    target_id,
+                    source_ids,
+                    path: None,
                 })
                 .collect();
-            // Sort by number of sources, descending
-            links.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
-
-            let max = links.first().map(|e| e.1.len()).unwrap_or(0);
-            self.edge_stats.insert(kind, EdgeStats { links, max });
-        }
-
-        let limit = 20;
-        for (_kind, stats) in self.edge_stats.iter_mut() {
-            if stats.links.len() > limit {
-                stats.links.truncate(limit);
+            // 3.
+            links.sort_by(|a, b| b.source_ids.len().cmp(&a.source_ids.len()));
+            // 4.
+            links.truncate(100);
+            // 5.
+            let max = links.first().map(|e| e.source_ids.len()).unwrap_or(0);
+            let mut stat = LinkStats { max, links };
+            // Add path info from path_map
+            for link in &mut stat.links {
+                if let Some(p) = path_map.get(&link.target_id) {
+                    link.path = p.clone();
+                }
             }
-            // Ensure max remains accurate after truncation
-            stats.max = stats.links.first().map(|e| e.1.len()).unwrap_or(0);
+            link_stats.insert(kind, stat);
         }
 
-        // Ensure every known edge kind is present in `edge_stats` so serialization
-        // always emits the key (empty array when no entries).
-        let all_kinds = [
-            "union",
-            "typeArgument",
-            "instantiated",
-            "substitutionBase",
-            "constraint",
-            "indexedAccessObject",
-            "indexedAccessIndex",
-            "conditionalCheck",
-            "conditionalExtends",
-            "conditionalTrue",
-            "conditionalFalse",
-            "keyof",
-            "evolvingArrayElement",
-            "evolvingArrayFinal",
-            "reverseMappedSource",
-            "reverseMappedMapped",
-            "reverseMappedConstraint",
-            "alias",
-            "aliasTypeArgument",
-            "intersection",
-        ];
-
-        for &k in all_kinds.iter() {
-            self.edge_stats.entry(k.to_string()).or_insert(EdgeStats {
-                links: Vec::new(),
-                max: 0,
-            });
-        }
+        self.link_stats = link_stats;
     }
 
     fn calculate_node_stats(&mut self, types: &TypesJsonSchema) {
@@ -329,7 +337,7 @@ impl TypeGraph {
             for t in types.iter() {
                 let count = accessor(t).map(|v| v.len()).unwrap_or(0);
                 if count > 0 {
-                    let name = TypeGraph::human_readable_name(t);
+                    let name = human_readable_name(t);
                     entries.push((t.id, name, count));
                 }
             }
@@ -353,135 +361,44 @@ impl TypeGraph {
                 v.truncate(limit);
             }
             // Attach path info from path_map
-            let nodes_with_path: Vec<(TypeId, String, usize, Option<String>)> = v
+            let nodes_with_path = v
                 .into_iter()
-                .map(|(id, name, val)| {
-                    let p = path_map.get(&id).cloned().unwrap_or(None);
-                    (id, name, val, p)
+                .map(|(id, name, value)| NodeStatNode {
+                    id,
+                    name,
+                    value,
+                    path: path_map.get(&id).cloned().unwrap_or(None),
                 })
                 .collect();
+
             NodeStatCategory {
                 max,
                 nodes: nodes_with_path,
             }
         };
 
-        self.node_stats = NodeStats {
-            type_arguments: build_category(type_arguments),
-            union_types: build_category(union_types),
-            intersection_types: build_category(intersection_types),
-            alias_type_arguments: build_category(alias_type_arguments),
-        };
+        self.node_stats = HashMap::from([
+            (NodeStatKind::TypeArguments, build_category(type_arguments)),
+            (NodeStatKind::UnionTypes, build_category(union_types)),
+            (
+                NodeStatKind::IntersectionTypes,
+                build_category(intersection_types),
+            ),
+            (
+                NodeStatKind::AliasTypeArguments,
+                build_category(alias_type_arguments),
+            ),
+        ]);
     }
 
-    pub fn to_force_graph(&self) -> ForceGraphData {
-        let nodes: Vec<ForceGraphNode> = self
-            .nodes
-            .values()
-            .map(|n| ForceGraphNode {
-                id: n.id,
-                name: n.name.clone(),
-            })
-            .collect();
-
-        let links: Vec<ForceGraphLink> = self
-            .links
-            .iter()
-            .map(|l| ForceGraphLink {
-                source: l.source,
-                target: l.target,
-                kind: l.kind.clone(),
-            })
-            .collect();
-
-        // Count edge kinds
-        let mut count: HashMap<String, usize> = HashMap::new();
+    pub fn calculate_counts(&mut self) {
+        let mut count: HashMap<LinkKind, usize> = HashMap::new();
         for link in &self.links {
-            let kind_str = match link.kind {
-                EdgeKind::Union => "union",
-                EdgeKind::TypeArgument => "typeArgument",
-                EdgeKind::Instantiated => "instantiated",
-                EdgeKind::SubstitutionBase => "substitutionBase",
-                EdgeKind::Constraint => "constraint",
-                EdgeKind::IndexedAccessObject => "indexedAccessObject",
-                EdgeKind::IndexedAccessIndex => "indexedAccessIndex",
-                EdgeKind::ConditionalCheck => "conditionalCheck",
-                EdgeKind::ConditionalExtends => "conditionalExtends",
-                EdgeKind::ConditionalTrue => "conditionalTrue",
-                EdgeKind::ConditionalFalse => "conditionalFalse",
-                EdgeKind::Keyof => "keyof",
-                EdgeKind::EvolvingArrayElement => "evolvingArrayElement",
-                EdgeKind::EvolvingArrayFinal => "evolvingArrayFinal",
-                EdgeKind::ReverseMappedSource => "reverseMappedSource",
-                EdgeKind::ReverseMappedMapped => "reverseMappedMapped",
-                EdgeKind::ReverseMappedConstraint => "reverseMappedConstraint",
-                EdgeKind::Alias => "alias",
-                EdgeKind::AliasTypeArgument => "aliasTypeArgument",
-                EdgeKind::Intersection => "intersection",
-            };
-            *count.entry(kind_str.to_string()).or_insert(0) += 1;
+            let entry = count.entry(link.kind.clone()).or_insert(0);
+            *entry += 1;
         }
-
-        ForceGraphData {
-            nodes,
-            links,
-            stats: GraphStats { count },
-            edge_stats: self.edge_stats.clone(),
-            node_stats: self.node_stats.clone(),
-        }
+        self.stats = GraphStats { count };
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct NodeStatCategory {
-    pub max: usize,
-    /// Array of [typeId, name, value]
-    pub nodes: Vec<(TypeId, String, usize, Option<String>)>,
-}
-
-impl Default for NodeStatCategory {
-    fn default() -> Self {
-        Self {
-            max: 0,
-            nodes: Vec::new(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct NodeStats {
-    pub type_arguments: NodeStatCategory,
-    pub union_types: NodeStatCategory,
-    pub intersection_types: NodeStatCategory,
-    pub alias_type_arguments: NodeStatCategory,
-}
-
-// react-force-graph expected shape
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ForceGraphNode {
-    pub id: TypeId,
-    pub name: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ForceGraphLink {
-    pub source: TypeId,
-    pub target: TypeId,
-    pub kind: EdgeKind,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ForceGraphData {
-    pub nodes: Vec<ForceGraphNode>,
-    pub links: Vec<ForceGraphLink>,
-    pub stats: GraphStats,
-    pub edge_stats: HashMap<String, EdgeStats>,
-    pub node_stats: NodeStats,
 }
 
 /// Build the in-memory graph from the loaded `types_json` and store in AppData via `State`.
@@ -542,7 +459,7 @@ pub fn generate_type_graph(
 pub fn get_type_graph(
     app: AppHandle,
     state: State<'_, std::sync::Arc<std::sync::Mutex<AppData>>>,
-) -> Result<ForceGraphData, String> {
+) -> Result<TypeGraph, String> {
     // If not yet built, build once
     let needs_build = {
         let app_data = state
@@ -560,9 +477,8 @@ pub fn get_type_graph(
     let fg = app_data
         .type_graph
         .as_ref()
-        .map(|g| g.to_force_graph())
         .ok_or_else(|| "type graph unavailable".to_string())?;
-    Ok(fg)
+    Ok(fg.clone())
 }
 
 #[tauri::command]
@@ -579,4 +495,19 @@ pub fn get_type_graph_text(
     let json = serde_json::to_string_pretty(fg)
         .map_err(|e| format!("Failed to serialize type_graph: {e}"))?;
     Ok(json)
+}
+
+#[tauri::command]
+pub fn verify_type_graph(
+    _app: AppHandle,
+    state: State<'_, std::sync::Arc<std::sync::Mutex<AppData>>>,
+) -> Result<bool, String> {
+    let app_data = state
+        .lock()
+        .map_err(|_| "AppData mutex poisoned".to_string())?;
+    if app_data.type_graph.is_some() {
+        Ok(true)
+    } else {
+        Ok(false)
+    }
 }

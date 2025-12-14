@@ -8,12 +8,17 @@ import { TypeRelationsDialog } from "./type-relations-dialog";
 export const getHumanReadableName = (
   resolvedType: ResolvedType | undefined,
 ): string => {
-  const isLiteral =
-    resolvedType?.flags.length === 1 &&
-    (resolvedType.flags[0] === "StringLiteral" ||
-      resolvedType.flags[0] === "NumberLiteral" ||
-      resolvedType.flags[0] === "BooleanLiteral" ||
-      resolvedType.flags[0] === "BigIntLiteral");
+  if (!resolvedType) {
+    return "<unknown>";
+  }
+
+  const isLiteral = resolvedType.flags.some(
+    flag =>
+      flag === "StringLiteral" ||
+      flag === "NumberLiteral" ||
+      flag === "BooleanLiteral" ||
+      flag === "BigIntLiteral",
+  );
   if (isLiteral && typeof resolvedType.display === "string") {
     return resolvedType.display;
   }

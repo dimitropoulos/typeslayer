@@ -1,4 +1,4 @@
-import { Alert, Button, Snackbar } from "@mui/material";
+import { Alert, Button, Snackbar, type SnackbarOrigin } from "@mui/material";
 import {
   createContext,
   type ReactNode,
@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 
-interface ToastData {
+export interface ToastData {
   message: string;
   severity?: "success" | "error" | "warning" | "info";
   action?: {
@@ -16,6 +16,7 @@ interface ToastData {
     onClick: () => void | Promise<void>;
   };
   duration?: number;
+  anchorOrigin?: SnackbarOrigin;
 }
 
 interface ToastContextType {
@@ -52,7 +53,9 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
         open={open}
         autoHideDuration={toast?.duration ?? 6000}
         onClose={handleClose}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        anchorOrigin={
+          toast?.anchorOrigin ?? { vertical: "bottom", horizontal: "right" }
+        }
         sx={{ zIndex: 1500 }}
       >
         <Alert

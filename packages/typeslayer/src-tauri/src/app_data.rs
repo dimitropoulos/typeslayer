@@ -1071,7 +1071,10 @@ pub async fn get_types_json(
 }
 
 #[tauri::command]
-pub async fn search_type(state: State<'_, Arc<Mutex<AppData>>>, id: i64) -> Result<Value, String> {
+pub async fn search_type(
+    state: State<'_, Arc<Mutex<AppData>>>,
+    id: usize,
+) -> Result<Value, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     // types_json contains ResolvedType; we return as JSON Value
     for t in &data.types_json {
@@ -1321,12 +1324,32 @@ pub async fn verify_analyze_trace(state: State<'_, Arc<Mutex<AppData>>>) -> Resu
         Some(v) => {
             let json = serde_json::to_string(v).map_err(|e| e.to_string())?;
             if json.trim().is_empty() {
-                Err("analyze-trace appears empty".to_string())
+                Err(format!("{} appears empty", ANALYZE_TRACE_FILENAME).to_string())
             } else {
                 Ok(())
             }
         }
-        None => Err("analyze-trace not loaded".to_string()),
+        None => Err(format!("{} not loaded", ANALYZE_TRACE_FILENAME).to_string()),
+    }
+}
+
+#[tauri::command]
+pub async fn verify_trace_json(state: State<'_, Arc<Mutex<AppData>>>) -> Result<(), String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    if data.trace_json.is_empty() {
+        Err(format!("{} is empty", TRACE_JSON_FILENAME).to_string())
+    } else {
+        Ok(())
+    }
+}
+
+#[tauri::command]
+pub async fn verify_types_json(state: State<'_, Arc<Mutex<AppData>>>) -> Result<(), String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    if data.types_json.is_empty() {
+        Err(format!("{} is empty", TYPES_JSON_FILENAME).to_string())
+    } else {
+        Ok(())
     }
 }
 
@@ -1336,12 +1359,12 @@ pub async fn verify_cpu_profile(state: State<'_, Arc<Mutex<AppData>>>) -> Result
     match &data.cpu_profile {
         Some(contents) => {
             if contents.trim().is_empty() {
-                Err("tsc.cpuprofile is empty".to_string())
+                Err(format!("{} is empty", CPU_PROFILE_FILENAME).to_string())
             } else {
                 Ok(())
             }
         }
-        None => Err("tsc.cpuprofile not loaded".to_string()),
+        None => Err(format!("{} not loaded", CPU_PROFILE_FILENAME).to_string()),
     }
 }
 

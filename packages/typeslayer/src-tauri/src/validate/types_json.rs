@@ -1,5 +1,5 @@
 use super::utils::{Location, TypeId};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 pub const TYPES_JSON_FILENAME: &str = "types.json";
 
@@ -126,6 +126,21 @@ impl std::fmt::Display for IntrinsicName {
     }
 }
 
+/// for some unknown reason, _only at the time of serialization_– the
+/// JSON `conditionalTrueType` and `conditionalFalseType` fields are serialized as
+/// `-1` instead of `null` if one is not found. This is a workaround for that.
+fn handle_minus_one<'de, D>(deserializer: D) -> Result<Option<TypeId>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let val = Option::<i64>::deserialize(deserializer)?;
+    match val {
+        Some(-1) => Ok(None),
+        Some(v) => Ok(Some(v as TypeId)),
+        None => Ok(None),
+    }
+}
+
 /// Rust equivalent of your Zod `resolvedType` schema.
 ///
 /// The `#[serde(rename_all = "camelCase")]` keeps the JSON field
@@ -174,9 +189,17 @@ pub struct ResolvedType {
     pub conditional_check_type: Option<TypeId>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub conditional_extends_type: Option<TypeId>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "handle_minus_one"
+    )]
     pub conditional_true_type: Option<TypeId>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "handle_minus_one"
+    )]
     pub conditional_false_type: Option<TypeId>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub keyof_type: Option<TypeId>,
@@ -211,12 +234,6 @@ pub type TypesJsonSchema = Vec<ResolvedType>;
 pub fn parse_types_json(path_label: &str, json_string: &str) -> Result<TypesJsonSchema, String> {
     let parsed: TypesJsonSchema = serde_json::from_str(json_string)
         .map_err(|e| format!("Failed to parse '{path_label}': {e}"))?;
-
-    for (i, t) in parsed.iter().enumerate() {
-        if t.id < -1 {
-            return Err(format!("types[{}].id invalid: {}", i, t.id));
-        }
-    }
 
     Ok(parsed)
 }

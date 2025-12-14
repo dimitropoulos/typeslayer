@@ -21,7 +21,6 @@ import {
   TypeSummary,
 } from "../../components/type-summary";
 import { useTypeGraph } from "../../hooks/tauri-hooks";
-import { GRAPH_EDGE_ENTRY } from "../../types/type-graph";
 import { AwardNavItem } from "./award-nav-item";
 import {
   AWARD_SELECTOR_COLUMN_WIDTH,
@@ -51,12 +50,12 @@ export function RelationAward({
   };
   const hasData = typeGraph !== undefined;
 
-  const edgeStatProperty = getEdgeStatProperty(awardId);
-  const edgeStats = typeGraph?.edgeStats[edgeStatProperty];
+  const edgeStatProperty = getLinkStatProperty(awardId);
+  const linkStats = typeGraph?.linkStats[edgeStatProperty];
 
-  const selectedItem = edgeStats?.links[selectedIndex];
+  const selectedItem = linkStats?.links[selectedIndex];
 
-  const hasItems = edgeStats && edgeStats.links.length > 0;
+  const hasItems = linkStats && linkStats.links.length > 0;
 
   const noneFound = (
     <Box
@@ -78,24 +77,24 @@ export function RelationAward({
 
   const items = (
     <List>
-      {edgeStats?.links.map(([typeId, sourceIds, maybePath], index) => (
+      {linkStats?.links.map(({ targetId, sourceIds, path }, index) => (
         <ListItemButton
           selected={index === selectedIndex}
           onClick={event => handleListItemClick(event, index)}
-          key={typeId}
+          key={targetId}
         >
           <ListItemText>
             <Stack sx={{ flexGrow: 1 }} gap={0}>
               <SimpleTypeSummary
-                id={typeId}
-                name={getHumanReadableName(typeRegistry[typeId])}
+                id={targetId}
+                name={getHumanReadableName(typeRegistry[targetId])}
                 suppressActions
               />
               <Stack gap={0.5}>
-                <MaybePathCaption maybePath={maybePath} />
+                <MaybePathCaption maybePath={path} />
                 <InlineBarGraph
                   label={`${sourceIds.length.toLocaleString()} ${unit}`}
-                  width={`${(sourceIds.length / edgeStats.max) * 100}%`}
+                  width={`${(sourceIds.length / linkStats.max) * 100}%`}
                 />
               </Stack>
             </Stack>
@@ -153,51 +152,44 @@ export function RelationAward({
       >
         {hasItems && selectedItem ? (
           <Stack gap={3}>
-            <DisplayRecursiveType
-              id={selectedItem[GRAPH_EDGE_ENTRY.TYPEID_INDEX]}
-            />
+            <DisplayRecursiveType id={selectedItem.targetId} />
 
             {selectedItem && hasItems && (
               <>
                 <Divider />
                 <Stack gap={1}>
                   <Typography variant="h6">
-                    {selectedItem[
-                      GRAPH_EDGE_ENTRY.TARGET_TYPEIDS_INDEX
-                    ].length.toLocaleString()}{" "}
-                    {unit}
+                    {selectedItem.sourceIds.length.toLocaleString()} {unit}
                   </Typography>
                   <List dense sx={{ backgroundColor: "transparent" }}>
                     <ShowMoreChildren incrementsOf={50}>
-                      {selectedItem[GRAPH_EDGE_ENTRY.TARGET_TYPEIDS_INDEX].map(
-                        sourceId => {
-                          const sourceType = typeRegistry[sourceId];
-                          return sourceType ? (
-                            <ListItem
-                              key={sourceId}
-                              sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 1,
-                                flexWrap: "nowrap",
-                              }}
-                            >
-                              <TypeSummary resolvedType={sourceType} />
+                      {selectedItem.sourceIds.map(sourceId => {
+                        const sourceType = typeRegistry[sourceId];
+                        return sourceType ? (
+                          <ListItem
+                            key={sourceId}
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                              flexWrap: "nowrap",
+                            }}
+                          >
+                            <TypeSummary resolvedType={sourceType} />
 
-                              <Stack
-                                className="action-buttons"
-                                sx={{
-                                  opacity: 0,
-                                  pointerEvents: "none",
-                                  flexDirection: "row",
-                                  gap: 0.5,
-                                  flexShrink: 0,
-                                }}
-                              ></Stack>
-                            </ListItem>
-                          ) : null;
-                        },
-                      )}
+                            <Stack
+                              className="action-buttons"
+                              sx={{
+                                opacity: 0,
+                                pointerEvents: "none",
+                                flexDirection: "row",
+                                gap: 0.5,
+                                flexShrink: 0,
+                              }}
+                            ></Stack>
+                          </ListItem>
+                        ) : null;
+                      })}
                     </ShowMoreChildren>
                   </List>
                 </Stack>
@@ -234,7 +226,7 @@ const typeRelationMetrics = [
 ] satisfies AwardId[];
 type TypeRelationMetricsAwardId = (typeof typeRelationMetrics)[number];
 
-const getEdgeStatProperty = <T extends AwardId>(property: T) =>
+const getLinkStatProperty = <T extends AwardId>(property: T) =>
   property.replace("relation_", "") as T extends `relation_${infer U}`
     ? U
     : never;
@@ -244,8 +236,7 @@ const useTypeRelationMetricsValue = () => {
   if (!typeGraph) {
     return () => 0;
   }
-
-  const { edgeStats } = typeGraph;
+  const { linkStats } = typeGraph;
 
   return (awardId: TypeRelationMetricsAwardId): number => {
     switch (awardId) {
@@ -269,8 +260,8 @@ const useTypeRelationMetricsValue = () => {
       case "relation_evolvingArrayElement":
       case "relation_evolvingArrayFinal":
       case "relation_alias": {
-        const edgeStatProperty = getEdgeStatProperty(awardId);
-        return edgeStats[edgeStatProperty].max;
+        const linkStatProperty = getLinkStatProperty(awardId);
+        return linkStats[linkStatProperty]?.max ?? 0;
       }
 
       default:

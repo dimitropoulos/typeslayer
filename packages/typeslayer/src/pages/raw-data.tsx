@@ -37,7 +37,7 @@ import { Code } from "../components/code";
 import { InlineCode } from "../components/inline-code";
 import { OpenablePath } from "../components/openable-path";
 import { formatBytesSize, serverBaseUrl } from "../components/utils";
-import { useToast } from "../contexts/toast-context";
+import { type ToastData, useToast } from "../contexts/toast-context";
 import {
   useDataDir,
   useGenerateAnalyzeTrace,
@@ -50,6 +50,11 @@ import {
   useUploadTrace,
   useUploadTypeGraph,
   useUploadTypes,
+  useVerifyAnalyzeTrace,
+  useVerifyCpuProfile,
+  useVerifyTraceJson,
+  useVerifyTypeGraph,
+  useVerifyTypesJson,
 } from "../hooks/tauri-hooks";
 import { TYPE_GRAPH_FILENAME } from "../types/type-graph";
 
@@ -61,7 +66,7 @@ const RAW_ITEMS: Record<
     route: string;
     filename: string;
     description: string;
-    verifyInvoke: string;
+    useVerify: () => UseMutationResult<void, Error, void, unknown>;
     useRegenerate: () => UseMutationResult<unknown, Error, void, unknown>;
     useUpload: () => UseMutationResult<unknown, Error, string, unknown>;
   }
@@ -71,7 +76,7 @@ const RAW_ITEMS: Record<
     filename: ANALYZE_TRACE_FILENAME,
     description:
       "Summary insights extracted from trace.json, including hotspots and duplicate packages.",
-    verifyInvoke: "verify_analyze_trace",
+    useVerify: useVerifyAnalyzeTrace,
     useRegenerate: useGenerateAnalyzeTrace,
     useUpload: useUploadAnalyzeTrace,
   },
@@ -81,7 +86,7 @@ const RAW_ITEMS: Record<
     filename: TRACE_JSON_FILENAME,
     description:
       "Raw event trace emitted by the TypeScript compiler during type checking.",
-    verifyInvoke: "validate_trace_json",
+    useVerify: useVerifyTraceJson,
     useRegenerate: useGenerateTrace,
     useUpload: useUploadTrace,
   },
@@ -90,7 +95,7 @@ const RAW_ITEMS: Record<
     route: "types-json",
     filename: TYPES_JSON_FILENAME,
     description: "Resolved types catalog containing metadata for each type id.",
-    verifyInvoke: "validate_types_json",
+    useVerify: useVerifyTypesJson,
     useRegenerate: useGenerateTrace,
     useUpload: useUploadTypes,
   },
@@ -100,7 +105,7 @@ const RAW_ITEMS: Record<
     filename: CPU_PROFILE_FILENAME,
     description:
       "V8 CPU profile generated during the TypeScript compilation run.",
-    verifyInvoke: "verify_cpu_profile",
+    useVerify: useVerifyCpuProfile,
     useRegenerate: useGenerateCpuProfile,
     useUpload: useUploadAnalyzeTrace,
   },
@@ -110,7 +115,7 @@ const RAW_ITEMS: Record<
     filename: TYPE_GRAPH_FILENAME,
     description:
       "Type graph representing relationships between types in the TypeScript project.",
-    verifyInvoke: "verify_type_graph",
+    useVerify: useVerifyTypeGraph,
     useRegenerate: useGenerateTypeGraph,
     useUpload: useUploadTypeGraph,
   },
@@ -173,14 +178,24 @@ export const RawData = () => {
 };
 
 const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
-  const { filename, description, verifyInvoke, useRegenerate, useUpload } =
+  const { filename, description, useVerify, useRegenerate, useUpload } =
     RAW_ITEMS[itemKey];
   const { mutateAsync: regenerate, isPending: isRegenerating } =
     useRegenerate();
   const { mutateAsync: upload, isPending: isUploading } = useUpload();
   const { data: text, isLoading } = useStaticFile(filename);
   const { data: fileSizes } = useOutputFileSizes();
-  const { showToast } = useToast();
+  const verify = useVerify();
+  const { showToast: showToastOriginal } = useToast();
+  const showToast = useCallback(
+    (toastData: ToastData) => {
+      showToastOriginal({
+        ...toastData,
+        anchorOrigin: { vertical: "top", horizontal: "center" },
+      });
+    },
+    [showToastOriginal],
+  );
   const dataDir = useDataDir();
 
   const onCopy = useCallback(async () => {
@@ -229,12 +244,12 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
 
   const onVerify = useCallback(async () => {
     try {
-      await invoke(verifyInvoke);
+      await verify.mutateAsync();
       showToast({ message: "Verified: OK", severity: "success" });
     } catch (_e) {
       showToast({ message: "Verify failed", severity: "error" });
     }
-  }, [verifyInvoke, showToast]);
+  }, [verify.mutateAsync, showToast]);
 
   const fileSize = fileSizes ? fileSizes[filename] : null;
 
@@ -286,6 +301,7 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
           variant="outlined"
           onClick={onVerify}
           startIcon={<VerifiedUser />}
+          loading={verify.isPending}
         >
           Verify
         </Button>

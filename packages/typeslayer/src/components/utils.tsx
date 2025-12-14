@@ -139,7 +139,6 @@ export const processTscExample = ({
     / --[^\s]+/g,
     match => ` \\\n  ${match}`,
   );
-  console.log({ tscExample, nodeOptionsStr, strippedTscExample, example });
   return projectRoot
     ? [
         `${stripPackageJson(projectRoot)}`,

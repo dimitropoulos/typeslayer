@@ -705,3 +705,80 @@ export const useMaxStackSize = () => {
     isSettingValue: mutation.isPending,
   };
 };
+
+export const useVerifyAnalyzeTrace = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => invoke<void>("verify_analyze_trace"),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["analyze_trace"] });
+      queryClient.invalidateQueries({
+        queryKey: ["outputs", ANALYZE_TRACE_FILENAME],
+      });
+      queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
+      queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
+    },
+  });
+};
+
+export const useVerifyTraceJson = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => invoke<void>("verify_trace_json"),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["trace_json"] });
+      queryClient.invalidateQueries({
+        queryKey: ["outputs", TRACE_JSON_FILENAME],
+      });
+      queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
+      queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
+    },
+  });
+};
+
+export const useVerifyTypesJson = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => invoke<void>("verify_types_json"),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["types_json"] });
+      queryClient.invalidateQueries({
+        queryKey: ["outputs", TYPES_JSON_FILENAME],
+      });
+      queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
+      queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
+    },
+  });
+};
+
+export const useVerifyTypeGraph = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => invoke<void>("verify_type_graph"),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["type_graph"] });
+      queryClient.invalidateQueries({
+        queryKey: ["outputs", TYPE_GRAPH_FILENAME],
+      });
+      queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
+      queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
+    },
+  });
+};
+
+export const useVerifyCpuProfile = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => invoke<void>("verify_cpu_profile"),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["cpu_profile"] });
+      queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
+      queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
+    },
+  });
+};

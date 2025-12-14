@@ -102,6 +102,8 @@ pub fn run_tauri_app(app_data: Arc<Mutex<app_data::AppData>>) {
             app_data::validate_types_json,
             app_data::verify_analyze_trace,
             app_data::verify_cpu_profile,
+            app_data::verify_trace_json,
+            app_data::verify_types_json,
             auth::is_authorized,
             auth::validate_auth_code,
             mcp::status::get_available_mcp_resources,
@@ -111,6 +113,7 @@ pub fn run_tauri_app(app_data: Arc<Mutex<app_data::AppData>>) {
             type_graph::generate_type_graph,
             type_graph::get_type_graph,
             type_graph::get_type_graph_text,
+            type_graph::verify_type_graph,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
