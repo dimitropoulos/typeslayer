@@ -11,11 +11,11 @@ pub struct TraceEvent {
     pub ts: f64,
     pub name: String,
     pub cat: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ph: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dur: Option<f64>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub s: Option<String>,
     #[serde(default = "default_args")]
     pub args: Value,

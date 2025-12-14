@@ -8,6 +8,7 @@ import { Code } from "../components/code";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
 import { InlineCode } from "../components/inline-code";
 import { StatPill } from "../components/stat-pill";
+import { TypeRelationsContent } from "../components/type-relations-dialog";
 import { useTypeRegistry } from "./award-winners/use-type-registry";
 
 export const SearchTypes = () => {
@@ -30,6 +31,30 @@ export const SearchTypes = () => {
 
   const typeString = JSON.stringify(typeRegistry[numberSearch], null, 2);
 
+  const callout = (
+    <Callout title="What's a type id?">
+      <Typography>
+        During typechecking, the TypeScript compiler assigns a unique{" "}
+        <InlineCode primary>id</InlineCode> to every type it encounters. To
+        interact with the TypeSlayer, you'll find yourself using these
+        identifiers a lot.
+      </Typography>
+      <Typography>
+        This may seem like an annoying detail, and you may be wondering why you
+        can't just search by name. But consider that actually most types
+        anonymous, and don't even have names.
+      </Typography>
+      <Typography>
+        Also, as strange as this may sound, almost every TypeScript codebase has
+        many distinct types that share the same name. Consider a codebase that
+        names generic parameters <InlineCode primary>T</InlineCode>. The
+        TypeScript compiler will assign a different{" "}
+        <InlineCode primary>id</InlineCode> to each of these types, even though
+        they all have the same name.
+      </Typography>
+    </Callout>
+  );
+
   return (
     <Box sx={{ px: 4, overflow: "auto", height: "100%" }}>
       <Stack
@@ -39,7 +64,9 @@ export const SearchTypes = () => {
           gap: 1,
           mt: 4,
           mb: 2,
-          width: 600,
+          width: "50%",
+          minWidth: "50%",
+          maxWidth: "50%",
         }}
       >
         <Typography variant="h2">Search</Typography>
@@ -52,7 +79,11 @@ export const SearchTypes = () => {
           placeholder="search by type id"
           variant="outlined"
           type="number"
-          sx={{ width: 600 }}
+          sx={{
+            width: "50%",
+            minWidth: "50%",
+            maxWidth: "50%",
+          }}
           value={search}
           onChange={event => {
             const newValue = event.target.value;
@@ -64,49 +95,55 @@ export const SearchTypes = () => {
             }
           }}
         />
+        <Stack gap={4} direction="row">
+          <Stack
+            width="50%"
+            sx={{
+              width: "50%",
+              minWidth: "50%",
+              maxWidth: "50%",
+              overflow: "auto",
+              height: "100%",
+              gap: 3,
+            }}
+          >
+            {isLoading ? (
+              <CenterLoader />
+            ) : (
+              <DisplayRecursiveType id={numberSearch} />
+            )}
 
-        {isLoading ? (
-          <Box maxWidth={600}>
-            <CenterLoader />
-          </Box>
-        ) : (
-          <DisplayRecursiveType id={numberSearch} />
-        )}
+            {typeString ? (
+              <>
+                <Divider />
+                <Typography variant="h5">
+                  Raw Type Definition{" "}
+                  <Typography fontSize={12}>
+                    (from <InlineCode>{TYPES_JSON_FILENAME}</InlineCode>)
+                  </Typography>
+                </Typography>
+                <Code value={typeString} />
+              </>
+            ) : isLoading ? null : (
+              callout
+            )}
+          </Stack>
 
-        {typeString ? (
-          <>
-            <Divider />
-            <Typography variant="h6">
-              Raw Type Definition{" "}
-              <Typography fontSize={10}>
-                (from <InlineCode>{TYPES_JSON_FILENAME}</InlineCode>)
-              </Typography>
-            </Typography>
-            <Code value={typeString} />
-          </>
-        ) : isLoading ? null : (
-          <Callout title="What's a type id?">
-            <Typography>
-              During typechecking, the TypeScript compiler assigns a unique{" "}
-              <InlineCode primary>id</InlineCode> to every type it encounters.
-              To interact with the TypeSlayer, you'll find yourself using these
-              identifiers a lot.
-            </Typography>
-            <Typography>
-              This may seem like an annoying detail, and you may be wondering
-              why you can't just search by name. But consider that actually most
-              types anonymous, and don't even have names.
-            </Typography>
-            <Typography>
-              Also, as strange as this may sound, almost every TypeScript
-              codebase has many distinct types that share the same name.
-              Consider a codebase that names generic parameters{" "}
-              <InlineCode primary>T</InlineCode>. The TypeScript compiler will
-              assign a different <InlineCode primary>id</InlineCode> to each of
-              these types, even though they all have the same name.
-            </Typography>
-          </Callout>
-        )}
+          {numberSearch > 0 ? (
+            <>
+              <Divider orientation="vertical" sx={{ minWidth: 10 }} />
+
+              <Stack gap={1}>
+                <Typography variant="h5" gutterBottom>
+                  Types Relations
+                </Typography>
+                <TypeRelationsContent
+                  resolvedType={typeRegistry[numberSearch]}
+                />
+              </Stack>
+            </>
+          ) : null}
+        </Stack>
       </Stack>
     </Box>
   );

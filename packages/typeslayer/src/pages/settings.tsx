@@ -90,7 +90,7 @@ export const SettingsPage = () => {
     if (!dataDir.data) {
       return;
     }
-    await invoke("open_file", { path: dataDir.data });
+    await invoke<void>("open_file", { path: dataDir.data });
   }, [dataDir.data]);
 
   return (

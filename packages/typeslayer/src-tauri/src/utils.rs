@@ -1,6 +1,8 @@
+use std::path::PathBuf;
 use std::process::Stdio;
 
 use shlex::Quoter;
+use tokio::io::AsyncReadExt;
 
 pub fn quote_if_needed(s: &str) -> String {
     // Equivalent to the now deprecated try_quote.
@@ -41,4 +43,17 @@ pub fn command_exists(cmd: &str) -> bool {
             .map(|s| s.success())
             .unwrap_or(false)
     }
+}
+
+pub async fn get_output_file_preview(path: &PathBuf) -> Result<String, String> {
+    let mut file = tokio::fs::File::open(path)
+        .await
+        .map_err(|e| format!("Failed to open {}: {}", path.display(), e))?;
+    let mut buf = vec![0u8; 1024 * 100]; // 100 KiB
+    let n = file
+        .read(&mut buf)
+        .await
+        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+    buf.truncate(n);
+    String::from_utf8(buf).map_err(|e| format!("Invalid UTF-8: {}", e))
 }

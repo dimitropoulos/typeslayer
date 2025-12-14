@@ -47,7 +47,6 @@ export const shikiTheme = {
       scope: ["invalid", "invalid.deprecated"],
       settings: {
         foreground: muiTheme.palette.error.main,
-        fontStyle: "underline",
       },
     },
     {

@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noArrayIndexKey: because daddy said so */
 import {
   Button,
   Dialog,
@@ -16,7 +17,10 @@ import {
   typeRelationInfo,
 } from "@typeslayer/validate";
 import { type SyntheticEvent, useCallback, useState } from "react";
-import { useTraceJson, useTypeGraph } from "../hooks/tauri-hooks";
+import {
+  useGetTracesRelatedToTypeId,
+  useTypeGraph,
+} from "../hooks/tauri-hooks";
 import { useTypeRegistry } from "../pages/award-winners/use-type-registry";
 import type { GraphLink, LinkKind } from "../types/type-graph";
 import { CenterLoader } from "./center-loader";
@@ -27,84 +31,45 @@ import { TabLabel } from "./tab-label";
 import { TypeSummary } from "./type-summary";
 
 const LastDitchEffort = ({ typeId }: { typeId: number }) => {
-  const { data: traceJson, isLoading } = useTraceJson();
+  const { data: events, isLoading } = useGetTracesRelatedToTypeId({ typeId });
 
   if (isLoading) {
     return <CenterLoader />;
   }
 
-  if (!traceJson) {
-    return null;
-  }
-
-  const events = traceJson.filter(event => {
-    if (!("name" in event)) {
-      return false;
-    }
-
-    switch (event.name) {
-      case "checkTypeParameterDeferred":
-        return event.args.parent === typeId || event.args.id === typeId;
-
-      case "checkTypeRelatedTo_DepthLimit":
-      case "structuredTypeRelatedTo":
-      case "traceUnionsOrIntersectionsTooLarge_DepthLimit":
-      case "typeRelatedToDiscriminatedType_DepthLimit":
-        return event.args.sourceId === typeId || event.args.targetId === typeId;
-
-      case "checkCrossProductUnion_DepthLimit":
-      case "removeSubtypes_DepthLimit":
-        return event.args.typeIds.includes(typeId);
-
-      case "instantiateType_DepthLimit":
-        return event.args.typeId === typeId;
-
-      case "recursiveTypeRelatedTo_DepthLimit":
-        return (
-          event.args.sourceId === typeId ||
-          event.args.targetId === typeId ||
-          event.args.sourceIdStack.includes(typeId) ||
-          event.args.targetIdStack.includes(typeId)
-        );
-
-      default:
-        return false;
-    }
-  });
-
-  if (events.length === 0) {
+  if (events?.length === 0) {
     return (
       <Stack gap={1}>
-        <Typography>
+        <Typography color="textSecondary">
           no types found with relations to <InlineCode>{typeId}</InlineCode>.
         </Typography>
-        <Typography>
+        <Typography color="textDisabled">
           that means that TypeScript didn't record any more information about
-          this type other than that it exists in your code.
-        </Typography>
-        <Typography>
-          one situation this can happen is for a top-level package export, so
-          check those.
+          this type other than that it exists in your code. it's pretty common -
+          basically this is a type that was either a top level export or was
+          never used by anything else in your program (or both).
         </Typography>
       </Stack>
     );
   }
 
   return (
-    <Stack>
-      <Typography>so what do you do next?</Typography>
-      <Typography gutterBottom>
-        it's tough. the last thing we can do is perform a search of all traces
-        that contain this type id:
+    <Stack gap={1}>
+      <Typography color="textSecondary">
+        no types found with relations to <InlineCode>{typeId}</InlineCode>.
       </Typography>
-      <Code value={JSON.stringify(events, null, 2)} />
-      <Typography sx={{ mt: 2 }}>
-        Now, what you shoudl do next is take the timestamp (the{" "}
+      <Typography color="textSecondary">
+        so what do you do next? it's tough. the last thing we can do is perform
+        a search of all traces that contain this type id:
+      </Typography>
+      <Code sx={{ my: 1 }} value={JSON.stringify(events, null, 2)} />
+      <Typography color="textSecondary">
+        what you should do next is take the timestamp (the{" "}
         <InlineCode>ts</InlineCode> field) of any of the events returned above,
         and look at that time in{" "}
         <Link href="/perfetto">the Perfetto module</Link>.
       </Typography>
-      <Typography>
+      <Typography color="textSecondary">
         there, you'll see what other sorts of things TypeScript was doing at
         that time (and what file it was checking).
       </Typography>
@@ -223,24 +188,63 @@ const TargetsTabs = ({ targets }: { targets: GraphLink[] }) => {
         <ShowMoreChildren incrementsOf={50}>
           {targets
             .filter(({ kind }) => kind === selectedTab)
-            .map(({ source }) => {
-              const resolvedType = typeRegistry?.[source];
+            .map(({ source }, index) => {
+              const resolvedType = typeRegistry[source];
               if (!resolvedType) {
                 return (
-                  <Typography key={source} color="error">
+                  <Typography key={`${source}-${index}`} color="error">
                     Could not find type with id {source} in registry
                   </Typography>
                 );
               }
 
               return (
-                <Stack key={source} sx={{ gap: 1, flexDirection: "row" }}>
-                  <TypeSummary resolvedType={resolvedType} key={source} />
+                <Stack
+                  key={`${source}-${index}`}
+                  sx={{ gap: 1, flexDirection: "row" }}
+                >
+                  <TypeSummary
+                    resolvedType={resolvedType}
+                    key={`${source}-${index}`}
+                  />
                 </Stack>
               );
             })}
         </ShowMoreChildren>
       </Stack>
+    </Stack>
+  );
+};
+
+export const TypeRelationsContent = ({
+  resolvedType,
+}: {
+  resolvedType?: ResolvedType | undefined;
+}) => {
+  const { data: typeGraph, isLoading } = useTypeGraph();
+  if (!resolvedType) {
+    return null;
+  }
+  const { id: typeId } = resolvedType;
+
+  if (typeId <= 0) {
+    return null;
+  }
+
+  const targets = typeGraph?.links.filter(node => node.target === typeId) ?? [];
+
+  const noneFound =
+    targets.length === 0 ? <LastDitchEffort typeId={typeId} /> : null;
+
+  return isLoading ? (
+    <CenterLoader />
+  ) : (
+    <Stack gap={0.5}>
+      {targets.length === 0 ? (
+        noneFound
+      ) : (
+        <TargetsTabs targets={targets} key={typeId} />
+      )}
     </Stack>
   );
 };
@@ -252,15 +256,6 @@ export const TypeRelationsDialog = ({
   resolvedType: ResolvedType;
   onClose: () => void;
 }) => {
-  const { id: typeId } = resolvedType;
-
-  const { data: typeGraph, isLoading } = useTypeGraph();
-
-  const targets = typeGraph?.links.filter(node => node.target === typeId) ?? [];
-
-  const noneFound =
-    targets.length === 0 ? <LastDitchEffort typeId={typeId} /> : null;
-
   return (
     <Dialog open onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -268,17 +263,7 @@ export const TypeRelationsDialog = ({
         <TypeSummary resolvedType={resolvedType} suppressActions />
       </DialogTitle>
       <DialogContent dividers>
-        {isLoading ? (
-          <CenterLoader />
-        ) : (
-          <Stack gap={0.5}>
-            {targets.length === 0 ? (
-              noneFound
-            ) : (
-              <TargetsTabs targets={targets} />
-            )}
-          </Stack>
-        )}
+        <TypeRelationsContent resolvedType={resolvedType} />
       </DialogContent>
 
       <DialogActions>

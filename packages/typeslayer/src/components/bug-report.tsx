@@ -81,7 +81,7 @@ export const BugReport = ({
             0,
             Math.max(zipPath.lastIndexOf("/"), zipPath.lastIndexOf("\\")),
           );
-          await invoke("open_file", { path: dirPath });
+          await invoke<void>("open_file", { path: dirPath });
         } catch (err) {
           console.error("Failed to open directory:", err);
         }

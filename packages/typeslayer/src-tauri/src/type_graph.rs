@@ -2,9 +2,11 @@ use serde::ser::Error as _;
 use serde::{Deserialize, Serialize, Serializer};
 use serde_json::value::RawValue;
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, State};
 
 use crate::app_data::AppData;
+use crate::utils::get_output_file_preview;
 use crate::validate::types_json::{Flag, TypesJsonSchema};
 use crate::validate::utils::TypeId;
 
@@ -405,7 +407,7 @@ impl TypeGraph {
 #[tauri::command]
 pub fn generate_type_graph(
     _app: AppHandle,
-    state: State<'_, std::sync::Arc<std::sync::Mutex<AppData>>>,
+    state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<(), String> {
     let types: TypesJsonSchema = {
         let app_data = state
@@ -458,7 +460,7 @@ pub fn generate_type_graph(
 #[tauri::command]
 pub fn get_type_graph(
     app: AppHandle,
-    state: State<'_, std::sync::Arc<std::sync::Mutex<AppData>>>,
+    state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<TypeGraph, String> {
     // If not yet built, build once
     let needs_build = {
@@ -482,25 +484,21 @@ pub fn get_type_graph(
 }
 
 #[tauri::command]
-pub fn get_type_graph_text(
-    state: State<'_, std::sync::Arc<std::sync::Mutex<AppData>>>,
+pub async fn get_type_graph_preview(
+    state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<String, String> {
-    let app_data = state
-        .lock()
-        .map_err(|_| "AppData mutex poisoned".to_string())?;
-    let fg = app_data
-        .type_graph
-        .as_ref()
-        .ok_or_else(|| "type graph unavailable".to_string())?;
-    let json = serde_json::to_string_pretty(fg)
-        .map_err(|e| format!("Failed to serialize type_graph: {e}"))?;
-    Ok(json)
+    let filepath = {
+        let data = state.lock().map_err(|e| e.to_string())?;
+        data.outputs_dir()
+            .join(crate::type_graph::TYPE_GRAPH_FILENAME)
+    };
+    get_output_file_preview(&filepath).await
 }
 
 #[tauri::command]
 pub fn verify_type_graph(
     _app: AppHandle,
-    state: State<'_, std::sync::Arc<std::sync::Mutex<AppData>>>,
+    state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<bool, String> {
     let app_data = state
         .lock()

@@ -1,4 +1,9 @@
-import { Stack, Typography, type TypographyVariant } from "@mui/material";
+import {
+  Stack,
+  type SxProps,
+  Typography,
+  type TypographyVariant,
+} from "@mui/material";
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback } from "react";
 import { useProjectRoot, useRelativePaths } from "../hooks/tauri-hooks";
@@ -16,6 +21,7 @@ export function OpenablePath({
   title,
   pathVariant = "body1",
   forceAbsolute,
+  propertyTextStyle = {},
 }: {
   absolutePath: string;
   line?: number;
@@ -23,18 +29,18 @@ export function OpenablePath({
   title?: string;
   pathVariant?: TypographyVariant;
   forceAbsolute?: boolean;
+  propertyTextStyle?: SxProps | undefined;
 }) {
   const relativePaths = useRelativePaths();
   const projectRoot = useProjectRoot();
   const findInPage = useCallback(async () => {
     try {
-      // Prefer opening in VS Code via backend; include line/char if present
       const goto =
         line !== undefined && character !== undefined
           ? `${absolutePath}:${line}:${character}`
           : absolutePath;
       console.log("Opening file via backend:", goto);
-      await invoke("open_file", { path: goto });
+      await invoke<void>("open_file", { path: goto });
     } catch (e) {
       console.error("Failed to open file via backend", e);
     }
@@ -78,6 +84,7 @@ export function OpenablePath({
           fontSize: "0.8rem",
           color: "text.secondary",
           letterSpacing: -0.25,
+          ...propertyTextStyle,
         }}
       >
         {exactLocation}

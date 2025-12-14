@@ -5,19 +5,17 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import {
-  ANALYZE_TRACE_FILENAME,
-  type AnalyzeTraceResult,
-} from "@typeslayer/analyze-trace/browser";
+import type { AnalyzeTraceResult } from "@typeslayer/analyze-trace/browser";
 import {
   extractPackageName,
   type ResolvedType,
-  TRACE_JSON_FILENAME,
+  type TraceEvent,
   type TraceJsonSchema,
-  TYPES_JSON_FILENAME,
+  type TypeId,
+  type TypesJsonSchema,
 } from "@typeslayer/validate";
-import { friendlyPath, serverBaseUrl } from "../components/utils";
-import { TYPE_GRAPH_FILENAME, type TypeGraph } from "../types/type-graph";
+import { friendlyPath } from "../components/utils";
+import type { TypeGraph } from "../types/type-graph";
 
 export function useRelativePaths() {
   const queryClient = useQueryClient();
@@ -29,7 +27,8 @@ export function useRelativePaths() {
   });
 
   const mutation = useMutation({
-    mutationFn: (value: boolean) => invoke("set_relative_paths", { value }),
+    mutationFn: (value: boolean) =>
+      invoke<void>("set_relative_paths", { value }),
     onSuccess: (_, value) => {
       queryClient.setQueryData(["relative_paths"], value);
     },
@@ -54,7 +53,8 @@ export function usePreferEditorOpen() {
   });
 
   const mutation = useMutation({
-    mutationFn: (value: boolean) => invoke("set_prefer_editor_open", { value }),
+    mutationFn: (value: boolean) =>
+      invoke<void>("set_prefer_editor_open", { value }),
     onSuccess: (_, value) => {
       queryClient.setQueryData(["prefer_editor_open"], value);
     },
@@ -79,7 +79,7 @@ export function useAutoStart() {
   });
 
   const mutation = useMutation({
-    mutationFn: (value: boolean) => invoke("set_auto_start", { value }),
+    mutationFn: (value: boolean) => invoke<void>("set_auto_start", { value }),
     onSuccess: (_, value) => {
       queryClient.setQueryData(["auto_start"], value);
     },
@@ -105,7 +105,7 @@ export function useApplyTscProjectFlag() {
 
   const mutation = useMutation({
     mutationFn: (value: boolean) =>
-      invoke("set_apply_tsc_project_flag", { value }),
+      invoke<void>("set_apply_tsc_project_flag", { value }),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
     },
@@ -134,7 +134,7 @@ export function usePreferredEditor() {
 
   const mutation = useMutation({
     mutationFn: (editor: string | null) =>
-      invoke("set_preferred_editor", { editor }),
+      invoke<void>("set_preferred_editor", { editor }),
     onSuccess: (_, editor) => {
       queryClient.setQueryData(["preferred_editor"], editor);
     },
@@ -165,7 +165,8 @@ export function useExtraTscFlags() {
   });
 
   const mutation = useMutation({
-    mutationFn: (flags: string) => invoke("set_extra_tsc_flags", { flags }),
+    mutationFn: (flags: string) =>
+      invoke<void>("set_extra_tsc_flags", { flags }),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
     },
@@ -204,7 +205,7 @@ export function useProjectRoot() {
 
   const mutation = useMutation({
     mutationFn: (projectRoot: string) =>
-      invoke("set_project_root", { projectRoot }),
+      invoke<void>("set_project_root", { projectRoot }),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["tsconfig_paths"] });
       queryClient.invalidateQueries({ queryKey: ["selected_tsconfig"] });
@@ -222,6 +223,15 @@ export function useProjectRoot() {
     set: mutation.mutateAsync,
     isSettingValue: mutation.isPending,
   };
+}
+
+export function useGetTracesRelatedToTypeId({ typeId }: { typeId: TypeId }) {
+  return useQuery({
+    queryKey: ["get_traces_related_to_typeid", typeId],
+    queryFn: () =>
+      invoke<TraceEvent[]>("get_traces_related_to_typeid", { typeId }),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
 }
 
 export function useTraceJson() {
@@ -273,27 +283,25 @@ export function useTsconfigPaths() {
 }
 
 const refreshGenerateTrace = (queryClient: QueryClient) => async () => {
-  const trace = await invoke("get_trace_json");
+  // trace.json
+  const trace = await invoke<TraceJsonSchema>("get_trace_json");
   queryClient.setQueryData(["trace_json"], trace);
-  queryClient.invalidateQueries({ queryKey: ["outputs", TRACE_JSON_FILENAME] });
+  queryClient.invalidateQueries({ queryKey: ["get_trace_json_preview"] });
 
-  const types = await invoke("get_types_json");
+  // types.json
+  const types = await invoke<TypesJsonSchema>("get_types_json");
   queryClient.setQueryData(["types_json"], types);
-  queryClient.invalidateQueries({ queryKey: ["outputs", TYPES_JSON_FILENAME] });
+  queryClient.invalidateQueries({ queryKey: ["get_types_json_preview"] });
 
+  // type-graph.json
   queryClient.invalidateQueries({ queryKey: ["type_graph"] });
-  queryClient.invalidateQueries({
-    queryKey: ["outputs", TYPE_GRAPH_FILENAME],
-  });
+  queryClient.invalidateQueries({ queryKey: ["get_type_graph_preview"] });
 
+  // analyze-trace.json
   queryClient.invalidateQueries({ queryKey: ["analyze_trace"] });
-  queryClient.invalidateQueries({
-    queryKey: ["outputs", ANALYZE_TRACE_FILENAME],
-  });
+  queryClient.invalidateQueries({ queryKey: ["get_analyze_trace_preview"] });
 
-  queryClient.invalidateQueries({ queryKey: ["type_graph"] });
-  queryClient.invalidateQueries({ queryKey: ["outputs", TYPE_GRAPH_FILENAME] });
-
+  // metadata
   queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
   queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
 };
@@ -302,7 +310,7 @@ export function useGenerateTrace() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => invoke("generate_trace"),
+    mutationFn: () => invoke<void>("generate_trace"),
     onSettled: refreshGenerateTrace(queryClient),
   });
 }
@@ -311,7 +319,8 @@ export function useUploadTrace() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (filePath: string) => invoke("upload_trace_json", { filePath }),
+    mutationFn: (filePath: string) =>
+      invoke<void>("upload_trace_json", { filePath }),
     onSettled: refreshGenerateTrace(queryClient),
   });
 }
@@ -320,17 +329,14 @@ export function useUploadTypes() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (filePath: string) => invoke("upload_types_json", { filePath }),
+    mutationFn: (filePath: string) =>
+      invoke<void>("upload_types_json", { filePath }),
     onSettled: refreshGenerateTrace(queryClient),
   });
 }
 
 export const refreshCpuProfile = (queryClient: QueryClient) => async () => {
-  // right now, we don't actually use this in the UI, it's served from the server directly to speedscope
-  // const cpuProfile = await invoke("get_cpu_profile");
-  // queryClient.setQueryData(["cpu_profile"], cpuProfile);
-  // queryClient.setQueryData(["outputs", CPU_PROFILE_FILENAME], cpuProfile);
-
+  queryClient.invalidateQueries({ queryKey: ["get_cpu_profile_preview"] });
   queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
   queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
 };
@@ -339,7 +345,7 @@ export function useGenerateCpuProfile() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => invoke("generate_cpu_profile"),
+    mutationFn: () => invoke<void>("generate_cpu_profile"),
     onSettled: refreshCpuProfile(queryClient),
   });
 }
@@ -349,18 +355,16 @@ export function useUploadCpuProfile() {
 
   return useMutation({
     mutationFn: (filePath: string) =>
-      invoke("upload_cpu_profile", { filePath }),
+      invoke<void>("upload_cpu_profile", { filePath }),
     onSettled: refreshCpuProfile(queryClient),
   });
 }
 
 const refreshAnalyzeTrace = (queryClient: QueryClient) => async () => {
-  const analyzeTrace = await invoke("get_analyze_trace");
+  const analyzeTrace = await invoke<AnalyzeTraceResult>("get_analyze_trace");
   queryClient.setQueryData(["analyze_trace"], analyzeTrace);
 
-  queryClient.invalidateQueries({
-    queryKey: ["outputs", ANALYZE_TRACE_FILENAME],
-  });
+  queryClient.invalidateQueries({ queryKey: ["get_analyze_trace_preview"] });
   queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
   queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
 };
@@ -369,7 +373,7 @@ export function useGenerateAnalyzeTrace() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => invoke("generate_analyze_trace"),
+    mutationFn: () => invoke<void>("generate_analyze_trace"),
     onSettled: refreshAnalyzeTrace(queryClient),
   });
 }
@@ -379,16 +383,16 @@ export function useUploadAnalyzeTrace() {
 
   return useMutation({
     mutationFn: (filePath: string) =>
-      invoke("upload_analyze_trace", { filePath }),
+      invoke<void>("upload_analyze_trace", { filePath }),
     onSettled: refreshAnalyzeTrace(queryClient),
   });
 }
 
 const refreshTypeGraph = (queryClient: QueryClient) => async () => {
-  const typeGraph = await invoke("get_type_graph");
+  const typeGraph = await invoke<TypeGraph>("get_type_graph");
   queryClient.setQueryData(["type_graph"], typeGraph);
 
-  queryClient.invalidateQueries({ queryKey: ["outputs", TYPE_GRAPH_FILENAME] });
+  queryClient.invalidateQueries({ queryKey: ["get_type_graph_preview"] });
   queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
   queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
 };
@@ -397,7 +401,7 @@ export function useGenerateTypeGraph() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => invoke("generate_type_graph"),
+    mutationFn: () => invoke<void>("generate_type_graph"),
     onSettled: refreshTypeGraph(queryClient),
   });
 }
@@ -406,7 +410,8 @@ export function useUploadTypeGraph() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (filePath: string) => invoke("upload_type_graph", { filePath }),
+    mutationFn: (filePath: string) =>
+      invoke<void>("upload_type_graph", { filePath }),
     onSettled: refreshTypeGraph(queryClient),
   });
 }
@@ -422,7 +427,7 @@ export function useSelectedTsconfig() {
 
   const mutation = useMutation({
     mutationFn: (tsconfigPath: string) =>
-      invoke("set_selected_tsconfig", { tsconfigPath }),
+      invoke<void>("set_selected_tsconfig", { tsconfigPath }),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
     },
@@ -442,7 +447,7 @@ export function useSelectedTsconfig() {
 
 export function useOpenFile() {
   return useMutation({
-    mutationFn: (path: string) => invoke("open_file", { path }),
+    mutationFn: (path: string) => invoke<void>("open_file", { path }),
   });
 }
 
@@ -590,7 +595,7 @@ export const useMaxOldSpaceSize = () => {
 
   const mutation = useMutation({
     mutationFn: (size: number | null) =>
-      invoke("set_max_old_space_size", { size }),
+      invoke<void>("set_max_old_space_size", { size }),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
     },
@@ -608,42 +613,42 @@ export const useMaxOldSpaceSize = () => {
   };
 };
 
-export const useGetAnalyzeTraceText = () => {
+export const useGetAnalyzeTracePreview = () => {
   return useQuery({
-    queryKey: ["get_analyze_trace_text"],
-    queryFn: () => invoke<string>("get_analyze_trace_text"),
+    queryKey: ["get_analyze_trace_preview"],
+    queryFn: () => invoke<string>("get_analyze_trace_preview"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 };
 
-export const useGetTraceJsonText = () => {
+export const useGetTraceJsonPreview = () => {
   return useQuery({
-    queryKey: ["get_trace_json_text"],
-    queryFn: () => invoke<string>("get_trace_json_text"),
+    queryKey: ["get_trace_json_preview"],
+    queryFn: () => invoke<string>("get_trace_json_preview"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 };
 
-export const useGetTypesJsonText = () => {
+export const useGetTypesJsonPreview = () => {
   return useQuery({
-    queryKey: ["get_types_json_text"],
-    queryFn: () => invoke<string>("get_types_json_text"),
+    queryKey: ["get_types_json_preview"],
+    queryFn: () => invoke<string>("get_types_json_preview"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 };
 
-export const useGetTypeGraphText = () => {
+export const useGetTypeGraphPreview = () => {
   return useQuery({
-    queryKey: ["get_type_graph_text"],
-    queryFn: () => invoke<string>("get_type_graph_text"),
+    queryKey: ["get_type_graph_preview"],
+    queryFn: () => invoke<string>("get_type_graph_preview"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 };
 
-export const useGetCpuProfileText = () => {
+export const useGetCpuProfilePreview = () => {
   return useQuery({
-    queryKey: ["get_cpu_profile_text"],
-    queryFn: () => invoke<string>("get_cpu_profile_text"),
+    queryKey: ["get_cpu_profile_preview"],
+    queryFn: () => invoke<string>("get_cpu_profile_preview"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 };
@@ -663,21 +668,6 @@ export const useTreemap = () => {
   });
 };
 
-// technically not tauri but yolo
-export const useStaticFile = (fileName: string) => {
-  return useQuery({
-    queryKey: ["outputs", fileName],
-    queryFn: async () => {
-      const response = await fetch(`${serverBaseUrl}/outputs/${fileName}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch ${fileName}: ${response.statusText}`);
-      }
-      return response.text();
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
-};
-
 export const useMaxStackSize = () => {
   const queryClient = useQueryClient();
 
@@ -688,7 +678,8 @@ export const useMaxStackSize = () => {
   });
 
   const mutation = useMutation({
-    mutationFn: (size: number | null) => invoke("set_max_stack_size", { size }),
+    mutationFn: (size: number | null) =>
+      invoke<void>("set_max_stack_size", { size }),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
     },
@@ -713,9 +704,6 @@ export const useVerifyAnalyzeTrace = () => {
     mutationFn: async () => invoke<void>("verify_analyze_trace"),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["analyze_trace"] });
-      queryClient.invalidateQueries({
-        queryKey: ["outputs", ANALYZE_TRACE_FILENAME],
-      });
       queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
       queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
     },
@@ -729,9 +717,6 @@ export const useVerifyTraceJson = () => {
     mutationFn: async () => invoke<void>("verify_trace_json"),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["trace_json"] });
-      queryClient.invalidateQueries({
-        queryKey: ["outputs", TRACE_JSON_FILENAME],
-      });
       queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
       queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
     },
@@ -745,9 +730,6 @@ export const useVerifyTypesJson = () => {
     mutationFn: async () => invoke<void>("verify_types_json"),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["types_json"] });
-      queryClient.invalidateQueries({
-        queryKey: ["outputs", TYPES_JSON_FILENAME],
-      });
       queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
       queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
     },
@@ -761,9 +743,6 @@ export const useVerifyTypeGraph = () => {
     mutationFn: async () => invoke<void>("verify_type_graph"),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["type_graph"] });
-      queryClient.invalidateQueries({
-        queryKey: ["outputs", TYPE_GRAPH_FILENAME],
-      });
       queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
       queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
     },

@@ -1,19 +1,19 @@
 import { TRACE_JSON_FILENAME } from "@typeslayer/validate";
 import { useEffect, useRef } from "react";
-import { useStaticFile } from "../hooks/tauri-hooks";
+import { useTraceJson } from "../hooks/tauri-hooks";
 
 export const Perfetto = () => {
-  const { data, isLoading } = useStaticFile(TRACE_JSON_FILENAME);
+  const { data, isLoading } = useTraceJson();
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Auto-load trace when data is available
   useEffect(() => {
     if (data && iframeRef.current) {
-      if (isLoading || !data || !iframeRef.current?.contentWindow) {
+      if (isLoading || !iframeRef.current?.contentWindow) {
         console.error("No trace data or iframe not ready.");
         return;
       }
-      const buffer = new TextEncoder().encode(data).buffer;
+      const buffer = new TextEncoder().encode(JSON.stringify(data)).buffer;
       const perfettoWindow = iframeRef.current.contentWindow;
 
       // Wait for iframe to be ready via PING/PONG

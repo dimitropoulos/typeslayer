@@ -3,6 +3,7 @@ import { Box, type BoxProps, IconButton, Tooltip } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { type BundledLanguage, codeToHtml } from "shiki";
 import { shikiTheme } from "../shikiTheme";
+import { OpenablePath } from "./openable-path";
 import { ShowMore } from "./show-more";
 
 const toDisplayString = (value: string, maxSize: number) => {
@@ -19,6 +20,7 @@ export const Code = ({
   value,
   maxHeight,
   fileName,
+  openableFilename,
   lang,
   maxSize = 1024 * 10,
   disableSyntaxHighlighting,
@@ -31,10 +33,11 @@ export const Code = ({
   maxHeight?: number | string;
   /** file name or path for the code snippet */
   fileName?: string;
+  openableFilename?: boolean | undefined;
   /** language for syntax highlighting */
   lang?: BundledLanguage;
   maxSize?: number;
-  disableSyntaxHighlighting?: boolean;
+  disableSyntaxHighlighting?: boolean | undefined;
   copyThisInstead?: string | undefined;
 } & BoxProps) => {
   const code = useMemo(() => toDisplayString(value, maxSize), [value, maxSize]);
@@ -92,19 +95,27 @@ export const Code = ({
             border: 1,
             borderColor: "divider",
             borderBottom: 0,
-            color: "secondary.main",
-            fontFamily: "monospace",
             p: 1,
             borderRadius: 1,
-            fontSize: "0.85rem",
-            fontWeight: "bold",
             userSelect: "none",
             display: "flex",
             gap: 1,
           }}
         >
           <Description fontSize="small" color="disabled" />
-          {fileName}
+          {openableFilename ? (
+            <OpenablePath
+              absolutePath={fileName}
+              forceAbsolute
+              propertyTextStyle={{
+                fontFamily: "monospace",
+                fontSize: "0.85rem",
+                fontWeight: "bold",
+              }}
+            />
+          ) : (
+            fileName
+          )}
         </Box>
       )}
       <Box

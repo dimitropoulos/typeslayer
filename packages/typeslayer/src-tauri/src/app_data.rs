@@ -1,14 +1,14 @@
 use crate::{
-    analyze_trace::constants::ANALYZE_TRACE_FILENAME,
+    analyze_trace::{AnalyzeTraceResult, constants::ANALYZE_TRACE_FILENAME},
     layercake::{LayerCake, LayerCakeInitArgs, ResolveBoolArgs, ResolveStringArgs, Source},
     process_controller::ProcessController,
-    type_graph::TYPE_GRAPH_FILENAME,
+    type_graph::{TYPE_GRAPH_FILENAME, TypeGraph},
     utils::{
-        OUTPUTS_DIRECTORY, PACKAGE_JSON_FILENAME, TSCONFIG_FILENAME, command_exists, make_cli_arg,
-        quote_if_needed,
+        OUTPUTS_DIRECTORY, PACKAGE_JSON_FILENAME, TSCONFIG_FILENAME, command_exists,
+        get_output_file_preview, make_cli_arg, quote_if_needed,
     },
     validate::{
-        trace_json::{TRACE_JSON_FILENAME, parse_trace_json, read_trace_json},
+        trace_json::{TRACE_JSON_FILENAME, TraceEvent, parse_trace_json, read_trace_json},
         types_json::{
             TYPES_JSON_FILENAME, TypesJsonSchema, parse_types_json,
             validate_types_json as load_types_json,
@@ -1040,7 +1040,7 @@ pub async fn validate_types_json(
 #[tauri::command]
 pub async fn validate_trace_json(
     state: State<'_, Arc<Mutex<AppData>>>,
-) -> Result<Vec<crate::validate::trace_json::TraceEvent>, String> {
+) -> Result<Vec<TraceEvent>, String> {
     let path = {
         let data = state.lock().map_err(|e| e.to_string())?;
         data.outputs_dir()
@@ -1057,7 +1057,7 @@ pub async fn validate_trace_json(
 #[tauri::command]
 pub async fn get_trace_json(
     state: State<'_, Arc<Mutex<AppData>>>,
-) -> Result<Vec<crate::validate::trace_json::TraceEvent>, String> {
+) -> Result<Vec<TraceEvent>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     Ok(data.trace_json.clone())
 }
@@ -1153,9 +1153,7 @@ pub async fn clear_outputs(
 }
 
 #[tauri::command]
-pub async fn generate_trace(
-    state: State<'_, Arc<Mutex<AppData>>>,
-) -> Result<TypesJsonSchema, String> {
+pub async fn generate_trace(state: State<'_, Arc<Mutex<AppData>>>) -> Result<(), String> {
     // Clone the entire AppData to move into the blocking task
     let app_data_clone = {
         let data = state.lock().map_err(|e| e.to_string())?;
@@ -1189,7 +1187,7 @@ pub async fn generate_trace(
             data.types_json = types.clone();
             data.trace_json = trace;
             AppData::update_outputs(&data);
-            Ok(types)
+            Ok(())
         }
         Ok(Err(e)) => Err(e),
         Err(e) => Err(format!("generate_trace join error: {}", e)),
@@ -1239,7 +1237,7 @@ pub async fn generate_cpu_profile(state: State<'_, Arc<Mutex<AppData>>>) -> Resu
 pub async fn generate_analyze_trace(
     state: State<'_, Arc<Mutex<AppData>>>,
     options: Option<crate::analyze_trace::AnalyzeTraceOptions>,
-) -> Result<crate::analyze_trace::AnalyzeTraceResult, String> {
+) -> Result<(), String> {
     info!("Starting analyze trace...");
     let outputs_dir = {
         let data = state.lock().map_err(|e| e.to_string())?;
@@ -1255,7 +1253,7 @@ pub async fn generate_analyze_trace(
         match crate::analyze_trace::analyze_trace(&outputs_dir, options) {
             Ok(result) => {
                 info!("Analyze trace completed successfully");
-                Ok::<crate::analyze_trace::AnalyzeTraceResult, String>(result)
+                Ok::<AnalyzeTraceResult, String>(result)
             }
             Err(e) => {
                 error!("Analyze trace failed: {}", e);
@@ -1275,7 +1273,7 @@ pub async fn generate_analyze_trace(
                     ANALYZE_TRACE_FILENAME, trace_dir_for_log
                 );
             }
-            r
+            Ok(())
         }
         Err(e) => Err(format!("generate_analyze_trace join error: {}", e)),
     }
@@ -1369,35 +1367,47 @@ pub async fn verify_cpu_profile(state: State<'_, Arc<Mutex<AppData>>>) -> Result
 }
 
 #[tauri::command]
-pub async fn get_types_json_text(state: State<'_, Arc<Mutex<AppData>>>) -> Result<String, String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
-    serde_json::to_string_pretty(&data.types_json).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub async fn get_trace_json_text(state: State<'_, Arc<Mutex<AppData>>>) -> Result<String, String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
-    serde_json::to_string_pretty(&data.trace_json).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub async fn get_analyze_trace_text(
+pub async fn get_types_json_preview(
     state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<String, String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
-    match &data.analyze_trace {
-        Some(v) => serde_json::to_string_pretty(v).map_err(|e| e.to_string()),
-        None => Err("analyze-trace not loaded".to_string()),
-    }
+    let filepath = {
+        let data = state.lock().map_err(|e| e.to_string())?;
+        data.outputs_dir().join(TYPES_JSON_FILENAME)
+    };
+    get_output_file_preview(&filepath).await
 }
 
 #[tauri::command]
-pub async fn get_cpu_profile_text(state: State<'_, Arc<Mutex<AppData>>>) -> Result<String, String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
-    match &data.cpu_profile {
-        Some(contents) => serde_json::to_string_pretty(contents).map_err(|e| e.to_string()),
-        None => Err("tsc.cpuprofile not loaded".to_string()),
-    }
+pub async fn get_trace_json_preview(
+    state: State<'_, Arc<Mutex<AppData>>>,
+) -> Result<String, String> {
+    let filepath = {
+        let data = state.lock().map_err(|e| e.to_string())?;
+        data.outputs_dir().join(TRACE_JSON_FILENAME)
+    };
+    get_output_file_preview(&filepath).await
+}
+
+#[tauri::command]
+pub async fn get_analyze_trace_preview(
+    state: State<'_, Arc<Mutex<AppData>>>,
+) -> Result<String, String> {
+    let filepath = {
+        let data = state.lock().map_err(|e| e.to_string())?;
+        data.outputs_dir().join(ANALYZE_TRACE_FILENAME)
+    };
+    get_output_file_preview(&filepath).await
+}
+
+#[tauri::command]
+pub async fn get_cpu_profile_preview(
+    state: State<'_, Arc<Mutex<AppData>>>,
+) -> Result<String, String> {
+    let filepath = {
+        let data = state.lock().map_err(|e| e.to_string())?;
+        data.outputs_dir().join(CPU_PROFILE_FILENAME)
+    };
+    get_output_file_preview(&filepath).await
 }
 
 #[tauri::command]
@@ -1977,7 +1987,7 @@ fn find_paired_file(path: &std::path::Path, from: &str, to: &str) -> std::path::
 pub async fn upload_trace_json(
     state: State<'_, Arc<Mutex<AppData>>>,
     file_path: String,
-) -> Result<String, String> {
+) -> Result<(), String> {
     use std::path::Path;
 
     let _trace_events = upload_file_with_validation(
@@ -1999,8 +2009,8 @@ pub async fn upload_trace_json(
     // Handle paired types file
     let path = Path::new(&file_path);
     let types_path = find_paired_file(path, "trace", "types");
-    let found_pair = if types_path.exists() {
-        match upload_file_with_validation(
+    if types_path.exists() {
+        upload_file_with_validation(
             &types_path.to_string_lossy(),
             TYPES_JSON_FILENAME,
             |path, contents| {
@@ -2012,13 +2022,7 @@ pub async fn upload_trace_json(
             },
             &state,
         )
-        .await
-        {
-            Ok(_) => true,
-            Err(_) => false, // Ignore errors for optional paired file
-        }
-    } else {
-        false
+        .await?;
     };
 
     // Regenerate analyze trace and type graph after upload
@@ -2026,21 +2030,14 @@ pub async fn upload_trace_json(
         tracing::warn!("Failed to regenerate analysis after trace upload: {}", e);
     }
 
-    Ok(format!(
-        "Successfully uploaded trace.json{}",
-        if found_pair {
-            " and corresponding types.json"
-        } else {
-            ""
-        }
-    ))
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn upload_types_json(
     state: State<'_, Arc<Mutex<AppData>>>,
     file_path: String,
-) -> Result<String, String> {
+) -> Result<(), String> {
     use std::path::Path;
 
     let _types_json = upload_file_with_validation(
@@ -2062,8 +2059,8 @@ pub async fn upload_types_json(
     // Handle paired trace file
     let path = Path::new(&file_path);
     let trace_path = find_paired_file(path, "types", "trace");
-    let found_pair = if trace_path.exists() {
-        match upload_file_with_validation(
+    if trace_path.exists() {
+        upload_file_with_validation(
             &trace_path.to_string_lossy(),
             TRACE_JSON_FILENAME,
             |path, contents| {
@@ -2075,13 +2072,7 @@ pub async fn upload_types_json(
             },
             &state,
         )
-        .await
-        {
-            Ok(_) => true,
-            Err(_) => false, // Ignore errors for optional paired file
-        }
-    } else {
-        false
+        .await?;
     };
 
     // Regenerate analyze trace and type graph after upload
@@ -2089,21 +2080,14 @@ pub async fn upload_types_json(
         tracing::warn!("Failed to regenerate analysis after types upload: {}", e);
     }
 
-    Ok(format!(
-        "Successfully uploaded types.json{}",
-        if found_pair {
-            " and corresponding trace.json"
-        } else {
-            ""
-        }
-    ))
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn upload_cpu_profile(
     state: State<'_, Arc<Mutex<AppData>>>,
     file_path: String,
-) -> Result<String, String> {
+) -> Result<(), String> {
     upload_file_with_validation(
         &file_path,
         CPU_PROFILE_FILENAME,
@@ -2119,19 +2103,19 @@ pub async fn upload_cpu_profile(
     )
     .await?;
 
-    Ok("Successfully uploaded CPU profile".to_string())
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn upload_analyze_trace(
     state: State<'_, Arc<Mutex<AppData>>>,
     file_path: String,
-) -> Result<String, String> {
+) -> Result<(), String> {
     upload_file_with_validation(
         &file_path,
         ANALYZE_TRACE_FILENAME,
         |_path, contents| {
-            serde_json::from_str::<crate::analyze_trace::AnalyzeTraceResult>(contents)
+            serde_json::from_str::<AnalyzeTraceResult>(contents)
                 .map_err(|e| format!("Invalid analyze trace format: {}", e))
         },
         |data, result| {
@@ -2141,19 +2125,19 @@ pub async fn upload_analyze_trace(
     )
     .await?;
 
-    Ok("Successfully uploaded analyze trace".to_string())
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn upload_type_graph(
     state: State<'_, Arc<Mutex<AppData>>>,
     file_path: String,
-) -> Result<String, String> {
+) -> Result<(), String> {
     upload_file_with_validation(
         &file_path,
         crate::type_graph::TYPE_GRAPH_FILENAME.trim_start_matches('/'),
         |_path, contents| {
-            serde_json::from_str::<crate::type_graph::TypeGraph>(contents)
+            serde_json::from_str::<TypeGraph>(contents)
                 .map_err(|e| format!("Invalid type graph format: {}", e))
         },
         |data, graph| {
@@ -2163,7 +2147,7 @@ pub async fn upload_type_graph(
     )
     .await?;
 
-    Ok("Successfully uploaded type graph".to_string())
+    Ok(())
 }
 
 #[tauri::command]
@@ -2294,4 +2278,55 @@ pub async fn get_output_file_sizes(
     }
 
     Ok(sizes)
+}
+
+#[tauri::command]
+pub async fn get_traces_related_to_typeid(
+    state: State<'_, Arc<Mutex<AppData>>>,
+    type_id: usize,
+) -> Result<Vec<TraceEvent>, String> {
+    let typeid = type_id as i64;
+    let data = state.lock().map_err(|e| e.to_string())?;
+    let events = data
+        .trace_json
+        .iter()
+        .filter(|event| match event.name.as_str() {
+            "checkTypeParameterDeferred" => {
+                event.args.get("parent").and_then(|v| v.as_i64()) == Some(typeid)
+                    || event.args.get("id").and_then(|v| v.as_i64()) == Some(typeid)
+            }
+            "checkTypeRelatedTo_DepthLimit"
+            | "structuredTypeRelatedTo"
+            | "traceUnionsOrIntersectionsTooLarge_DepthLimit"
+            | "typeRelatedToDiscriminatedType_DepthLimit" => {
+                event.args.get("sourceId").and_then(|v| v.as_i64()) == Some(typeid)
+                    || event.args.get("targetId").and_then(|v| v.as_i64()) == Some(typeid)
+            }
+            "checkCrossProductUnion_DepthLimit" | "removeSubtypes_DepthLimit" => event
+                .args
+                .get("typeIds")
+                .and_then(|v| v.as_array())
+                .map_or(false, |arr| arr.iter().any(|v| v.as_i64() == Some(typeid))),
+            "instantiateType_DepthLimit" => {
+                event.args.get("typeId").and_then(|v| v.as_i64()) == Some(typeid)
+            }
+            "recursiveTypeRelatedTo_DepthLimit" => {
+                event.args.get("sourceId").and_then(|v| v.as_i64()) == Some(typeid)
+                    || event.args.get("targetId").and_then(|v| v.as_i64()) == Some(typeid)
+                    || event
+                        .args
+                        .get("sourceIdStack")
+                        .and_then(|v| v.as_array())
+                        .map_or(false, |arr| arr.iter().any(|v| v.as_i64() == Some(typeid)))
+                    || event
+                        .args
+                        .get("targetIdStack")
+                        .and_then(|v| v.as_array())
+                        .map_or(false, |arr| arr.iter().any(|v| v.as_i64() == Some(typeid)))
+            }
+            _ => false,
+        })
+        .cloned()
+        .collect();
+    Ok(events)
 }

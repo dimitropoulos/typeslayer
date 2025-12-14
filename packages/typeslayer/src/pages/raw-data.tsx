@@ -19,7 +19,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import type { UseMutationResult } from "@tanstack/react-query";
+import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { downloadDir } from "@tauri-apps/api/path";
@@ -35,7 +35,6 @@ import { useCallback, useMemo } from "react";
 import { CenterLoader } from "../components/center-loader";
 import { Code } from "../components/code";
 import { InlineCode } from "../components/inline-code";
-import { OpenablePath } from "../components/openable-path";
 import { formatBytesSize, serverBaseUrl } from "../components/utils";
 import { type ToastData, useToast } from "../contexts/toast-context";
 import {
@@ -44,8 +43,12 @@ import {
   useGenerateCpuProfile,
   useGenerateTrace,
   useGenerateTypeGraph,
+  useGetAnalyzeTracePreview,
+  useGetCpuProfilePreview,
+  useGetTraceJsonPreview,
+  useGetTypeGraphPreview,
+  useGetTypesJsonPreview,
   useOutputFileSizes,
-  useStaticFile,
   useUploadAnalyzeTrace,
   useUploadTrace,
   useUploadTypeGraph,
@@ -66,6 +69,7 @@ const RAW_ITEMS: Record<
     route: string;
     filename: string;
     description: string;
+    usePreview: () => UseQueryResult<string, Error>;
     useVerify: () => UseMutationResult<void, Error, void, unknown>;
     useRegenerate: () => UseMutationResult<unknown, Error, void, unknown>;
     useUpload: () => UseMutationResult<unknown, Error, string, unknown>;
@@ -76,6 +80,7 @@ const RAW_ITEMS: Record<
     filename: ANALYZE_TRACE_FILENAME,
     description:
       "Summary insights extracted from trace.json, including hotspots and duplicate packages.",
+    usePreview: useGetAnalyzeTracePreview,
     useVerify: useVerifyAnalyzeTrace,
     useRegenerate: useGenerateAnalyzeTrace,
     useUpload: useUploadAnalyzeTrace,
@@ -86,6 +91,7 @@ const RAW_ITEMS: Record<
     filename: TRACE_JSON_FILENAME,
     description:
       "Raw event trace emitted by the TypeScript compiler during type checking.",
+    usePreview: useGetTraceJsonPreview,
     useVerify: useVerifyTraceJson,
     useRegenerate: useGenerateTrace,
     useUpload: useUploadTrace,
@@ -95,6 +101,7 @@ const RAW_ITEMS: Record<
     route: "types-json",
     filename: TYPES_JSON_FILENAME,
     description: "Resolved types catalog containing metadata for each type id.",
+    usePreview: useGetTypesJsonPreview,
     useVerify: useVerifyTypesJson,
     useRegenerate: useGenerateTrace,
     useUpload: useUploadTypes,
@@ -105,6 +112,7 @@ const RAW_ITEMS: Record<
     filename: CPU_PROFILE_FILENAME,
     description:
       "V8 CPU profile generated during the TypeScript compilation run.",
+    usePreview: useGetCpuProfilePreview,
     useVerify: useVerifyCpuProfile,
     useRegenerate: useGenerateCpuProfile,
     useUpload: useUploadAnalyzeTrace,
@@ -115,6 +123,7 @@ const RAW_ITEMS: Record<
     filename: TYPE_GRAPH_FILENAME,
     description:
       "Type graph representing relationships between types in the TypeScript project.",
+    usePreview: useGetTypeGraphPreview,
     useVerify: useVerifyTypeGraph,
     useRegenerate: useGenerateTypeGraph,
     useUpload: useUploadTypeGraph,
@@ -178,12 +187,18 @@ export const RawData = () => {
 };
 
 const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
-  const { filename, description, useVerify, useRegenerate, useUpload } =
-    RAW_ITEMS[itemKey];
+  const {
+    filename,
+    description,
+    useVerify,
+    useRegenerate,
+    useUpload,
+    usePreview,
+  } = RAW_ITEMS[itemKey];
   const { mutateAsync: regenerate, isPending: isRegenerating } =
     useRegenerate();
   const { mutateAsync: upload, isPending: isUploading } = useUpload();
-  const { data: text, isLoading } = useStaticFile(filename);
+  const { data: preview, isLoading: previewIsLoading } = usePreview();
   const { data: fileSizes } = useOutputFileSizes();
   const verify = useVerify();
   const { showToast: showToastOriginal } = useToast();
@@ -199,11 +214,11 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
   const dataDir = useDataDir();
 
   const onCopy = useCallback(async () => {
-    if (!text) {
+    if (!preview) {
       return;
     }
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(preview);
       showToast({
         message: "Copied to clipboard",
         severity: "success",
@@ -211,7 +226,7 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
     } catch {
       showToast({ message: "Copy failed", severity: "error" });
     }
-  }, [text, showToast]);
+  }, [preview, showToast]);
 
   const onDownload = useCallback(async () => {
     try {
@@ -222,7 +237,7 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
 
       const handleOpenFile = async () => {
         try {
-          await invoke("open_file", { path: dest });
+          await invoke<void>("open_file", { path: dest });
         } catch {
           showToast({ message: "Failed to open file", severity: "error" });
         }
@@ -269,6 +284,8 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
     }
   }, [upload, showToast, filename]);
 
+  const absolutePath = `${dataDir.data ?? ""}/outputs/${filename}`;
+
   return (
     <Stack
       sx={{
@@ -288,10 +305,6 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
               {fileSize.toLocaleString()} bytes
             </Typography>
           ) : null}
-          <OpenablePath
-            absolutePath={`${dataDir.data ?? ""}/outputs/${filename}`}
-            forceAbsolute
-          />
         </Stack>
         <Typography>{description}</Typography>
       </Stack>
@@ -337,7 +350,7 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
         </Button>
       </Stack>
 
-      {isLoading ? (
+      {previewIsLoading ? (
         <Box
           sx={{
             backgroundColor: "background.paper",
@@ -345,8 +358,13 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
         >
           <CenterLoader />
         </Box>
-      ) : text && typeof text === "string" ? (
-        <Code value={text} />
+      ) : preview && typeof preview === "string" ? (
+        <Code
+          value={preview}
+          openableFilename
+          maxSize={1024 * 100 - 1}
+          fileName={absolutePath}
+        />
       ) : (
         <Alert severity="error">File not found.</Alert>
       )}

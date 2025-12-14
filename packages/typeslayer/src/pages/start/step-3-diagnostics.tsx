@@ -113,7 +113,7 @@ export const Step3Diagnostics = ({
   const handleClearOrCancel = useCallback(async () => {
     setIsClearingOutputs(true);
     try {
-      await invoke("clear_outputs", { cancelRunning: isProcessing });
+      await invoke<void>("clear_outputs", { cancelRunning: isProcessing });
       setProcessingError(null);
       setProcessingErrorStdout(null);
       setProcessingErrorStderr(null);

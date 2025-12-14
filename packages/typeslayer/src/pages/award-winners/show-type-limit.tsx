@@ -92,7 +92,6 @@ export const ShowTypeLimit = <L extends LimitType>({
   const hasItems = data.length > 0;
 
   const hasData =
-    typeRegistry &&
     relativePaths.data !== undefined &&
     projectRoot.data !== undefined &&
     analyzeTrace;
