@@ -5,7 +5,7 @@ use axum::{
     response::IntoResponse,
     routing::get,
 };
-use std::sync::{Arc, Mutex};
+use tokio::sync::Mutex;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{error, info};
 
@@ -14,18 +14,21 @@ use tracing::{error, info};
 /// This server runs on port 4765 and serves files from the outputs directory.
 /// It's independent of the Tauri app and can run alongside it.
 pub async fn run_http_server(
-    app_data: Arc<Mutex<AppData>>,
+    app_data: &'static Mutex<AppData>,
+    listener: tokio::net::TcpListener,
 ) -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting HTTP server for outputs on port 4765");
 
     async fn serve_output(
         Path(name): Path<String>,
-        State(app_data): State<Arc<Mutex<AppData>>>,
+        State(app_data): State<&Mutex<AppData>>,
     ) -> impl IntoResponse {
-        let outputs_dir = {
-            let data = app_data.lock().unwrap();
-            data.outputs_dir().to_string_lossy().to_string()
-        };
+        let outputs_dir = app_data
+            .lock()
+            .await
+            .outputs_dir()
+            .to_string_lossy()
+            .to_string();
 
         let path = std::path::Path::new(&outputs_dir).join(&name);
 
@@ -53,9 +56,10 @@ pub async fn run_http_server(
         .layer(cors)
         .with_state(app_data);
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:4765").await?;
-
-    info!("HTTP server listening on http://127.0.0.1:4765");
+    info!(
+        "HTTP server listening on {}",
+        listener.local_addr().map_err(|e| e.to_string())?
+    );
 
     axum::serve(listener, app_router.into_make_service()).await?;
 

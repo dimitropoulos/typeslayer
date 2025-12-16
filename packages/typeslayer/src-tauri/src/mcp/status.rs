@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use tracing::info;
 
 /// Represents the execution status of an MCP tool
@@ -30,57 +31,48 @@ impl McpStatusTracker {
 
     /// Mark a tool as started
     #[allow(dead_code)]
-    pub fn start_tool(&self, tool_name: impl Into<String>) {
+    pub async fn start_tool(&self, tool_name: impl Into<String>) {
         let tool_name = tool_name.into();
         info!("MCP tool started: {}", tool_name);
 
-        if let Ok(mut tools) = self.tools.lock() {
-            tools.insert(
-                tool_name.clone(),
-                ToolStatus {
-                    command: tool_name,
-                    started_at: std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .map(|d| d.as_secs())
-                        .unwrap_or(0),
-                },
-            );
-        }
+        let mut tools = self.tools.lock().await;
+        tools.insert(
+            tool_name.clone(),
+            ToolStatus {
+                command: tool_name,
+                started_at: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs())
+                    .unwrap_or(0),
+            },
+        );
     }
 
     /// Mark a tool as finished (remove from running tools)
     #[allow(dead_code)]
-    pub fn end_tool(&self, tool_name: &str) {
+    pub async fn end_tool(&self, tool_name: &str) {
         info!("MCP tool completed: {}", tool_name);
-        if let Ok(mut tools) = self.tools.lock() {
-            tools.remove(tool_name);
-        }
+        let mut tools = self.tools.lock().await;
+        tools.remove(tool_name);
     }
 
     /// Get the status of a specific tool if it's running
     #[allow(dead_code)]
-    pub fn get_tool_status(&self, tool_name: &str) -> Option<ToolStatus> {
-        self.tools
-            .lock()
-            .ok()
-            .and_then(|tools| tools.get(tool_name).cloned())
+    pub async fn get_tool_status(&self, tool_name: &str) -> Option<ToolStatus> {
+        let tools = self.tools.lock().await;
+        tools.get(tool_name).cloned()
     }
 
     /// Get all currently running tools
-    pub fn get_running_tools(&self) -> Vec<ToolStatus> {
-        self.tools
-            .lock()
-            .ok()
-            .map(|tools| tools.values().cloned().collect())
-            .unwrap_or_default()
+    pub async fn get_running_tools(&self) -> Vec<ToolStatus> {
+        let tools = self.tools.lock().await;
+        tools.values().cloned().collect()
     }
 
     /// Clear all tool statuses
     #[allow(dead_code)]
-    pub fn clear_all(&self) {
-        if let Ok(mut tools) = self.tools.lock() {
-            tools.clear();
-        }
+    pub async fn clear_all(&self) {
+        self.tools.lock().await.clear();
     }
 }
 

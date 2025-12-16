@@ -1,10 +1,10 @@
 use std::{
-    fs,
     path::{Path, PathBuf},
     process::Stdio,
 };
 
 use shlex::Quoter;
+use tokio::{fs, process::Command};
 use tracing::{debug, info};
 
 pub fn quote_if_needed(s: &str) -> String {
@@ -42,26 +42,28 @@ pub const AVAILABLE_EDITORS: &[(&str, &str)] = &[
     ("lite-xl", "Lite XL"),
 ];
 
-pub fn command_exists(cmd: &str) -> bool {
+pub async fn command_exists(cmd: &str) -> bool {
     #[cfg(target_os = "windows")]
     {
-        std::process::Command::new("where")
+        Command::new("where")
             .arg(cmd)
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status()
+            .await
             .map(|s| s.success())
             .unwrap_or(false)
     }
 
     #[cfg(not(target_os = "windows"))]
     {
-        std::process::Command::new("command")
+        Command::new("command")
             .arg("-v")
             .arg(cmd)
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status()
+            .await
             .map(|s| s.success())
             .unwrap_or(false)
     }
@@ -150,8 +152,8 @@ pub fn default_extra_tsc_flags() -> String {
     return "--noEmit --incremental false --noErrorTruncation".to_string();
 }
 
-pub fn file_mtime_iso(path: &Path) -> Option<String> {
-    if let Ok(meta) = fs::metadata(path) {
+pub async fn file_mtime_iso(path: &Path) -> Option<String> {
+    if let Ok(meta) = fs::metadata(path).await {
         if let Ok(modified) = meta.modified() {
             return Some(chrono::DateTime::<chrono::Utc>::from(modified).to_rfc3339());
         }
@@ -159,10 +161,11 @@ pub fn file_mtime_iso(path: &Path) -> Option<String> {
     None
 }
 
-pub fn compute_window_title(project_root: PathBuf) -> String {
+pub async fn compute_window_title(project_root: PathBuf) -> String {
     let default_title = "TypeSlayer".to_string();
     // Attempt to read and parse the package.json name; fallback to default on any error.
-    match std::fs::read_to_string(project_root)
+    match fs::read_to_string(project_root)
+        .await
         .ok()
         .and_then(|contents| serde_json::from_str::<serde_json::Value>(&contents).ok())
         .and_then(|v| {

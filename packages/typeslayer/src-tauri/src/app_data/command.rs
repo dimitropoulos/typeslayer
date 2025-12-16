@@ -1,6 +1,4 @@
 use std::fmt::Display;
-#[cfg(target_os = "windows")]
-use std::os::windows::process::CommandExt;
 
 use crate::utils::quote_if_needed;
 use serde::Deserialize;

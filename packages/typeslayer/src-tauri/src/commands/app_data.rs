@@ -1,50 +1,42 @@
 use crate::{
-    analyze_trace::{AnalyzeTraceResult, constants::ANALYZE_TRACE_FILENAME},
-    app_data::AppData,
-    commands::generate::generate_type_graph,
-    type_graph::TypeGraph,
-    validate::{trace_json::TraceEvent, types_json::TypesJsonSchema},
+    analyze_trace::{AnalyzeTraceResult, constants::ANALYZE_TRACE_FILENAME}, app_data::AppData, commands::generate::generate_type_graph, process_controller::ProcessController, type_graph::TypeGraph, validate::{trace_json::TraceEvent, types_json::TypesJsonSchema}
 };
-use std::{
-    path::{Path, PathBuf},
-    sync::{Arc, Mutex},
-};
+use std::path::{Path, PathBuf};
 use tauri::{AppHandle, State};
+use tokio::sync::Mutex;
 use tracing::debug;
 
 #[tauri::command]
-pub async fn get_project_root(state: State<'_, Arc<Mutex<AppData>>>) -> Result<String, String> {
-    state
+pub async fn get_project_root(state: State<'_, &Mutex<AppData>>) -> Result<String, String> {
+    Ok(state
         .lock()
-        .map(|data| data.project_root.to_string_lossy().to_string())
-        .map_err(|e| e.to_string())
+        .await
+        .project_root
+        .to_string_lossy()
+        .to_string())
 }
 
 #[tauri::command]
 pub async fn set_project_root(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
     project_root: String,
 ) -> Result<(), String> {
-    let mut data = state.lock().map_err(|e| e.to_string())?;
+    let mut data = state.lock().await;
     let path_buf = PathBuf::from(project_root.clone());
-    data.set_project_root(path_buf)?;
+    data.set_project_root(path_buf).await?;
     Ok(())
 }
 
 #[tauri::command]
-pub async fn get_types_json(
-    state: State<'_, Arc<Mutex<AppData>>>,
-) -> Result<TypesJsonSchema, String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
+pub async fn get_types_json(state: State<'_, &Mutex<AppData>>) -> Result<TypesJsonSchema, String> {
+    let data = state.lock().await;
     debug!("[get_types_json] returning {} types", data.types_json.len());
     Ok(data.types_json.clone())
 }
 
 #[tauri::command]
-pub async fn get_trace_json(
-    state: State<'_, Arc<Mutex<AppData>>>,
-) -> Result<Vec<TraceEvent>, String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
+pub async fn get_trace_json(state: State<'_, &Mutex<AppData>>) -> Result<Vec<TraceEvent>, String> {
+    let data = state.lock().await;
     debug!(
         "[get_trace_json] returning {} trace events",
         data.trace_json.len()
@@ -54,19 +46,16 @@ pub async fn get_trace_json(
 
 #[tauri::command]
 pub async fn get_analyze_trace(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
 ) -> Result<AnalyzeTraceResult, String> {
+    let mut data = state.lock().await;
     // Serve cached value if present
-    {
-        let data = state.lock().map_err(|e| e.to_string())?;
-        if let Some(result) = &data.analyze_trace {
-            return Ok(result.clone());
-        }
+    if let Some(result) = &data.analyze_trace {
+        return Ok(result.clone());
     }
 
     // Read from disk and cache
     let path = {
-        let data = state.lock().map_err(|e| e.to_string())?;
         let outputs_dir = data.outputs_dir().to_string_lossy().to_string();
         Path::new(&outputs_dir).join(ANALYZE_TRACE_FILENAME)
     };
@@ -75,7 +64,6 @@ pub async fn get_analyze_trace(
         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
     let parsed: AnalyzeTraceResult = serde_json::from_str(&contents)
         .map_err(|e| format!("Failed to parse {}: {}", path.display(), e))?;
-    let mut data = state.lock().map_err(|e| e.to_string())?;
     data.analyze_trace = Some(parsed.clone());
     debug!(
         "[get_analyze_trace] loaded analyze trace from disk with size {} bytes",
@@ -85,10 +73,8 @@ pub async fn get_analyze_trace(
 }
 
 #[tauri::command]
-pub async fn get_cpu_profile(
-    state: State<'_, Arc<Mutex<AppData>>>,
-) -> Result<Option<String>, String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
+pub async fn get_cpu_profile(state: State<'_, &Mutex<AppData>>) -> Result<Option<String>, String> {
+    let data = state.lock().await;
     debug!(
         "[get_cpu_profile] returning CPU profile of size {} bytes",
         data.cpu_profile.as_ref().map_or(0, |s| s.len())
@@ -97,10 +83,8 @@ pub async fn get_cpu_profile(
 }
 
 #[tauri::command]
-pub async fn get_tsconfig_paths(
-    state: State<'_, Arc<Mutex<AppData>>>,
-) -> Result<Vec<String>, String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
+pub async fn get_tsconfig_paths(state: State<'_, &Mutex<AppData>>) -> Result<Vec<String>, String> {
+    let data = state.lock().await;
     debug!(
         "[get_tsconfig_paths] returning {} tsconfig paths",
         data.tsconfig_paths.len()
@@ -114,9 +98,9 @@ pub async fn get_tsconfig_paths(
 
 #[tauri::command]
 pub async fn get_selected_tsconfig(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
 ) -> Result<Option<String>, String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
+    let data = state.lock().await;
     debug!(
         "[get_selected_tsconfig] returning selected tsconfig = {:?}",
         data.selected_tsconfig
@@ -129,10 +113,10 @@ pub async fn get_selected_tsconfig(
 
 #[tauri::command]
 pub async fn set_selected_tsconfig(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
     tsconfig_path: String,
 ) -> Result<(), String> {
-    let mut data = state.lock().map_err(|e| e.to_string())?;
+    let mut data = state.lock().await;
 
     // Empty string means no tsconfig (valid)
     if tsconfig_path.is_empty() {
@@ -159,32 +143,25 @@ pub async fn set_selected_tsconfig(
 }
 
 #[tauri::command]
-pub async fn get_data_dir(state: State<'_, Arc<Mutex<AppData>>>) -> Result<String, String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
+pub async fn get_data_dir(state: State<'_, &Mutex<AppData>>) -> Result<String, String> {
+    let data = state.lock().await;
     Ok(data.data_dir.to_string_lossy().to_string())
 }
 
 /// Return the graph data formatted for react-force-graph. Builds if missing.
 #[tauri::command]
-pub fn get_type_graph(
+pub async fn get_type_graph(
     app: AppHandle,
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
 ) -> Result<TypeGraph, String> {
+    let data = state.lock().await;
     // If not yet built, build once
-    let needs_build = {
-        let app_data = state
-            .lock()
-            .map_err(|_| "AppData mutex poisoned".to_string())?;
-        app_data.type_graph.is_none()
-    };
+    let needs_build = data.type_graph.is_none();
     if needs_build {
-        generate_type_graph(app.clone(), state.clone())?;
+        generate_type_graph(app.clone(), state.clone()).await?;
     }
 
-    let app_data = state
-        .lock()
-        .map_err(|_| "AppData mutex poisoned".to_string())?;
-    let fg = app_data
+    let fg = data
         .type_graph
         .as_ref()
         .ok_or_else(|| "type graph unavailable".to_string())?;
@@ -193,18 +170,14 @@ pub fn get_type_graph(
 
 #[tauri::command]
 pub async fn clear_outputs(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    process_controller: State<'_, ProcessController>,
+    state: State<'_, &Mutex<AppData>>,
     cancel_running: bool,
 ) -> Result<(), String> {
-    let controller = {
-        let data = state.lock().map_err(|e| e.to_string())?;
-        data.process_controller.clone()
-    };
-
     if cancel_running {
-        controller.request_cancel()?;
+        process_controller.request_cancel()?;
     }
+    state.lock().await.clear_outputs_dir().await?;
 
-    let mut data = state.lock().map_err(|e| e.to_string())?;
-    data.clear_outputs_dir()
+    Ok(())
 }

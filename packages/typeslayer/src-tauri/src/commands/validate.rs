@@ -5,14 +5,14 @@ use crate::validate::{
     trace_json::{TRACE_JSON_FILENAME, read_trace_json},
     types_json::{TYPES_JSON_FILENAME, load_types_json},
 };
-use std::sync::{Arc, Mutex};
 use tauri::State;
+use tokio::sync::Mutex;
 use tracing::debug;
 
 #[tauri::command]
-pub async fn validate_types_json(state: State<'_, Arc<Mutex<AppData>>>) -> Result<(), String> {
+pub async fn validate_types_json(state: State<'_, &Mutex<AppData>>) -> Result<(), String> {
     let path = {
-        let data = state.lock().map_err(|e| e.to_string())?;
+        let data = state.lock().await;
         data.outputs_dir()
             .join(TYPES_JSON_FILENAME.trim_start_matches('/'))
             .to_string_lossy()
@@ -23,9 +23,9 @@ pub async fn validate_types_json(state: State<'_, Arc<Mutex<AppData>>>) -> Resul
 }
 
 #[tauri::command]
-pub async fn validate_trace_json(state: State<'_, Arc<Mutex<AppData>>>) -> Result<(), String> {
+pub async fn validate_trace_json(state: State<'_, &Mutex<AppData>>) -> Result<(), String> {
     let path = {
-        let data = state.lock().map_err(|e| e.to_string())?;
+        let data = state.lock().await;
         data.outputs_dir()
             .join(TRACE_JSON_FILENAME.trim_start_matches('/'))
             .to_string_lossy()
@@ -36,10 +36,8 @@ pub async fn validate_trace_json(state: State<'_, Arc<Mutex<AppData>>>) -> Resul
 }
 
 #[tauri::command]
-pub fn validate_type_graph(state: State<'_, Arc<Mutex<AppData>>>) -> Result<bool, String> {
-    let data = state
-        .lock()
-        .map_err(|_| "AppData mutex poisoned".to_string())?;
+pub async fn validate_type_graph(state: State<'_, &Mutex<AppData>>) -> Result<bool, String> {
+    let data = state.lock().await;
     if data.type_graph.is_some() {
         Ok(true)
     } else {
@@ -48,8 +46,8 @@ pub fn validate_type_graph(state: State<'_, Arc<Mutex<AppData>>>) -> Result<bool
 }
 
 #[tauri::command]
-pub async fn verify_analyze_trace(state: State<'_, Arc<Mutex<AppData>>>) -> Result<(), String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
+pub async fn verify_analyze_trace(state: State<'_, &Mutex<AppData>>) -> Result<(), String> {
+    let data = state.lock().await;
     match &data.analyze_trace {
         Some(v) => {
             let json = serde_json::to_string(v).map_err(|e| e.to_string())?;
@@ -69,8 +67,8 @@ pub async fn verify_analyze_trace(state: State<'_, Arc<Mutex<AppData>>>) -> Resu
 }
 
 #[tauri::command]
-pub async fn verify_trace_json(state: State<'_, Arc<Mutex<AppData>>>) -> Result<(), String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
+pub async fn verify_trace_json(state: State<'_, &Mutex<AppData>>) -> Result<(), String> {
+    let data = state.lock().await;
     if data.trace_json.is_empty() {
         Err(format!("{} is empty", TRACE_JSON_FILENAME).to_string())
     } else {
@@ -80,8 +78,8 @@ pub async fn verify_trace_json(state: State<'_, Arc<Mutex<AppData>>>) -> Result<
 }
 
 #[tauri::command]
-pub async fn verify_types_json(state: State<'_, Arc<Mutex<AppData>>>) -> Result<(), String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
+pub async fn verify_types_json(state: State<'_, &Mutex<AppData>>) -> Result<(), String> {
+    let data = state.lock().await;
     if data.types_json.is_empty() {
         Err(format!("{} is empty", TYPES_JSON_FILENAME).to_string())
     } else {
@@ -91,8 +89,8 @@ pub async fn verify_types_json(state: State<'_, Arc<Mutex<AppData>>>) -> Result<
 }
 
 #[tauri::command]
-pub async fn verify_cpu_profile(state: State<'_, Arc<Mutex<AppData>>>) -> Result<(), String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
+pub async fn verify_cpu_profile(state: State<'_, &Mutex<AppData>>) -> Result<(), String> {
+    let data = state.lock().await;
     match &data.cpu_profile {
         Some(contents) => {
             if contents.trim().is_empty() {

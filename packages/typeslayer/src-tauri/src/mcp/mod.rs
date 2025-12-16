@@ -10,10 +10,8 @@ use rmcp::{
     tool, tool_handler, tool_router,
     transport::stdio,
 };
-use std::{
-    io,
-    sync::{Arc, Mutex},
-};
+use std::io;
+use tokio::sync::Mutex;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
@@ -22,14 +20,14 @@ use tracing_subscriber::EnvFilter;
 /// Provides tools for analyzing TypeScript compilation performance via MCP protocol.
 #[derive(Clone)]
 pub struct TypeSlayerMcpServer {
-    app_data: Arc<Mutex<AppData>>,
+    app_data: &'static Mutex<AppData>,
     pub status: status::McpStatusTracker,
     tool_router: ToolRouter<Self>,
 }
 
 #[tool_router]
 impl TypeSlayerMcpServer {
-    pub fn new(app_data: Arc<Mutex<AppData>>) -> Self {
+    pub fn new(app_data: &'static Mutex<AppData>) -> Self {
         info!("Initializing TypeSlayer MCP Server");
         Self {
             app_data,
@@ -43,12 +41,9 @@ impl TypeSlayerMcpServer {
     )]
     async fn get_duplicate_packages(&self) -> String {
         let command = crate::mcp::tools::get_duplicate_packages::COMMAND;
-        self.status.start_tool(command);
-        let result = crate::mcp::tools::get_duplicate_packages::execute(std::sync::Arc::clone(
-            &self.app_data,
-        ))
-        .await;
-        self.status.end_tool(command);
+        self.status.start_tool(command).await;
+        let result = crate::mcp::tools::get_duplicate_packages::execute(self.app_data).await;
+        self.status.end_tool(command).await;
         result
     }
 
@@ -57,10 +52,9 @@ impl TypeSlayerMcpServer {
     )]
     async fn get_hots_types(&self) -> String {
         let command = crate::mcp::tools::get_hot_types::COMMAND;
-        self.status.start_tool(command);
-        let result =
-            crate::mcp::tools::get_hot_types::execute(std::sync::Arc::clone(&self.app_data)).await;
-        self.status.end_tool(command);
+        self.status.start_tool(command).await;
+        let result = crate::mcp::tools::get_hot_types::execute(self.app_data).await;
+        self.status.end_tool(command).await;
         result
     }
 
@@ -69,10 +63,9 @@ impl TypeSlayerMcpServer {
     )]
     async fn get_hot_files(&self) -> String {
         let command = crate::mcp::tools::get_hot_files::COMMAND;
-        self.status.start_tool(command);
-        let result =
-            crate::mcp::tools::get_hot_files::execute(std::sync::Arc::clone(&self.app_data)).await;
-        self.status.end_tool(command);
+        self.status.start_tool(command).await;
+        let result = crate::mcp::tools::get_hot_files::execute(self.app_data).await;
+        self.status.end_tool(command).await;
         result
     }
 
@@ -81,11 +74,9 @@ impl TypeSlayerMcpServer {
     )]
     async fn get_depth_limits(&self) -> String {
         let command = crate::mcp::tools::get_depth_limits::COMMAND;
-        self.status.start_tool(command);
-        let result =
-            crate::mcp::tools::get_depth_limits::execute(std::sync::Arc::clone(&self.app_data))
-                .await;
-        self.status.end_tool(command);
+        self.status.start_tool(command).await;
+        let result = crate::mcp::tools::get_depth_limits::execute(self.app_data).await;
+        self.status.end_tool(command).await;
         result
     }
 }
@@ -111,7 +102,7 @@ impl ServerHandler for TypeSlayerMcpServer {
 /// This is called when the binary is invoked with the 'mcp' subcommand.
 /// It receives shared AppData created in main.rs and serves the MCP protocol.
 #[tokio::main]
-pub async fn run_mcp_server(app_data: Arc<Mutex<AppData>>) -> io::Result<()> {
+pub async fn run_mcp_server(app_data: &'static Mutex<AppData>) -> io::Result<()> {
     // Initialize logging to stderr (stdout is used for MCP protocol)
     let verbose = std::env::args().any(|arg| arg == "--verbose");
     let default_level = if verbose { "info" } else { "warn" };

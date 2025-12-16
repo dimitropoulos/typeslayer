@@ -25,13 +25,10 @@ use crate::{
         utils::CPU_PROFILE_FILENAME,
     },
 };
-use std::fs;
-#[cfg(target_os = "windows")]
-use std::os::windows::process::CommandExt;
-use std::path::Path;
-use std::process::{Command, Stdio};
 use std::{cmp::Ordering, path::PathBuf};
 use std::{fs::File, io::BufReader};
+use tokio::process::Command;
+use tokio::{fs, io::AsyncReadExt};
 use tracing::{debug, error, info};
 
 #[derive(Clone)]
@@ -49,12 +46,11 @@ pub struct AppData {
     pub cake: LayerCake,
     pub auth_code: Option<String>,
     pub type_graph: Option<TypeGraph>,
-    pub process_controller: ProcessController,
     pub data_dir: PathBuf,
 }
 
 impl AppData {
-    pub fn new(data_dir: PathBuf) -> Result<Self, String> {
+    pub async fn new(data_dir: PathBuf) -> Result<Self, String> {
         info!("using base data_dir: {}", data_dir.display());
         // Build a single LayerCake and reuse it across init functions
         let mut cake = LayerCake::new(LayerCakeInitArgs {
@@ -62,7 +58,7 @@ impl AppData {
             precedence: [Source::Env, Source::Flag, Source::File],
             env_prefix: "TYPESLAYER_",
         });
-        cake.load_config_in_dir(&data_dir.to_string_lossy());
+        cake.load_config_in_dir(data_dir.to_string_lossy().to_string()).await?;
 
         let project_root = init_project_root(&cake);
         let outputs_dir = data_dir.join(OUTPUTS_DIRECTORY);
@@ -75,7 +71,7 @@ impl AppData {
         let verbose = init_verbose(&cake);
         let auth_code = init_auth_code(&cake);
 
-        let package_manager = Self::find_package_manager(&project_root)?;
+        let package_manager = Self::find_package_manager(project_root.clone()).await?;
 
         let mut app = Self {
             project_root,
@@ -91,10 +87,9 @@ impl AppData {
             cake,
             auth_code,
             type_graph,
-            process_controller: ProcessController::new(),
             data_dir,
         };
-        app.discover_tsconfigs()?;
+        app.discover_tsconfigs().await?;
         app.selected_tsconfig = init_selected_tsconfig_with(&app.cake, &app.tsconfig_paths);
         Ok(app)
     }
@@ -103,7 +98,7 @@ impl AppData {
         self.data_dir.join(OUTPUTS_DIRECTORY)
     }
 
-    pub fn set_project_root(&mut self, new_root: PathBuf) -> Result<(), String> {
+    pub async fn set_project_root(&mut self, new_root: PathBuf) -> Result<(), String> {
         if !new_root.exists() {
             self.selected_tsconfig = None;
             self.tsconfig_paths = vec![];
@@ -116,12 +111,12 @@ impl AppData {
 
         self.project_root = new_root;
 
-        let package_manager = Self::find_package_manager(&self.project_root)?;
+        let package_manager = Self::find_package_manager(self.project_root.clone()).await?;
         self.package_manager = package_manager;
 
         let previous_selection = self.selected_tsconfig.clone();
 
-        self.discover_tsconfigs()?;
+        self.discover_tsconfigs().await?;
 
         // Try to keep previous selection if it still exists
         if let Some(prev) = previous_selection {
@@ -137,7 +132,7 @@ impl AppData {
         Ok(())
     }
 
-    pub fn discover_tsconfigs(&mut self) -> Result<(), String> {
+    pub async fn discover_tsconfigs(&mut self) -> Result<(), String> {
         self.tsconfig_paths.clear();
 
         // Get the directory containing the package.json
@@ -148,9 +143,18 @@ impl AppData {
             .unwrap_or_else(|| PathBuf::from("."));
 
         // Search for tsconfig*.json files in the project directory and subdirectories
-        let entries =
-            fs::read_dir(&project_dir).map_err(|e| format!("Could not read dir {}", e))?;
-        for entry in entries.flatten() {
+        let mut entries = fs::read_dir(&project_dir)
+            .await
+            .map_err(|e| format!("Could not read dir {}", e))?;
+        loop {
+            let entry = entries
+                .next_entry()
+                .await
+                .map_err(|e| format!("Could not read dir {}", e))?;
+            let Some(entry) = entry else {
+                break;
+            };
+
             if let Ok(file_name) = entry.file_name().into_string() {
                 if file_name.starts_with("tsconfig") && file_name.ends_with(".json") {
                     self.tsconfig_paths.push(entry.path());
@@ -245,14 +249,12 @@ impl AppData {
         })
     }
 
-    // Blocking helper that runs tsc directly
-    pub fn run_tsc(&self, flag: String, context: &str) -> Result<(), String> {
+    pub async fn run_tsc(&self, process_controller: &ProcessController, flag: String, context: &str) -> Result<(), String> {
         let outputs_dir = self.outputs_dir().to_string_lossy().to_string();
 
         fs::create_dir_all(&outputs_dir)
+            .await
             .map_err(|e| format!("Failed to create data directory: {e}"))?;
-
-        self.process_controller.reset_cancel_flag();
 
         let tsc_command = self.get_tsc_call(&flag)?;
 
@@ -271,38 +273,39 @@ impl AppData {
         // raw_arg makes sure a command like `npx tsc --project "foo bar"` is interpreted by the shell.
         // The default with `.arg`, on Windows, is more like `npx tsc --project "\"foo bar\""` but shell quoting is more complicated.
         #[cfg(target_os = "windows")]
-        cmd.raw_arg(format!("\"{}\"", tsc_command.command));
+        {
+            cmd.raw_arg(format!("\"{}\"", tsc_command.command));
+            // Set CREATE_NO_WINDOW https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags
+            cmd.creation_flags(0x08000000);
+        }
 
         #[cfg(not(target_os = "windows"))]
         cmd.arg(tsc_command.command);
 
-        cmd.current_dir(&cwd)
-            .envs(tsc_command.env)
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
+        cmd.current_dir(&cwd).envs(tsc_command.env);
 
-        let child = cmd
-            .spawn()
-            .map_err(|e| format!("Failed to execute command: {e}"))?;
-
-        self.process_controller.register_process(child.id());
-
-        let output = child
-            .wait_with_output()
-            .map_err(|e| format!("Failed to wait for command completion: {e}"))?;
-
-        let cancelled = self.process_controller.cancel_requested();
-        self.process_controller.clear_current_process();
-        self.process_controller.reset_cancel_flag();
-
-        if cancelled {
-            return Err("Operation cancelled".to_string());
-        }
+        let output = process_controller.run_command(cmd).await?;
+        let Some(mut output) = output else {
+            return Err("Command canceled".to_string());
+        };
 
         if !output.status.success() {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let stderr = String::from_utf8_lossy(&output.stderr);
+            let mut stdout = Vec::new();
+            output
+                .stdout
+                .read_to_end(&mut stdout)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            let mut stderr = Vec::new();
+            output
+                .stderr
+                .read_to_end(&mut stderr)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            let stdout = String::from_utf8_lossy(&stdout);
+            let stderr = String::from_utf8_lossy(&stderr);
             return Err(format!(
                 "{context} failed:\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}"
             ));
@@ -332,7 +335,7 @@ struct TypeSlayerConfig<'a> {
 }
 
 impl AppData {
-    pub fn update_outputs(&self) {
+    pub async fn update_outputs(&self) {
         let data_dir = &self.data_dir;
         let outputs_dir = self.outputs_dir();
         let config_path = data_dir.join(CONFIG_FILENAME);
@@ -343,11 +346,11 @@ impl AppData {
         let cpu_path = outputs_dir.join(CPU_PROFILE_FILENAME);
 
         let outputs = OutputTimestamps {
-            types_json: file_mtime_iso(&types_path),
-            trace_json: file_mtime_iso(&trace_path),
-            analyze_trace: file_mtime_iso(&analyze_path),
-            type_graph: file_mtime_iso(&type_graph_path),
-            cpu_profile: file_mtime_iso(&cpu_path),
+            types_json: file_mtime_iso(&types_path).await,
+            trace_json: file_mtime_iso(&trace_path).await,
+            analyze_trace: file_mtime_iso(&analyze_path).await,
+            type_graph: file_mtime_iso(&type_graph_path).await,
+            cpu_profile: file_mtime_iso(&cpu_path).await,
         };
 
         let cfg = TypeSlayerConfig {
@@ -360,11 +363,11 @@ impl AppData {
 
         match toml::to_string(&cfg) {
             Ok(s) => {
-                if let Err(e) = fs::create_dir_all(&outputs_dir) {
+                if let Err(e) = fs::create_dir_all(&outputs_dir).await {
                     error!("Failed to create temp dir for config: {}", e);
                     return;
                 }
-                if let Err(e) = fs::write(&config_path, s) {
+                if let Err(e) = fs::write(&config_path, s).await {
                     error!(
                         "Failed to write config file {}: {}",
                         config_path.display(),
@@ -381,24 +384,32 @@ impl AppData {
         }
     }
 
-    pub fn clear_outputs_dir(&mut self) -> Result<(), String> {
+    pub async fn clear_outputs_dir(&mut self) -> Result<(), String> {
         let outputs_dir = self.outputs_dir();
 
         fs::create_dir_all(&outputs_dir)
+            .await
             .map_err(|e| format!("failed to ensure outputs directory exists: {e}"))?;
 
         if outputs_dir.exists() {
-            for output_file in fs::read_dir(&outputs_dir)
-                .map_err(|e| format!("failed to read outputs directory: {e}"))?
-            {
-                let entry =
-                    output_file.map_err(|e| format!("failed to inspect outputs entry: {e}"))?;
+            let mut entries = fs::read_dir(&outputs_dir)
+                .await
+                .map_err(|e| format!("Could not read dir {}", e))?;
+            loop {
+                let entry = entries
+                    .next_entry()
+                    .await
+                    .map_err(|e| format!("failed to read outputs directory: {e}"))?;
+                let Some(entry) = entry else { break };
+
                 let path = entry.path();
                 if path.is_dir() {
                     fs::remove_dir_all(&path)
+                        .await
                         .map_err(|e| format!("failed to remove directory {:?}: {e}", path))?;
                 } else {
                     fs::remove_file(&path)
+                        .await
                         .map_err(|e| format!("failed to remove file {:?}: {e}", path))?;
                 }
             }
@@ -413,44 +424,48 @@ impl AppData {
             "[clear_outputs_dir] Cleared outputs directory: {}",
             outputs_dir.display()
         );
-        self.update_outputs();
+        self.update_outputs().await;
         Ok(())
     }
 
-    pub fn find_package_manager(project_root: &Path) -> Result<PackageManager, String> {
-        let package_json = File::open(project_root)
-            .map_err(|e| format!("could not open {}: {e}", project_root.to_string_lossy()))?;
-        let package_json: PackageJSON =
-            serde_json::from_reader(BufReader::new(package_json)).map_err(|e| format!("{e}"))?;
+    pub async fn find_package_manager(project_root: PathBuf) -> Result<PackageManager, String> {
+        tauri::async_runtime::spawn_blocking(move || {
+            let package_json = File::open(&project_root)
+                .map_err(|e| format!("could not open {}: {e}", project_root.to_string_lossy()))?;
+            let package_json: PackageJSON = serde_json::from_reader(BufReader::new(package_json))
+                .map_err(|e| format!("{e}"))?;
 
-        match package_json.package_manager {
-            Some(package_manager) => {
-                let package_manager = package_manager
-                    .split("@")
-                    .next()
-                    .unwrap_or(&package_manager);
-                let result = match package_manager {
-                    "npm" => Ok(PackageManager::NPM),
-                    "pnpm" => Ok(PackageManager::PNPM),
-                    "yarn" => Ok(PackageManager::Yarn),
-                    "bun" => Ok(PackageManager::Bun),
-                    _ => Err(format!("Unsupported packageManager {package_manager}")),
-                };
-                debug!(
-                    "[find_package_manager] Detected packageManager '{}' in {}, using {:?}",
-                    package_manager,
-                    project_root.display(),
-                    result.as_ref().ok()
-                );
-                result
+            match package_json.package_manager {
+                Some(package_manager) => {
+                    let package_manager = package_manager
+                        .split("@")
+                        .next()
+                        .unwrap_or(&package_manager);
+                    let result = match package_manager {
+                        "npm" => Ok(PackageManager::NPM),
+                        "pnpm" => Ok(PackageManager::PNPM),
+                        "yarn" => Ok(PackageManager::Yarn),
+                        "bun" => Ok(PackageManager::Bun),
+                        _ => Err(format!("Unsupported packageManager {package_manager}")),
+                    };
+                    debug!(
+                        "[find_package_manager] Detected packageManager '{}' in {:?}, using {:?}",
+                        package_manager,
+                        project_root,
+                        result.as_ref().ok()
+                    );
+                    result
+                }
+                None => {
+                    info!(
+                        "[find_package_manager] No packageManager field in {}, defaulting to npm",
+                        project_root.display()
+                    );
+                    return Ok(PackageManager::NPM);
+                }
             }
-            None => {
-                info!(
-                    "[find_package_manager] No packageManager field in {}, defaulting to npm",
-                    project_root.display()
-                );
-                return Ok(PackageManager::NPM);
-            }
-        }
+        })
+        .await
+        .map_err(|e| format!("could not run thread: {e}"))?
     }
 }

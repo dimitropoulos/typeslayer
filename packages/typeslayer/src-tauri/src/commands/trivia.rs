@@ -8,12 +8,9 @@ use crate::{
         utils::CPU_PROFILE_FILENAME,
     },
 };
-use std::{
-    collections::HashMap,
-    path::Path,
-    sync::{Arc, Mutex},
-};
+use std::{collections::HashMap, path::Path};
 use tauri::State;
+use tokio::sync::Mutex;
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -23,8 +20,8 @@ pub struct AppStats {
 }
 
 #[tauri::command]
-pub async fn get_app_stats(state: State<'_, Arc<Mutex<AppData>>>) -> Result<AppStats, String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
+pub async fn get_app_stats(state: State<'_, &Mutex<AppData>>) -> Result<AppStats, String> {
+    let data = state.lock().await;
     Ok(AppStats {
         // we synthetically insert id:0 to make it so you can just index the vec to lookup by id
         types_count: data.types_json.len() - 1,
@@ -37,7 +34,7 @@ pub async fn get_app_stats(state: State<'_, Arc<Mutex<AppData>>>) -> Result<AppS
 
 #[tauri::command]
 pub async fn get_available_editors(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
 ) -> Result<Vec<(String, String)>, String> {
     let _ = state; // unused
     Ok(AVAILABLE_EDITORS
@@ -47,8 +44,8 @@ pub async fn get_available_editors(
 }
 
 #[tauri::command]
-pub async fn get_tsc_example_call(state: State<'_, Arc<Mutex<AppData>>>) -> Result<String, String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
+pub async fn get_tsc_example_call(state: State<'_, &Mutex<AppData>>) -> Result<String, String> {
+    let data = state.lock().await;
     let outputs_dir = data.outputs_dir().to_string_lossy().to_string();
     let flag = make_cli_arg("--generateTrace", outputs_dir.as_str());
     Ok(data.get_tsc_call(&flag)?.to_string())
@@ -56,14 +53,12 @@ pub async fn get_tsc_example_call(state: State<'_, Arc<Mutex<AppData>>>) -> Resu
 
 #[tauri::command]
 pub async fn get_output_file_sizes(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
 ) -> Result<HashMap<String, u64>, String> {
     use std::fs;
 
-    let outputs_dir = {
-        let data = state.lock().map_err(|e| e.to_string())?;
-        data.outputs_dir().to_string_lossy().to_string()
-    };
+    let data = state.lock().await;
+    let outputs_dir = data.outputs_dir().to_string_lossy().to_string();
 
     let filenames = vec![
         ANALYZE_TRACE_FILENAME,

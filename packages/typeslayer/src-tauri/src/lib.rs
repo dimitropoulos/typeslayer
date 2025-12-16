@@ -11,21 +11,29 @@ mod type_graph;
 pub mod utils;
 mod validate;
 
-use std::sync::{Arc, Mutex};
+use crate::process_controller::ProcessController;
 use tauri::Manager;
+use tokio::sync::Mutex;
 
 pub use http_server::run_http_server;
 pub use mcp::run_mcp_server;
 
 use crate::utils::compute_window_title;
 
-pub fn run_tauri_app(app_data: Arc<Mutex<app_data::AppData>>) {
+pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
+    let app = app_data.lock().await;
+    let project_root = app.project_root.clone();
+    drop(app);
+
+    let title = compute_window_title(project_root).await;
+
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
         .plugin(tauri_plugin_upload::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_screenshots::init())
         .setup(move |app| {
+            app.manage(ProcessController::new());
             app.manage(app_data);
 
             // Initialize MCP status tracker
@@ -33,15 +41,8 @@ pub fn run_tauri_app(app_data: Arc<Mutex<app_data::AppData>>) {
             app.manage(mcp_tracker);
 
             // Set initial window title based on detected project package.json
-            if let Some(title) = app
-                .state::<Arc<Mutex<app_data::AppData>>>()
-                .lock()
-                .ok()
-                .map(|data| compute_window_title(data.project_root.clone()))
-            {
-                if let Some(win) = app.get_webview_window("main") {
-                    let _ = win.set_title(&title);
-                }
+            if let Some(win) = app.get_webview_window("main") {
+                let _ = win.set_title(&title);
             }
 
             Ok(())
