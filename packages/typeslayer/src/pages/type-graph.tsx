@@ -128,7 +128,7 @@ const EDGE_CONFIGS: EdgeConfig[] = EDGE_RANKING.map((id, i) => {
 
 const EDGE_CONFIG_MAP = new Map(EDGE_CONFIGS.map(cfg => [cfg.id, cfg]));
 
-export const TypeNetwork = () => {
+export const TypeGraph = () => {
   const navigate = useNavigate();
   const navigateRef = useRef(navigate);
   const params = useParams({ strict: false });
@@ -398,9 +398,9 @@ export const TypeNetwork = () => {
 
       // Toggle selection if clicking the same node
       if (selectedIndex === typeId) {
-        navigate({ to: "/type-network" });
+        navigate({ to: "/type-graph" });
       } else {
-        navigate({ to: `/type-network/${typeId}` });
+        navigate({ to: `/type-graph/${typeId}` });
       }
     },
     [typeGraph, navigate, selectedIndex],
@@ -624,7 +624,7 @@ export const TypeNetwork = () => {
             handlePointClickRef.current?.(index);
           },
           onBackgroundClick: () => {
-            navigateRef.current({ to: "/type-network" });
+            navigateRef.current({ to: "/type-graph" });
           },
         });
         graphRef.current = graph;
@@ -690,7 +690,7 @@ export const TypeNetwork = () => {
             if (colorArray) {
               graph.setLinkColors(colorArray);
               console.log(
-                "[TypeNetwork] setLinkColors called AFTER render with array of length",
+                "[TypeGraph] setLinkColors called AFTER render with array of length",
                 colorArray.length,
               );
               graph.render(); // render again with colors
@@ -761,9 +761,9 @@ export const TypeNetwork = () => {
             onChange={event => {
               const value = event.target.value;
               if (!value) {
-                navigate({ to: "/type-network" });
+                navigate({ to: "/type-graph" });
               } else {
-                navigate({ to: `/type-network/${value}` });
+                navigate({ to: `/type-graph/${value}` });
               }
             }}
             slotProps={{

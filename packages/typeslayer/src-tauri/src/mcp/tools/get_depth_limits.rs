@@ -65,7 +65,7 @@ pub fn tool_definition() -> ToolDefinition<GetDepthLimitsExample> {
 }
 
 pub async fn execute(app_data: &Mutex<AppData>) -> String {
-    info!("get_depth_limits called");
+    info!("[get_depth_limits] called");
 
     // Lock app_data to access analyze_trace
     let data = app_data.lock().await;

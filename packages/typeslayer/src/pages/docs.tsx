@@ -15,6 +15,7 @@ import { useState } from "react";
 import { Code } from "../components/code";
 import { InlineCode } from "../components/inline-code";
 import { createOpenHandler } from "../components/utils";
+import { Step } from "./start/step";
 import { step4 } from "./start/step-0-prerequisites";
 
 export const DocsPage = () => {
@@ -292,12 +293,12 @@ export const DocsPage = () => {
       ),
     },
     {
-      id: "type-network-moving",
-      title: <span>why does the Type Network keep moving?</span>,
+      id: "type-graph-moving",
+      title: <span>why does the Type Graph keep moving?</span>,
       description: (
         <Stack gap={1}>
           <Typography>
-            the Type Network is a thing called a "force directed graph". it's a
+            the Type Graph is a thing called a "force directed graph". it's a
             way of visualizing a graph where the nodes (in this case, your
             types) are connected by edges (in this case, the relationships
             between your types) via a physics simulation. the nodes are
@@ -328,7 +329,7 @@ export const DocsPage = () => {
           <Typography>
             if you want to stop the movement, you can click on the{" "}
             <Pause fontSize="small" /> (pause) icon in the top right corner of
-            the Type Network view. this will lock the current layout and prevent
+            the Type Graph view. this will lock the current layout and prevent
             the nodes from moving.
           </Typography>
           <Typography>
@@ -376,6 +377,115 @@ export const DocsPage = () => {
             your types perform in a real-world scenario (exactly like you would
             want to do with any other kind of performance testing).
           </Typography>
+        </Stack>
+      ),
+    },
+    {
+      id: "overwhelmed",
+      title: <span>this is a lot. where do I start?</span>,
+      description: (
+        <Stack gap={2}>
+          <Typography>ask yourself these questions:</Typography>
+          <Step step={1}>
+            <Stack direction="column" gap={1}>
+              <Typography variant="h5">
+                is there <em>actually</em> a problem?
+              </Typography>
+              <Typography>
+                don't walk into any performance or analysis tool with
+                preconceived notions. your goal is the pursuit of data and
+                evidence. granted "my editor is slow" could absolutely be a
+                piece of evidence - but that in itself is not enough. for
+                example maybe it's slow because of an extension. now, if you add
+                "my editor is slow and the CI is also slow and running{" "}
+                <InlineCode>tsc</InlineCode> on the command line is slow" then
+                you've got a good start.
+              </Typography>
+              <Typography>
+                do, though, go into this ready to accept the possibility that
+                nothing is wrong (unless you have aforementioned evidence).
+              </Typography>
+            </Stack>
+          </Step>
+          <Step step={2}>
+            <Stack direction="column" gap={1}>
+              <Typography variant="h5">
+                is there an outlier in the <Link href="/treemap">Treemap</Link>?
+              </Typography>
+              <Typography>
+                the treemap view is a great place to start. if there's one (or a
+                few) rectangles that are <em>much larger</em> than the rest..
+                that's a great place to start.
+              </Typography>
+              <Typography>
+                make sure you understand, though, that these files may not be
+                the specific files where you need to fix your types.{" "}
+                <em>
+                  they might just be the first file to import the file (perhaps
+                  many times removed, down the chain).
+                </em>
+              </Typography>
+            </Stack>
+          </Step>
+          <Step step={3}>
+            <Stack direction="column" gap={1}>
+              <Typography variant="h5">
+                does anything look weird in{" "}
+                <Link href="/perfetto">Perfetto</Link>?
+              </Typography>
+              <Typography>
+                yes, flamegraphs (which is the name of the graph Perfetto shows)
+                can be intimidating - but they're such a powerful tool because
+                you can quickly spot abnormalities. let's say you have a bunch
+                of spans (that's the technical terms for all the little boxes)
+                that are roughly equal in size and then there's one big huge one
+                that dominates the rest. you're human (presumably) so use your
+                highly advanced human skill of pattern matching (which,
+                tragically,{" "}
+                <Link
+                  href="https://github.com/tc39/proposal-pattern-matching"
+                  onClick={createOpenHandler(
+                    "https://github.com/tc39/proposal-pattern-matching",
+                  )}
+                >
+                  JavaScript still doesn't have
+                </Link>
+                ).
+              </Typography>
+              <Typography>
+                once you've found a type (it'll show up in{" "}
+                <InlineCode>args</InlineCode> under{" "}
+                <InlineCode>sourceId</InlineCode> or{" "}
+                <InlineCode>targetId</InlineCode>) you can start to investigate
+                by taking that type id number and dropping it into the{" "}
+                <Link href="/search">Search</Link> module.
+              </Typography>
+            </Stack>
+          </Step>
+          <Step step={4}>
+            <Stack direction="column" gap={1}>
+              <Typography variant="h5">
+                are there any <Link href="/award-winners">Award Winners</Link>{" "}
+                that stand out?
+              </Typography>
+              <Typography>
+                what does "stand out" mean? don't ask yourself "how big is a
+                union that's <em>too big</em>" ask yourself "is there a union
+                that's considerably larger than all the rest". that kind of
+                logic goes for all the type metrics and type relation metrics.
+                that's why they all have little red bars underneath - to show
+                you <em>relative scale</em> to other items in that list.
+              </Typography>
+              <Typography>
+                beyond that, look for type-level limits that are being reached
+                in your project that were errors but someone ignored with{" "}
+                <InlineCode>@ts-ignore</InlineCode> or{" "}
+                <InlineCode>@ts-expect-error</InlineCode>. these are definitely
+                things you want to address, whether or not you're concerned with
+                slowness.
+              </Typography>
+            </Stack>
+          </Step>
         </Stack>
       ),
     },
@@ -433,7 +543,16 @@ export const DocsPage = () => {
             }}
           >
             <ListItemText>
-              <Typography variant="h6">{title}</Typography>
+              <Typography
+                variant="h6"
+                sx={{
+                  ...(activeIndex === index
+                    ? { fontWeight: "bold", letterSpacing: "-0.033em" }
+                    : { fontWeight: "normal" }),
+                }}
+              >
+                {title}
+              </Typography>
             </ListItemText>
           </ListItemButton>
         ))}
@@ -446,7 +565,7 @@ export const DocsPage = () => {
           overflow: "auto",
           px: 4,
           py: 4,
-          maxWidth: 700,
+          width: "100%",
         }}
       >
         <Typography
@@ -459,7 +578,7 @@ export const DocsPage = () => {
         >
           {selected.title}
         </Typography>
-        {selected.description}
+        <Box maxWidth={700}>{selected.description}</Box>
       </Box>
     </Stack>
   );

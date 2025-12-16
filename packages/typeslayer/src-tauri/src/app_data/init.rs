@@ -25,7 +25,7 @@ pub fn init_project_root(cake: &LayerCake) -> PathBuf {
         if let Some(cwd_pkg) = detect_project_root_from_cwd() {
             if let Ok(validated) = validate_project_root_path(&cwd_pkg.to_string_lossy()) {
                 info!(
-                    "using project_root from current directory: {}",
+                    "[init_project_root] using project_root from current directory: {}",
                     validated.display()
                 );
                 return validated;
@@ -46,7 +46,7 @@ pub fn init_project_root(cake: &LayerCake) -> PathBuf {
     });
     let path = PathBuf::from(resolved);
     info!(
-        "resolved project_root from config/env/flag: {}",
+        "[init_project_root] resolved project_root from config/env/flag: {}",
         path.display()
     );
     path
@@ -316,7 +316,7 @@ pub fn init_auth_code(cake: &LayerCake) -> Option<String> {
         default: || "".to_string(),
         validate: |s| Ok(s.to_string()),
     });
-    tracing::info!("init_auth_code_with: resolved code = '{}'", code);
+    tracing::info!("[init_auth_code] resolved code = '{}'", code);
     if code.is_empty() { None } else { Some(code) }
 }
 pub fn init_selected_tsconfig_with(

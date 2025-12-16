@@ -6,28 +6,30 @@ import {
   DialogContent,
   DialogTitle,
   Link,
+  MenuItem,
+  Select,
+  type SelectChangeEvent,
   Stack,
   Tabs,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
-import {
-  type ResolvedType,
-  type TypeRelationInfo,
-  typeRelationInfo,
-} from "@typeslayer/validate";
-import { type SyntheticEvent, useCallback, useState } from "react";
+import { type TypeRelationInfo, typeRelationInfo } from "@typeslayer/validate";
+import { useCallback, useState } from "react";
 import {
   type LinksToType,
   useGetLinksToTypeId,
+  useGetResolvedTypeById,
   useGetTracesRelatedToTypeId,
 } from "../hooks/tauri-hooks";
+import { theme } from "../theme";
 import type { LinkKind } from "../types/type-graph";
 import { CenterLoader } from "./center-loader";
 import { Code } from "./code";
 import { InlineCode } from "./inline-code";
 import { ShowMoreChildren } from "./show-more-children";
 import { VerticalTab } from "./tab-label";
-import { SimpleTypeSummary, TypeSummary } from "./type-summary";
+import { getHumanReadableName, TypeSummary } from "./type-summary";
 
 const LastDitchEffort = ({ typeId }: { typeId: number }) => {
   const { data: events, isLoading } = useGetTracesRelatedToTypeId({ typeId });
@@ -148,41 +150,79 @@ function TargetsTabs({ linksToTypeId }: { linksToTypeId: LinksToType }) {
     linksToTypeId[0][0],
   );
 
-  const handleTabChange = useCallback(
-    (_event: SyntheticEvent, value: LinkKind) => {
-      setSelectedTab(value);
+  const handleTabChange = useCallback((_event: unknown, value: LinkKind) => {
+    setSelectedTab(value);
+  }, []);
+
+  const handleSelectChange = useCallback(
+    (event: SelectChangeEvent<LinkKind>) => {
+      setSelectedTab(event?.target.value);
     },
     [],
   );
 
+  const isSmallWidth = useMediaQuery(theme.breakpoints.down("lg"));
+
   return (
     <Stack
       sx={{
-        flexDirection: "row",
+        flexDirection: isSmallWidth ? "column" : "row",
         backgroundColor: "#11111190",
         border: 1,
         borderColor: "divider",
-        p: 1,
+        p: 2,
+        spacing: 1,
         flexShrink: 0,
         overflow: "hidden",
       }}
     >
-      <Tabs
-        onChange={handleTabChange}
-        value={selectedTab}
-        orientation="vertical"
-        sx={{ mr: 3, flexShrink: 0 }}
-      >
-        {linksToTypeId.map(([kind, nodes]) => (
-          <VerticalTab
-            key={kind}
-            label={kindToTypesRelationInfo(kind).title}
-            count={nodes.length}
-            value={kind}
-          />
-        ))}
-      </Tabs>
-      <Stack sx={{ overflow: "auto", my: 1, height: "100%", width: "100%" }}>
+      {isSmallWidth ? (
+        <Select
+          value={selectedTab}
+          onChange={handleSelectChange}
+          sx={{ flexShrink: 0, mb: 2 }}
+          variant="outlined"
+        >
+          {linksToTypeId.map(([kind, nodes]) => (
+            <MenuItem key={kind} value={kind}>
+              <Stack>
+                <Typography
+                  sx={{
+                    ...(selectedTab === kind ? { fontWeight: "bold" } : {}),
+                  }}
+                >
+                  {kindToTypesRelationInfo(kind).title}
+                </Typography>
+                <Typography
+                  sx={{
+                    color: "secondary.main",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {nodes.length.toLocaleString()}
+                </Typography>
+              </Stack>
+            </MenuItem>
+          ))}
+        </Select>
+      ) : (
+        <Tabs
+          onChange={handleTabChange}
+          value={selectedTab}
+          orientation="vertical"
+          sx={{ mr: 3, flexShrink: 0 }}
+        >
+          {linksToTypeId.map(([kind, nodes]) => (
+            <VerticalTab
+              key={kind}
+              label={kindToTypesRelationInfo(kind).title}
+              count={nodes.length}
+              value={kind}
+            />
+          ))}
+        </Tabs>
+      )}
+      <Stack sx={{ width: "100%" }}>
         <ShowMoreChildren incrementsOf={50}>
           {linksToTypeId
             .filter(([kind]) => kind === selectedTab)
@@ -193,10 +233,12 @@ function TargetsTabs({ linksToTypeId }: { linksToTypeId: LinksToType }) {
                   key={`${id}-${index}`}
                   sx={{ gap: 1, flexDirection: "row" }}
                 >
-                  <SimpleTypeSummary
-                    id={id}
+                  <TypeSummary
+                    typeId={id}
+                    flags={[]}
                     name={name}
                     key={`${id}-${index}`}
+                    showFlags={false}
                   />
                 </Stack>
               );
@@ -207,20 +249,9 @@ function TargetsTabs({ linksToTypeId }: { linksToTypeId: LinksToType }) {
   );
 }
 
-export const TypeRelationsContent = ({
-  resolvedType,
-}: {
-  resolvedType?: ResolvedType | undefined;
-}) => {
-  const { data: linksToTypeId, isLoading } = useGetLinksToTypeId(
-    resolvedType?.id ?? 0,
-  );
+export const TypeRelationsContent = ({ typeId }: { typeId: number }) => {
+  const { data: linksToTypeId, isLoading } = useGetLinksToTypeId(typeId);
 
-  if (!resolvedType) {
-    return null;
-  }
-
-  const { id: typeId } = resolvedType;
   if (typeId <= 0) {
     return null;
   }
@@ -241,20 +272,32 @@ export const TypeRelationsContent = ({
 };
 
 export const TypeRelationsDialog = ({
-  resolvedType,
+  typeId,
   onClose,
 }: {
-  resolvedType: ResolvedType;
+  typeId: number;
   onClose: () => void;
 }) => {
+  const { data: resolvedType } = useGetResolvedTypeById(typeId);
+
+  if (!resolvedType) {
+    return null;
+  }
+
   return (
     <Dialog open onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
         Type Relations to{" "}
-        <TypeSummary resolvedType={resolvedType} suppressActions />
+        <TypeSummary
+          typeId={resolvedType.id}
+          name={getHumanReadableName(resolvedType)}
+          flags={resolvedType.flags}
+          showFlags={false}
+          suppressActions
+        />
       </DialogTitle>
       <DialogContent sx={{ m: 0, py: 0 }}>
-        <TypeRelationsContent resolvedType={resolvedType} />
+        <TypeRelationsContent typeId={resolvedType.id} />
       </DialogContent>
 
       <DialogActions>

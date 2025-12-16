@@ -1,5 +1,11 @@
 use crate::{
-    analyze_trace::{AnalyzeTraceResult, constants::ANALYZE_TRACE_FILENAME}, app_data::AppData, commands::generate::generate_type_graph, process_controller::ProcessController, type_graph::TypeGraph, validate::{trace_json::TraceEvent, types_json::TypesJsonSchema}
+    analyze_trace::{AnalyzeTraceResult, constants::ANALYZE_TRACE_FILENAME},
+    app_data::AppData,
+    commands::generate::generate_type_graph,
+    process_controller::ProcessController,
+    type_graph::TypeGraph,
+    utils::{compute_window_title, set_window_title},
+    validate::{trace_json::TraceEvent, types_json::TypesJsonSchema},
 };
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, State};
@@ -18,11 +24,14 @@ pub async fn get_project_root(state: State<'_, &Mutex<AppData>>) -> Result<Strin
 
 #[tauri::command]
 pub async fn set_project_root(
+    app: AppHandle,
     state: State<'_, &Mutex<AppData>>,
     project_root: String,
 ) -> Result<(), String> {
     let mut data = state.lock().await;
     let path_buf = PathBuf::from(project_root.clone());
+    let window_title = compute_window_title(path_buf.clone()).await;
+    set_window_title(&app, window_title).await?;
     data.set_project_root(path_buf).await?;
     Ok(())
 }

@@ -20,7 +20,7 @@ export const ShowMoreChildren = ({
           direction="row"
           gap={1}
           alignItems="center"
-          sx={{ px: 2, pl: 0, mb: 2, mt: 0.5 }}
+          sx={{ px: 2, pl: 0, my: 0.5 }}
         >
           <Button
             variant="outlined"

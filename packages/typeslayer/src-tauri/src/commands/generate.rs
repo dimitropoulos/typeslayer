@@ -1,15 +1,20 @@
 use crate::{
     analyze_trace::{
         AnalyzeTraceOptions, AnalyzeTraceResult, analyze_trace, constants::ANALYZE_TRACE_FILENAME,
-    }, app_data::AppData, process_controller::ProcessController, type_graph::{TYPE_GRAPH_FILENAME, TypeGraph}, utils::make_cli_arg, validate::{
+    },
+    app_data::AppData,
+    process_controller::ProcessController,
+    type_graph::{TYPE_GRAPH_FILENAME, TypeGraph},
+    utils::make_cli_arg,
+    validate::{
         trace_json::{TRACE_JSON_FILENAME, TraceEvent, read_trace_json},
         types_json::{TYPES_JSON_FILENAME, TypesJsonSchema, load_types_json},
         utils::CPU_PROFILE_FILENAME,
-    }
+    },
 };
 use std::path::Path;
 use tauri::{AppHandle, State};
-use tokio::{sync::Mutex, fs};
+use tokio::{fs, sync::Mutex};
 use tracing::{debug, error, info};
 
 // Async helper to validate outputs in outputs_dir and return parsed results
@@ -52,7 +57,10 @@ pub async fn validate_types_and_trace_async(
 }
 
 #[tauri::command]
-pub async fn generate_trace(app_data: State<'_, &Mutex<AppData>>, process_controller: State<'_, ProcessController>) -> Result<(), String> {
+pub async fn generate_trace(
+    app_data: State<'_, &Mutex<AppData>>,
+    process_controller: State<'_, ProcessController>,
+) -> Result<(), String> {
     // Clone the entire AppData to move into the blocking task
     let mut data = app_data.lock().await;
     let outputs_dir = data.outputs_dir().to_string_lossy().to_string();
@@ -61,11 +69,18 @@ pub async fn generate_trace(app_data: State<'_, &Mutex<AppData>>, process_contro
     let outputs_dir_for_closure = outputs_dir.clone();
     let flag = make_cli_arg("--generateTrace", &outputs_dir_for_closure);
 
-    data.run_tsc(&*process_controller, flag, "TypeScript compilation with trace generation")
-        .await
-        .map_err(|e| format!("generate_trace join error: {}", e))?;
+    data.run_tsc(
+        &*process_controller,
+        flag,
+        "TypeScript compilation with trace generation",
+    )
+    .await
+    .map_err(|e| format!("generate_trace join error: {}", e))?;
 
-    info!("Listing files in output directory: {}", outputs_dir);
+    info!(
+        "[generate_trace] Listing files in output directory: {}",
+        outputs_dir
+    );
     if let Ok(entries) = std::fs::read_dir(&outputs_dir) {
         for entry in entries.flatten() {
             if let Ok(file_name) = entry.file_name().into_string() {
@@ -73,13 +88,16 @@ pub async fn generate_trace(app_data: State<'_, &Mutex<AppData>>, process_contro
             }
         }
     } else {
-        info!("Could not read outputs directory: {}", outputs_dir);
+        info!(
+            "[generate_trace] Could not read outputs directory: {}",
+            outputs_dir
+        );
     }
 
     let (types, trace) = validate_types_and_trace_async(&outputs_dir).await?;
     data.types_json = types.clone();
     data.trace_json = trace;
-    AppData::update_outputs(&data).await;
+    data.update_typeslayer_config_toml().await;
     debug!(
         "[generate_trace] cached {} types and {} trace events",
         data.types_json.len(),
@@ -90,7 +108,10 @@ pub async fn generate_trace(app_data: State<'_, &Mutex<AppData>>, process_contro
 }
 
 #[tauri::command]
-pub async fn generate_cpu_profile(state: State<'_, &Mutex<AppData>>, process_controller: State<'_, ProcessController>) -> Result<(), String> {
+pub async fn generate_cpu_profile(
+    state: State<'_, &Mutex<AppData>>,
+    process_controller: State<'_, ProcessController>,
+) -> Result<(), String> {
     let mut data = state.lock().await;
     let outputs_dir = data.outputs_dir().to_string_lossy().to_string();
 
@@ -115,7 +136,7 @@ pub async fn generate_cpu_profile(state: State<'_, &Mutex<AppData>>, process_con
                 "[generate_cpu_profile] cached CPU profile of size {} bytes",
                 data.cpu_profile.as_ref().map_or(0, |s| s.len())
             );
-            AppData::update_outputs(&data).await;
+            data.update_typeslayer_config_toml().await;
         }
         Err(e) => error!("Failed to read CPU profile after generation: {}", e),
     };
@@ -152,7 +173,7 @@ pub async fn generate_analyze_trace(
         Ok(r) => {
             if let Ok(res) = &r {
                 data.analyze_trace = Some(res.clone());
-                AppData::update_outputs(&data).await;
+                data.update_typeslayer_config_toml().await;
                 debug!(
                     "[generate_analyze_trace] wrote {} in {}",
                     ANALYZE_TRACE_FILENAME, trace_dir_for_log
@@ -202,9 +223,12 @@ pub async fn generate_type_graph(
     let path = outputs_dir.join(TYPE_GRAPH_FILENAME);
     let json = serde_json::to_string_pretty(&app_data.type_graph)
         .map_err(|e| format!("Failed to serialize type_graph: {e}"))?;
-    fs::create_dir_all(&outputs_dir).await
+    fs::create_dir_all(&outputs_dir)
+        .await
         .map_err(|e| format!("Failed to create outputs dir: {e}"))?;
-    fs::write(&path, json).await.map_err(|e| format!("Failed to write {}: {e}", path.display()))?;
+    fs::write(&path, json)
+        .await
+        .map_err(|e| format!("Failed to write {}: {e}", path.display()))?;
 
     Ok(())
 }

@@ -17,7 +17,8 @@ use crate::{
     process_controller::ProcessController,
     type_graph::{TYPE_GRAPH_FILENAME, TypeGraph},
     utils::{
-        CONFIG_FILENAME, OUTPUTS_DIRECTORY, TSCONFIG_FILENAME, file_mtime_iso, quote_if_needed,
+        CONFIG_FILENAME, OUTPUTS_DIRECTORY, TSCONFIG_FILENAME, file_mtime_iso, get_platform,
+        quote_if_needed,
     },
     validate::{
         trace_json::{TRACE_JSON_FILENAME, TraceEvent},
@@ -47,18 +48,20 @@ pub struct AppData {
     pub auth_code: Option<String>,
     pub type_graph: Option<TypeGraph>,
     pub data_dir: PathBuf,
+    pub platform: String,
 }
 
 impl AppData {
     pub async fn new(data_dir: PathBuf) -> Result<Self, String> {
-        info!("using base data_dir: {}", data_dir.display());
+        info!("[AppData::new] using base data_dir: {}", data_dir.display());
         // Build a single LayerCake and reuse it across init functions
         let mut cake = LayerCake::new(LayerCakeInitArgs {
             config_filename: CONFIG_FILENAME,
             precedence: [Source::Env, Source::Flag, Source::File],
             env_prefix: "TYPESLAYER_",
         });
-        cake.load_config_in_dir(data_dir.to_string_lossy().to_string()).await?;
+        cake.load_config_in_dir(data_dir.to_string_lossy().to_string())
+            .await?;
 
         let project_root = init_project_root(&cake);
         let outputs_dir = data_dir.join(OUTPUTS_DIRECTORY);
@@ -72,6 +75,8 @@ impl AppData {
         let auth_code = init_auth_code(&cake);
 
         let package_manager = Self::find_package_manager(project_root.clone()).await?;
+
+        let platform = get_platform().await?;
 
         let mut app = Self {
             project_root,
@@ -88,9 +93,11 @@ impl AppData {
             auth_code,
             type_graph,
             data_dir,
+            platform,
         };
         app.discover_tsconfigs().await?;
         app.selected_tsconfig = init_selected_tsconfig_with(&app.cake, &app.tsconfig_paths);
+        app.update_typeslayer_config_toml().await;
         Ok(app)
     }
 
@@ -249,7 +256,12 @@ impl AppData {
         })
     }
 
-    pub async fn run_tsc(&self, process_controller: &ProcessController, flag: String, context: &str) -> Result<(), String> {
+    pub async fn run_tsc(
+        &self,
+        process_controller: &ProcessController,
+        flag: String,
+        context: &str,
+    ) -> Result<(), String> {
         let outputs_dir = self.outputs_dir().to_string_lossy().to_string();
 
         fs::create_dir_all(&outputs_dir)
@@ -311,7 +323,7 @@ impl AppData {
             ));
         }
 
-        info!("Command completed successfully: {}", context);
+        info!("[run_tsc] Command completed successfully: {}", context);
         Ok(())
     }
 }
@@ -330,12 +342,13 @@ struct TypeSlayerConfig<'a> {
     project_root: &'a str,
     outputs_dir: &'a str,
     verbose: bool,
+    platform: &'a str,
     settings: &'a Settings,
     outputs: OutputTimestamps,
 }
 
 impl AppData {
-    pub async fn update_outputs(&self) {
+    pub async fn update_typeslayer_config_toml(&self) {
         let data_dir = &self.data_dir;
         let outputs_dir = self.outputs_dir();
         let config_path = data_dir.join(CONFIG_FILENAME);
@@ -357,6 +370,7 @@ impl AppData {
             project_root: &self.project_root.to_string_lossy(),
             outputs_dir: &outputs_dir.to_string_lossy(),
             verbose: self.verbose,
+            platform: &self.platform,
             settings: &self.settings,
             outputs,
         };
@@ -375,7 +389,7 @@ impl AppData {
                     );
                 } else {
                     debug!(
-                        "[update_outputs] Wrote updated config to {}",
+                        "[update_typeslayer_config_toml] Wrote updated config to {}",
                         config_path.display()
                     );
                 }
@@ -424,7 +438,7 @@ impl AppData {
             "[clear_outputs_dir] Cleared outputs directory: {}",
             outputs_dir.display()
         );
-        self.update_outputs().await;
+        self.update_typeslayer_config_toml().await;
         Ok(())
     }
 

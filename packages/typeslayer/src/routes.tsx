@@ -18,7 +18,7 @@ import { SettingsPage } from "./pages/settings";
 import { SpeedScope } from "./pages/speedscope";
 import { Start } from "./pages/start/start";
 import { Treemap } from "./pages/treemap";
-import { TypeNetwork } from "./pages/type-network";
+import { TypeGraph } from "./pages/type-graph";
 
 // Root route – renders App which contains DashboardLayout and Outlet
 const rootRoute = createRootRoute({
@@ -62,16 +62,16 @@ const awardWinnersChildRoute = createRoute({
   component: AwardWinners,
 });
 
-const typeNetworkRoute = createRoute({
+const TypeGraphRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/type-network",
-  component: TypeNetwork,
+  path: "/type-graph",
+  component: TypeGraph,
 });
 
-const typeNetworkChildRoute = createRoute({
+const TypeGraphChildRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/type-network/$typeId",
-  component: TypeNetwork,
+  path: "/type-graph/$typeId",
+  component: TypeGraph,
 });
 
 const treemapRoute = createRoute({
@@ -162,8 +162,8 @@ const routeTree = rootRoute.addChildren([
   searchTypesChildRoute,
   awardWinnersRoute,
   awardWinnersChildRoute,
-  typeNetworkRoute,
-  typeNetworkChildRoute,
+  TypeGraphRoute,
+  TypeGraphChildRoute,
   treemapRoute,
   perfettoRoute,
   speedscopeRoute,

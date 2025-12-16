@@ -3,7 +3,7 @@ import { Chip, IconButton, Skeleton, Stack, Typography } from "@mui/material";
 import { useNavigate } from "@tanstack/react-router";
 import type { ResolvedType } from "@typeslayer/validate";
 import { useCallback, useState } from "react";
-import { TypeRelationsDialog } from "./type-relations-dialog";
+import { TypeRelationsDialog } from "./type-relations";
 
 export const getHumanReadableName = (
   resolvedType: ResolvedType | undefined,
@@ -44,16 +44,16 @@ export const getHumanReadableName = (
 
 const OpenInNetworkAction = ({ typeId }: { typeId: number }) => {
   const navigate = useNavigate();
-  const viewInTypeNetwork = useCallback(() => {
-    navigate({ to: `/type-network/${typeId}` });
+  const viewInTypeGraph = useCallback(() => {
+    navigate({ to: `/type-graph/${typeId}` });
   }, [navigate, typeId]);
 
   return (
     <IconButton
       className="summaryAction"
       size="small"
-      title="view in Type Network"
-      onClick={viewInTypeNetwork}
+      title="view in Type Graph"
+      onClick={viewInTypeGraph}
       sx={{ my: -1 }}
     >
       <Hub />
@@ -80,11 +80,7 @@ const OpenInSearchAction = ({ typeId }: { typeId: number }) => {
   );
 };
 
-const OpenRelationsAction = ({
-  resolvedType,
-}: {
-  resolvedType: ResolvedType;
-}) => {
+const OpenRelationsAction = ({ typeId }: { typeId: number }) => {
   const [relationsDialogOpen, setRelationsDialogOpen] = useState(false);
 
   const onOpenDialog = useCallback(() => {
@@ -107,10 +103,7 @@ const OpenRelationsAction = ({
         <Share sx={{ transform: "rotate(180deg)" }} />
       </IconButton>
       {relationsDialogOpen ? (
-        <TypeRelationsDialog
-          resolvedType={resolvedType}
-          onClose={onCloseDialog}
-        />
+        <TypeRelationsDialog typeId={typeId} onClose={onCloseDialog} />
       ) : null}
     </>
   );
@@ -162,21 +155,24 @@ export function TypeSummarySkeleton({
 }
 
 export function TypeSummary({
-  showFlags = false,
-  resolvedType,
-  suppressActions = false,
+  flags,
   loading = false,
+  showFlags = false,
+  name,
+  suppressActions = false,
+  typeId,
 }: {
-  showFlags?: boolean;
-  resolvedType: ResolvedType;
-  suppressActions?: boolean;
+  flags: ResolvedType["flags"];
   loading?: boolean;
+  name?: string;
+  showFlags: boolean;
+  suppressActions?: boolean;
+  typeId: number;
 }) {
   if (loading) {
     return <TypeSummarySkeleton showFlags={showFlags} />;
   }
 
-  const { id, flags } = resolvedType;
   return (
     <Stack
       direction="row"
@@ -188,9 +184,9 @@ export function TypeSummary({
       }}
     >
       <Typography color="secondary" sx={{ fontFamily: "monospace" }}>
-        {getHumanReadableName(resolvedType)}
+        {name}
       </Typography>
-      <Typography sx={{ fontFamily: "monospace" }}>id:{id}</Typography>
+      <Typography sx={{ fontFamily: "monospace" }}>id:{typeId}</Typography>
       {showFlags
         ? flags.map(flag => (
             <Chip
@@ -204,49 +200,9 @@ export function TypeSummary({
         : null}
       {suppressActions ? null : (
         <>
-          <OpenInNetworkAction typeId={resolvedType.id} />
-          <OpenInSearchAction typeId={resolvedType.id} />
-          <OpenRelationsAction resolvedType={resolvedType} />
-        </>
-      )}
-    </Stack>
-  );
-}
-
-export function SimpleTypeSummary({
-  id,
-  name,
-  loading = false,
-  suppressActions = false,
-}: {
-  id: number;
-  name: string;
-  loading?: boolean;
-  suppressActions?: boolean;
-}) {
-  if (loading) {
-    return <TypeSummarySkeleton showFlags={false} />;
-  }
-
-  return (
-    <Stack
-      direction="row"
-      key={id}
-      gap={1}
-      sx={{
-        alignItems: "center",
-        "& .summaryAction": { visibility: "hidden" },
-        "&:hover .summaryAction": { visibility: "visible" },
-      }}
-    >
-      <Typography color="secondary" sx={{ fontFamily: "monospace" }}>
-        {name}
-      </Typography>
-      <Typography sx={{ fontFamily: "monospace" }}>id:{id}</Typography>
-      {suppressActions ? null : (
-        <>
-          <OpenInNetworkAction typeId={id} />
-          <OpenInSearchAction typeId={id} />
+          <OpenInNetworkAction typeId={typeId} />
+          <OpenInSearchAction typeId={typeId} />
+          <OpenRelationsAction typeId={typeId} />
         </>
       )}
     </Stack>

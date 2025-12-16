@@ -1,12 +1,12 @@
 use crate::{
     app_data::AppData,
     layercake::ResolveStringArgs,
-    utils::{AVAILABLE_EDITORS, command_exists, compute_window_title},
+    utils::{AVAILABLE_EDITORS, command_exists},
 };
-use std::{path::Path};
+use std::path::Path;
 use tauri::State;
 use tauri::{AppHandle, Manager, WebviewWindow};
-use tokio::{process::Command, sync::Mutex, fs};
+use tokio::{fs, process::Command, sync::Mutex};
 
 #[tauri::command]
 pub async fn take_screenshot(app: AppHandle) -> Result<String, String> {
@@ -181,18 +181,4 @@ pub async fn open_file(state: State<'_, &Mutex<AppData>>, path: String) -> Resul
         Ok(s) if s.success() => Ok(()),
         _ => Err("Failed to open file with any known method".to_string()),
     }
-}
-
-#[tauri::command]
-pub async fn set_window_title_from_project(
-    app: tauri::AppHandle,
-    state: State<'_, &Mutex<AppData>>,
-) -> Result<(), String> {
-    let guard = state.lock().await;
-    let title = compute_window_title(guard.project_root.clone()).await;
-    let win = app
-        .get_webview_window("main")
-        .ok_or_else(|| "main window not found".to_string())?;
-    win.set_title(&title)
-        .map_err(|e| format!("failed to set title: {}", e))
 }

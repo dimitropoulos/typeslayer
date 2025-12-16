@@ -56,7 +56,6 @@ pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
             commands::trivia::get_output_file_sizes,
             commands::trivia::get_app_stats,
             commands::actions::open_file,
-            commands::actions::set_window_title_from_project,
             commands::actions::take_screenshot,
             commands::app_data::get_analyze_trace,
             commands::app_data::get_cpu_profile,

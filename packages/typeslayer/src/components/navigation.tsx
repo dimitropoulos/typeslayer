@@ -80,8 +80,8 @@ export const NAVIGATION = [
   },
   {
     kind: "segment",
-    segment: "type-network",
-    title: "Type Network",
+    segment: "type-graph",
+    title: "Type Graph",
     icon: <Hub />,
   },
   {

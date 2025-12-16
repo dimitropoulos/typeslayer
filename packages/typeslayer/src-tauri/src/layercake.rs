@@ -64,7 +64,9 @@ impl LayerCake {
             seen.insert(std::mem::discriminant(s));
         }
         if seen.len() != 3 {
-            panic!("LayerCake precedence must contain exactly 3 unique sources (Env, Flag, File)");
+            panic!(
+                "[layercake] precedence must contain exactly 3 unique sources (Env, Flag, File)"
+            );
         }
         let flags = Self::parse_flags();
         Self {
@@ -124,7 +126,7 @@ impl LayerCake {
         V: Fn(&str) -> Result<String, String>,
     {
         if !args.flag.starts_with("--") {
-            panic!("Flag '{}' must start with --", args.flag);
+            panic!("[layercake] Flag '{}' must start with --", args.flag);
         }
         let env_key = if self.env_prefix.is_empty() {
             args.env.to_string()
@@ -139,7 +141,7 @@ impl LayerCake {
                             match (args.validate)(&v) {
                                 Ok(transformed) => {
                                     debug!(
-                                        "resolved {}='{}' from env {}",
+                                        "[layercake] resolved {}='{}' from env {}",
                                         args.env, transformed, env_key
                                     );
                                     return transformed;
@@ -156,7 +158,7 @@ impl LayerCake {
                         match (args.validate)(v) {
                             Ok(transformed) => {
                                 debug!(
-                                    "resolved {}='{}' from flag {}",
+                                    "[layercake] resolved {}='{}' from flag {}",
                                     args.env, transformed, args.flag
                                 );
                                 return transformed;
@@ -170,13 +172,16 @@ impl LayerCake {
                         match (args.validate)(&v) {
                             Ok(transformed) => {
                                 debug!(
-                                    "resolved {}='{}' from file key {}",
+                                    "[layercake] resolved {}='{}' from file key {}",
                                     args.env, transformed, args.file
                                 );
                                 return transformed;
                             }
                             Err(e) => {
-                                panic!("Invalid {} from file key {}: {}", args.env, args.file, e)
+                                panic!(
+                                    "[layercake] Invalid {} from file key {}: {}",
+                                    args.env, args.file, e
+                                )
                             }
                         }
                     }
@@ -192,7 +197,7 @@ impl LayerCake {
         F: FnOnce() -> bool,
     {
         if !args.flag.starts_with("--") {
-            panic!("Flag '{}' must start with --", args.flag);
+            panic!("[layercake] Flag '{}' must start with --", args.flag);
         }
         let env_key = if self.env_prefix.is_empty() {
             args.env.to_string()
@@ -204,7 +209,10 @@ impl LayerCake {
                 Source::Env => {
                     if let Ok(v) = std::env::var(&env_key) {
                         if let Some(b) = Self::parse_bool(&v) {
-                            debug!("resolved bool {}={} from env {}", args.env, b, env_key);
+                            debug!(
+                                "[layercake] resolved bool {}={} from env {}",
+                                args.env, b, env_key
+                            );
                             return b;
                         }
                     }
@@ -212,7 +220,10 @@ impl LayerCake {
                 Source::Flag => {
                     if let Some(v) = self.flags.get(args.flag) {
                         if let Some(b) = Self::parse_bool(v) {
-                            debug!("resolved bool {}={} from flag {}", args.env, b, args.flag);
+                            debug!(
+                                "[layercake] resolved bool {}={} from flag {}",
+                                args.env, b, args.flag
+                            );
                             return b;
                         }
                     }
@@ -220,7 +231,7 @@ impl LayerCake {
                 Source::File => {
                     if let Some(v) = self.get_config_bool(args.file) {
                         debug!(
-                            "resolved bool {}={} from file key {}",
+                            "[layercake] resolved bool {}={} from file key {}",
                             args.env, v, args.file
                         );
                         return v;

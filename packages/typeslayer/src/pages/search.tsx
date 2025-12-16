@@ -15,7 +15,7 @@ import { Code } from "../components/code";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
 import { InlineCode } from "../components/inline-code";
 import { StatPill } from "../components/stat-pill";
-import { TypeRelationsContent } from "../components/type-relations-dialog";
+import { TypeRelationsContent } from "../components/type-relations";
 import { useGetAppStats, useGetResolvedTypeById } from "../hooks/tauri-hooks";
 
 export const SearchTypes = () => {
@@ -118,10 +118,35 @@ export const SearchTypes = () => {
               gap: 3,
             }}
           >
+            <Stack>
+              <Typography variant="h5">Type Definition</Typography>
+
+              <Typography fontSize={12}>
+                {" "}
+                <Link
+                  underline="hover"
+                  color="inherit"
+                  sx={{ fontWeight: "normal" }}
+                  href="/type-graph"
+                >
+                  (recursively expanded)
+                </Link>
+              </Typography>
+            </Stack>
             {isLoading ? (
               <CenterLoader />
             ) : validSearch ? (
-              <DisplayRecursiveType id={numberSearch} />
+              <Box
+                sx={{
+                  backgroundColor: "#11111190",
+                  border: 1,
+                  borderColor: "divider",
+                  p: 2,
+                  overflowY: "auto",
+                }}
+              >
+                <DisplayRecursiveType id={numberSearch} />
+              </Box>
             ) : null}
 
             {typeString && validSearch ? (
@@ -168,13 +193,13 @@ export const SearchTypes = () => {
                       underline="hover"
                       color="inherit"
                       sx={{ fontWeight: "normal" }}
-                      href="/type-network"
+                      href="/type-graph"
                     >
-                      (from <InlineCode>Type Network</InlineCode>)
+                      (from <InlineCode>Type Graph</InlineCode>)
                     </Link>
                   </Typography>
                 </Stack>
-                <TypeRelationsContent resolvedType={resolvedType} />
+                <TypeRelationsContent typeId={resolvedType.id} />
               </>
             ) : null}
           </Stack>

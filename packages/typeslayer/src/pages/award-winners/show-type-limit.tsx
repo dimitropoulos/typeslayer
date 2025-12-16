@@ -26,7 +26,10 @@ import { Code } from "../../components/code";
 import { DisplayRecursiveType } from "../../components/display-recursive-type";
 import { NoData } from "../../components/no-data";
 import { TabLabel } from "../../components/tab-label";
-import { TypeSummary } from "../../components/type-summary";
+import {
+  getHumanReadableName,
+  TypeSummary,
+} from "../../components/type-summary";
 import { extractPath } from "../../components/utils";
 import {
   useAnalyzeTrace,
@@ -234,7 +237,13 @@ const LimitListItem = ({
   return (
     <ListItemButton onClick={onClick} selected={selected}>
       <ListItemText>
-        <TypeSummary resolvedType={resolvedType} suppressActions />
+        <TypeSummary
+          typeId={resolvedType.id}
+          flags={resolvedType.flags}
+          name={getHumanReadableName(resolvedType)}
+          showFlags
+          suppressActions
+        />
         <Stack gap={0.5}>
           <MaybePathCaption maybePath={extractPath(resolvedType)} />
           {inlineBarGraph}

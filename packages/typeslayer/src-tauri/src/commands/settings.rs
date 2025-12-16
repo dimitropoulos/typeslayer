@@ -23,8 +23,8 @@ pub async fn set_relative_paths(
 ) -> Result<(), String> {
     let mut data = state.lock().await;
     data.settings.relative_paths = value;
-    AppData::update_outputs(&data).await;
     debug!("[set_relative_paths] set to {}", value);
+    data.update_typeslayer_config_toml().await;
     Ok(())
 }
 
@@ -41,7 +41,7 @@ pub async fn set_prefer_editor_open(
 ) -> Result<(), String> {
     let mut data = state.lock().await;
     data.settings.prefer_editor_open = value;
-    AppData::update_outputs(&data).await;
+    data.update_typeslayer_config_toml().await;
     Ok(())
 }
 
@@ -55,7 +55,7 @@ pub async fn get_auto_start(state: State<'_, &Mutex<AppData>>) -> Result<bool, S
 pub async fn set_auto_start(state: State<'_, &Mutex<AppData>>, value: bool) -> Result<(), String> {
     let mut data = state.lock().await;
     data.settings.auto_start = value;
-    AppData::update_outputs(&data).await;
+    data.update_typeslayer_config_toml().await;
     Ok(())
 }
 
@@ -85,7 +85,7 @@ pub async fn set_preferred_editor(
     }
 
     data.settings.preferred_editor = Some(editor);
-    AppData::update_outputs(&data).await;
+    data.update_typeslayer_config_toml().await;
     Ok(())
 }
 
@@ -107,7 +107,7 @@ pub async fn set_extra_tsc_flags(
 ) -> Result<(), String> {
     let mut data = state.lock().await;
     data.settings.extra_tsc_flags = flags;
-    AppData::update_outputs(&data).await;
+    data.update_typeslayer_config_toml().await;
     Ok(())
 }
 
@@ -124,7 +124,7 @@ pub async fn set_apply_tsc_project_flag(
 ) -> Result<(), String> {
     let mut data = state.lock().await;
     data.settings.apply_tsc_project_flag = value;
-    AppData::update_outputs(&data).await;
+    data.update_typeslayer_config_toml().await;
     Ok(())
 }
 
@@ -143,7 +143,7 @@ pub async fn set_max_old_space_size(
 ) -> Result<(), String> {
     let mut data = state.lock().await;
     data.settings.max_old_space_size = size;
-    AppData::update_outputs(&data).await;
+    data.update_typeslayer_config_toml().await;
     Ok(())
 }
 
@@ -160,6 +160,6 @@ pub async fn set_max_stack_size(
 ) -> Result<(), String> {
     let mut data = state.lock().await;
     data.settings.max_stack_size = size;
-    AppData::update_outputs(&data).await;
+    data.update_typeslayer_config_toml().await;
     Ok(())
 }

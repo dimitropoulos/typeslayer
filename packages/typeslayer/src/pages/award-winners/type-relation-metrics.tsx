@@ -20,7 +20,6 @@ import { NoData } from "../../components/no-data";
 import { ShowMoreChildren } from "../../components/show-more-children";
 import {
   getHumanReadableName,
-  SimpleTypeSummary,
   TypeSummary,
 } from "../../components/type-summary";
 import {
@@ -96,6 +95,7 @@ export function RelationAward({
   const items = (
     <List>
       {linkStats?.links.map(({ targetId, sourceIds, path }, index) => {
+        const maybeResolvedType = partialIndexedTypeRegistry?.[targetId];
         return (
           <ListItemButton
             selected={index === selectedIndex}
@@ -104,12 +104,12 @@ export function RelationAward({
           >
             <ListItemText>
               <Stack sx={{ flexGrow: 1 }} gap={0}>
-                <SimpleTypeSummary
-                  id={targetId}
+                <TypeSummary
+                  typeId={targetId}
+                  flags={[]}
+                  showFlags={false}
                   loading={isLoadingPartialIndexedTypeRegistry}
-                  name={getHumanReadableName(
-                    partialIndexedTypeRegistry?.[targetId],
-                  )}
+                  name={getHumanReadableName(maybeResolvedType)}
                   suppressActions
                 />
                 <Stack gap={0.5}>
@@ -228,7 +228,12 @@ const TypeMetricsListItem = ({ typeId }: { typeId: TypeId }) => {
 
   return (
     <ListItem sx={sx}>
-      <TypeSummary resolvedType={resolvedType} />
+      <TypeSummary
+        typeId={resolvedType.id}
+        flags={resolvedType.flags}
+        name={getHumanReadableName(resolvedType)}
+        showFlags
+      />
 
       <Stack
         className="action-buttons"

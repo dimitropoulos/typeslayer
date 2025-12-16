@@ -17,7 +17,7 @@ pub async fn run_http_server(
     app_data: &'static Mutex<AppData>,
     listener: tokio::net::TcpListener,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    info!("Starting HTTP server for outputs on port 4765");
+    info!("[run_http_server] Starting HTTP server for outputs on port 4765");
 
     async fn serve_output(
         Path(name): Path<String>,
@@ -57,7 +57,7 @@ pub async fn run_http_server(
         .with_state(app_data);
 
     info!(
-        "HTTP server listening on {}",
+        "[run_http_server] HTTP server listening on {}",
         listener.local_addr().map_err(|e| e.to_string())?
     );
 

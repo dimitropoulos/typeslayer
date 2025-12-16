@@ -75,7 +75,7 @@ pub fn tool_definition() -> ToolDefinition<GetDuplicatePackagesExample> {
 }
 
 pub async fn execute(app_data: &Mutex<AppData>) -> String {
-    info!("get_duplicate_packages called");
+    info!("[get_duplicate_packages] called");
 
     // Lock app_data to access duplicate packages data
     let data = app_data.lock().await;
@@ -123,7 +123,7 @@ pub async fn execute(app_data: &Mutex<AppData>) -> String {
         .unwrap_or_else(|e| format!("{{\"error\": \"Failed to serialize response: {}\"}}", e));
 
     info!(
-        "get_duplicate_packages returning {} duplicates (total: {})",
+        "[get_duplicate_packages] returning {} duplicates (total: {})",
         response.duplicates.len(),
         response.total_duplicates
     );

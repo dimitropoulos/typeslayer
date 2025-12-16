@@ -52,7 +52,7 @@ where
 
     // Update state
     state_updater(&mut data, parsed_data.clone());
-    AppData::update_outputs(&data).await;
+    data.update_typeslayer_config_toml().await;
 
     Ok(parsed_data)
 }
@@ -112,7 +112,7 @@ async fn regenerate_analysis_after_upload(
     }
 
     // Update outputs after regeneration
-    AppData::update_outputs(&data).await;
+    data.update_typeslayer_config_toml().await;
     Ok(())
 }
 

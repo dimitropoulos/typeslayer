@@ -4,8 +4,9 @@ use std::{
 };
 
 use shlex::Quoter;
+use tauri::{AppHandle, Manager};
 use tokio::{fs, process::Command};
-use tracing::{debug, info};
+use tracing::debug;
 
 pub fn quote_if_needed(s: &str) -> String {
     // Equivalent to the now deprecated try_quote.
@@ -100,23 +101,32 @@ pub fn get_typeslayer_base_data_dir() -> PathBuf {
 pub fn detect_project_root_from_cwd() -> Option<PathBuf> {
     let cwd = std::env::current_dir().ok()?;
     let pkg_path = cwd.join(PACKAGE_JSON_FILENAME);
-    info!("checking for package.json in cwd: {}", cwd.display());
+    debug!(
+        "[detect_project_root_from_cwd] checking for package.json in cwd: {}",
+        cwd.display()
+    );
     if pkg_path.exists() {
-        info!("found package.json in cwd: {}", pkg_path.display());
+        debug!("found package.json in cwd: {}", pkg_path.display());
         return Some(pkg_path);
     }
 
     // Also check PWD environment variable in case cwd was changed
     if let Ok(pwd) = std::env::var("PWD") {
         let pwd_path = Path::new(&pwd).join(PACKAGE_JSON_FILENAME);
-        info!("checking for package.json in PWD: {}", pwd);
+        debug!(
+            "[detect_project_root_from_cwd] checking for package.json in PWD: {}",
+            pwd
+        );
         if pwd_path.exists() {
-            info!("found package.json in PWD: {}", pwd_path.display());
+            debug!(
+                "[detect_project_root_from_cwd] found package.json in PWD: {}",
+                pwd_path.display()
+            );
             return Some(pwd_path);
         }
     }
 
-    info!("no package.json found in cwd or PWD");
+    debug!("[detect_project_root_from_cwd] no package.json found in cwd or PWD");
     None
 }
 
@@ -176,4 +186,26 @@ pub async fn compute_window_title(project_root: PathBuf) -> String {
         Some(name) if !name.is_empty() => format!("{} | {}", default_title, name),
         _ => default_title,
     }
+}
+
+pub async fn set_window_title(app: &AppHandle, title: String) -> Result<(), String> {
+    let win = app
+        .get_webview_window("main")
+        .ok_or_else(|| "main window not found".to_string())?;
+    win.set_title(&title)
+        .map_err(|e| format!("failed to set title: {}", e))
+}
+
+// get the user's platform at runtime as a string
+// including, detect whether they're running on wsl
+// for linux and macos, we also return the output of `uname`
+pub async fn get_platform() -> Result<String, String> {
+    let info = os_info::get();
+    Ok(format!(
+        "{} {} {}",
+        info.os_type(),
+        info.version(),
+        info.architecture().unwrap_or("unknown")
+    )
+    .to_string())
 }

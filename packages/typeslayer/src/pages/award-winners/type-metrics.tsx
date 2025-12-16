@@ -12,7 +12,7 @@ import { useState } from "react";
 import { CenterLoader } from "../../components/center-loader";
 import { DisplayRecursiveType } from "../../components/display-recursive-type";
 import { NoData } from "../../components/no-data";
-import { SimpleTypeSummary } from "../../components/type-summary";
+import { TypeSummary } from "../../components/type-summary";
 import { useTypeGraph } from "../../hooks/tauri-hooks";
 import { AwardNavItem } from "./award-nav-item";
 import {
@@ -115,7 +115,13 @@ export function TypeMetricsAward({ awardId }: { awardId: TypeMetricsAwardId }) {
           >
             <ListItemText>
               <Stack sx={{ flexGrow: 1 }} gap={0}>
-                <SimpleTypeSummary id={id} name={name} suppressActions />
+                <TypeSummary
+                  typeId={id}
+                  name={name}
+                  flags={[]}
+                  showFlags={false}
+                  suppressActions
+                />
                 <Stack gap={0.5}>
                   <MaybePathCaption maybePath={path} />
                   <InlineBarGraph

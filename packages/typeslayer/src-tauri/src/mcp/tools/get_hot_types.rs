@@ -95,7 +95,7 @@ pub fn tool_definition() -> ToolDefinition<GetTypesExample> {
 }
 
 pub async fn execute(app_data: &Mutex<AppData>) -> String {
-    info!("get_hot_types called");
+    info!("[get_hot_types] called");
 
     // Lock app_data to access analyze_trace
     let data = app_data.lock().await;
@@ -134,7 +134,7 @@ pub async fn execute(app_data: &Mutex<AppData>) -> String {
         .unwrap_or_else(|e| format!("{{\"error\": \"Failed to serialize response: {}\"}}", e));
 
     info!(
-        "get_hot_types returning {} hotspots (total: {})",
+        "[get_hot_types] returning {} hotspots (total: {})",
         response.hot_types.len(),
         response.total_hot_types
     );

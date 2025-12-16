@@ -78,7 +78,7 @@ export const Step3Diagnostics = ({
       setTimeout(() => setFadePhase(2), 500);
       setTimeout(() => {
         navigate({
-          to: "/type-network",
+          to: "/type-graph",
         });
       }, 1500);
     } catch (e) {
@@ -178,7 +178,7 @@ export const Step3Diagnostics = ({
             <BigAction
               title="Type Graph"
               description="creates a graph of all types and their relationships to visualize complex type dependencies"
-              unlocks={["Type Network"]}
+              unlocks={["Type Graph"]}
               isLoading={isProcessing && processingStep === 3}
             />
           </Stack>

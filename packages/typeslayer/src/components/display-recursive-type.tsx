@@ -12,7 +12,11 @@ import { theme } from "../theme";
 import { InlineCode } from "./inline-code";
 import { OpenablePath, propertyTextStyle } from "./openable-path";
 import { ShowMoreChildren } from "./show-more-children";
-import { SimpleTypeSummary, TypeSummary } from "./type-summary";
+import {
+  getHumanReadableName,
+  TypeSummary,
+  TypeSummarySkeleton,
+} from "./type-summary";
 
 // Type guard for Location objects coming from backend serialization
 function isLocation(v: unknown): v is {
@@ -77,7 +81,7 @@ export const DisplayRecursiveType: FC<{
     return (
       <Stack sx={wrapperSx}>
         {noChildrenDot}
-        <SimpleTypeSummary name="asdf" id={0} loading />
+        <TypeSummarySkeleton showFlags />
       </Stack>
     );
   }
@@ -100,7 +104,12 @@ export const DisplayRecursiveType: FC<{
       <Stack sx={wrapperSx}>
         {noChildrenDot}
         <Stack>
-          <TypeSummary resolvedType={resolvedType} showFlags />
+          <TypeSummary
+            typeId={id}
+            flags={resolvedType.flags}
+            name={getHumanReadableName(resolvedType)}
+            showFlags
+          />
           <Alert severity="error" style={{}}>
             <AlertTitle>Type Depth Exceeded</AlertTitle>
             you went pretty deep. we're stopping here. if you wanna keep going
@@ -116,7 +125,12 @@ export const DisplayRecursiveType: FC<{
       <Stack sx={wrapperSx}>
         {noChildrenDot}
         <Stack>
-          <TypeSummary resolvedType={resolvedType} showFlags />
+          <TypeSummary
+            typeId={id}
+            flags={resolvedType.flags}
+            name={getHumanReadableName(resolvedType)}
+            showFlags
+          />
           <Alert severity="info" style={{}}>
             <AlertTitle>Recursive Type</AlertTitle>
             <Stack gap={0.5}>
@@ -395,7 +409,12 @@ export const DisplayRecursiveType: FC<{
     <Stack sx={wrapperSx}>
       {twiddle}
       <Stack>
-        <TypeSummary showFlags resolvedType={resolvedType} />
+        <TypeSummary
+          showFlags
+          typeId={resolvedType.id}
+          flags={resolvedType.flags}
+          name={getHumanReadableName(resolvedType)}
+        />
         {expanded && !noChildren && (
           <Stack gap={1} sx={{ marginTop: 0.5 }}>
             {children}
