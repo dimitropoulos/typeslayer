@@ -5,7 +5,6 @@ use axum::{
     response::IntoResponse,
     routing::get,
 };
-use std::sync::Arc;
 use tokio::sync::Mutex;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{error, info};
@@ -15,14 +14,14 @@ use tracing::{error, info};
 /// This server runs on port 4765 and serves files from the outputs directory.
 /// It's independent of the Tauri app and can run alongside it.
 pub async fn run_http_server(
-    app_data: Arc<Mutex<AppData>>,
+    app_data: &'static Mutex<AppData>,
     listener: tokio::net::TcpListener,
 ) -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting HTTP server for outputs on port 4765");
 
     async fn serve_output(
         Path(name): Path<String>,
-        State(app_data): State<Arc<Mutex<AppData>>>,
+        State(app_data): State<&Mutex<AppData>>,
     ) -> impl IntoResponse {
         let outputs_dir = app_data
             .lock()

@@ -11,7 +11,7 @@ mod type_graph;
 pub mod utils;
 mod validate;
 
-use std::sync::Arc;
+use crate::process_controller::ProcessController;
 use tauri::Manager;
 use tokio::sync::Mutex;
 
@@ -20,8 +20,10 @@ pub use mcp::run_mcp_server;
 
 use crate::utils::compute_window_title;
 
-pub async fn run_tauri_app(app_data: Arc<Mutex<app_data::AppData>>) {
-    let project_root = app_data.lock().await.project_root.clone();
+pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
+    let app = app_data.lock().await;
+    let project_root = app.project_root.clone();
+    drop(app);
 
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
@@ -29,6 +31,7 @@ pub async fn run_tauri_app(app_data: Arc<Mutex<app_data::AppData>>) {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_screenshots::init())
         .setup(move |app| {
+            app.manage(ProcessController::new());
             app.manage(app_data);
 
             // Initialize MCP status tracker

@@ -1,17 +1,13 @@
 use crate::{
     analyze_trace::{
         AnalyzeTraceOptions, AnalyzeTraceResult, analyze_trace, constants::ANALYZE_TRACE_FILENAME,
-    },
-    app_data::AppData,
-    type_graph::{TYPE_GRAPH_FILENAME, TypeGraph},
-    utils::make_cli_arg,
-    validate::{
+    }, app_data::AppData, process_controller::ProcessController, type_graph::{TYPE_GRAPH_FILENAME, TypeGraph}, utils::make_cli_arg, validate::{
         trace_json::{TRACE_JSON_FILENAME, TraceEvent, read_trace_json},
         types_json::{TYPES_JSON_FILENAME, TypesJsonSchema, load_types_json},
         utils::CPU_PROFILE_FILENAME,
-    },
+    }
 };
-use std::{path::Path, sync::Arc};
+use std::path::Path;
 use tauri::{AppHandle, State};
 use tokio::sync::Mutex;
 use tracing::{debug, error, info};
@@ -56,17 +52,16 @@ pub async fn validate_types_and_trace_async(
 }
 
 #[tauri::command]
-pub async fn generate_trace(state: State<'_, Arc<Mutex<AppData>>>) -> Result<(), String> {
+pub async fn generate_trace(app_data: State<'_, &Mutex<AppData>>, process_controller: State<'_, ProcessController>) -> Result<(), String> {
     // Clone the entire AppData to move into the blocking task
-    let data = state.lock().await;
+    let mut data = app_data.lock().await;
     let outputs_dir = data.outputs_dir().to_string_lossy().to_string();
 
     info!("[generate_trace] will write outputs under {}", outputs_dir);
     let outputs_dir_for_closure = outputs_dir.clone();
     let flag = make_cli_arg("--generateTrace", &outputs_dir_for_closure);
 
-    data
-        .run_tsc(flag, "TypeScript compilation with trace generation")
+    data.run_tsc(&*process_controller, flag, "TypeScript compilation with trace generation")
         .await
         .map_err(|e| format!("generate_trace join error: {}", e))?;
 
@@ -82,7 +77,6 @@ pub async fn generate_trace(state: State<'_, Arc<Mutex<AppData>>>) -> Result<(),
     }
 
     let (types, trace) = validate_types_and_trace_async(&outputs_dir).await?;
-    let mut data = state.lock().await;
     data.types_json = types.clone();
     data.trace_json = trace;
     AppData::update_outputs(&data).await;
@@ -96,12 +90,9 @@ pub async fn generate_trace(state: State<'_, Arc<Mutex<AppData>>>) -> Result<(),
 }
 
 #[tauri::command]
-pub async fn generate_cpu_profile(state: State<'_, Arc<Mutex<AppData>>>) -> Result<(), String> {
-    let app_data_clone = {
-        let data = state.lock().await;
-        data.clone()
-    };
-    let outputs_dir = app_data_clone.outputs_dir().to_string_lossy().to_string();
+pub async fn generate_cpu_profile(state: State<'_, &Mutex<AppData>>, process_controller: State<'_, ProcessController>) -> Result<(), String> {
+    let mut data = state.lock().await;
+    let outputs_dir = data.outputs_dir().to_string_lossy().to_string();
 
     info!(
         "[generate_cpu_profile]: will write profile under {}",
@@ -111,8 +102,7 @@ pub async fn generate_cpu_profile(state: State<'_, Arc<Mutex<AppData>>>) -> Resu
     let generation_path = Path::new(&outputs_dir_for_closure).join(CPU_PROFILE_FILENAME);
     let flag = make_cli_arg("--generateCpuProfile", &generation_path.to_string_lossy());
 
-    app_data_clone
-        .run_tsc(flag, "TypeScript CPU profile run")
+    data.run_tsc(&*process_controller, flag, "TypeScript CPU profile run")
         .await
         .map_err(|e| format!("[generate_cpu_profile] errored: {}", e))?;
 
@@ -120,7 +110,6 @@ pub async fn generate_cpu_profile(state: State<'_, Arc<Mutex<AppData>>>) -> Resu
     let path = Path::new(&outputs_dir).join(CPU_PROFILE_FILENAME);
     match tokio::fs::read_to_string(&path).await {
         Ok(contents) => {
-            let mut data = state.lock().await;
             data.cpu_profile = Some(contents);
             debug!(
                 "[generate_cpu_profile] cached CPU profile of size {} bytes",
@@ -136,13 +125,11 @@ pub async fn generate_cpu_profile(state: State<'_, Arc<Mutex<AppData>>>) -> Resu
 
 #[tauri::command]
 pub async fn generate_analyze_trace(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
     options: Option<AnalyzeTraceOptions>,
 ) -> Result<(), String> {
-    let outputs_dir = {
-        let data = state.lock().await;
-        data.outputs_dir().to_string_lossy().to_string()
-    };
+    let mut data = state.lock().await;
+    let outputs_dir = data.outputs_dir().to_string_lossy().to_string();
     debug!(
         "[generate_analyze_trace] reading inputs and writing output under {}",
         outputs_dir
@@ -164,7 +151,6 @@ pub async fn generate_analyze_trace(
     match handle.await {
         Ok(r) => {
             if let Ok(res) = &r {
-                let mut data = state.lock().await;
                 data.analyze_trace = Some(res.clone());
                 AppData::update_outputs(&data).await;
                 debug!(
@@ -183,11 +169,10 @@ pub async fn generate_analyze_trace(
 #[tauri::command]
 pub async fn generate_type_graph(
     _app: AppHandle,
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
 ) -> Result<(), String> {
-    let types: TypesJsonSchema = {
-        let app_data = state.lock().await;
-
+    let mut app_data = state.lock().await;
+    let types: &TypesJsonSchema = {
         // Check if both types.json and trace.json exist
         if app_data.types_json.is_empty() {
             return Err("Cannot build type graph: types.json is required".to_string());
@@ -197,11 +182,11 @@ pub async fn generate_type_graph(
             return Err("Cannot build type graph: trace.json is required".to_string());
         }
 
-        app_data.types_json.clone()
+        &app_data.types_json
     };
 
     // Build the graph
-    let graph = TypeGraph::from_types(&types);
+    let graph = TypeGraph::from_types(types);
 
     // Attach to LayerCake or settings? Keep simple: stash in `cake` extras via BTreeMap
     // For now, we add it to an ad-hoc static holder in AppData via lazy BTreeMap-like cache.
@@ -210,20 +195,16 @@ pub async fn generate_type_graph(
     // Minimal approach: serialize into a ForceGraphData and keep as text output for retrieval.
 
     // Store in AppData for quick in-memory access
-    {
-        let mut app_data = state.lock().await;
-        app_data.type_graph = Some(graph);
+    app_data.type_graph = Some(graph);
 
-        // Persist to outputs/type-graph.json for refresh-on-boot
-        let outputs_dir = app_data.outputs_dir();
-        let path = outputs_dir.join(TYPE_GRAPH_FILENAME);
-        let json = serde_json::to_string_pretty(&app_data.type_graph)
-            .map_err(|e| format!("Failed to serialize type_graph: {e}"))?;
-        std::fs::create_dir_all(&outputs_dir)
-            .map_err(|e| format!("Failed to create outputs dir: {e}"))?;
-        std::fs::write(&path, json)
-            .map_err(|e| format!("Failed to write {}: {e}", path.display()))?;
-    }
+    // Persist to outputs/type-graph.json for refresh-on-boot
+    let outputs_dir = app_data.outputs_dir();
+    let path = outputs_dir.join(TYPE_GRAPH_FILENAME);
+    let json = serde_json::to_string_pretty(&app_data.type_graph)
+        .map_err(|e| format!("Failed to serialize type_graph: {e}"))?;
+    std::fs::create_dir_all(&outputs_dir)
+        .map_err(|e| format!("Failed to create outputs dir: {e}"))?;
+    std::fs::write(&path, json).map_err(|e| format!("Failed to write {}: {e}", path.display()))?;
 
     Ok(())
 }

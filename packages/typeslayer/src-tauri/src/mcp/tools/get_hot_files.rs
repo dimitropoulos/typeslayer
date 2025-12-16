@@ -3,7 +3,6 @@ use crate::{
     mcp::tools::{ToolDefinition, ToolParameter},
 };
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::info;
 
@@ -51,7 +50,7 @@ pub fn tool_definition() -> ToolDefinition<GetHotFilesExample> {
     }
 }
 
-pub async fn execute(app_data: Arc<Mutex<AppData>>) -> String {
+pub async fn execute(app_data: &Mutex<AppData>) -> String {
     info!("get_hot_files called");
 
     // Lock app_data to access trace data

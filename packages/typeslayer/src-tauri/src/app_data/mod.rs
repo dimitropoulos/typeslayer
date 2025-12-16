@@ -25,11 +25,10 @@ use crate::{
         utils::CPU_PROFILE_FILENAME,
     },
 };
-use std::process::Stdio;
 use std::{cmp::Ordering, path::PathBuf};
 use std::{fs::File, io::BufReader};
-use tokio::fs;
 use tokio::process::Command;
+use tokio::{fs, io::AsyncReadExt};
 use tracing::{debug, error, info};
 
 #[derive(Clone)]
@@ -47,7 +46,6 @@ pub struct AppData {
     pub cake: LayerCake,
     pub auth_code: Option<String>,
     pub type_graph: Option<TypeGraph>,
-    pub process_controller: ProcessController,
     pub data_dir: PathBuf,
 }
 
@@ -89,7 +87,6 @@ impl AppData {
             cake,
             auth_code,
             type_graph,
-            process_controller: ProcessController::new(),
             data_dir,
         };
         app.discover_tsconfigs().await?;
@@ -252,15 +249,12 @@ impl AppData {
         })
     }
 
-    // Blocking helper that runs tsc directly
-    pub async fn run_tsc(&self, flag: String, context: &str) -> Result<(), String> {
+    pub async fn run_tsc(&self, process_controller: &ProcessController, flag: String, context: &str) -> Result<(), String> {
         let outputs_dir = self.outputs_dir().to_string_lossy().to_string();
 
         fs::create_dir_all(&outputs_dir)
             .await
             .map_err(|e| format!("Failed to create data directory: {e}"))?;
-
-        self.process_controller.reset_cancel_flag().await;
 
         let tsc_command = self.get_tsc_call(&flag)?;
 
@@ -279,41 +273,39 @@ impl AppData {
         // raw_arg makes sure a command like `npx tsc --project "foo bar"` is interpreted by the shell.
         // The default with `.arg`, on Windows, is more like `npx tsc --project "\"foo bar\""` but shell quoting is more complicated.
         #[cfg(target_os = "windows")]
-        cmd.raw_arg(format!("\"{}\"", tsc_command.command));
+        {
+            cmd.raw_arg(format!("\"{}\"", tsc_command.command));
+            // Set CREATE_NO_WINDOW https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags
+            cmd.creation_flags(0x08000000);
+        }
 
         #[cfg(not(target_os = "windows"))]
         cmd.arg(tsc_command.command);
 
-        cmd.current_dir(&cwd)
-            .envs(tsc_command.env)
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
+        cmd.current_dir(&cwd).envs(tsc_command.env);
 
-        let child = cmd
-            .spawn()
-            .map_err(|e| format!("Failed to execute command: {e}"))?;
-
-        if let Some(id) = child.id() {
-            self.process_controller.register_process(id).await;
-        }
-
-        let output = child
-            .wait_with_output()
-            .await
-            .map_err(|e| format!("Failed to wait for command completion: {e}"))?;
-
-        let cancelled = self.process_controller.cancel_requested().await;
-        self.process_controller.clear_current_process().await;
-        self.process_controller.reset_cancel_flag().await;
-
-        if cancelled {
-            return Err("Operation cancelled".to_string());
-        }
+        let output = process_controller.run_command(cmd).await?;
+        let Some(mut output) = output else {
+            return Err("Command canceled".to_string());
+        };
 
         if !output.status.success() {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let stderr = String::from_utf8_lossy(&output.stderr);
+            let mut stdout = Vec::new();
+            output
+                .stdout
+                .read_to_end(&mut stdout)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            let mut stderr = Vec::new();
+            output
+                .stderr
+                .read_to_end(&mut stderr)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            let stdout = String::from_utf8_lossy(&stdout);
+            let stderr = String::from_utf8_lossy(&stderr);
             return Err(format!(
                 "{context} failed:\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}"
             ));

@@ -3,16 +3,13 @@ use crate::{
     type_graph::{LinkKind, get_relationships_for_type, human_readable_name},
     validate::{trace_json::TraceEvent, types_json::ResolvedType, utils::TypeId},
 };
-use std::{
-    collections::HashMap,
-    sync::{Arc},
-};
+use std::{collections::HashMap};
 use tauri::State;
 use tokio::sync::Mutex;
 
 #[tauri::command]
 pub async fn get_links_to_type_id(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
     type_id: usize,
 ) -> Result<Vec<(LinkKind, Vec<(TypeId, String)>)>, String> {
     let data = state.lock().await;
@@ -46,7 +43,7 @@ pub async fn get_links_to_type_id(
 
 #[tauri::command]
 pub async fn get_resolved_type_by_id(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
     type_id: Option<usize>,
 ) -> Result<Option<ResolvedType>, String> {
     if let Some(id) = type_id {
@@ -63,7 +60,7 @@ pub async fn get_resolved_type_by_id(
 
 #[tauri::command]
 pub async fn get_resolved_types_by_ids(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
     type_ids: Option<Vec<usize>>,
 ) -> Result<HashMap<usize, Option<ResolvedType>>, String> {
     let mut result = HashMap::new();
@@ -79,7 +76,7 @@ pub async fn get_resolved_types_by_ids(
 
 #[tauri::command]
 pub async fn get_recursive_resolved_types(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
     type_id: Option<usize>,
 ) -> Result<HashMap<TypeId, ResolvedType>, String> {
     if type_id.is_none() {
@@ -113,7 +110,7 @@ pub async fn get_recursive_resolved_types(
 
 #[tauri::command]
 pub async fn get_traces_related_to_typeid(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
     type_id: usize,
 ) -> Result<Vec<TraceEvent>, String> {
     let typeid = type_id as i64;

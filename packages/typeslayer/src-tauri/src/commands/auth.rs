@@ -1,5 +1,4 @@
 use base64::{Engine as _, engine::general_purpose};
-use std::sync::Arc;
 use tauri::State;
 use tokio::sync::Mutex;
 
@@ -78,7 +77,7 @@ pub fn is_valid_key(key: &str) -> bool {
 
 #[tauri::command]
 pub async fn validate_auth_code(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
     code: String,
 ) -> Result<bool, String> {
     let mut data = state.lock().await;
@@ -90,7 +89,7 @@ pub async fn validate_auth_code(
 }
 
 #[tauri::command]
-pub async fn is_authorized(state: State<'_, Arc<Mutex<AppData>>>) -> Result<bool, String> {
+pub async fn is_authorized(state: State<'_, &Mutex<AppData>>) -> Result<bool, String> {
     let data = state.lock().await;
     if let Some(ref code) = data.auth_code {
         let valid = is_valid_key(code);

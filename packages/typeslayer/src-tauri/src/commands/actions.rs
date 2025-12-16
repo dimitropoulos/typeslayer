@@ -3,7 +3,7 @@ use crate::{
     layercake::ResolveStringArgs,
     utils::{AVAILABLE_EDITORS, command_exists, compute_window_title},
 };
-use std::{path::Path, sync::Arc};
+use std::{path::Path};
 use tauri::State;
 use tauri::{AppHandle, Manager, WebviewWindow};
 use tokio::{process::Command, sync::Mutex};
@@ -83,19 +83,14 @@ fn capture_window_to_png<R: tauri::Runtime>(window: &WebviewWindow<R>) -> Result
 }
 
 #[tauri::command]
-pub async fn open_file(state: State<'_, Arc<Mutex<AppData>>>, path: String) -> Result<(), String> {
+pub async fn open_file(state: State<'_, &Mutex<AppData>>, path: String) -> Result<(), String> {
+    let data = state.lock().await;
+
     // Extract settings without holding the lock during blocking operations.
-    let (prefer_editor, preferred_editor) = {
-        let data = state.lock().await;
-        (
-            data.settings.prefer_editor_open,
-            data.settings.preferred_editor.clone(),
-        )
-    };
+    let prefer_editor = data.settings.prefer_editor_open;
 
     // Resolve editor via precedence using the app's cake (Env > Flag > File)
     let cli_or_env_editor = {
-        let data = state.lock().await;
         let v = data.cake.resolve_string(ResolveStringArgs {
             env: "EDITOR",
             flag: "--editor",
@@ -129,7 +124,7 @@ pub async fn open_file(state: State<'_, Arc<Mutex<AppData>>>, path: String) -> R
             .collect();
         // Determine editor to use: CLI/env > preferred_editor > first available
         let editor_to_use = cli_or_env_editor
-            .or(preferred_editor)
+            .or_else(|| data.settings.preferred_editor.clone())
             .or_else(|| available_editors.first().map(|(cmd, _)| cmd.clone()));
 
         // Build list of editors to try
@@ -190,7 +185,7 @@ pub async fn open_file(state: State<'_, Arc<Mutex<AppData>>>, path: String) -> R
 #[tauri::command]
 pub async fn set_window_title_from_project(
     app: tauri::AppHandle,
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
 ) -> Result<(), String> {
     let guard = state.lock().await;
     let title = compute_window_title(guard.project_root.clone());

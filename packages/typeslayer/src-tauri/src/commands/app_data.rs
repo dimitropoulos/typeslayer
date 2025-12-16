@@ -1,20 +1,13 @@
 use crate::{
-    analyze_trace::{AnalyzeTraceResult, constants::ANALYZE_TRACE_FILENAME},
-    app_data::AppData,
-    commands::generate::generate_type_graph,
-    type_graph::TypeGraph,
-    validate::{trace_json::TraceEvent, types_json::TypesJsonSchema},
+    analyze_trace::{AnalyzeTraceResult, constants::ANALYZE_TRACE_FILENAME}, app_data::AppData, commands::generate::generate_type_graph, process_controller::ProcessController, type_graph::TypeGraph, validate::{trace_json::TraceEvent, types_json::TypesJsonSchema}
 };
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::path::{Path, PathBuf};
 use tauri::{AppHandle, State};
 use tokio::sync::Mutex;
 use tracing::debug;
 
 #[tauri::command]
-pub async fn get_project_root(state: State<'_, Arc<Mutex<AppData>>>) -> Result<String, String> {
+pub async fn get_project_root(state: State<'_, &Mutex<AppData>>) -> Result<String, String> {
     Ok(state
         .lock()
         .await
@@ -25,7 +18,7 @@ pub async fn get_project_root(state: State<'_, Arc<Mutex<AppData>>>) -> Result<S
 
 #[tauri::command]
 pub async fn set_project_root(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
     project_root: String,
 ) -> Result<(), String> {
     let mut data = state.lock().await;
@@ -35,18 +28,14 @@ pub async fn set_project_root(
 }
 
 #[tauri::command]
-pub async fn get_types_json(
-    state: State<'_, Arc<Mutex<AppData>>>,
-) -> Result<TypesJsonSchema, String> {
+pub async fn get_types_json(state: State<'_, &Mutex<AppData>>) -> Result<TypesJsonSchema, String> {
     let data = state.lock().await;
     debug!("[get_types_json] returning {} types", data.types_json.len());
     Ok(data.types_json.clone())
 }
 
 #[tauri::command]
-pub async fn get_trace_json(
-    state: State<'_, Arc<Mutex<AppData>>>,
-) -> Result<Vec<TraceEvent>, String> {
+pub async fn get_trace_json(state: State<'_, &Mutex<AppData>>) -> Result<Vec<TraceEvent>, String> {
     let data = state.lock().await;
     debug!(
         "[get_trace_json] returning {} trace events",
@@ -57,19 +46,16 @@ pub async fn get_trace_json(
 
 #[tauri::command]
 pub async fn get_analyze_trace(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
 ) -> Result<AnalyzeTraceResult, String> {
+    let mut data = state.lock().await;
     // Serve cached value if present
-    {
-        let data = state.lock().await;
-        if let Some(result) = &data.analyze_trace {
-            return Ok(result.clone());
-        }
+    if let Some(result) = &data.analyze_trace {
+        return Ok(result.clone());
     }
 
     // Read from disk and cache
     let path = {
-        let data = state.lock().await;
         let outputs_dir = data.outputs_dir().to_string_lossy().to_string();
         Path::new(&outputs_dir).join(ANALYZE_TRACE_FILENAME)
     };
@@ -78,7 +64,6 @@ pub async fn get_analyze_trace(
         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
     let parsed: AnalyzeTraceResult = serde_json::from_str(&contents)
         .map_err(|e| format!("Failed to parse {}: {}", path.display(), e))?;
-    let mut data = state.lock().await;
     data.analyze_trace = Some(parsed.clone());
     debug!(
         "[get_analyze_trace] loaded analyze trace from disk with size {} bytes",
@@ -88,9 +73,7 @@ pub async fn get_analyze_trace(
 }
 
 #[tauri::command]
-pub async fn get_cpu_profile(
-    state: State<'_, Arc<Mutex<AppData>>>,
-) -> Result<Option<String>, String> {
+pub async fn get_cpu_profile(state: State<'_, &Mutex<AppData>>) -> Result<Option<String>, String> {
     let data = state.lock().await;
     debug!(
         "[get_cpu_profile] returning CPU profile of size {} bytes",
@@ -100,9 +83,7 @@ pub async fn get_cpu_profile(
 }
 
 #[tauri::command]
-pub async fn get_tsconfig_paths(
-    state: State<'_, Arc<Mutex<AppData>>>,
-) -> Result<Vec<String>, String> {
+pub async fn get_tsconfig_paths(state: State<'_, &Mutex<AppData>>) -> Result<Vec<String>, String> {
     let data = state.lock().await;
     debug!(
         "[get_tsconfig_paths] returning {} tsconfig paths",
@@ -117,7 +98,7 @@ pub async fn get_tsconfig_paths(
 
 #[tauri::command]
 pub async fn get_selected_tsconfig(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
 ) -> Result<Option<String>, String> {
     let data = state.lock().await;
     debug!(
@@ -132,7 +113,7 @@ pub async fn get_selected_tsconfig(
 
 #[tauri::command]
 pub async fn set_selected_tsconfig(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
     tsconfig_path: String,
 ) -> Result<(), String> {
     let mut data = state.lock().await;
@@ -162,7 +143,7 @@ pub async fn set_selected_tsconfig(
 }
 
 #[tauri::command]
-pub async fn get_data_dir(state: State<'_, Arc<Mutex<AppData>>>) -> Result<String, String> {
+pub async fn get_data_dir(state: State<'_, &Mutex<AppData>>) -> Result<String, String> {
     let data = state.lock().await;
     Ok(data.data_dir.to_string_lossy().to_string())
 }
@@ -171,19 +152,16 @@ pub async fn get_data_dir(state: State<'_, Arc<Mutex<AppData>>>) -> Result<Strin
 #[tauri::command]
 pub async fn get_type_graph(
     app: AppHandle,
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
 ) -> Result<TypeGraph, String> {
+    let data = state.lock().await;
     // If not yet built, build once
-    let needs_build = {
-        let app_data = state.lock().await;
-        app_data.type_graph.is_none()
-    };
+    let needs_build = data.type_graph.is_none();
     if needs_build {
         generate_type_graph(app.clone(), state.clone()).await?;
     }
 
-    let app_data = state.lock().await;
-    let fg = app_data
+    let fg = data
         .type_graph
         .as_ref()
         .ok_or_else(|| "type graph unavailable".to_string())?;
@@ -192,18 +170,14 @@ pub async fn get_type_graph(
 
 #[tauri::command]
 pub async fn clear_outputs(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    process_controller: State<'_, ProcessController>,
+    state: State<'_, &Mutex<AppData>>,
     cancel_running: bool,
 ) -> Result<(), String> {
-    let controller = {
-        let data = state.lock().await;
-        data.process_controller.clone()
-    };
-
     if cancel_running {
-        controller.request_cancel().await?;
+        process_controller.request_cancel()?;
     }
+    state.lock().await.clear_outputs_dir().await?;
 
-    let mut data = state.lock().await;
-    data.clear_outputs_dir().await
+    Ok(())
 }

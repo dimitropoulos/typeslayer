@@ -8,10 +8,7 @@ use crate::{
         utils::CPU_PROFILE_FILENAME,
     },
 };
-use std::{
-    io::Write,
-    sync::{Arc, Mutex},
-};
+use std::{io::Write, sync::Mutex};
 use tauri::State;
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -22,7 +19,7 @@ pub struct BugReportFile {
 
 #[tauri::command]
 pub async fn get_bug_report_files(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
 ) -> Result<Vec<BugReportFile>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
     let mut files = Vec::new();
@@ -116,7 +113,7 @@ pub async fn get_bug_report_files(
 
 #[tauri::command]
 pub async fn create_bug_report(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
     description: String,
     stdout: Option<String>,
     stderr: Option<String>,

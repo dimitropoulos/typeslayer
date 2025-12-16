@@ -8,10 +8,7 @@ use crate::{
         utils::CPU_PROFILE_FILENAME,
     },
 };
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::path::{Path, PathBuf};
 use tauri::State;
 use tokio::sync::Mutex;
 
@@ -21,7 +18,7 @@ async fn upload_file_with_validation<T, F, U>(
     dest_filename: &str,
     parser: F,
     state_updater: U,
-    state: &State<'_, Arc<Mutex<AppData>>>,
+    state: &State<'_, &Mutex<AppData>>,
 ) -> Result<T, String>
 where
     T: Clone,
@@ -41,10 +38,8 @@ where
     let parsed_data = parser(file_path, &contents)?;
 
     // Copy file to outputs directory
-    let outputs_dir = {
-        let data = state.lock().await;
-        data.outputs_dir()
-    };
+    let mut data = state.lock().await;
+    let outputs_dir = data.outputs_dir();
 
     tokio::fs::create_dir_all(&outputs_dir)
         .await
@@ -56,11 +51,8 @@ where
         .map_err(|e| format!("Failed to copy file: {}", e))?;
 
     // Update state
-    {
-        let mut data = state.lock().await;
-        state_updater(&mut data, parsed_data.clone());
-        AppData::update_outputs(&data).await;
-    }
+    state_updater(&mut data, parsed_data.clone());
+    AppData::update_outputs(&data).await;
 
     Ok(parsed_data)
 }
@@ -79,7 +71,9 @@ fn find_paired_file(path: &Path, from: &str, to: &str) -> PathBuf {
 }
 
 // Helper to regenerate analyze trace and type graph after upload
-async fn regenerate_analysis_after_upload(state: &State<'_, Arc<Mutex<AppData>>>) -> Result<(), String> {
+async fn regenerate_analysis_after_upload(
+    state: &State<'_, &Mutex<AppData>>,
+) -> Result<(), String> {
     let outputs_dir = state
         .lock()
         .await
@@ -89,52 +83,42 @@ async fn regenerate_analysis_after_upload(state: &State<'_, Arc<Mutex<AppData>>>
 
     // Regenerate analyze trace
     let analyze_result = analyze_trace(&outputs_dir, None);
+    let mut data = state.lock().await;
     if let Ok(result) = analyze_result {
-        let mut data = state.lock().await;
         data.analyze_trace = Some(result);
     }
 
     // Generate type graph if both trace and types are available
-    let should_generate_graph = {
-        let data = state.lock().await;
-        !data.trace_json.is_empty() && !data.types_json.is_empty()
-    };
+    let should_generate_graph = !data.trace_json.is_empty() && !data.types_json.is_empty();
 
     if should_generate_graph {
-        let types = {
-            let data = state.lock().await;
-            data.types_json.clone()
-        };
+        let types = &data.types_json;
 
-        let graph = TypeGraph::from_types(&types);
+        let graph = TypeGraph::from_types(types);
 
         // Store in AppData and persist to disk
-        {
-            let mut data = state.lock().await;
-            data.type_graph = Some(graph);
+        data.type_graph = Some(graph);
 
-            // Persist to outputs/type-graph.json
-            let outputs_dir = data.outputs_dir();
-            let path = outputs_dir.join(TYPE_GRAPH_FILENAME);
-            let json = serde_json::to_string_pretty(&data.type_graph)
-                .map_err(|e| format!("Failed to serialize type_graph: {}", e))?;
+        // Persist to outputs/type-graph.json
+        let outputs_dir = data.outputs_dir();
+        let path = outputs_dir.join(TYPE_GRAPH_FILENAME);
+        let json = serde_json::to_string_pretty(&data.type_graph)
+            .map_err(|e| format!("Failed to serialize type_graph: {}", e))?;
 
-            std::fs::create_dir_all(&outputs_dir)
-                .map_err(|e| format!("Failed to create outputs directory: {}", e))?;
-            std::fs::write(&path, json)
-                .map_err(|e| format!("Failed to write type-graph.json: {}", e))?;
-        }
+        std::fs::create_dir_all(&outputs_dir)
+            .map_err(|e| format!("Failed to create outputs directory: {}", e))?;
+        std::fs::write(&path, json)
+            .map_err(|e| format!("Failed to write type-graph.json: {}", e))?;
     }
 
     // Update outputs after regeneration
-    let data = state.lock().await;
     AppData::update_outputs(&data).await;
     Ok(())
 }
 
 #[tauri::command]
 pub async fn upload_trace_json(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
     file_path: String,
 ) -> Result<(), String> {
     use Path;
@@ -184,7 +168,7 @@ pub async fn upload_trace_json(
 
 #[tauri::command]
 pub async fn upload_types_json(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
     file_path: String,
 ) -> Result<(), String> {
     use Path;
@@ -234,7 +218,7 @@ pub async fn upload_types_json(
 
 #[tauri::command]
 pub async fn upload_cpu_profile(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
     file_path: String,
 ) -> Result<(), String> {
     upload_file_with_validation(
@@ -257,7 +241,7 @@ pub async fn upload_cpu_profile(
 
 #[tauri::command]
 pub async fn upload_analyze_trace(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
     file_path: String,
 ) -> Result<(), String> {
     upload_file_with_validation(
@@ -279,7 +263,7 @@ pub async fn upload_analyze_trace(
 
 #[tauri::command]
 pub async fn upload_type_graph(
-    state: State<'_, Arc<Mutex<AppData>>>,
+    state: State<'_, &Mutex<AppData>>,
     file_path: String,
 ) -> Result<(), String> {
     upload_file_with_validation(

@@ -1,6 +1,6 @@
 use crate::app_data::AppData;
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use tracing::info;
 
 /// Resource definitions for outputs
@@ -58,10 +58,7 @@ pub mod resources {
     }
 
     #[allow(dead_code)]
-    pub fn read_output_resource(
-        uri: &str,
-        app_data: Arc<Mutex<AppData>>,
-    ) -> Result<String, String> {
+    pub fn read_output_resource(uri: &str, app_data: &Mutex<AppData>) -> Result<String, String> {
         let data = app_data.lock().map_err(|e| e.to_string())?;
 
         match uri {
@@ -112,14 +109,14 @@ pub mod resources {
 
 /// Get available resources
 #[allow(dead_code)]
-pub fn list_resources(_app_data: Arc<Mutex<AppData>>) -> Vec<ManagedResource> {
+pub fn list_resources(_app_data: &Mutex<AppData>) -> Vec<ManagedResource> {
     info!("MCP: Listing available resources");
     resources::get_output_resources()
 }
 
 /// Read a specific resource by URI
 #[allow(dead_code)]
-pub fn read_resource(uri: &str, app_data: Arc<Mutex<AppData>>) -> Result<(String, String), String> {
+pub fn read_resource(uri: &str, app_data: &Mutex<AppData>) -> Result<(String, String), String> {
     info!("MCP: Reading resource: {}", uri);
     let content = resources::read_output_resource(uri, app_data)?;
     Ok((uri.to_string(), content))
