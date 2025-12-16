@@ -31,9 +31,14 @@ async fn main() -> Result<(), String> {
         // Clone for HTTP server
         let app_data_for_http = app_data.clone();
 
+        // The listener is bound here to make sure the address is open for connections.
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:4765")
+            .await
+            .map_err(|e| e.to_string())?;
+
         // Spawn HTTP server in background with better error handling
         tokio::task::spawn(async move {
-            match typeslayer_lib::run_http_server(app_data_for_http).await {
+            match typeslayer_lib::run_http_server(app_data_for_http, listener).await {
                 Ok(_) => println!("HTTP server stopped gracefully"),
                 Err(e) => {
                     eprintln!("HTTP server error: {}", e);
@@ -41,9 +46,6 @@ async fn main() -> Result<(), String> {
                 }
             }
         });
-
-        // Give the HTTP server a moment to bind to the port
-        std::thread::sleep(std::time::Duration::from_millis(100));
 
         // Run Tauri GUI app with the shared AppData
         run_tauri_app(app_data).await;

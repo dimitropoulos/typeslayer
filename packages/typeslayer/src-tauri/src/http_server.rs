@@ -10,14 +10,13 @@ use tokio::sync::Mutex;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{error, info};
 
-const OUTPUT_SERVER_ADDR: &str = "127.0.0.1:4765";
-
 /// Standalone HTTP server for serving output files
 ///
 /// This server runs on port 4765 and serves files from the outputs directory.
 /// It's independent of the Tauri app and can run alongside it.
 pub async fn run_http_server(
     app_data: Arc<Mutex<AppData>>,
+    listener: tokio::net::TcpListener,
 ) -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting HTTP server for outputs on port 4765");
 
@@ -58,9 +57,10 @@ pub async fn run_http_server(
         .layer(cors)
         .with_state(app_data);
 
-    let listener = tokio::net::TcpListener::bind(OUTPUT_SERVER_ADDR).await?;
-
-    info!("HTTP server listening on http://127.0.0.1:4765");
+    info!(
+        "HTTP server listening on {}",
+        listener.local_addr().map_err(|e| e.to_string())?
+    );
 
     axum::serve(listener, app_router.into_make_service()).await?;
 
