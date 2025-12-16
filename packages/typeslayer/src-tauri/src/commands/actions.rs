@@ -3,13 +3,10 @@ use crate::{
     layercake::ResolveStringArgs,
     utils::{AVAILABLE_EDITORS, command_exists, compute_window_title},
 };
-use std::{
-    path::Path,
-    process::Command,
-    sync::{Arc, Mutex},
-};
+use std::{path::Path, sync::Arc};
 use tauri::State;
 use tauri::{AppHandle, Manager, WebviewWindow};
+use tokio::{process::Command, sync::Mutex};
 
 #[tauri::command]
 pub async fn take_screenshot(app: AppHandle) -> Result<String, String> {
@@ -89,7 +86,7 @@ fn capture_window_to_png<R: tauri::Runtime>(window: &WebviewWindow<R>) -> Result
 pub async fn open_file(state: State<'_, Arc<Mutex<AppData>>>, path: String) -> Result<(), String> {
     // Extract settings without holding the lock during blocking operations.
     let (prefer_editor, preferred_editor) = {
-        let data = state.lock().map_err(|e| e.to_string())?;
+        let data = state.lock().await;
         (
             data.settings.prefer_editor_open,
             data.settings.preferred_editor.clone(),
@@ -98,7 +95,7 @@ pub async fn open_file(state: State<'_, Arc<Mutex<AppData>>>, path: String) -> R
 
     // Resolve editor via precedence using the app's cake (Env > Flag > File)
     let cli_or_env_editor = {
-        let data = state.lock().map_err(|e| e.to_string())?;
+        let data = state.lock().await;
         let v = data.cake.resolve_string(ResolveStringArgs {
             env: "EDITOR",
             flag: "--editor",
@@ -124,76 +121,69 @@ pub async fn open_file(state: State<'_, Arc<Mutex<AppData>>>, path: String) -> R
         return Err(format!("Path does not exist: {file_path}"));
     }
 
-    let handle = tauri::async_runtime::spawn_blocking(move || {
-        if prefer_editor {
-            // Built-in available editors list
-            let available_editors: Vec<(String, String)> = AVAILABLE_EDITORS
-                .iter()
-                .map(|(c, n)| (c.to_string(), n.to_string()))
-                .collect();
-            // Determine editor to use: CLI/env > preferred_editor > first available
-            let editor_to_use = cli_or_env_editor
-                .or(preferred_editor)
-                .or_else(|| available_editors.first().map(|(cmd, _)| cmd.clone()));
+    if prefer_editor {
+        // Built-in available editors list
+        let available_editors: Vec<(String, String)> = AVAILABLE_EDITORS
+            .iter()
+            .map(|(c, n)| (c.to_string(), n.to_string()))
+            .collect();
+        // Determine editor to use: CLI/env > preferred_editor > first available
+        let editor_to_use = cli_or_env_editor
+            .or(preferred_editor)
+            .or_else(|| available_editors.first().map(|(cmd, _)| cmd.clone()));
 
-            // Build list of editors to try
-            let editors_to_try: Vec<String> = if let Some(ref editor) = editor_to_use {
-                let mut eds = vec![editor.clone()];
-                for (cmd, _label) in &available_editors {
-                    if cmd != editor {
-                        eds.push(cmd.clone());
-                    }
-                }
-                eds
-            } else {
-                available_editors
-                    .iter()
-                    .map(|(cmd, _)| cmd.clone())
-                    .collect()
-            };
-
-            // Try each editor in order
-            for ed in editors_to_try.iter() {
-                if !command_exists(ed) {
-                    continue;
-                }
-                // VS Code supports --goto path:line:col; others we just pass file path.
-                let attempt = if ed == "code" { &path } else { &file_path };
-                let status = if ed == "code" {
-                    Command::new(ed).arg("--goto").arg(attempt).status()
-                } else {
-                    Command::new(ed).arg(attempt).status()
-                };
-                match status {
-                    Ok(s) if s.success() => return Ok(()),
-                    _ => continue,
+        // Build list of editors to try
+        let editors_to_try: Vec<String> = if let Some(ref editor) = editor_to_use {
+            let mut eds = vec![editor.clone()];
+            for (cmd, _label) in &available_editors {
+                if cmd != editor {
+                    eds.push(cmd.clone());
                 }
             }
-            // Fall through to system opener if editors failed.
+            eds
+        } else {
+            available_editors
+                .iter()
+                .map(|(cmd, _)| cmd.clone())
+                .collect()
+        };
+
+        // Try each editor in order
+        for ed in editors_to_try.iter() {
+            if !command_exists(ed).await {
+                continue;
+            }
+            // VS Code supports --goto path:line:col; others we just pass file path.
+            let attempt = if ed == "code" { &path } else { &file_path };
+            let status = if ed == "code" {
+                Command::new(ed).arg("--goto").arg(attempt).status()
+            } else {
+                Command::new(ed).arg(attempt).status()
+            };
+            match status.await {
+                Ok(s) if s.success() => return Ok(()),
+                _ => continue,
+            }
         }
+        // Fall through to system opener if editors failed.
+    }
 
-        // System fallback (xdg-open/open/start) to let OS decide.
-        #[cfg(target_os = "linux")]
-        let fallback_status = Command::new("xdg-open").arg(&file_path).status();
-        #[cfg(target_os = "macos")]
-        let fallback_status = Command::new("open").arg(&file_path).status();
-        #[cfg(target_os = "windows")]
-        let fallback_status = Command::new("cmd")
-            .arg("/C")
-            .arg("start")
-            .arg("")
-            .arg(&file_path)
-            .status();
+    // System fallback (xdg-open/open/start) to let OS decide.
+    #[cfg(target_os = "linux")]
+    let fallback_status = Command::new("xdg-open").arg(&file_path).status();
+    #[cfg(target_os = "macos")]
+    let fallback_status = Command::new("open").arg(&file_path).status();
+    #[cfg(target_os = "windows")]
+    let fallback_status = Command::new("cmd")
+        .arg("/C")
+        .arg("start")
+        .arg("")
+        .arg(&file_path)
+        .status();
 
-        match fallback_status {
-            Ok(s) if s.success() => Ok(()),
-            _ => Err("Failed to open file with any known method".to_string()),
-        }
-    });
-
-    match handle.await {
-        Ok(r) => r,
-        Err(e) => Err(format!("open_file join error: {e}")),
+    match fallback_status.await {
+        Ok(s) if s.success() => Ok(()),
+        _ => Err("Failed to open file with any known method".to_string()),
     }
 }
 
@@ -202,7 +192,7 @@ pub async fn set_window_title_from_project(
     app: tauri::AppHandle,
     state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<(), String> {
-    let guard = state.lock().map_err(|_| "state poisoned".to_string())?;
+    let guard = state.lock().await;
     let title = compute_window_title(guard.project_root.clone());
     let win = app
         .get_webview_window("main")

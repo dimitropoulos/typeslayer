@@ -1,8 +1,9 @@
 #[cfg(unix)]
 use std::io;
 #[cfg(windows)]
-use std::process::Command;
-use std::sync::{Arc, Mutex};
+use tokio::process::Command;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 #[derive(Default)]
 struct ProcessState {
@@ -22,43 +23,43 @@ impl ProcessController {
         }
     }
 
-    pub fn register_process(&self, pid: u32) {
-        let mut state = self.inner.lock().expect("process controller poisoned");
+    pub async fn register_process(&self, pid: u32) {
+        let mut state = self.inner.lock().await;
         state.current_pid = Some(pid);
         state.cancel_requested = false;
     }
 
-    pub fn clear_current_process(&self) {
-        let mut state = self.inner.lock().expect("process controller poisoned");
+    pub async fn clear_current_process(&self) {
+        let mut state = self.inner.lock().await;
         state.current_pid = None;
     }
 
-    pub fn reset_cancel_flag(&self) {
-        let mut state = self.inner.lock().expect("process controller poisoned");
+    pub async fn reset_cancel_flag(&self) {
+        let mut state = self.inner.lock().await;
         state.cancel_requested = false;
     }
 
-    pub fn cancel_requested(&self) -> bool {
-        let state = self.inner.lock().expect("process controller poisoned");
+    pub async fn cancel_requested(&self) -> bool {
+        let state = self.inner.lock().await;
         state.cancel_requested
     }
 
-    pub fn request_cancel(&self) -> Result<(), String> {
+    pub async fn request_cancel(&self) -> Result<(), String> {
         let pid = {
-            let mut state = self.inner.lock().expect("process controller poisoned");
+            let mut state = self.inner.lock().await;
             state.cancel_requested = true;
             state.current_pid
         };
 
         if let Some(pid) = pid {
-            send_terminate_signal(pid)?;
+            send_terminate_signal(pid).await?;
         }
 
         Ok(())
     }
 }
 
-fn send_terminate_signal(pid: u32) -> Result<(), String> {
+async fn send_terminate_signal(pid: u32) -> Result<(), String> {
     #[cfg(unix)]
     unsafe {
         if libc::kill(pid as i32, libc::SIGTERM) == 0 {
@@ -72,6 +73,7 @@ fn send_terminate_signal(pid: u32) -> Result<(), String> {
         let status = Command::new("taskkill")
             .args(["/PID", &pid.to_string(), "/T", "/F"])
             .status()
+            .await
             .map_err(|e| format!("failed to execute taskkill: {e}"))?;
         if status.success() {
             Ok(())

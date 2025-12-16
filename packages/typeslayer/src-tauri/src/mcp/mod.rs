@@ -10,10 +10,8 @@ use rmcp::{
     tool, tool_handler, tool_router,
     transport::stdio,
 };
-use std::{
-    io,
-    sync::{Arc, Mutex},
-};
+use std::{io, sync::Arc};
+use tokio::sync::Mutex;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 

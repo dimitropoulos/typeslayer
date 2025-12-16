@@ -5,16 +5,17 @@ use crate::{
 };
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{Arc},
 };
 use tauri::State;
+use tokio::sync::Mutex;
 
 #[tauri::command]
 pub async fn get_links_to_type_id(
     state: State<'_, Arc<Mutex<AppData>>>,
     type_id: usize,
 ) -> Result<Vec<(LinkKind, Vec<(TypeId, String)>)>, String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
+    let data = state.lock().await;
 
     let mut links_by_kind = HashMap::<LinkKind, Vec<(TypeId, String)>>::new();
     if let Some(graph) = &data.type_graph {
@@ -49,7 +50,7 @@ pub async fn get_resolved_type_by_id(
     type_id: Option<usize>,
 ) -> Result<Option<ResolvedType>, String> {
     if let Some(id) = type_id {
-        let data = state.lock().map_err(|e| e.to_string())?;
+        let data = state.lock().await;
         if let Some(t) = data.types_json.get(id) {
             Ok(Some(t.clone()))
         } else {
@@ -66,7 +67,7 @@ pub async fn get_resolved_types_by_ids(
     type_ids: Option<Vec<usize>>,
 ) -> Result<HashMap<usize, Option<ResolvedType>>, String> {
     let mut result = HashMap::new();
-    let data = state.lock().map_err(|e| e.to_string())?;
+    let data = state.lock().await;
     if let Some(ids) = type_ids {
         for id in ids {
             let entry = data.types_json.get(id).cloned();
@@ -85,7 +86,7 @@ pub async fn get_recursive_resolved_types(
         return Ok(HashMap::new());
     }
 
-    let data = state.lock().map_err(|e| e.to_string())?;
+    let data = state.lock().await;
 
     let mut result = HashMap::new();
 
@@ -116,7 +117,7 @@ pub async fn get_traces_related_to_typeid(
     type_id: usize,
 ) -> Result<Vec<TraceEvent>, String> {
     let typeid = type_id as i64;
-    let data = state.lock().map_err(|e| e.to_string())?;
+    let data = state.lock().await;
     let events = data
         .trace_json
         .iter()

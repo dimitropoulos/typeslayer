@@ -3,7 +3,8 @@ use crate::{
     mcp::tools::{ToolDefinition, ToolParameter},
 };
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use tracing::info;
 
 pub const COMMAND: &str = "get_hot_types";
@@ -98,10 +99,7 @@ pub async fn execute(app_data: Arc<Mutex<AppData>>) -> String {
     info!("get_hot_types called");
 
     // Lock app_data to access analyze_trace
-    let data = match app_data.lock() {
-        Ok(d) => d,
-        Err(e) => return format!("{{\"error\": \"Failed to lock app data: {}\"}}", e),
-    };
+    let data = app_data.lock().await;
 
     // Check if analyze-trace data is available
     let analyze_trace = match data.analyze_trace.as_ref() {

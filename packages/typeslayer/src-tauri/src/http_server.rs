@@ -5,9 +5,12 @@ use axum::{
     response::IntoResponse,
     routing::get,
 };
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{error, info};
+
+const OUTPUT_SERVER_ADDR: &str = "127.0.0.1:4765";
 
 /// Standalone HTTP server for serving output files
 ///
@@ -22,10 +25,12 @@ pub async fn run_http_server(
         Path(name): Path<String>,
         State(app_data): State<Arc<Mutex<AppData>>>,
     ) -> impl IntoResponse {
-        let outputs_dir = {
-            let data = app_data.lock().unwrap();
-            data.outputs_dir().to_string_lossy().to_string()
-        };
+        let outputs_dir = app_data
+            .lock()
+            .await
+            .outputs_dir()
+            .to_string_lossy()
+            .to_string();
 
         let path = std::path::Path::new(&outputs_dir).join(&name);
 
@@ -53,7 +58,7 @@ pub async fn run_http_server(
         .layer(cors)
         .with_state(app_data);
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:4765").await?;
+    let listener = tokio::net::TcpListener::bind(OUTPUT_SERVER_ADDR).await?;
 
     info!("HTTP server listening on http://127.0.0.1:4765");
 

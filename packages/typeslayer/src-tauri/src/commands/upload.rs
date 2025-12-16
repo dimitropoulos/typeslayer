@@ -10,9 +10,10 @@ use crate::{
 };
 use std::{
     path::{Path, PathBuf},
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
 use tauri::State;
+use tokio::sync::Mutex;
 
 // Helper function for common upload validation and file operations
 async fn upload_file_with_validation<T, F, U>(
@@ -41,7 +42,7 @@ where
 
     // Copy file to outputs directory
     let outputs_dir = {
-        let data = state.lock().map_err(|e| e.to_string())?;
+        let data = state.lock().await;
         data.outputs_dir()
     };
 
@@ -56,9 +57,9 @@ where
 
     // Update state
     {
-        let mut data = state.lock().map_err(|e| e.to_string())?;
+        let mut data = state.lock().await;
         state_updater(&mut data, parsed_data.clone());
-        AppData::update_outputs(&data);
+        AppData::update_outputs(&data).await;
     }
 
     Ok(parsed_data)
@@ -78,10 +79,10 @@ fn find_paired_file(path: &Path, from: &str, to: &str) -> PathBuf {
 }
 
 // Helper to regenerate analyze trace and type graph after upload
-fn regenerate_analysis_after_upload(state: &State<'_, Arc<Mutex<AppData>>>) -> Result<(), String> {
+async fn regenerate_analysis_after_upload(state: &State<'_, Arc<Mutex<AppData>>>) -> Result<(), String> {
     let outputs_dir = state
         .lock()
-        .map_err(|e| e.to_string())?
+        .await
         .outputs_dir()
         .to_string_lossy()
         .to_string();
@@ -89,19 +90,19 @@ fn regenerate_analysis_after_upload(state: &State<'_, Arc<Mutex<AppData>>>) -> R
     // Regenerate analyze trace
     let analyze_result = analyze_trace(&outputs_dir, None);
     if let Ok(result) = analyze_result {
-        let mut data = state.lock().map_err(|e| e.to_string())?;
+        let mut data = state.lock().await;
         data.analyze_trace = Some(result);
     }
 
     // Generate type graph if both trace and types are available
     let should_generate_graph = {
-        let data = state.lock().map_err(|e| e.to_string())?;
+        let data = state.lock().await;
         !data.trace_json.is_empty() && !data.types_json.is_empty()
     };
 
     if should_generate_graph {
         let types = {
-            let data = state.lock().map_err(|e| e.to_string())?;
+            let data = state.lock().await;
             data.types_json.clone()
         };
 
@@ -109,7 +110,7 @@ fn regenerate_analysis_after_upload(state: &State<'_, Arc<Mutex<AppData>>>) -> R
 
         // Store in AppData and persist to disk
         {
-            let mut data = state.lock().map_err(|e| e.to_string())?;
+            let mut data = state.lock().await;
             data.type_graph = Some(graph);
 
             // Persist to outputs/type-graph.json
@@ -126,8 +127,8 @@ fn regenerate_analysis_after_upload(state: &State<'_, Arc<Mutex<AppData>>>) -> R
     }
 
     // Update outputs after regeneration
-    let data = state.lock().map_err(|e| e.to_string())?;
-    AppData::update_outputs(&data);
+    let data = state.lock().await;
+    AppData::update_outputs(&data).await;
     Ok(())
 }
 
@@ -174,7 +175,7 @@ pub async fn upload_trace_json(
     };
 
     // Regenerate analyze trace and type graph after upload
-    if let Err(e) = regenerate_analysis_after_upload(&state) {
+    if let Err(e) = regenerate_analysis_after_upload(&state).await {
         tracing::warn!("Failed to regenerate analysis after trace upload: {}", e);
     }
 
@@ -224,7 +225,7 @@ pub async fn upload_types_json(
     };
 
     // Regenerate analyze trace and type graph after upload
-    if let Err(e) = regenerate_analysis_after_upload(&state) {
+    if let Err(e) = regenerate_analysis_after_upload(&state).await {
         tracing::warn!("Failed to regenerate analysis after types upload: {}", e);
     }
 

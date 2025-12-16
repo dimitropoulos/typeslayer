@@ -3,9 +3,10 @@ use crate::app_data::AppData;
 use crate::validate::utils::CPU_PROFILE_FILENAME;
 use crate::validate::{trace_json::TRACE_JSON_FILENAME, types_json::TYPES_JSON_FILENAME};
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tauri::State;
 use tokio::io::AsyncReadExt;
+use tokio::sync::Mutex;
 use tracing::debug;
 
 pub async fn get_output_file_preview(path: &PathBuf) -> Result<String, String> {
@@ -31,7 +32,7 @@ pub async fn get_types_json_preview(
     state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<String, String> {
     let filepath = {
-        let data = state.lock().map_err(|e| e.to_string())?;
+        let data = state.lock().await;
         data.outputs_dir().join(TYPES_JSON_FILENAME)
     };
     get_output_file_preview(&filepath).await
@@ -42,7 +43,7 @@ pub async fn get_trace_json_preview(
     state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<String, String> {
     let filepath = {
-        let data = state.lock().map_err(|e| e.to_string())?;
+        let data = state.lock().await;
         data.outputs_dir().join(TRACE_JSON_FILENAME)
     };
 
@@ -54,7 +55,7 @@ pub async fn get_analyze_trace_preview(
     state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<String, String> {
     let filepath = {
-        let data = state.lock().map_err(|e| e.to_string())?;
+        let data = state.lock().await;
         data.outputs_dir().join(ANALYZE_TRACE_FILENAME)
     };
     get_output_file_preview(&filepath).await
@@ -65,7 +66,7 @@ pub async fn get_cpu_profile_preview(
     state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<String, String> {
     let filepath = {
-        let data = state.lock().map_err(|e| e.to_string())?;
+        let data = state.lock().await;
         data.outputs_dir().join(CPU_PROFILE_FILENAME)
     };
     get_output_file_preview(&filepath).await
@@ -76,7 +77,7 @@ pub async fn get_type_graph_preview(
     state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<String, String> {
     let filepath = {
-        let data = state.lock().map_err(|e| e.to_string())?;
+        let data = state.lock().await;
         data.outputs_dir()
             .join(crate::type_graph::TYPE_GRAPH_FILENAME)
     };

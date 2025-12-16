@@ -3,7 +3,8 @@ use crate::{
     mcp::tools::{ToolDefinition, ToolParameter},
 };
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use tracing::info;
 
 pub const COMMAND: &str = "get_hot_files";
@@ -54,10 +55,7 @@ pub async fn execute(app_data: Arc<Mutex<AppData>>) -> String {
     info!("get_hot_files called");
 
     // Lock app_data to access trace data
-    let data = match app_data.lock() {
-        Ok(d) => d,
-        Err(e) => return format!("{{\"error\": \"Failed to lock app data: {}\"}}", e),
-    };
+    let data = app_data.lock().await;
 
     if data.trace_json.is_empty() {
         return r#"{"error": "No trace data available. Please generate a trace first."}"#

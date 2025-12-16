@@ -6,6 +6,7 @@ use std::{
 
 use shlex::Quoter;
 use tracing::{debug, info};
+use tokio::process::Command;
 
 pub fn quote_if_needed(s: &str) -> String {
     // Equivalent to the now deprecated try_quote.
@@ -42,26 +43,28 @@ pub const AVAILABLE_EDITORS: &[(&str, &str)] = &[
     ("lite-xl", "Lite XL"),
 ];
 
-pub fn command_exists(cmd: &str) -> bool {
+pub async fn command_exists(cmd: &str) -> bool {
     #[cfg(target_os = "windows")]
     {
-        std::process::Command::new("where")
+        Command::new("where")
             .arg(cmd)
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status()
+            .await
             .map(|s| s.success())
             .unwrap_or(false)
     }
 
     #[cfg(not(target_os = "windows"))]
     {
-        std::process::Command::new("command")
+        Command::new("command")
             .arg("-v")
             .arg(cmd)
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status()
+            .await
             .map(|s| s.success())
             .unwrap_or(false)
     }
