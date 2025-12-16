@@ -41,9 +41,9 @@ impl TypeSlayerMcpServer {
     )]
     async fn get_duplicate_packages(&self) -> String {
         let command = crate::mcp::tools::get_duplicate_packages::COMMAND;
-        self.status.start_tool(command);
+        self.status.start_tool(command).await;
         let result = crate::mcp::tools::get_duplicate_packages::execute(self.app_data).await;
-        self.status.end_tool(command);
+        self.status.end_tool(command).await;
         result
     }
 
@@ -52,9 +52,9 @@ impl TypeSlayerMcpServer {
     )]
     async fn get_hots_types(&self) -> String {
         let command = crate::mcp::tools::get_hot_types::COMMAND;
-        self.status.start_tool(command);
+        self.status.start_tool(command).await;
         let result = crate::mcp::tools::get_hot_types::execute(self.app_data).await;
-        self.status.end_tool(command);
+        self.status.end_tool(command).await;
         result
     }
 
@@ -63,9 +63,9 @@ impl TypeSlayerMcpServer {
     )]
     async fn get_hot_files(&self) -> String {
         let command = crate::mcp::tools::get_hot_files::COMMAND;
-        self.status.start_tool(command);
+        self.status.start_tool(command).await;
         let result = crate::mcp::tools::get_hot_files::execute(self.app_data).await;
-        self.status.end_tool(command);
+        self.status.end_tool(command).await;
         result
     }
 
@@ -74,9 +74,9 @@ impl TypeSlayerMcpServer {
     )]
     async fn get_depth_limits(&self) -> String {
         let command = crate::mcp::tools::get_depth_limits::COMMAND;
-        self.status.start_tool(command);
+        self.status.start_tool(command).await;
         let result = crate::mcp::tools::get_depth_limits::execute(self.app_data).await;
-        self.status.end_tool(command);
+        self.status.end_tool(command).await;
         result
     }
 }

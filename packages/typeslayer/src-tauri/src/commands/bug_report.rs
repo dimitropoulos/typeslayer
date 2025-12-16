@@ -8,8 +8,9 @@ use crate::{
         utils::CPU_PROFILE_FILENAME,
     },
 };
-use std::{io::Write, sync::Mutex};
+use std::io::Write;
 use tauri::State;
+use tokio::sync::Mutex;
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct BugReportFile {
@@ -21,7 +22,7 @@ pub struct BugReportFile {
 pub async fn get_bug_report_files(
     state: State<'_, &Mutex<AppData>>,
 ) -> Result<Vec<BugReportFile>, String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
+    let data = state.lock().await;
     let mut files = Vec::new();
 
     let outputs_dir = data.outputs_dir();
@@ -118,7 +119,9 @@ pub async fn create_bug_report(
     stdout: Option<String>,
     stderr: Option<String>,
 ) -> Result<String, String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
+    let data = state.lock().await;
+    let outputs_dir = data.outputs_dir().clone();
+    let data_dir = data.data_dir.clone();
 
     // Create bug report zip file
     let downloads_dir =
@@ -128,71 +131,75 @@ pub async fn create_bug_report(
     let zip_filename = format!("typeslayer_bug_report_{}.zip", timestamp);
     let zip_path = downloads_dir.join(&zip_filename);
 
-    // Create the zip file
-    let file = std::fs::File::create(&zip_path)
-        .map_err(|e| format!("Failed to create zip file: {}", e))?;
+    let zip_path_inner = zip_path.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        // Create the zip file
+        let file = std::fs::File::create(zip_path_inner)
+            .map_err(|e| format!("Failed to create zip file: {}", e))?;
 
-    let mut zip = zip::ZipWriter::new(file);
-    let options = zip::write::SimpleFileOptions::default()
-        .compression_method(zip::CompressionMethod::Deflated);
+        let mut zip = zip::ZipWriter::new(file);
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
 
-    // Add description as a text file
-    zip.start_file("description", options)
-        .map_err(|e| format!("Failed to add description file: {}", e))?;
-    zip.write_all(description.as_bytes())
-        .map_err(|e| format!("Failed to write description: {}", e))?;
+        // Add description as a text file
+        zip.start_file("description", options)
+            .map_err(|e| format!("Failed to add description file: {}", e))?;
+        zip.write_all(description.as_bytes())
+            .map_err(|e| format!("Failed to write description: {}", e))?;
 
-    // Add stdout if provided
-    if let Some(stdout_content) = stdout {
-        zip.start_file("stdout", options)
-            .map_err(|e| format!("Failed to add stdout file: {}", e))?;
-        zip.write_all(stdout_content.as_bytes())
-            .map_err(|e| format!("Failed to write stdout: {}", e))?;
-    }
-
-    // Add stderr if provided
-    if let Some(stderr_content) = stderr {
-        zip.start_file("stderr", options)
-            .map_err(|e| format!("Failed to add stderr file: {}", e))?;
-        zip.write_all(stderr_content.as_bytes())
-            .map_err(|e| format!("Failed to write stderr: {}", e))?;
-    }
-
-    // Define the files to include
-    let files_to_include = [
-        CONFIG_FILENAME,
-        TYPES_JSON_FILENAME,
-        TRACE_JSON_FILENAME,
-        ANALYZE_TRACE_FILENAME,
-        TYPE_GRAPH_FILENAME,
-        CPU_PROFILE_FILENAME,
-    ];
-
-    let outputs_dir = data.outputs_dir();
-
-    // Add each file to the zip
-    for filename in files_to_include {
-        let file_path = if filename == CONFIG_FILENAME {
-            // typescript.toml is in the data directory
-            data.data_dir.join(filename)
-        } else {
-            // Other files are in the outputs directory
-            outputs_dir.join(filename)
-        };
-
-        if file_path.exists() {
-            let contents = std::fs::read(&file_path)
-                .map_err(|e| format!("Failed to read {}: {}", filename, e))?;
-
-            zip.start_file(filename, options)
-                .map_err(|e| format!("Failed to add {} to zip: {}", filename, e))?;
-            zip.write_all(&contents)
-                .map_err(|e| format!("Failed to write {} to zip: {}", filename, e))?;
+        // Add stdout if provided
+        if let Some(stdout_content) = stdout {
+            zip.start_file("stdout", options)
+                .map_err(|e| format!("Failed to add stdout file: {}", e))?;
+            zip.write_all(stdout_content.as_bytes())
+                .map_err(|e| format!("Failed to write stdout: {}", e))?;
         }
-    }
 
-    zip.finish()
-        .map_err(|e| format!("Failed to finalize zip file: {}", e))?;
+        // Add stderr if provided
+        if let Some(stderr_content) = stderr {
+            zip.start_file("stderr", options)
+                .map_err(|e| format!("Failed to add stderr file: {}", e))?;
+            zip.write_all(stderr_content.as_bytes())
+                .map_err(|e| format!("Failed to write stderr: {}", e))?;
+        }
+        // Define the files to include
+        let files_to_include = [
+            CONFIG_FILENAME,
+            TYPES_JSON_FILENAME,
+            TRACE_JSON_FILENAME,
+            ANALYZE_TRACE_FILENAME,
+            TYPE_GRAPH_FILENAME,
+            CPU_PROFILE_FILENAME,
+        ];
+
+        // Add each file to the zip
+        for filename in files_to_include {
+            let file_path = if filename == CONFIG_FILENAME {
+                // typescript.toml is in the data directory
+                data_dir.join(filename)
+            } else {
+                // Other files are in the outputs directory
+                outputs_dir.join(filename)
+            };
+
+            if file_path.exists() {
+                let contents = std::fs::read(&file_path)
+                    .map_err(|e| format!("Failed to read {}: {}", filename, e))?;
+
+                zip.start_file(filename, options)
+                    .map_err(|e| format!("Failed to add {} to zip: {}", filename, e))?;
+                zip.write_all(&contents)
+                    .map_err(|e| format!("Failed to write {} to zip: {}", filename, e))?;
+            }
+        }
+
+        zip.finish()
+            .map_err(|e| format!("Failed to finalize zip file: {}", e))?;
+
+        Ok::<(), String>(())
+    })
+    .await
+    .map_err(|e| e.to_string())??;
 
     Ok(zip_path.to_string_lossy().to_string())
 }

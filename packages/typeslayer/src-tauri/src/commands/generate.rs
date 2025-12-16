@@ -9,7 +9,7 @@ use crate::{
 };
 use std::path::Path;
 use tauri::{AppHandle, State};
-use tokio::sync::Mutex;
+use tokio::{sync::Mutex, fs};
 use tracing::{debug, error, info};
 
 // Async helper to validate outputs in outputs_dir and return parsed results
@@ -202,9 +202,9 @@ pub async fn generate_type_graph(
     let path = outputs_dir.join(TYPE_GRAPH_FILENAME);
     let json = serde_json::to_string_pretty(&app_data.type_graph)
         .map_err(|e| format!("Failed to serialize type_graph: {e}"))?;
-    std::fs::create_dir_all(&outputs_dir)
+    fs::create_dir_all(&outputs_dir).await
         .map_err(|e| format!("Failed to create outputs dir: {e}"))?;
-    std::fs::write(&path, json).map_err(|e| format!("Failed to write {}: {e}", path.display()))?;
+    fs::write(&path, json).await.map_err(|e| format!("Failed to write {}: {e}", path.display()))?;
 
     Ok(())
 }

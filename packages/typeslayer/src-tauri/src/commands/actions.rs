@@ -6,7 +6,7 @@ use crate::{
 use std::{path::Path};
 use tauri::State;
 use tauri::{AppHandle, Manager, WebviewWindow};
-use tokio::{process::Command, sync::Mutex};
+use tokio::{process::Command, sync::Mutex, fs};
 
 #[tauri::command]
 pub async fn take_screenshot(app: AppHandle) -> Result<String, String> {
@@ -27,7 +27,8 @@ pub async fn take_screenshot(app: AppHandle) -> Result<String, String> {
     let screenshot_path = downloads_dir.join(&filename);
 
     // Save to file
-    std::fs::write(&screenshot_path, &screenshot_bytes)
+    fs::write(&screenshot_path, &screenshot_bytes)
+        .await
         .map_err(|e| format!("Failed to save screenshot: {}", e))?;
 
     // Copy image data to clipboard
@@ -188,7 +189,7 @@ pub async fn set_window_title_from_project(
     state: State<'_, &Mutex<AppData>>,
 ) -> Result<(), String> {
     let guard = state.lock().await;
-    let title = compute_window_title(guard.project_root.clone());
+    let title = compute_window_title(guard.project_root.clone()).await;
     let win = app
         .get_webview_window("main")
         .ok_or_else(|| "main window not found".to_string())?;

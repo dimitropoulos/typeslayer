@@ -58,7 +58,7 @@ impl AppData {
             precedence: [Source::Env, Source::Flag, Source::File],
             env_prefix: "TYPESLAYER_",
         });
-        cake.load_config_in_dir(&data_dir.to_string_lossy());
+        cake.load_config_in_dir(data_dir.to_string_lossy().to_string()).await?;
 
         let project_root = init_project_root(&cake);
         let outputs_dir = data_dir.join(OUTPUTS_DIRECTORY);
@@ -346,11 +346,11 @@ impl AppData {
         let cpu_path = outputs_dir.join(CPU_PROFILE_FILENAME);
 
         let outputs = OutputTimestamps {
-            types_json: file_mtime_iso(&types_path),
-            trace_json: file_mtime_iso(&trace_path),
-            analyze_trace: file_mtime_iso(&analyze_path),
-            type_graph: file_mtime_iso(&type_graph_path),
-            cpu_profile: file_mtime_iso(&cpu_path),
+            types_json: file_mtime_iso(&types_path).await,
+            trace_json: file_mtime_iso(&trace_path).await,
+            analyze_trace: file_mtime_iso(&analyze_path).await,
+            type_graph: file_mtime_iso(&type_graph_path).await,
+            cpu_profile: file_mtime_iso(&cpu_path).await,
         };
 
         let cfg = TypeSlayerConfig {

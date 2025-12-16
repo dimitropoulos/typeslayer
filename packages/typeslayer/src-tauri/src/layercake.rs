@@ -77,11 +77,18 @@ impl LayerCake {
     }
 
     /// Load or reload the TOML config by joining stored filename with provided directory.
-    pub fn load_config_in_dir(&mut self, dir: &str) {
-        let path = std::path::Path::new(dir).join(&self.config_filename);
-        self.cfg = std::fs::read_to_string(&path)
-            .ok()
-            .and_then(|s| toml::from_str::<toml::Value>(&s).ok());
+    pub async fn load_config_in_dir(&mut self, dir: String) -> Result<(), String> {
+        let config_filename = self.config_filename.clone();
+        self.cfg = tauri::async_runtime::spawn_blocking(move || {
+            let path = std::path::Path::new(&dir).join(config_filename);
+            std::fs::read_to_string(&path)
+                .ok()
+                .and_then(|s| toml::from_str::<toml::Value>(&s).ok())
+        })
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(())
     }
 
     /// Parse CLI args into a simple flag map supporting `--name=value` and `--name value`.

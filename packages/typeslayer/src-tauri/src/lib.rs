@@ -25,6 +25,8 @@ pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
     let project_root = app.project_root.clone();
     drop(app);
 
+    let title = compute_window_title(project_root).await;
+
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
         .plugin(tauri_plugin_upload::init())
@@ -39,7 +41,6 @@ pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
             app.manage(mcp_tracker);
 
             // Set initial window title based on detected project package.json
-            let title = compute_window_title(project_root);
             if let Some(win) = app.get_webview_window("main") {
                 let _ = win.set_title(&title);
             }
