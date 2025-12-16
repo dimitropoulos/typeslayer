@@ -1,8 +1,20 @@
+import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   extractPackageName,
   type ResolvedType,
   relativizePath,
 } from "@typeslayer/validate";
+import type { MouseEvent } from "react";
+
+export const createOpenHandler =
+  (url: string) => async (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    try {
+      await openUrl(url);
+    } catch (error) {
+      console.error("Failed to open external link", error);
+    }
+  };
 
 export const stripPackageJson = (path: string): string => {
   if (path.endsWith("/package.json")) {

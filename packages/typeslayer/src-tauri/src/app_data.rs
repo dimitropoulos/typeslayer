@@ -1,8 +1,13 @@
 use crate::{
-    analyze_trace::{AnalyzeTraceResult, constants::ANALYZE_TRACE_FILENAME},
+    analyze_trace::{
+        AnalyzeTraceOptions, AnalyzeTraceResult, analyze_trace, constants::ANALYZE_TRACE_FILENAME,
+    },
     layercake::{LayerCake, LayerCakeInitArgs, ResolveBoolArgs, ResolveStringArgs, Source},
     process_controller::ProcessController,
-    type_graph::{TYPE_GRAPH_FILENAME, TypeGraph},
+    treemap::{TreemapNode, build_treemap_from_trace},
+    type_graph::{
+        LinkKind, TYPE_GRAPH_FILENAME, TypeGraph, get_relationships_for_type, human_readable_name,
+    },
     utils::{
         OUTPUTS_DIRECTORY, PACKAGE_JSON_FILENAME, TSCONFIG_FILENAME, command_exists,
         get_output_file_preview, make_cli_arg, quote_if_needed,
@@ -10,27 +15,26 @@ use crate::{
     validate::{
         trace_json::{TRACE_JSON_FILENAME, TraceEvent, parse_trace_json, read_trace_json},
         types_json::{
-            TYPES_JSON_FILENAME, TypesJsonSchema, parse_types_json,
+            ResolvedType, TYPES_JSON_FILENAME, TypesJsonSchema, parse_types_json,
             validate_types_json as load_types_json,
         },
-        utils::CPU_PROFILE_FILENAME,
+        utils::{CPU_PROFILE_FILENAME, TypeId},
     },
 };
 use serde::Deserialize;
-use serde_json::Value;
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
-use std::path::Path;
-use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
+use std::{cmp::Ordering, path::PathBuf};
+use std::{collections::HashMap, path::Path};
 use std::{fmt::Display, fs};
 use std::{
     fs::File,
     io::{BufReader, Write},
 };
 use tauri::{Manager, State};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 const CONFIG_FILENAME: &str = "typeslayer.toml";
 
@@ -76,7 +80,7 @@ impl Display for TSCCommand {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum PackageManager {
     Bun,
     NPM,
@@ -88,8 +92,8 @@ pub enum PackageManager {
 pub struct AppData {
     pub project_root: PathBuf,
     pub types_json: TypesJsonSchema,
-    pub trace_json: Vec<crate::validate::trace_json::TraceEvent>,
-    pub analyze_trace: Option<crate::analyze_trace::AnalyzeTraceResult>,
+    pub trace_json: Vec<TraceEvent>,
+    pub analyze_trace: Option<AnalyzeTraceResult>,
     pub cpu_profile: Option<String>,
     pub tsconfig_paths: Vec<PathBuf>,
     pub selected_tsconfig: Option<PathBuf>,
@@ -98,7 +102,7 @@ pub struct AppData {
     pub verbose: bool,
     pub cake: LayerCake,
     pub auth_code: Option<String>,
-    pub type_graph: Option<crate::type_graph::TypeGraph>,
+    pub type_graph: Option<TypeGraph>,
     pub process_controller: ProcessController,
     pub data_dir: PathBuf,
 }
@@ -156,7 +160,7 @@ impl AppData {
         Ok(app)
     }
 
-    pub fn outputs_dir(&self) -> std::path::PathBuf {
+    pub fn outputs_dir(&self) -> PathBuf {
         self.data_dir.join(OUTPUTS_DIRECTORY)
     }
 
@@ -210,7 +214,7 @@ impl AppData {
 
         // Also check PWD environment variable in case cwd was changed
         if let Ok(pwd) = std::env::var("PWD") {
-            let pwd_path = std::path::Path::new(&pwd).join(PACKAGE_JSON_FILENAME);
+            let pwd_path = Path::new(&pwd).join(PACKAGE_JSON_FILENAME);
             info!("checking for package.json in PWD: {}", pwd);
             if pwd_path.exists() {
                 info!("found package.json in PWD: {}", pwd_path.display());
@@ -223,7 +227,7 @@ impl AppData {
     }
 
     fn validate_project_root_path(s: &str) -> Result<PathBuf, String> {
-        let p = std::path::Path::new(s);
+        let p = Path::new(s);
 
         if p.file_name()
             .map(|f| f == PACKAGE_JSON_FILENAME)
@@ -316,7 +320,7 @@ impl AppData {
 
     fn init_selected_tsconfig_with(
         cake: &LayerCake,
-        tsconfig_paths: &[std::path::PathBuf],
+        tsconfig_paths: &[PathBuf],
     ) -> Option<PathBuf> {
         let auto_detect = || {
             // Prefer tsconfig.json, then first found tsconfig
@@ -363,7 +367,7 @@ impl AppData {
             .project_root
             .parent()
             .map(|p| p.to_path_buf())
-            .unwrap_or_else(|| std::path::PathBuf::from("."));
+            .unwrap_or_else(|| PathBuf::from("."));
 
         // Search for tsconfig*.json files in the project directory and subdirectories
         let entries =
@@ -385,8 +389,8 @@ impl AppData {
                 .file_name()
                 .map_or(false, |name| name == TSCONFIG_FILENAME);
             match (a_is_main, b_is_main) {
-                (true, false) => std::cmp::Ordering::Less,
-                (false, true) => std::cmp::Ordering::Greater,
+                (true, false) => Ordering::Less,
+                (false, true) => Ordering::Greater,
                 _ => a.cmp(b),
             }
         });
@@ -497,7 +501,7 @@ impl AppData {
     }
 
     // Blocking helper that runs tsc directly
-    fn run_typescript_with_flag_blocking(&self, flag: String, context: &str) -> Result<(), String> {
+    fn run_tsc(&self, flag: String, context: &str) -> Result<(), String> {
         let outputs_dir = self.outputs_dir().to_string_lossy().to_string();
 
         fs::create_dir_all(&outputs_dir)
@@ -512,9 +516,9 @@ impl AppData {
             .parent()
             .ok_or_else(|| "project_root must be a package.json file")?;
 
-        info!("Executing command: {}", tsc_command);
-        info!("Working directory: {:?}", cwd);
-        info!("Outputs directory: {}", outputs_dir);
+        info!("[run_tsc] Executing command: {}", tsc_command);
+        info!("[run_tsc] Working directory: {:?}", cwd);
+        info!("[run_tsc] Outputs directory: {}", outputs_dir);
 
         let mut cmd = Command::new(tsc_command.shell);
         cmd.arg(tsc_command.shell_arg);
@@ -566,18 +570,12 @@ impl AppData {
     // Async helper to validate outputs in outputs_dir and return parsed results
     async fn validate_types_and_trace_async(
         outputs_dir: &str,
-    ) -> Result<
-        (
-            TypesJsonSchema,
-            Vec<crate::validate::trace_json::TraceEvent>,
-        ),
-        String,
-    > {
-        let types_path = std::path::Path::new(outputs_dir)
+    ) -> Result<(TypesJsonSchema, Vec<TraceEvent>), String> {
+        let types_path = Path::new(outputs_dir)
             .join(TYPES_JSON_FILENAME.trim_start_matches('/'))
             .to_string_lossy()
             .to_string();
-        let trace_path = std::path::Path::new(outputs_dir)
+        let trace_path = Path::new(outputs_dir)
             .join(TRACE_JSON_FILENAME.trim_start_matches('/'))
             .to_string_lossy()
             .to_string();
@@ -590,17 +588,21 @@ impl AppData {
 
         let types = types_res.map_err(|e| {
             format!(
-                "types.json validation failed: {}\nExpected file at: {}",
+                "[init_types_json] types.json validation failed: {}\nExpected file at: {}",
                 e, types_path
             )
         })?;
         let trace = trace_res.map_err(|e| {
             format!(
-                "trace.json validation failed: {}\nExpected file at: {}",
+                "[init_trace_json] trace.json validation failed: {}\nExpected file at: {}",
                 e, trace_path
             )
         })?;
-
+        debug!(
+            "[validate_types_and_trace_async] Loaded types.json ({} types) and trace.json ({} events)",
+            types.len(),
+            trace.len()
+        );
         Ok((types, trace))
     }
 
@@ -621,21 +623,22 @@ impl AppData {
                     .map_err(|e| e.to_string())
                     .and_then(|s| parse_types_json(&path_str, &s))
                 {
-                    Ok(parsed) => return parsed,
+                    Ok(parsed) => {
+                        debug!("[init_types_json] Loaded types.json from {}", p.display());
+                        return parsed;
+                    }
                     Err(e) => info!(
-                        "Startup types.json ingestion failed at {}: {e}",
+                        "[init_types_json] Startup types.json ingestion failed at {}: {e}",
                         p.display()
                     ),
                 }
             }
         }
+        debug!("[init_types_json] No valid types.json found at startup");
         Vec::new()
     }
 
-    fn init_trace_json(
-        outputs_dir: &Path,
-        project_root: &Path,
-    ) -> Vec<crate::validate::trace_json::TraceEvent> {
+    fn init_trace_json(outputs_dir: &Path, project_root: &Path) -> Vec<TraceEvent> {
         let project_dir = project_root
             .parent()
             .map(|p| p.to_path_buf())
@@ -652,54 +655,69 @@ impl AppData {
                     .map_err(|e| e.to_string())
                     .and_then(|s| parse_trace_json(&path_str, &s))
                 {
-                    Ok(parsed) => return parsed,
+                    Ok(parsed) => {
+                        debug!("[init_trace_json] Loaded trace.json from {}", p.display());
+                        return parsed;
+                    }
                     Err(e) => info!(
-                        "Startup trace.json ingestion failed at {}: {e}",
+                        "[init_trace_json] Startup trace.json ingestion failed at {}: {e}",
                         p.display()
                     ),
                 }
             }
         }
+        debug!("[init_trace_json] No valid trace.json found at startup");
         Vec::new()
     }
 
-    fn init_analyze_trace(outputs_dir: &Path) -> Option<crate::analyze_trace::AnalyzeTraceResult> {
+    fn init_analyze_trace(outputs_dir: &Path) -> Option<AnalyzeTraceResult> {
         let analyze_path = outputs_dir.join(ANALYZE_TRACE_FILENAME);
         if analyze_path.exists() {
             match std::fs::read_to_string(&analyze_path)
                 .map_err(|e| e.to_string())
                 .and_then(|s| {
-                    serde_json::from_str::<crate::analyze_trace::AnalyzeTraceResult>(&s)
-                        .map_err(|e| e.to_string())
+                    serde_json::from_str::<AnalyzeTraceResult>(&s).map_err(|e| e.to_string())
                 }) {
-                Ok(parsed) => return Some(parsed),
+                Ok(parsed) => {
+                    debug!(
+                        "[init_analyze_trace] Loaded from {}",
+                        analyze_path.display()
+                    );
+                    return Some(parsed);
+                }
                 Err(e) => info!(
-                    "Startup analyze-trace ingestion failed at {}: {}",
+                    "[init_analyze_trace] Startup ingestion failed at {}: {}",
                     analyze_path.display(),
                     e
                 ),
             }
         }
+        debug!("[init_analyze_trace] No valid analyze-trace.json found at startup");
         None
     }
 
-    fn init_type_graph(outputs_dir: &Path) -> Option<crate::type_graph::TypeGraph> {
-        let path = outputs_dir.join(crate::type_graph::TYPE_GRAPH_FILENAME.trim_start_matches('/'));
+    fn init_type_graph(outputs_dir: &Path) -> Option<TypeGraph> {
+        let path = outputs_dir.join(TYPE_GRAPH_FILENAME.trim_start_matches('/'));
         if path.exists() {
             match std::fs::read_to_string(&path)
                 .map_err(|e| e.to_string())
-                .and_then(|s| {
-                    serde_json::from_str::<crate::type_graph::TypeGraph>(&s)
-                        .map_err(|e| e.to_string())
-                }) {
-                Ok(parsed) => return Some(parsed),
+                .and_then(|s| serde_json::from_str::<TypeGraph>(&s).map_err(|e| e.to_string()))
+            {
+                Ok(parsed) => {
+                    debug!(
+                        "[init_type_graph] Loaded type-graph.json from {}",
+                        path.display()
+                    );
+                    return Some(parsed);
+                }
                 Err(e) => info!(
-                    "Startup type-graph ingestion failed at {}: {}",
+                    "[init_type_graph] Startup type-graph ingestion failed at {}: {}",
                     path.display(),
                     e
                 ),
             }
         }
+        debug!("[init_type_graph] No valid type-graph.json found at startup");
         None
     }
 
@@ -707,14 +725,21 @@ impl AppData {
         let cpu_profile_path = outputs_dir.join(CPU_PROFILE_FILENAME);
         if cpu_profile_path.exists() {
             match std::fs::read_to_string(&cpu_profile_path) {
-                Ok(contents) => return Some(contents),
+                Ok(contents) => {
+                    debug!(
+                        "[init_cpu_profile] Loaded CPU profile from {}",
+                        cpu_profile_path.display()
+                    );
+                    return Some(contents);
+                }
                 Err(e) => info!(
-                    "Startup CPU profile ingestion failed at {}: {}",
+                    "[init_cpu_profile] Startup CPU profile ingestion failed at {}: {}",
                     cpu_profile_path.display(),
                     e
                 ),
             }
         }
+        debug!("[init_cpu_profile] No valid CPU profile found at startup");
         None
     }
 
@@ -786,8 +811,7 @@ impl AppData {
         let types_path = outputs_dir.join(TYPES_JSON_FILENAME.trim_start_matches('/'));
         let trace_path = outputs_dir.join(TRACE_JSON_FILENAME.trim_start_matches('/'));
         let analyze_path = outputs_dir.join(ANALYZE_TRACE_FILENAME);
-        let type_graph_path =
-            outputs_dir.join(crate::type_graph::TYPE_GRAPH_FILENAME.trim_start_matches('/'));
+        let type_graph_path = outputs_dir.join(TYPE_GRAPH_FILENAME.trim_start_matches('/'));
         let cpu_path = outputs_dir.join(CPU_PROFILE_FILENAME);
 
         let outputs = OutputTimestamps {
@@ -818,6 +842,11 @@ impl AppData {
                         config_path.display(),
                         e
                     );
+                } else {
+                    debug!(
+                        "[update_outputs] Wrote updated config to {}",
+                        config_path.display()
+                    );
                 }
             }
             Err(e) => error!("Failed to serialize config: {}", e),
@@ -831,7 +860,7 @@ impl AppData {
             .map_err(|e| format!("failed to ensure outputs directory exists: {e}"))?;
 
         if outputs_dir.exists() {
-            for output_file in fs::read_dir(outputs_dir)
+            for output_file in fs::read_dir(&outputs_dir)
                 .map_err(|e| format!("failed to read outputs directory: {e}"))?
             {
                 let entry =
@@ -852,7 +881,10 @@ impl AppData {
         self.analyze_trace = None;
         self.cpu_profile = None;
         self.type_graph = None;
-
+        debug!(
+            "[clear_outputs_dir] Cleared outputs directory: {}",
+            outputs_dir.display()
+        );
         self.update_outputs();
         Ok(())
     }
@@ -869,15 +901,28 @@ impl AppData {
                     .split("@")
                     .next()
                     .unwrap_or(&package_manager);
-                match package_manager {
+                let result = match package_manager {
                     "npm" => Ok(PackageManager::NPM),
                     "pnpm" => Ok(PackageManager::PNPM),
                     "yarn" => Ok(PackageManager::Yarn),
                     "bun" => Ok(PackageManager::Bun),
                     _ => Err(format!("Unsupported packageManager {package_manager}")),
-                }
+                };
+                debug!(
+                    "[find_package_manager] Detected packageManager '{}' in {}, using {:?}",
+                    package_manager,
+                    project_root.display(),
+                    result.as_ref().ok()
+                );
+                result
             }
-            None => Ok(PackageManager::NPM),
+            None => {
+                info!(
+                    "[find_package_manager] No packageManager field in {}, defaulting to npm",
+                    project_root.display()
+                );
+                return Ok(PackageManager::NPM);
+            }
         }
     }
 }
@@ -912,7 +957,8 @@ impl Default for Settings {
 
 impl Settings {
     pub fn default_extra_tsc_flags() -> String {
-        "--noEmit --incremental false --noErrorTruncation".to_string()
+        debug!("[default_extra_tsc_flags] requested default extra tsc flags");
+        return "--noEmit --incremental false --noErrorTruncation".to_string();
     }
 }
 
@@ -1021,9 +1067,7 @@ impl AppData {
 }
 
 #[tauri::command]
-pub async fn validate_types_json(
-    state: State<'_, Arc<Mutex<AppData>>>,
-) -> Result<TypesJsonSchema, String> {
+pub async fn validate_types_json(state: State<'_, Arc<Mutex<AppData>>>) -> Result<(), String> {
     let path = {
         let data = state.lock().map_err(|e| e.to_string())?;
         data.outputs_dir()
@@ -1031,16 +1075,12 @@ pub async fn validate_types_json(
             .to_string_lossy()
             .to_string()
     };
-    let result = load_types_json(path).await?;
-    let mut data = state.lock().map_err(|e| e.to_string())?;
-    data.types_json = result.clone();
-    Ok(result)
+    load_types_json(path).await?;
+    Ok(())
 }
 
 #[tauri::command]
-pub async fn validate_trace_json(
-    state: State<'_, Arc<Mutex<AppData>>>,
-) -> Result<Vec<TraceEvent>, String> {
+pub async fn validate_trace_json(state: State<'_, Arc<Mutex<AppData>>>) -> Result<(), String> {
     let path = {
         let data = state.lock().map_err(|e| e.to_string())?;
         data.outputs_dir()
@@ -1048,10 +1088,8 @@ pub async fn validate_trace_json(
             .to_string_lossy()
             .to_string()
     };
-    let result = read_trace_json(&path).await?;
-    let mut data = state.lock().map_err(|e| e.to_string())?;
-    data.trace_json = result.clone();
-    Ok(result)
+    read_trace_json(&path).await?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -1059,6 +1097,10 @@ pub async fn get_trace_json(
     state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<Vec<TraceEvent>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
+    debug!(
+        "[get_trace_json] returning {} trace events",
+        data.trace_json.len()
+    );
     Ok(data.trace_json.clone())
 }
 
@@ -1067,22 +1109,8 @@ pub async fn get_types_json(
     state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<TypesJsonSchema, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
+    debug!("[get_types_json] returning {} types", data.types_json.len());
     Ok(data.types_json.clone())
-}
-
-#[tauri::command]
-pub async fn search_type(
-    state: State<'_, Arc<Mutex<AppData>>>,
-    id: usize,
-) -> Result<Value, String> {
-    let data = state.lock().map_err(|e| e.to_string())?;
-    // types_json contains ResolvedType; we return as JSON Value
-    for t in &data.types_json {
-        if t.id == id {
-            return serde_json::to_value(t).map_err(|e| e.to_string());
-        }
-    }
-    Err(format!("Type {id} not found"))
 }
 
 #[tauri::command]
@@ -1090,6 +1118,10 @@ pub async fn get_tsconfig_paths(
     state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<Vec<String>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
+    debug!(
+        "[get_tsconfig_paths] returning {} tsconfig paths",
+        data.tsconfig_paths.len()
+    );
     Ok(data
         .tsconfig_paths
         .iter()
@@ -1102,6 +1134,10 @@ pub async fn get_selected_tsconfig(
     state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<Option<String>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
+    debug!(
+        "[get_selected_tsconfig] returning selected tsconfig = {:?}",
+        data.selected_tsconfig
+    );
     Ok(data
         .selected_tsconfig
         .as_ref()
@@ -1118,6 +1154,7 @@ pub async fn set_selected_tsconfig(
     // Empty string means no tsconfig (valid)
     if tsconfig_path.is_empty() {
         data.selected_tsconfig = None;
+        debug!("[set_selected_tsconfig] selected tsconfig set to None (empty string provided)");
         return Ok(());
     }
 
@@ -1131,6 +1168,10 @@ pub async fn set_selected_tsconfig(
     }
 
     data.selected_tsconfig = Some(path_buf);
+    debug!(
+        "[set_selected_tsconfig] selected tsconfig set to {:?}",
+        data.selected_tsconfig
+    );
     Ok(())
 }
 
@@ -1161,12 +1202,11 @@ pub async fn generate_trace(state: State<'_, Arc<Mutex<AppData>>>) -> Result<(),
     };
     let outputs_dir = app_data_clone.outputs_dir().to_string_lossy().to_string();
 
-    info!("generate_trace: will write outputs under {}", outputs_dir);
+    info!("[generate_trace] will write outputs under {}", outputs_dir);
     let outputs_dir_for_closure = outputs_dir.clone();
     let handle = tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
         let flag = make_cli_arg("--generateTrace", &outputs_dir_for_closure);
-        app_data_clone
-            .run_typescript_with_flag_blocking(flag, "TypeScript compilation with trace generation")
+        app_data_clone.run_tsc(flag, "TypeScript compilation with trace generation")
     });
 
     match handle.await {
@@ -1187,6 +1227,11 @@ pub async fn generate_trace(state: State<'_, Arc<Mutex<AppData>>>) -> Result<(),
             data.types_json = types.clone();
             data.trace_json = trace;
             AppData::update_outputs(&data);
+            debug!(
+                "[generate_trace] cached {} types and {} trace events",
+                data.types_json.len(),
+                data.trace_json.len()
+            );
             Ok(())
         }
         Ok(Err(e)) => Err(e),
@@ -1203,14 +1248,14 @@ pub async fn generate_cpu_profile(state: State<'_, Arc<Mutex<AppData>>>) -> Resu
     let outputs_dir = app_data_clone.outputs_dir().to_string_lossy().to_string();
 
     info!(
-        "generate_cpu_profile: will write profile under {}",
+        "[generate_cpu_profile]: will write profile under {}",
         outputs_dir
     );
     let outputs_dir_for_closure = outputs_dir.clone();
     let handle = tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
         let generation_path = Path::new(&outputs_dir_for_closure).join(CPU_PROFILE_FILENAME);
         let flag = make_cli_arg("--generateCpuProfile", &generation_path.to_string_lossy());
-        app_data_clone.run_typescript_with_flag_blocking(flag, "TypeScript CPU profile run")
+        app_data_clone.run_tsc(flag, "TypeScript CPU profile run")
     });
 
     match handle.await {
@@ -1222,45 +1267,48 @@ pub async fn generate_cpu_profile(state: State<'_, Arc<Mutex<AppData>>>) -> Resu
                     Ok(contents) => {
                         let mut data = state.lock().map_err(|e| e.to_string())?;
                         data.cpu_profile = Some(contents);
+                        debug!(
+                            "[generate_cpu_profile] cached CPU profile of size {} bytes",
+                            data.cpu_profile.as_ref().map_or(0, |s| s.len())
+                        );
                         AppData::update_outputs(&data);
                     }
                     Err(e) => error!("Failed to read CPU profile after generation: {}", e),
                 }
             }
+            debug!("[generate_cpu_profile] completed with result {:?}", r);
             r
         }
-        Err(e) => Err(format!("generate_cpu_profile join error: {}", e)),
+        Err(e) => Err(format!("[generate_cpu_profile] join error: {}", e)),
     }
 }
 
 #[tauri::command]
 pub async fn generate_analyze_trace(
     state: State<'_, Arc<Mutex<AppData>>>,
-    options: Option<crate::analyze_trace::AnalyzeTraceOptions>,
+    options: Option<AnalyzeTraceOptions>,
 ) -> Result<(), String> {
-    info!("Starting analyze trace...");
     let outputs_dir = {
         let data = state.lock().map_err(|e| e.to_string())?;
         data.outputs_dir().to_string_lossy().to_string()
     };
-    info!(
-        "analyze_trace: reading inputs and writing output under {}",
+    debug!(
+        "[generate_analyze_trace] reading inputs and writing output under {}",
         outputs_dir
     );
 
     let trace_dir_for_log = outputs_dir.clone();
-    let handle = tauri::async_runtime::spawn_blocking(move || {
-        match crate::analyze_trace::analyze_trace(&outputs_dir, options) {
+    let handle =
+        tauri::async_runtime::spawn_blocking(move || match analyze_trace(&outputs_dir, options) {
             Ok(result) => {
-                info!("Analyze trace completed successfully");
+                debug!("[generate_analyze_trace] Analyze trace completed successfully");
                 Ok::<AnalyzeTraceResult, String>(result)
             }
             Err(e) => {
                 error!("Analyze trace failed: {}", e);
                 Err(e)
             }
-        }
-    });
+        });
 
     match handle.await {
         Ok(r) => {
@@ -1268,21 +1316,22 @@ pub async fn generate_analyze_trace(
                 let mut data = state.lock().map_err(|e| e.to_string())?;
                 data.analyze_trace = Some(res.clone());
                 AppData::update_outputs(&data);
-                info!(
-                    "analyze_trace: wrote {} in {}",
+                debug!(
+                    "[generate_analyze_trace] wrote {} in {}",
                     ANALYZE_TRACE_FILENAME, trace_dir_for_log
                 );
             }
+            debug!("[generate_analyze_trace] completed");
             Ok(())
         }
-        Err(e) => Err(format!("generate_analyze_trace join error: {}", e)),
+        Err(e) => Err(format!("[generate_analyze_trace] join error: {}", e)),
     }
 }
 
 #[tauri::command]
 pub async fn get_analyze_trace(
     state: State<'_, Arc<Mutex<AppData>>>,
-) -> Result<crate::analyze_trace::AnalyzeTraceResult, String> {
+) -> Result<AnalyzeTraceResult, String> {
     // Serve cached value if present
     {
         let data = state.lock().map_err(|e| e.to_string())?;
@@ -1300,10 +1349,14 @@ pub async fn get_analyze_trace(
     let contents = tokio::fs::read_to_string(&path)
         .await
         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-    let parsed: crate::analyze_trace::AnalyzeTraceResult = serde_json::from_str(&contents)
+    let parsed: AnalyzeTraceResult = serde_json::from_str(&contents)
         .map_err(|e| format!("Failed to parse {}: {}", path.display(), e))?;
     let mut data = state.lock().map_err(|e| e.to_string())?;
     data.analyze_trace = Some(parsed.clone());
+    debug!(
+        "[get_analyze_trace] loaded analyze trace from disk with size {} bytes",
+        contents.len()
+    );
     Ok(parsed)
 }
 
@@ -1312,6 +1365,10 @@ pub async fn get_cpu_profile(
     state: State<'_, Arc<Mutex<AppData>>>,
 ) -> Result<Option<String>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
+    debug!(
+        "[get_cpu_profile] returning CPU profile of size {} bytes",
+        data.cpu_profile.as_ref().map_or(0, |s| s.len())
+    );
     Ok(data.cpu_profile.clone())
 }
 
@@ -1324,6 +1381,11 @@ pub async fn verify_analyze_trace(state: State<'_, Arc<Mutex<AppData>>>) -> Resu
             if json.trim().is_empty() {
                 Err(format!("{} appears empty", ANALYZE_TRACE_FILENAME).to_string())
             } else {
+                debug!(
+                    "[verify_analyze_trace] {} has size {} bytes",
+                    ANALYZE_TRACE_FILENAME,
+                    json.len()
+                );
                 Ok(())
             }
         }
@@ -1337,6 +1399,7 @@ pub async fn verify_trace_json(state: State<'_, Arc<Mutex<AppData>>>) -> Result<
     if data.trace_json.is_empty() {
         Err(format!("{} is empty", TRACE_JSON_FILENAME).to_string())
     } else {
+        debug!("[verify_trace_json] {} trace events", data.trace_json.len());
         Ok(())
     }
 }
@@ -1347,6 +1410,7 @@ pub async fn verify_types_json(state: State<'_, Arc<Mutex<AppData>>>) -> Result<
     if data.types_json.is_empty() {
         Err(format!("{} is empty", TYPES_JSON_FILENAME).to_string())
     } else {
+        debug!("[verify_types_json] {} types", data.types_json.len());
         Ok(())
     }
 }
@@ -1359,6 +1423,7 @@ pub async fn verify_cpu_profile(state: State<'_, Arc<Mutex<AppData>>>) -> Result
             if contents.trim().is_empty() {
                 Err(format!("{} is empty", CPU_PROFILE_FILENAME).to_string())
             } else {
+                debug!("[verify_cpu_profile] size {} bytes", contents.len());
                 Ok(())
             }
         }
@@ -1385,6 +1450,7 @@ pub async fn get_trace_json_preview(
         let data = state.lock().map_err(|e| e.to_string())?;
         data.outputs_dir().join(TRACE_JSON_FILENAME)
     };
+
     get_output_file_preview(&filepath).await
 }
 
@@ -1413,6 +1479,10 @@ pub async fn get_cpu_profile_preview(
 #[tauri::command]
 pub async fn get_relative_paths(state: State<'_, Arc<Mutex<AppData>>>) -> Result<bool, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
+    debug!(
+        "[get_relative_paths] returning {}",
+        data.settings.relative_paths
+    );
     Ok(data.settings.relative_paths)
 }
 
@@ -1424,6 +1494,7 @@ pub async fn set_relative_paths(
     let mut data = state.lock().map_err(|e| e.to_string())?;
     data.settings.relative_paths = value;
     AppData::update_outputs(&data);
+    debug!("[set_relative_paths] set to {}", value);
     Ok(())
 }
 
@@ -1496,7 +1567,7 @@ pub async fn open_file(state: State<'_, Arc<Mutex<AppData>>>, path: String) -> R
     if file_path.is_empty() {
         return Err("Empty path".to_string());
     }
-    if !std::path::Path::new(&file_path).exists() {
+    if !Path::new(&file_path).exists() {
         return Err(format!("Path does not exist: {file_path}"));
     }
 
@@ -1658,9 +1729,9 @@ pub async fn set_apply_tsc_project_flag(
 #[tauri::command]
 pub async fn get_treemap_data(
     state: State<'_, Arc<Mutex<AppData>>>,
-) -> Result<Vec<crate::treemap::TreemapNode>, String> {
+) -> Result<Vec<TreemapNode>, String> {
     let data = state.lock().map_err(|e| e.to_string())?;
-    let treemap_data = crate::treemap::build_treemap_from_trace(&data.trace_json)?;
+    let treemap_data = build_treemap_from_trace(&data.trace_json)?;
     Ok(treemap_data)
 }
 
@@ -1711,7 +1782,7 @@ pub async fn get_bug_report_files(
         ),
         (
             "type-graph.json",
-            crate::type_graph::TYPE_GRAPH_FILENAME,
+            TYPE_GRAPH_FILENAME,
             "Type relationship graph",
         ),
         (
@@ -1825,7 +1896,7 @@ pub async fn create_bug_report(
         TYPES_JSON_FILENAME,
         TRACE_JSON_FILENAME,
         ANALYZE_TRACE_FILENAME,
-        crate::type_graph::TYPE_GRAPH_FILENAME,
+        TYPE_GRAPH_FILENAME,
         CPU_PROFILE_FILENAME,
     ];
 
@@ -1877,7 +1948,7 @@ where
     F: Fn(&str, &str) -> Result<T, String>,
     U: Fn(&mut AppData, T) -> (),
 {
-    use std::path::Path;
+    use Path;
 
     let path = Path::new(file_path);
     if !path.exists() {
@@ -1926,7 +1997,7 @@ fn regenerate_analysis_after_upload(state: &State<'_, Arc<Mutex<AppData>>>) -> R
         .to_string();
 
     // Regenerate analyze trace
-    let analyze_result = crate::analyze_trace::analyze_trace(&outputs_dir, None);
+    let analyze_result = analyze_trace(&outputs_dir, None);
     if let Ok(result) = analyze_result {
         let mut data = state.lock().map_err(|e| e.to_string())?;
         data.analyze_trace = Some(result);
@@ -1944,7 +2015,7 @@ fn regenerate_analysis_after_upload(state: &State<'_, Arc<Mutex<AppData>>>) -> R
             data.types_json.clone()
         };
 
-        let graph = crate::type_graph::TypeGraph::from_types(&types);
+        let graph = TypeGraph::from_types(&types);
 
         // Store in AppData and persist to disk
         {
@@ -1953,7 +2024,7 @@ fn regenerate_analysis_after_upload(state: &State<'_, Arc<Mutex<AppData>>>) -> R
 
             // Persist to outputs/type-graph.json
             let outputs_dir = data.outputs_dir();
-            let path = outputs_dir.join(crate::type_graph::TYPE_GRAPH_FILENAME);
+            let path = outputs_dir.join(TYPE_GRAPH_FILENAME);
             let json = serde_json::to_string_pretty(&data.type_graph)
                 .map_err(|e| format!("Failed to serialize type_graph: {}", e))?;
 
@@ -1971,7 +2042,7 @@ fn regenerate_analysis_after_upload(state: &State<'_, Arc<Mutex<AppData>>>) -> R
 }
 
 // Helper to find paired trace/types files
-fn find_paired_file(path: &std::path::Path, from: &str, to: &str) -> std::path::PathBuf {
+fn find_paired_file(path: &Path, from: &str, to: &str) -> PathBuf {
     let default_name = format!("{}.json", from);
     let filename = path
         .file_name()
@@ -1979,7 +2050,7 @@ fn find_paired_file(path: &std::path::Path, from: &str, to: &str) -> std::path::
         .unwrap_or(&default_name);
     let paired_filename = filename.replace(from, to);
     path.parent()
-        .unwrap_or(std::path::Path::new("."))
+        .unwrap_or(Path::new("."))
         .join(paired_filename)
 }
 
@@ -1988,7 +2059,7 @@ pub async fn upload_trace_json(
     state: State<'_, Arc<Mutex<AppData>>>,
     file_path: String,
 ) -> Result<(), String> {
-    use std::path::Path;
+    use Path;
 
     let _trace_events = upload_file_with_validation(
         &file_path,
@@ -2038,7 +2109,7 @@ pub async fn upload_types_json(
     state: State<'_, Arc<Mutex<AppData>>>,
     file_path: String,
 ) -> Result<(), String> {
-    use std::path::Path;
+    use Path;
 
     let _types_json = upload_file_with_validation(
         &file_path,
@@ -2135,7 +2206,7 @@ pub async fn upload_type_graph(
 ) -> Result<(), String> {
     upload_file_with_validation(
         &file_path,
-        crate::type_graph::TYPE_GRAPH_FILENAME.trim_start_matches('/'),
+        TYPE_GRAPH_FILENAME.trim_start_matches('/'),
         |_path, contents| {
             serde_json::from_str::<TypeGraph>(contents)
                 .map_err(|e| format!("Invalid type graph format: {}", e))
@@ -2202,7 +2273,7 @@ pub async fn set_project_root(
     project_root: String,
 ) -> Result<(), String> {
     let mut data = state.lock().map_err(|e| e.to_string())?;
-    let path_buf = std::path::PathBuf::from(project_root.clone());
+    let path_buf = PathBuf::from(project_root.clone());
     data.set_project_root(path_buf)?;
     Ok(())
 }
@@ -2218,33 +2289,30 @@ pub async fn get_current_dir() -> Result<String, String> {
         .map_err(|e| e.to_string())
 }
 
-pub fn get_typeslayer_base_data_dir() -> std::path::PathBuf {
+pub fn get_typeslayer_base_data_dir() -> PathBuf {
     if let Ok(env_dir) = std::env::var("TYPESLAYER_DATA_DIR") {
-        std::path::PathBuf::from(env_dir)
+        PathBuf::from(env_dir)
     } else {
         #[cfg(target_os = "linux")]
         {
             if let Ok(home) = std::env::var("HOME") {
-                return std::path::PathBuf::from(format!("{}/.local/share/typeslayer", home));
+                return PathBuf::from(format!("{}/.local/share/typeslayer", home));
             }
         }
         #[cfg(target_os = "macos")]
         {
             if let Ok(home) = std::env::var("HOME") {
-                return std::path::PathBuf::from(format!(
-                    "{}/Library/Application Support/typeslayer",
-                    home
-                ));
+                return PathBuf::from(format!("{}/Library/Application Support/typeslayer", home));
             }
         }
         #[cfg(target_os = "windows")]
         {
             if let Ok(appdata) = std::env::var("APPDATA") {
-                return std::path::PathBuf::from(format!("{}\\typeslayer", appdata));
+                return PathBuf::from(format!("{}\\typeslayer", appdata));
             }
         }
         std::env::current_dir()
-            .unwrap_or(std::path::PathBuf::from("."))
+            .unwrap_or(PathBuf::from("."))
             .join("typeslayer")
     }
 }
@@ -2252,7 +2320,7 @@ pub fn get_typeslayer_base_data_dir() -> std::path::PathBuf {
 #[tauri::command]
 pub async fn get_output_file_sizes(
     state: State<'_, Arc<Mutex<AppData>>>,
-) -> Result<std::collections::HashMap<String, u64>, String> {
+) -> Result<HashMap<String, u64>, String> {
     use std::fs;
 
     let outputs_dir = {
@@ -2268,10 +2336,10 @@ pub async fn get_output_file_sizes(
         TYPE_GRAPH_FILENAME,
     ];
 
-    let mut sizes = std::collections::HashMap::new();
+    let mut sizes = HashMap::new();
 
     for filename in filenames {
-        let path = std::path::Path::new(&outputs_dir).join(filename);
+        let path = Path::new(&outputs_dir).join(filename);
         if let Ok(metadata) = fs::metadata(&path) {
             sizes.insert(filename.to_string(), metadata.len());
         }
@@ -2329,4 +2397,125 @@ pub async fn get_traces_related_to_typeid(
         .cloned()
         .collect();
     Ok(events)
+}
+
+#[tauri::command]
+pub async fn get_links_to_type_id(
+    state: State<'_, Arc<Mutex<AppData>>>,
+    type_id: usize,
+) -> Result<Vec<(LinkKind, Vec<(TypeId, String)>)>, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+
+    let mut links_by_kind = HashMap::<LinkKind, Vec<(TypeId, String)>>::new();
+    if let Some(graph) = &data.type_graph {
+        for link in graph.links.iter() {
+            if link.target == type_id {
+                links_by_kind
+                    .entry(link.kind.clone())
+                    .or_insert_with(Vec::<(TypeId, String)>::new)
+                    .push((
+                        type_id,
+                        human_readable_name(
+                            data.types_json
+                                .get(link.source)
+                                .ok_or_else(|| format!("Type with id {} not found", link.source))?,
+                        ),
+                    ));
+            }
+        }
+    } else {
+        return Err("No type graph available".to_string());
+    }
+
+    let mut sorted_links: Vec<(LinkKind, Vec<(TypeId, String)>)> =
+        links_by_kind.into_iter().collect();
+    sorted_links.sort_by(|(_, a), (_, b)| b.len().cmp(&a.len()));
+    Ok(sorted_links)
+}
+
+#[tauri::command]
+pub async fn get_resolved_type_by_id(
+    state: State<'_, Arc<Mutex<AppData>>>,
+    type_id: Option<usize>,
+) -> Result<Option<ResolvedType>, String> {
+    if let Some(id) = type_id {
+        let data = state.lock().map_err(|e| e.to_string())?;
+        if let Some(t) = data.types_json.get(id) {
+            Ok(Some(t.clone()))
+        } else {
+            Err(format!("Type with id {} not found", id))
+        }
+    } else {
+        Ok(None)
+    }
+}
+
+#[tauri::command]
+pub async fn get_resolved_types_by_ids(
+    state: State<'_, Arc<Mutex<AppData>>>,
+    type_ids: Option<Vec<usize>>,
+) -> Result<HashMap<usize, Option<ResolvedType>>, String> {
+    let mut result = HashMap::new();
+    let data = state.lock().map_err(|e| e.to_string())?;
+    if let Some(ids) = type_ids {
+        for id in ids {
+            let entry = data.types_json.get(id).cloned();
+            result.insert(id, entry);
+        }
+    }
+    Ok(result)
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppStats {
+    pub types_count: usize,
+    pub links_count: usize,
+}
+
+#[tauri::command]
+pub async fn get_app_stats(state: State<'_, Arc<Mutex<AppData>>>) -> Result<AppStats, String> {
+    let data = state.lock().map_err(|e| e.to_string())?;
+    Ok(AppStats {
+        // we synthetically insert id:0 to make it so you can just index the vec to lookup by id
+        types_count: data.types_json.len() - 1,
+        links_count: data
+            .type_graph
+            .as_ref()
+            .map_or(0, |graph| graph.links.len()),
+    })
+}
+
+#[tauri::command]
+pub async fn get_recursive_resolved_types(
+    state: State<'_, Arc<Mutex<AppData>>>,
+    type_id: Option<usize>,
+) -> Result<HashMap<TypeId, ResolvedType>, String> {
+    if type_id.is_none() {
+        return Ok(HashMap::new());
+    }
+
+    let data = state.lock().map_err(|e| e.to_string())?;
+
+    let mut result = HashMap::new();
+
+    fn collect_types(
+        current_id: TypeId,
+        accumulator: &mut HashMap<TypeId, ResolvedType>,
+        types: &[ResolvedType],
+    ) {
+        if accumulator.contains_key(&current_id) {
+            return;
+        }
+        if let Some(resolved_type) = types.get(current_id) {
+            accumulator.insert(current_id, resolved_type.clone());
+            for link in get_relationships_for_type(resolved_type) {
+                collect_types(link.target, accumulator, types);
+            }
+        }
+    }
+
+    let types: &[ResolvedType] = &data.types_json;
+    collect_types(type_id.unwrap(), &mut result, types);
+    Ok(result)
 }

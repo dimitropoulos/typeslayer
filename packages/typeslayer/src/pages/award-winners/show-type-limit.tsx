@@ -5,6 +5,8 @@ import {
   ListItemButton,
   ListItemText,
   Stack,
+  Tab,
+  Tabs,
   Typography,
 } from "@mui/material";
 import type {
@@ -16,15 +18,19 @@ import type {
   EventChecktypes__RemoveSubtypes_DepthLimit,
   EventChecktypes__TraceUnionsOrIntersectionsTooLarge_DepthLimit,
   EventChecktypes__TypeRelatedToDiscriminatedType_DepthLimit,
+  TypeId,
 } from "@typeslayer/validate";
 import { type ReactNode, useCallback, useRef, useState } from "react";
 import { CenterLoader } from "../../components/center-loader";
+import { Code } from "../../components/code";
 import { DisplayRecursiveType } from "../../components/display-recursive-type";
 import { NoData } from "../../components/no-data";
+import { TabLabel } from "../../components/tab-label";
 import { TypeSummary } from "../../components/type-summary";
 import { extractPath } from "../../components/utils";
 import {
   useAnalyzeTrace,
+  useGetResolvedTypeById,
   useProjectRoot,
   useRelativePaths,
 } from "../../hooks/tauri-hooks";
@@ -38,7 +44,6 @@ import {
   getDepthLimitsProperty,
   type TypeLevelLimitAwardId,
 } from "./type-level-limits";
-import { useTypeRegistry } from "./use-type-registry";
 
 type LimitType =
   | EventChecktypes__InstantiateType_DepthLimit
@@ -71,8 +76,8 @@ export const ShowTypeLimit = <L extends LimitType>({
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const relativePaths = useRelativePaths();
   const projectRoot = useProjectRoot();
-  const { typeRegistry, isLoading: isTypeRegistryLoading } = useTypeRegistry();
   const depthLimitKey = getDepthLimitsProperty(awardId);
+  const [selectedTab, setSelectedTab] = useState<"type" | "json">("type");
 
   const { data: analyzeTrace } = useAnalyzeTrace();
 
@@ -83,8 +88,7 @@ export const ShowTypeLimit = <L extends LimitType>({
     }
   }, []);
 
-  const isLoading =
-    isTypeRegistryLoading || relativePaths.isLoading || projectRoot.isLoading;
+  const isLoading = relativePaths.isLoading || projectRoot.isLoading;
 
   const data = (analyzeTrace?.depthLimits[depthLimitKey] || []) as L[];
   const first: L | undefined = data[0];
@@ -139,42 +143,15 @@ export const ShowTypeLimit = <L extends LimitType>({
         ) : hasData ? (
           hasItems ? (
             <List>
-              {data.map((current, index) => {
-                const typeId = getTypeId(current);
-                const resolvedType = typeRegistry[typeId];
-                const key = getKey(current);
-
-                if (!resolvedType) {
-                  return (
-                    <ListItemText key={key}>
-                      <Typography color="error">
-                        Type {typeId} not found in type registry
-                      </Typography>
-                    </ListItemText>
-                  );
-                }
-
-                return (
-                  <ListItemButton
-                    key={key}
-                    onClick={() => handleTypeClick(index)}
-                    selected={index === selectedIndex}
-                  >
-                    <ListItemText>
-                      <TypeSummary
-                        resolvedType={resolvedType}
-                        suppressActions
-                      />
-                      <Stack gap={0.5}>
-                        <MaybePathCaption
-                          maybePath={extractPath(resolvedType)}
-                        />
-                        {inlineBarGraph(current, first)}
-                      </Stack>
-                    </ListItemText>
-                  </ListItemButton>
-                );
-              })}
+              {data.map((current, index) => (
+                <LimitListItem
+                  typeId={getTypeId(current)}
+                  key={getKey(current)}
+                  inlineBarGraph={inlineBarGraph(current, first)}
+                  onClick={() => handleTypeClick(index)}
+                  selected={index === selectedIndex}
+                />
+              ))}
             </List>
           ) : (
             nonePresent
@@ -195,9 +172,74 @@ export const ShowTypeLimit = <L extends LimitType>({
           }}
           ref={scrollContainerRef}
         >
-          <DisplayRecursiveType id={getTypeId(data[selectedIndex])} />
+          <Tabs
+            value={selectedTab}
+            onChange={(_, value) => setSelectedTab(value)}
+            sx={{ mb: 2 }}
+          >
+            <Tab label={<TabLabel label="Type" count={null} />} value="type" />
+            <Tab
+              label={<TabLabel label="Trace Event" count={null} />}
+              value="json"
+            />
+          </Tabs>
+
+          {selectedTab === "type" ? (
+            <DisplayRecursiveType id={getTypeId(data[selectedIndex])} />
+          ) : null}
+
+          {selectedTab === "json" ? (
+            <Code
+              lang="json"
+              value={JSON.stringify(data[selectedIndex], null, 2)}
+            />
+          ) : null}
         </Box>
       ) : null}
     </Stack>
+  );
+};
+
+const LimitListItem = ({
+  typeId,
+  inlineBarGraph,
+  onClick,
+  selected,
+}: {
+  typeId: TypeId;
+  inlineBarGraph: ReactNode;
+  onClick: () => void;
+  selected: boolean;
+}) => {
+  const { data: resolvedType, isLoading } = useGetResolvedTypeById(typeId);
+
+  if (isLoading) {
+    return (
+      <ListItemText>
+        <CenterLoader />
+      </ListItemText>
+    );
+  }
+
+  if (!resolvedType) {
+    return (
+      <ListItemText>
+        <Typography color="error">
+          Type {typeId} not found in type registry
+        </Typography>
+      </ListItemText>
+    );
+  }
+
+  return (
+    <ListItemButton onClick={onClick} selected={selected}>
+      <ListItemText>
+        <TypeSummary resolvedType={resolvedType} suppressActions />
+        <Stack gap={0.5}>
+          <MaybePathCaption maybePath={extractPath(resolvedType)} />
+          {inlineBarGraph}
+        </Stack>
+      </ListItemText>
+    </ListItemButton>
   );
 };

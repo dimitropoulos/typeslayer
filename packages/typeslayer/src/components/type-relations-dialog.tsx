@@ -7,7 +7,6 @@ import {
   DialogTitle,
   Link,
   Stack,
-  Tab,
   Tabs,
   Typography,
 } from "@mui/material";
@@ -18,17 +17,17 @@ import {
 } from "@typeslayer/validate";
 import { type SyntheticEvent, useCallback, useState } from "react";
 import {
+  type LinksToType,
+  useGetLinksToTypeId,
   useGetTracesRelatedToTypeId,
-  useTypeGraph,
 } from "../hooks/tauri-hooks";
-import { useTypeRegistry } from "../pages/award-winners/use-type-registry";
-import type { GraphLink, LinkKind } from "../types/type-graph";
+import type { LinkKind } from "../types/type-graph";
 import { CenterLoader } from "./center-loader";
 import { Code } from "./code";
 import { InlineCode } from "./inline-code";
 import { ShowMoreChildren } from "./show-more-children";
-import { TabLabel } from "./tab-label";
-import { TypeSummary } from "./type-summary";
+import { VerticalTab } from "./tab-label";
+import { SimpleTypeSummary, TypeSummary } from "./type-summary";
 
 const LastDitchEffort = ({ typeId }: { typeId: number }) => {
   const { data: events, isLoading } = useGetTracesRelatedToTypeId({ typeId });
@@ -43,7 +42,7 @@ const LastDitchEffort = ({ typeId }: { typeId: number }) => {
         <Typography color="textSecondary">
           no types found with relations to <InlineCode>{typeId}</InlineCode>.
         </Typography>
-        <Typography color="textDisabled">
+        <Typography color="textDisabled" maxWidth="610px">
           that means that TypeScript didn't record any more information about
           this type other than that it exists in your code. it's pretty common -
           basically this is a type that was either a top level export or was
@@ -144,21 +143,9 @@ const kindToTypesRelationInfo = (kind: LinkKind): TypeRelationInfo => {
   }
 };
 
-const TargetsTabs = ({ targets }: { targets: GraphLink[] }) => {
-  const { typeRegistry } = useTypeRegistry();
-
-  const targetsByKind = Object.entries(
-    targets.reduce(
-      (acc, node) => {
-        acc[node.kind] = (acc[node.kind] ?? []).concat(node);
-        return acc;
-      },
-      {} as Record<LinkKind, GraphLink[]>,
-    ),
-  ) as [LinkKind, GraphLink[]][];
-
+function TargetsTabs({ linksToTypeId }: { linksToTypeId: LinksToType }) {
   const [selectedTab, setSelectedTab] = useState<LinkKind | undefined>(
-    targetsByKind[0][0],
+    linksToTypeId[0][0],
   );
 
   const handleTabChange = useCallback(
@@ -169,43 +156,47 @@ const TargetsTabs = ({ targets }: { targets: GraphLink[] }) => {
   );
 
   return (
-    <Stack>
-      <Tabs onChange={handleTabChange} value={selectedTab}>
-        {targetsByKind.map(([kind, nodes]) => (
-          <Tab
-            label={
-              <TabLabel
-                label={kindToTypesRelationInfo(kind).title}
-                count={nodes.length}
-              />
-            }
+    <Stack
+      sx={{
+        flexDirection: "row",
+        backgroundColor: "#11111190",
+        border: 1,
+        borderColor: "divider",
+        p: 1,
+        flexShrink: 0,
+        overflow: "hidden",
+      }}
+    >
+      <Tabs
+        onChange={handleTabChange}
+        value={selectedTab}
+        orientation="vertical"
+        sx={{ mr: 3, flexShrink: 0 }}
+      >
+        {linksToTypeId.map(([kind, nodes]) => (
+          <VerticalTab
             key={kind}
+            label={kindToTypesRelationInfo(kind).title}
+            count={nodes.length}
             value={kind}
           />
         ))}
       </Tabs>
-      <Stack sx={{ mt: 1 }}>
+      <Stack sx={{ overflow: "auto", my: 1, height: "100%", width: "100%" }}>
         <ShowMoreChildren incrementsOf={50}>
-          {targets
-            .filter(({ kind }) => kind === selectedTab)
-            .map(({ source }, index) => {
-              const resolvedType = typeRegistry[source];
-              if (!resolvedType) {
-                return (
-                  <Typography key={`${source}-${index}`} color="error">
-                    Could not find type with id {source} in registry
-                  </Typography>
-                );
-              }
-
+          {linksToTypeId
+            .filter(([kind]) => kind === selectedTab)
+            .flatMap(([, nodes]) => nodes)
+            .map(([id, name], index) => {
               return (
                 <Stack
-                  key={`${source}-${index}`}
+                  key={`${id}-${index}`}
                   sx={{ gap: 1, flexDirection: "row" }}
                 >
-                  <TypeSummary
-                    resolvedType={resolvedType}
-                    key={`${source}-${index}`}
+                  <SimpleTypeSummary
+                    id={id}
+                    name={name}
+                    key={`${id}-${index}`}
                   />
                 </Stack>
               );
@@ -214,39 +205,39 @@ const TargetsTabs = ({ targets }: { targets: GraphLink[] }) => {
       </Stack>
     </Stack>
   );
-};
+}
 
 export const TypeRelationsContent = ({
   resolvedType,
 }: {
   resolvedType?: ResolvedType | undefined;
 }) => {
-  const { data: typeGraph, isLoading } = useTypeGraph();
+  const { data: linksToTypeId, isLoading } = useGetLinksToTypeId(
+    resolvedType?.id ?? 0,
+  );
+
   if (!resolvedType) {
     return null;
   }
-  const { id: typeId } = resolvedType;
 
+  const { id: typeId } = resolvedType;
   if (typeId <= 0) {
     return null;
   }
 
-  const targets = typeGraph?.links.filter(node => node.target === typeId) ?? [];
+  if (isLoading) {
+    return <CenterLoader />;
+  }
 
-  const noneFound =
-    targets.length === 0 ? <LastDitchEffort typeId={typeId} /> : null;
+  if (!linksToTypeId) {
+    return null;
+  }
 
-  return isLoading ? (
-    <CenterLoader />
-  ) : (
-    <Stack gap={0.5}>
-      {targets.length === 0 ? (
-        noneFound
-      ) : (
-        <TargetsTabs targets={targets} key={typeId} />
-      )}
-    </Stack>
-  );
+  if (linksToTypeId.length === 0) {
+    return <LastDitchEffort typeId={typeId} />;
+  }
+
+  return <TargetsTabs linksToTypeId={linksToTypeId} key={typeId} />;
 };
 
 export const TypeRelationsDialog = ({
@@ -259,10 +250,10 @@ export const TypeRelationsDialog = ({
   return (
     <Dialog open onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-        <em>types related to</em>{" "}
+        Type Relations to{" "}
         <TypeSummary resolvedType={resolvedType} suppressActions />
       </DialogTitle>
-      <DialogContent dividers>
+      <DialogContent sx={{ m: 0, py: 0 }}>
         <TypeRelationsContent resolvedType={resolvedType} />
       </DialogContent>
 

@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use tracing::debug;
+
 /// Source precedence options for resolution.
 #[derive(Clone, Debug)]
 pub enum Source {
@@ -128,7 +130,13 @@ impl LayerCake {
                     if let Ok(v) = std::env::var(&env_key) {
                         if !v.is_empty() {
                             match (args.validate)(&v) {
-                                Ok(transformed) => return transformed,
+                                Ok(transformed) => {
+                                    debug!(
+                                        "resolved {}='{}' from env {}",
+                                        args.env, transformed, env_key
+                                    );
+                                    return transformed;
+                                }
                                 Err(e) => {
                                     panic!("Invalid {} from env {}: {}", args.env, env_key, e)
                                 }
@@ -139,7 +147,13 @@ impl LayerCake {
                 Source::Flag => {
                     if let Some(v) = self.flags.get(args.flag) {
                         match (args.validate)(v) {
-                            Ok(transformed) => return transformed,
+                            Ok(transformed) => {
+                                debug!(
+                                    "resolved {}='{}' from flag {}",
+                                    args.env, transformed, args.flag
+                                );
+                                return transformed;
+                            }
                             Err(e) => panic!("Invalid {} from flag {}: {}", args.env, args.flag, e),
                         }
                     }
@@ -147,7 +161,13 @@ impl LayerCake {
                 Source::File => {
                     if let Some(v) = self.get_config_str(args.file) {
                         match (args.validate)(&v) {
-                            Ok(transformed) => return transformed,
+                            Ok(transformed) => {
+                                debug!(
+                                    "resolved {}='{}' from file key {}",
+                                    args.env, transformed, args.file
+                                );
+                                return transformed;
+                            }
                             Err(e) => {
                                 panic!("Invalid {} from file key {}: {}", args.env, args.file, e)
                             }
@@ -177,6 +197,7 @@ impl LayerCake {
                 Source::Env => {
                     if let Ok(v) = std::env::var(&env_key) {
                         if let Some(b) = Self::parse_bool(&v) {
+                            debug!("resolved bool {}={} from env {}", args.env, b, env_key);
                             return b;
                         }
                     }
@@ -184,12 +205,17 @@ impl LayerCake {
                 Source::Flag => {
                     if let Some(v) = self.flags.get(args.flag) {
                         if let Some(b) = Self::parse_bool(v) {
+                            debug!("resolved bool {}={} from flag {}", args.env, b, args.flag);
                             return b;
                         }
                     }
                 }
                 Source::File => {
                     if let Some(v) = self.get_config_bool(args.file) {
+                        debug!(
+                            "resolved bool {}={} from file key {}",
+                            args.env, v, args.file
+                        );
                         return v;
                     }
                 }

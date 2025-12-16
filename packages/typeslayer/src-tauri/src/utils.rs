@@ -3,6 +3,7 @@ use std::process::Stdio;
 
 use shlex::Quoter;
 use tokio::io::AsyncReadExt;
+use tracing::debug;
 
 pub fn quote_if_needed(s: &str) -> String {
     // Equivalent to the now deprecated try_quote.
@@ -55,5 +56,10 @@ pub async fn get_output_file_preview(path: &PathBuf) -> Result<String, String> {
         .await
         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
     buf.truncate(n);
+    debug!(
+        "[get_output_file_preview]: read {} bytes from {}",
+        n,
+        path.display()
+    );
     String::from_utf8(buf).map_err(|e| format!("Invalid UTF-8: {}", e))
 }

@@ -11,7 +11,7 @@ export function TitleSubtitle({
   icon: ReactNode;
 }) {
   return (
-    <Stack sx={{ gap: 1, py: 1, px: 2 }}>
+    <Stack sx={{ gap: 2, py: 1, pb: 2, px: 2 }}>
       <Stack direction="row" gap={2} alignItems="center">
         {icon}
         <Typography variant="h4">{title}</Typography>

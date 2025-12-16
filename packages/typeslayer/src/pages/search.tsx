@@ -1,4 +1,11 @@
-import { Box, Divider, Stack, TextField, Typography } from "@mui/material";
+import {
+  Box,
+  Divider,
+  Link,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { TYPES_JSON_FILENAME } from "@typeslayer/validate";
 import { useEffect, useState } from "react";
@@ -9,13 +16,13 @@ import { DisplayRecursiveType } from "../components/display-recursive-type";
 import { InlineCode } from "../components/inline-code";
 import { StatPill } from "../components/stat-pill";
 import { TypeRelationsContent } from "../components/type-relations-dialog";
-import { useTypeRegistry } from "./award-winners/use-type-registry";
+import { useGetAppStats, useGetResolvedTypeById } from "../hooks/tauri-hooks";
 
 export const SearchTypes = () => {
   const params = useParams({ strict: false });
   const navigate = useNavigate();
   const typeIdParam = params.typeId as string | undefined;
-
+  const { data: appStats } = useGetAppStats();
   const [search, setSearch] = useState(typeIdParam || "");
 
   // Sync search with URL param
@@ -27,9 +34,10 @@ export const SearchTypes = () => {
 
   const numberSearch = Number.parseInt(search, 10);
 
-  const { typeRegistry, isLoading } = useTypeRegistry();
+  const { data: resolvedType, isLoading } =
+    useGetResolvedTypeById(numberSearch);
 
-  const typeString = JSON.stringify(typeRegistry[numberSearch], null, 2);
+  const typeString = JSON.stringify(resolvedType, null, 2);
 
   const callout = (
     <Callout title="What's a type id?">
@@ -55,8 +63,11 @@ export const SearchTypes = () => {
     </Callout>
   );
 
+  const validSearch =
+    numberSearch > 0 && !Number.isNaN(numberSearch) && resolvedType;
+
   return (
-    <Box sx={{ px: 4, overflow: "auto", height: "100%" }}>
+    <Box sx={{ pl: 4, pr: 3, overflowY: "scroll", maxHeight: "100%" }}>
       <Stack
         sx={{
           flexDirection: "row",
@@ -70,8 +81,8 @@ export const SearchTypes = () => {
         }}
       >
         <Typography variant="h2">Search</Typography>
-        {typeRegistry.length > 1 ? (
-          <StatPill label="Types" value={typeRegistry.length - 1} />
+        {appStats ? (
+          <StatPill label="Types" value={appStats.typesCount} />
         ) : null}
       </Stack>
       <Stack gap={3}>
@@ -109,17 +120,26 @@ export const SearchTypes = () => {
           >
             {isLoading ? (
               <CenterLoader />
-            ) : (
+            ) : validSearch ? (
               <DisplayRecursiveType id={numberSearch} />
-            )}
+            ) : null}
 
-            {typeString ? (
+            {typeString && validSearch ? (
               <>
                 <Divider />
                 <Typography variant="h5">
                   Raw Type Definition{" "}
                   <Typography fontSize={12}>
-                    (from <InlineCode>{TYPES_JSON_FILENAME}</InlineCode>)
+                    <Link
+                      underline="hover"
+                      color="inherit"
+                      sx={{ fontWeight: "normal" }}
+                      href="/raw-data/types"
+                    >
+                      (from <InlineCode>Raw Data</InlineCode>{" "}
+                      <InlineCode>|</InlineCode>{" "}
+                      <InlineCode>{TYPES_JSON_FILENAME}</InlineCode>)
+                    </Link>
                   </Typography>
                 </Typography>
                 <Code value={typeString} />
@@ -129,20 +149,35 @@ export const SearchTypes = () => {
             )}
           </Stack>
 
-          {numberSearch > 0 ? (
-            <>
-              <Divider orientation="vertical" sx={{ minWidth: 10 }} />
+          <Stack
+            sx={{
+              flexGrow: 1,
+              overflow: "auto",
+              mb: 1,
+              gap: 3,
+            }}
+          >
+            {validSearch ? (
+              <>
+                <Stack>
+                  <Typography variant="h5">Types Relations</Typography>
 
-              <Stack gap={1}>
-                <Typography variant="h5" gutterBottom>
-                  Types Relations
-                </Typography>
-                <TypeRelationsContent
-                  resolvedType={typeRegistry[numberSearch]}
-                />
-              </Stack>
-            </>
-          ) : null}
+                  <Typography fontSize={12}>
+                    {" "}
+                    <Link
+                      underline="hover"
+                      color="inherit"
+                      sx={{ fontWeight: "normal" }}
+                      href="/type-network"
+                    >
+                      (from <InlineCode>Type Network</InlineCode>)
+                    </Link>
+                  </Typography>
+                </Stack>
+                <TypeRelationsContent resolvedType={resolvedType} />
+              </>
+            ) : null}
+          </Stack>
         </Stack>
       </Stack>
     </Box>

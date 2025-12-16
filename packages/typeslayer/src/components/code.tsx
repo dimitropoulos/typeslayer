@@ -96,7 +96,6 @@ export const Code = ({
             borderColor: "divider",
             borderBottom: 0,
             p: 1,
-            borderRadius: 1,
             userSelect: "none",
             display: "flex",
             gap: 1,

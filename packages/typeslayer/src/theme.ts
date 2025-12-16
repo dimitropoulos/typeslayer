@@ -222,7 +222,7 @@ export const theme: Theme = createTheme({
           height: 8,
         },
         "*::-webkit-scrollbar-track": {
-          background: border.subtle,
+          background: "transparent",
         },
         "*::-webkit-scrollbar-thumb": {
           background: `linear-gradient(180deg, ${doomRed.darker}, ${doomRed.dark})`,

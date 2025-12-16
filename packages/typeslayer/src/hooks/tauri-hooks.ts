@@ -12,10 +12,95 @@ import {
   type TraceEvent,
   type TraceJsonSchema,
   type TypeId,
-  type TypesJsonSchema,
 } from "@typeslayer/validate";
+import { useEffect } from "react";
 import { friendlyPath } from "../components/utils";
-import type { TypeGraph } from "../types/type-graph";
+import type { LinkKind, TypeGraph } from "../types/type-graph";
+
+export const useGetRecursiveResolvedTypes = (typeId: TypeId | undefined) => {
+  const queryClient = useQueryClient();
+
+  const query = useQuery<Record<TypeId, ResolvedType>, unknown>({
+    queryKey: ["resolved_type", "recursive", typeId],
+    queryFn: () =>
+      invoke<Record<TypeId, ResolvedType>>("get_recursive_resolved_types", {
+        typeId,
+      }),
+    enabled: typeId !== undefined,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  useEffect(() => {
+    if (!query.isSuccess && query.data) {
+      Object.entries(query.data ?? {}).forEach(([id, resolvedType]) => {
+        queryClient.setQueryData(["resolved_type", Number(id)], resolvedType);
+      });
+    }
+  }, [query.isSuccess, query.data, queryClient.setQueryData]);
+
+  return {
+    data: query.data,
+    isLoading: query.isLoading,
+    error: query.error,
+  };
+};
+
+export const useGetResolvedTypeById = (typeId: TypeId | undefined) => {
+  const queryClient = useQueryClient();
+
+  const query = useQuery<ResolvedType | undefined, unknown>({
+    queryKey: ["resolved_type", typeId],
+    queryFn: () =>
+      invoke<ResolvedType | undefined>("get_resolved_type_by_id", { typeId }),
+    enabled: typeId !== undefined,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  useEffect(() => {
+    if (!query.isSuccess && query.data) {
+      queryClient.setQueryData(["resolved_type", typeId], query.data);
+    }
+  }, [query.isSuccess, query.data, queryClient.setQueryData, typeId]);
+
+  return {
+    data: query.data,
+    isLoading: query.isLoading,
+    error: query.error,
+  };
+};
+
+export const useGetResolvedTypesByIds = (typeIds: TypeId[]) => {
+  const queryClient = useQueryClient();
+
+  const query = useQuery<Record<TypeId, ResolvedType>, unknown>({
+    queryKey: ["resolved_type", "ids", ...typeIds],
+    queryFn: () =>
+      invoke<Record<TypeId, ResolvedType>>("get_resolved_types_by_ids", {
+        typeIds,
+      }),
+    enabled: typeIds.length > 0,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  useEffect(() => {
+    if (!query.isSuccess && query.data) {
+      Object.entries(query.data ?? {}).forEach(([id, resolvedType]) => {
+        const typeId = Number(id);
+        if (resolvedType) {
+          queryClient.setQueryData(["resolved_type", typeId], resolvedType);
+        } else {
+          queryClient.setQueryData(["resolved_type", typeId], undefined);
+        }
+      });
+    }
+  }, [query.isSuccess, query.data, queryClient.setQueryData]);
+
+  return {
+    data: query.data,
+    isLoading: query.isLoading,
+    error: query.error,
+  };
+};
 
 export function useRelativePaths() {
   const queryClient = useQueryClient();
@@ -234,18 +319,11 @@ export function useGetTracesRelatedToTypeId({ typeId }: { typeId: TypeId }) {
   });
 }
 
+/** @deprecated this should be used only for the perfetto page */
 export function useTraceJson() {
   return useQuery({
     queryKey: ["trace_json"],
     queryFn: () => invoke<TraceJsonSchema>("get_trace_json"),
-    staleTime: Number.POSITIVE_INFINITY,
-  });
-}
-
-export function useTypesJson() {
-  return useQuery({
-    queryKey: ["types_json"],
-    queryFn: () => invoke<ResolvedType[]>("get_types_json"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 }
@@ -284,14 +362,12 @@ export function useTsconfigPaths() {
 
 const refreshGenerateTrace = (queryClient: QueryClient) => async () => {
   // trace.json
-  const trace = await invoke<TraceJsonSchema>("get_trace_json");
-  queryClient.setQueryData(["trace_json"], trace);
+  queryClient.invalidateQueries({ queryKey: ["trace_json"] });
   queryClient.invalidateQueries({ queryKey: ["get_trace_json_preview"] });
 
   // types.json
-  const types = await invoke<TypesJsonSchema>("get_types_json");
-  queryClient.setQueryData(["types_json"], types);
   queryClient.invalidateQueries({ queryKey: ["get_types_json_preview"] });
+  queryClient.invalidateQueries({ queryKey: ["resolved_type"] });
 
   // type-graph.json
   queryClient.invalidateQueries({ queryKey: ["type_graph"] });
@@ -302,6 +378,7 @@ const refreshGenerateTrace = (queryClient: QueryClient) => async () => {
   queryClient.invalidateQueries({ queryKey: ["get_analyze_trace_preview"] });
 
   // metadata
+  queryClient.invalidateQueries({ queryKey: ["get_app_stats"] });
   queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
   queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
 };
@@ -715,11 +792,7 @@ export const useVerifyTraceJson = () => {
 
   return useMutation({
     mutationFn: async () => invoke<void>("verify_trace_json"),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["trace_json"] });
-      queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
-      queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
-    },
+    onSettled: refreshGenerateTrace(queryClient),
   });
 };
 
@@ -728,11 +801,7 @@ export const useVerifyTypesJson = () => {
 
   return useMutation({
     mutationFn: async () => invoke<void>("verify_types_json"),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["types_json"] });
-      queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
-      queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
-    },
+    onSettled: refreshGenerateTrace(queryClient),
   });
 };
 
@@ -759,5 +828,31 @@ export const useVerifyCpuProfile = () => {
       queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
       queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
     },
+  });
+};
+
+export type LinksToType = [LinkKind, [TypeId, string][]][];
+
+export const useGetLinksToTypeId = (typeId: TypeId) => {
+  return useQuery({
+    queryKey: ["get_links_to_type_id", typeId],
+    queryFn: () =>
+      invoke<LinksToType>("get_links_to_type_id", {
+        typeId,
+      }),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+};
+
+export interface AppStats {
+  typesCount: number;
+  linksCount: number;
+}
+
+export const useGetAppStats = () => {
+  return useQuery({
+    queryKey: ["get_app_stats"],
+    queryFn: () => invoke<AppStats>("get_app_stats"),
+    staleTime: Number.POSITIVE_INFINITY,
   });
 };

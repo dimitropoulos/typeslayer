@@ -232,8 +232,45 @@ pub struct ResolvedType {
 pub type TypesJsonSchema = Vec<ResolvedType>;
 
 pub fn parse_types_json(path_label: &str, json_string: &str) -> Result<TypesJsonSchema, String> {
-    let parsed: TypesJsonSchema = serde_json::from_str(json_string)
+    let mut parsed: TypesJsonSchema = serde_json::from_str(json_string)
         .map_err(|e| format!("Failed to parse '{path_label}': {e}"))?;
+
+    parsed.insert(
+        0,
+        // TODO: do a better job of splitting this up
+        ResolvedType {
+            id: 0,
+            flags: vec![],
+            recursion_id: None,
+            intrinsic_name: None,
+            first_declaration: None,
+            reference_location: None,
+            destructuring_pattern: None,
+            type_arguments: None,
+            union_types: None,
+            intersection_types: None,
+            alias_type_arguments: None,
+            instantiated_type: None,
+            substitution_base_type: None,
+            constraint_type: None,
+            indexed_access_object_type: None,
+            indexed_access_index_type: None,
+            conditional_check_type: None,
+            conditional_extends_type: None,
+            conditional_true_type: None,
+            conditional_false_type: None,
+            keyof_type: None,
+            alias_type: None,
+            evolving_array_element_type: None,
+            evolving_array_final_type: None,
+            reverse_mapped_source_type: None,
+            reverse_mapped_mapped_type: None,
+            reverse_mapped_constraint_type: None,
+            is_tuple: None,
+            symbol_name: None,
+            display: None,
+        },
+    );
 
     Ok(parsed)
 }

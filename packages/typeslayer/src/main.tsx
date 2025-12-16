@@ -1,5 +1,6 @@
 import CssBaseline from "@mui/material/CssBaseline";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+// import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import ReactDOM from "react-dom/client";
 import { AppRouterProvider } from "./routes";
 
@@ -16,16 +17,16 @@ const queryClient = new QueryClient({
     queries: {
       // Don't refetch on window focus in desktop app
       refetchOnWindowFocus: false,
-      // Retry failed requests 1 time
-      // retry: 1,
+      // we're not over the internet so no reason to retry
+      retry: 0,
       // Cache data for 5 minutes
       staleTime: 1000 * 60 * 5,
       // Keep data in cache for 10 minutes
       gcTime: 1000 * 60 * 10,
     },
     mutations: {
-      // Retry failed mutations 1 time
-      // retry: 1,
+      // we're not over the internet so no reason to retry
+      retry: 0,
     },
   },
 });
@@ -43,5 +44,6 @@ ReactDOM.createRoot(root).render(
         <AppRouterProvider />
       </ToastProvider>
     </ThemeProvider>
+    {/* <ReactQueryDevtools initialIsOpen={false} /> */}
   </QueryClientProvider>,
 );

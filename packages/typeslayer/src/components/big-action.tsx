@@ -80,7 +80,7 @@ export function BigAction({
     <Card
       sx={{
         position: "relative",
-        maxWidth: 500,
+        maxWidth: 525,
         transition: "all 0.3s ease-in-out",
         border: `1px solid ${theme.palette.divider}`,
         ...(isLoading && {

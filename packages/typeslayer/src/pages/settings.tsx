@@ -111,7 +111,7 @@ export const SettingsPage = () => {
             label="Relative Paths"
             control={
               <Switch
-                checked={relativePaths.data}
+                checked={relativePaths.data ?? false}
                 onChange={handleRelativePaths}
                 disabled={relativePaths.isLoading}
               />
@@ -133,7 +133,7 @@ export const SettingsPage = () => {
             <br />
             that file's path will be displayed as
             <br />
-            <InlineCode>src/index.ts</InlineCode>
+            <InlineCode>./src/index.ts</InlineCode>
           </Typography>
         </FormGroup>
       </Setting>
@@ -144,7 +144,7 @@ export const SettingsPage = () => {
             label="Open in Editor"
             control={
               <Switch
-                checked={preferEditorOpen.data}
+                checked={preferEditorOpen.data ?? false}
                 onChange={handlePreferEditor}
                 disabled={preferEditorOpen.isLoading}
               />
@@ -197,7 +197,7 @@ export const SettingsPage = () => {
             label="Auto Start"
             control={
               <Switch
-                checked={autoStart.data}
+                checked={autoStart.data ?? false}
                 onChange={handleAutoStart}
                 disabled={autoStart.isLoading}
               />

@@ -15,6 +15,7 @@ import { useToast } from "../contexts/toast-context";
 import { BugReport } from "./bug-report";
 import { MITS_DISCORD } from "./constants";
 import { InlineCode } from "./inline-code";
+import { createOpenHandler } from "./utils";
 
 const HelpDialog = () => {
   const [open, setOpen] = useState(false);
@@ -33,8 +34,10 @@ const HelpDialog = () => {
             {" "}
             if you have questions or need help, check out the{" "}
             <InlineCode>#typeslayer</InlineCode> channel on the{" "}
-            <Link href={MITS_DISCORD}>Michigan TypeScript Discord</Link> or send
-            a bug report: <BugReport onClose={handleClose} />
+            <Link href={MITS_DISCORD} onClick={createOpenHandler(MITS_DISCORD)}>
+              Michigan TypeScript Discord
+            </Link>{" "}
+            or send a bug report: <BugReport onClose={handleClose} />
           </Typography>
         </Stack>
         <DialogActions>

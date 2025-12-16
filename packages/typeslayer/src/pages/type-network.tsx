@@ -28,9 +28,8 @@ import { CenterLoader } from "../components/center-loader";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
 import { NoData } from "../components/no-data";
 import { StatPill } from "../components/stat-pill";
-import { useTypeGraph } from "../hooks/tauri-hooks";
+import { useGetAppStats, useTypeGraph } from "../hooks/tauri-hooks";
 import type { GraphLink, LinkKind } from "../types/type-graph";
-import { useTypeRegistry } from "./award-winners/use-type-registry";
 
 type EdgeConfig = {
   id: LinkKind;
@@ -168,12 +167,15 @@ export const TypeNetwork = () => {
   const [isResizing, setIsResizing] = useState(false);
   const [graphReady, setGraphReady] = useState(false);
   const spaceHoldRef = useRef({ active: false, previous: false });
-  const { typeRegistry, isLoading: isTypeRegistryLoading } = useTypeRegistry();
+  const { data: appStats, isLoading: isAppStatsLoading } = useGetAppStats();
   const { data: typeGraph, isLoading: isTypeGraphLoading } = useTypeGraph();
 
-  const isLoading = isTypeGraphLoading || isTypeRegistryLoading;
+  const isLoading = isTypeGraphLoading || isAppStatsLoading;
 
-  const hasData = typeGraph !== undefined && typeRegistry.length > 0;
+  const hasTypes =
+    typeof appStats?.typesCount === "number" && appStats.typesCount > 0;
+
+  const hasData = typeGraph !== undefined && hasTypes;
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -999,7 +1001,7 @@ export const TypeNetwork = () => {
                 },
               }}
             />
-            {typeRegistry.length > 1 /* the registry always has entry 0 */ ? (
+            {hasTypes ? (
               <DisplayRecursiveType id={Number(selectedId)} />
             ) : (
               <Typography variant="body2" color="text.secondary">

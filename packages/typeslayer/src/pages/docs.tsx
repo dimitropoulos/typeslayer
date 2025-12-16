@@ -14,15 +14,14 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { Code } from "../components/code";
 import { InlineCode } from "../components/inline-code";
+import { createOpenHandler } from "../components/utils";
 import { step4 } from "./start/step-0-prerequisites";
 
 export const DocsPage = () => {
   const docItems = [
     {
       id: "my-code",
-      title: (
-        <Typography variant="h6">"but I just want to see my code"</Typography>
-      ),
+      title: <span>"but I just want to see my code"</span>,
       description: (
         <Stack gap={1}>
           <Typography gutterBottom>
@@ -79,14 +78,24 @@ export const DocsPage = () => {
     {
       id: "anonymous",
       title: (
-        <Typography variant="h6">
+        <span>
           why do I see lots of <InlineCode>&lt;anonymous&gt;</InlineCode>{" "}
           everywhere?
-        </Typography>
+        </span>
       ),
       description: (
         <Stack gap={1}>
-          <Typography>that's the world we're livin' in.</Typography>
+          <Typography>
+            you live in a world where some types don't have names. it's actually{" "}
+            <Link
+              href="https://worrydream.com/AlligatorEggs"
+              onClick={createOpenHandler(
+                "https://worrydream.com/AlligatorEggs",
+              )}
+            >
+              a good thing
+            </Link>
+          </Typography>
           <Typography>
             although you may not think of them as distinct types, consider
             something like this:
@@ -140,15 +149,20 @@ export const DocsPage = () => {
     {
       id: "tsgo",
       title: (
-        <Typography variant="h6">
+        <span>
           what about <InlineCode>tsgo</InlineCode>?
-        </Typography>
+        </span>
       ),
       description: (
         <Stack gap={1}>
           <Typography>
             while I expect{" "}
-            <Link href="https://github.com/microsoft/typescript-go">
+            <Link
+              href="https://github.com/microsoft/typescript-go"
+              onClick={createOpenHandler(
+                "https://github.com/microsoft/typescript-go",
+              )}
+            >
               TypeScript-Go
             </Link>{" "}
             will have the <InlineCode>--generateTrace</InlineCode> flag (which
@@ -181,10 +195,10 @@ export const DocsPage = () => {
     {
       id: "botique-frameworks",
       title: (
-        <Typography variant="h6">
+        <span>
           what about <InlineCode>Svelte</InlineCode> or{" "}
           <InlineCode>Vue</InlineCode>?
-        </Typography>
+        </span>
       ),
       description: (
         <Stack gap={1}>
@@ -204,11 +218,7 @@ export const DocsPage = () => {
     },
     {
       id: "data-storage",
-      title: (
-        <Typography variant="h6">
-          where does TypeSlayer store my data?
-        </Typography>
-      ),
+      title: <span>where does TypeSlayer store my data?</span>,
       description: (
         <Stack gap={1}>
           <Stack>
@@ -232,11 +242,7 @@ export const DocsPage = () => {
     },
     {
       id: "data-sensitivity",
-      title: (
-        <Typography variant="h6">
-          how sensitive is the data in the outputs?
-        </Typography>
-      ),
+      title: <span>how sensitive is the data in the outputs?</span>,
       description: (
         <Stack gap={1}>
           <Typography>
@@ -266,7 +272,7 @@ export const DocsPage = () => {
     },
     {
       id: "data-tracking",
-      title: <Typography variant="h6">does TypeSlayer track me?</Typography>,
+      title: <span>does TypeSlayer track me?</span>,
       description: (
         <Stack gap={1}>
           <Typography>
@@ -287,11 +293,7 @@ export const DocsPage = () => {
     },
     {
       id: "type-network-moving",
-      title: (
-        <Typography variant="h6">
-          why does the Type Network keep moving?
-        </Typography>
-      ),
+      title: <span>why does the Type Network keep moving?</span>,
       description: (
         <Stack gap={1}>
           <Typography>
@@ -338,11 +340,7 @@ export const DocsPage = () => {
     },
     {
       id: "testing-libraries",
-      title: (
-        <Typography variant="h6">
-          how is testing a library different?
-        </Typography>
-      ),
+      title: <span>how is testing a library different?</span>,
       description: (
         <Stack gap={1}>
           <Typography>
@@ -451,14 +449,16 @@ export const DocsPage = () => {
           maxWidth: 700,
         }}
       >
-        <Box
+        <Typography
+          variant="h6"
           sx={{
+            fontSize: "1.5rem",
+            color: "text.primary",
             mb: 2,
-            "&> h6": { fontSize: "1.5rem !important", color: "text.primary" },
           }}
         >
           {selected.title}
-        </Box>
+        </Typography>
         {selected.description}
       </Box>
     </Stack>

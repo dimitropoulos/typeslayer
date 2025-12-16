@@ -18,6 +18,9 @@
       },
       "style": {
         "useBlockStatements": "error"
+      },
+      "performance": {
+        "noAccumulatingSpread": "off"
       }
     }
   },

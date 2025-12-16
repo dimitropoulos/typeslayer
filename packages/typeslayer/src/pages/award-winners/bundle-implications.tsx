@@ -1,6 +1,7 @@
 import { Alert, ListSubheader, Stack, Typography } from "@mui/material";
 import { useCallback } from "react";
 import { CenterLoader } from "../../components/center-loader";
+import { InlineCode } from "../../components/inline-code";
 import { NoData } from "../../components/no-data";
 import { OpenablePath } from "../../components/openable-path";
 import { useAnalyzeTrace } from "../../hooks/tauri-hooks";
@@ -81,7 +82,15 @@ const DuplicatePackages = () => {
     >
       <TitleSubtitle
         title="Duplicate Packages"
-        subtitle="Packages that are duplicated in the bundle.  TypeScript doesn't keep track of where these were included from, but at least now you know they're there."
+        subtitle={
+          <Typography>
+            Packages that are duplicated in the bundle. TypeScript doesn't keep
+            track of where these were included from, but at least now you know
+            they're there. What you should do next is run something lke{" "}
+            <InlineCode>pnpm why</InlineCode> (or just look at your lockfile) to
+            see why these packages are being included.
+          </Typography>
+        }
         icon={<Icon fontSize="large" />}
       />
 

@@ -27,7 +27,8 @@
     "@mui/icons-material": "7.3.6",
     "@mui/material": "7.3.6",
     "@tanstack/react-query": "5.90.12",
-    "@tanstack/react-router": "1.139.14",
+    "@tanstack/react-query-devtools": "5.91.1",
+    "@tanstack/react-router": "1.141.2",
     "@tauri-apps/api": "2.9.1",
     "@tauri-apps/plugin-clipboard-manager": "2.3.2",
     "@tauri-apps/plugin-dialog": "2.4.2",
@@ -35,22 +36,22 @@
     "@tauri-apps/plugin-upload": "2.3.2",
     "echarts": "6.0.0",
     "echarts-for-react": "3.0.5",
-    "react": "19.2.1",
-    "react-dom": "19.2.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
     "react-window": "2.2.3",
-    "shiki": "3.19.0"
+    "shiki": "3.20.0"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "2.9.5",
+    "@tauri-apps/cli": "2.9.6",
     "@types/mime-types": "3.0.1",
-    "@types/node": "24.10.1",
+    "@types/node": "24.10.4",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
     "@typeslayer/analyze-trace": "workspace:*",
     "@typeslayer/validate": "workspace:*",
-    "@vitejs/plugin-react": "5.1.1",
+    "@vitejs/plugin-react": "5.1.2",
     "typescript": "5.9.3",
-    "vite": "7.2.6",
-    "zod": "4.1.13"
+    "vite": "7.3.0",
+    "zod": "4.2.0"
   }
 }

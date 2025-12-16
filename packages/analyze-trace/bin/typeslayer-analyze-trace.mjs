@@ -33,8 +33,6 @@ try {
 	exit(1);
 }
 
-console.log({ traceDir });
-
 analyzeTrace({ traceDir, options: defaultOptions }).then((result) => {
 	const destination = resolve(traceDir, ANALYZE_TRACE_FILENAME);
 	writeFileSync(destination, JSON.stringify(result, null, 2), "utf-8");

@@ -1,4 +1,4 @@
-use crate::validate::trace_json::TraceEvent;
+use crate::{analyze_trace::depth_limits::DepthLimitKind, validate::trace_json::TraceEvent};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -91,7 +91,7 @@ pub type NodeModulePaths = HashMap<String, Vec<String>>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnalyzeTraceResult {
-    pub depth_limits: std::collections::HashMap<String, Vec<TraceEvent>>,
+    pub depth_limits: HashMap<DepthLimitKind, Vec<TraceEvent>>,
     pub duplicate_packages: Vec<DuplicatedPackage>,
     pub hot_spots: Vec<HotSpot>,
     pub unterminated_events: Vec<TraceEvent>,

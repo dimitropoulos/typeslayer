@@ -22,6 +22,7 @@ import { type SyntheticEvent, useState } from "react";
 import { Code } from "../components/code";
 import { InlineCode } from "../components/inline-code";
 import { TabLabel } from "../components/tab-label";
+import { createOpenHandler } from "../components/utils";
 import {
   type ManagedResource,
   type ToolDefinition,
@@ -267,8 +268,7 @@ const HelpDialog = () => {
             TypeSlayer now supports the{" "}
             <Link
               href="https://modelcontextprotocol.io"
-              target="_blank"
-              rel="noopener"
+              onClick={createOpenHandler("https://modelcontextprotocol.io")}
             >
               Model Context Protocol (MCP)
             </Link>
@@ -494,7 +494,7 @@ const McpPrompts = () => {
 const providerLinks = [
   {
     name: "Claude Desktop / Claude Code",
-    url: "https://docs.anthropic.com/claude/docs/model-context-protocol",
+    url: "https://code.claude.com/docs/en/mcp",
   },
   {
     name: "VS Code + GitHub Copilot",
@@ -502,7 +502,7 @@ const providerLinks = [
   },
   {
     name: "Cursor",
-    url: "https://docs.cursor.com/advanced/model-context-protocol",
+    url: "https://cursor.com/docs/context/mcp",
   },
   {
     name: "Neovim (avante.nvim)",
@@ -534,7 +534,7 @@ const Setup = () => {
             <ul style={{ marginLeft: "-24px" }}>
               {providerLinks.map(({ name, url }) => (
                 <li key={name} style={{ marginBottom: "0px" }}>
-                  <Link href={url} target="_blank" rel="noopener">
+                  <Link href={url} onClick={createOpenHandler(url)}>
                     {name}
                   </Link>
                 </li>
@@ -600,8 +600,7 @@ const Troubleshooting = () => {
           <Typography>
             <Link
               href="https://modelcontextprotocol.io"
-              target="_blank"
-              rel="noopener"
+              onClick={createOpenHandler("https://modelcontextprotocol.io")}
             >
               Model Context Protocol Documentation
             </Link>
@@ -611,8 +610,9 @@ const Troubleshooting = () => {
           <Typography>
             <Link
               href="https://github.com/dimitropoulos/typeslayer"
-              target="_blank"
-              rel="noopener"
+              onClick={createOpenHandler(
+                "https://github.com/dimitropoulos/typeslayer",
+              )}
             >
               TypeSlayer GitHub Repository
             </Link>
@@ -622,8 +622,7 @@ const Troubleshooting = () => {
           <Typography>
             <Link
               href="https://www.anthropic.com/claude"
-              target="_blank"
-              rel="noopener"
+              onClick={createOpenHandler("https://www.anthropic.com/claude")}
             >
               Claude Desktop
             </Link>

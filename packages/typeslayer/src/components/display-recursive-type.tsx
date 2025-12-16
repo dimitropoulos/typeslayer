@@ -1,17 +1,18 @@
 import {
+  DoubleArrow,
   FiberManualRecord,
   KeyboardArrowDown,
   KeyboardArrowRight,
 } from "@mui/icons-material";
-import { Box, Stack, Typography } from "@mui/material";
-import type { ResolvedType } from "@typeslayer/validate";
-import { type FC, useState } from "react";
-import { useTypeRegistry } from "../pages/award-winners/use-type-registry";
+import { Alert, AlertTitle, Box, Stack, Typography } from "@mui/material";
+import type { ResolvedType, TypeId } from "@typeslayer/validate";
+import { type FC, type ReactNode, useState } from "react";
+import { useGetRecursiveResolvedTypes } from "../hooks/tauri-hooks";
 import { theme } from "../theme";
-import { CenterLoader } from "./center-loader";
+import { InlineCode } from "./inline-code";
 import { OpenablePath, propertyTextStyle } from "./openable-path";
 import { ShowMoreChildren } from "./show-more-children";
-import { TypeSummary } from "./type-summary";
+import { SimpleTypeSummary, TypeSummary } from "./type-summary";
 
 // Type guard for Location objects coming from backend serialization
 function isLocation(v: unknown): v is {
@@ -33,43 +34,148 @@ function isLocation(v: unknown): v is {
   return typeof start.line === "number" && typeof start.character === "number";
 }
 
+const baseTwiddleSx = {
+  alignSelf: "flex-start",
+  pt: "3px",
+  height: "100%",
+};
+
+const noChildrenDot = (
+  <FiberManualRecord
+    sx={{
+      ...baseTwiddleSx,
+      cursor: "default",
+      transform: "scale(0.5)",
+      color: theme.palette.text.secondary,
+    }}
+  />
+);
+
+const wrapperSx = {
+  gap: 0.5,
+  flexDirection: "row",
+  alignItems: "center",
+  borderLeft: 1,
+  borderColor: "transparent",
+  "&:hover": {
+    borderColor: "#ffffff30",
+  },
+};
+
 export const DisplayRecursiveType: FC<{
-  id: number;
-  depth?: number;
-}> = ({ id, depth = 0 }) => {
+  id: TypeId;
+  depth?: number; // for recursion
+  visitors?: TypeId[]; // for recursion
+}> = ({ id, depth = 0, visitors = [] }) => {
   const [expanded, setExpanded] = useState(true);
-  const { typeRegistry, isLoading } = useTypeRegistry();
+  const { data: partialIndexedTypeRegistry, isLoading } =
+    useGetRecursiveResolvedTypes(id);
+
+  const resolvedType = partialIndexedTypeRegistry?.[id];
 
   if (isLoading) {
-    return <CenterLoader />;
-  }
-
-  if (!typeRegistry) {
-    return <Box>[Missing Data for TypeId]: {id}</Box>;
+    return (
+      <Stack sx={wrapperSx}>
+        {noChildrenDot}
+        <SimpleTypeSummary name="asdf" id={0} loading />
+      </Stack>
+    );
   }
 
   if (Number.isNaN(id)) {
     return null;
   }
 
-  if (depth > 10) {
-    return (
-      <Box style={{ marginLeft: depth * 16 }}>
-        [TypeSlayer Recursion limit reached for type {id}]
-      </Box>
-    );
-  }
-
   if (id === 0) {
     return <Box style={{ marginLeft: depth * 16 }}>[TypeId Not Provided]</Box>;
   }
 
-  const resolvedType = typeRegistry[id];
-
   const marginLeft = depth * 16;
-
   if (!resolvedType) {
     return <Box style={{ marginLeft }}>[Missing Node: {id}]</Box>;
+  }
+
+  if (depth > 10) {
+    return (
+      <Stack sx={wrapperSx}>
+        {noChildrenDot}
+        <Stack>
+          <TypeSummary resolvedType={resolvedType} showFlags />
+          <Alert severity="error" style={{}}>
+            <AlertTitle>Type Depth Exceeded</AlertTitle>
+            you went pretty deep. we're stopping here. if you wanna keep going
+            then search for type <InlineCode>{id}</InlineCode>
+          </Alert>
+        </Stack>
+      </Stack>
+    );
+  }
+
+  if (visitors.includes(id)) {
+    return (
+      <Stack sx={wrapperSx}>
+        {noChildrenDot}
+        <Stack>
+          <TypeSummary resolvedType={resolvedType} showFlags />
+          <Alert severity="info" style={{}}>
+            <AlertTitle>Recursive Type</AlertTitle>
+            <Stack gap={0.5}>
+              <Typography>
+                type <InlineCode>{id}</InlineCode> contains a recursion, so
+                we're stopping here to avoid an infinite loop. there's not
+                necessarily anything wrong with a recursive type: actually,
+                TypeScript intentionally allows it and sometimes it's useful.
+                yet, other times, it happens by accident and is the source of a
+                problem.
+              </Typography>
+              <Typography>
+                here's the loop:{" "}
+                {[...visitors, id]
+                  .map(visitor => (
+                    <InlineCode
+                      style={
+                        id === visitor ? { textDecoration: "underline" } : {}
+                      }
+                      key={visitor}
+                    >
+                      {visitor}
+                    </InlineCode>
+                  ))
+                  .reduce(
+                    (acc, visitor, index) => [
+                      ...[
+                        index === 0
+                          ? []
+                          : [
+                              acc,
+                              <DoubleArrow
+                                fontSize="small"
+                                // biome-ignore lint/suspicious/noArrayIndexKey: the sort order is stable
+                                key={index}
+                                sx={{
+                                  width: 27,
+                                  px: 1,
+                                  flexShrink: 0,
+                                  height: "100%",
+                                  alignSelf: "center",
+                                }}
+                              />,
+                            ],
+                      ],
+                      visitor,
+                    ],
+                    [] as ReactNode[],
+                  )}
+              </Typography>
+              <Typography>
+                with this information, look at each of these types
+                slowly/carefully and make sure the loop is intended.
+              </Typography>
+            </Stack>
+          </Alert>
+        </Stack>
+      </Stack>
+    );
   }
 
   const { flags = [] } = resolvedType;
@@ -183,9 +289,13 @@ export const DisplayRecursiveType: FC<{
 
           if (typeof value === "number") {
             return (
-              <Stack key={reactKey}>
+              <Stack key={reactKey} gap={1}>
                 <Typography sx={propertyTextStyle}>{String(key)}:</Typography>
-                <DisplayRecursiveType id={value} depth={depth + 2} />
+                <DisplayRecursiveType
+                  id={value}
+                  depth={depth + 1}
+                  visitors={[...visitors, id]}
+                />
               </Stack>
             );
           }
@@ -226,7 +336,7 @@ export const DisplayRecursiveType: FC<{
           }
 
           return (
-            <Stack key={reactKey}>
+            <Stack key={reactKey} gap={0}>
               <Stack display="inline">
                 <Typography display="inline" sx={propertyTextStyle}>
                   {String(key)}:{" "}
@@ -244,7 +354,8 @@ export const DisplayRecursiveType: FC<{
                         i
                       }`}
                       id={v as number}
-                      depth={depth + 2}
+                      depth={depth + 1}
+                      visitors={[...visitors, id]}
                     />
                   ))}
                 </ShowMoreChildren>
@@ -266,31 +377,23 @@ export const DisplayRecursiveType: FC<{
 
   const noChildren = children.length === 0;
 
-  const TwiddlyGuy = noChildren
-    ? FiberManualRecord
-    : expanded
-      ? KeyboardArrowDown
-      : KeyboardArrowRight;
+  const ExpandIcon = expanded ? KeyboardArrowDown : KeyboardArrowRight;
+
+  const twiddle = noChildren ? (
+    noChildrenDot
+  ) : (
+    <ExpandIcon
+      onClick={noChildren ? undefined : toggleExpanded}
+      sx={{
+        ...baseTwiddleSx,
+        cursor: "pointer",
+      }}
+    />
+  );
 
   return (
-    <Stack gap={0.5} direction="row">
-      <TwiddlyGuy
-        onClick={noChildren ? undefined : toggleExpanded}
-        sx={
-          noChildren
-            ? {
-                cursor: "default",
-                transform: "scale(0.5)",
-                alignSelf: "center",
-                color: theme.palette.text.secondary,
-                pt: "4px",
-              }
-            : {
-                cursor: "pointer",
-                pt: "4px",
-              }
-        }
-      />
+    <Stack sx={wrapperSx}>
+      {twiddle}
       <Stack>
         <TypeSummary showFlags resolvedType={resolvedType} />
         {expanded && !noChildren && (

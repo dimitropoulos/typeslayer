@@ -97,6 +97,17 @@ const OOMError = ({
           with the current sad state of affairs. good luck with that. it's the
           "TypeScript Professional"'s final boss.
         </Typography>
+        <Divider />
+        <Typography>
+          note well: your operating system has a limit of its own and you may
+          need to update that first. <InlineCode>Node.js</InlineCode>,{" "}
+          <InlineCode>npm</InlineCode>, or <InlineCode>tsc</InlineCode> can't
+          increase it proactively. technically{" "}
+          <InlineCode>TypeSlayer</InlineCode>
+          has shell access and it could try to detect your OS and do it... I
+          draw the line at messing with your overall system configuration: you
+          gotta do it.
+        </Typography>
       </Stack>
     </Alert>
   );

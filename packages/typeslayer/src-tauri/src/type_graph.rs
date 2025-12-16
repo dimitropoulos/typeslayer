@@ -7,7 +7,7 @@ use tauri::{AppHandle, State};
 
 use crate::app_data::AppData;
 use crate::utils::get_output_file_preview;
-use crate::validate::types_json::{Flag, TypesJsonSchema};
+use crate::validate::types_json::{Flag, ResolvedType, TypesJsonSchema};
 use crate::validate::utils::TypeId;
 
 pub const TYPE_GRAPH_FILENAME: &str = "type-graph.json";
@@ -155,7 +155,7 @@ pub struct TypeGraph {
 }
 
 /// Return a human-readable type name similar to frontend's getHumanReadableName
-fn human_readable_name(t: &crate::validate::types_json::ResolvedType) -> String {
+pub fn human_readable_name(t: &ResolvedType) -> String {
     let is_literal = t.flags.iter().any(|f| {
         matches!(
             f,
@@ -212,67 +212,21 @@ impl TypeGraph {
     fn calculate_links(&mut self, types: &TypesJsonSchema) {
         // TypeIds start at 1
         let last_type_id = self.nodes;
-        // Helper to add link if both endpoints exist
-        let mut add_link = |source: TypeId, target: TypeId, kind: LinkKind| {
-            let source_exists = source <= last_type_id;
-            let target_exists = target <= last_type_id;
-            if source_exists && target_exists {
-                self.links.push(GraphLink {
-                    source,
-                    target,
-                    kind: kind.clone(),
-                });
-            }
-        };
+        // Collect links to add in a temporary vector to avoid double borrowing self
+        let mut new_links = Vec::new();
 
         // Second pass: add links for supported relations
         for t in types.iter() {
-            let src = t.id;
-
-            // Single relationships
-            for (opt_target, kind) in [
-                (t.instantiated_type, LinkKind::Instantiated),
-                (t.substitution_base_type, LinkKind::SubstitutionBase),
-                (t.constraint_type, LinkKind::Constraint),
-                (t.indexed_access_object_type, LinkKind::IndexedAccessObject),
-                (t.indexed_access_index_type, LinkKind::IndexedAccessIndex),
-                (t.conditional_check_type, LinkKind::ConditionalCheck),
-                (t.conditional_extends_type, LinkKind::ConditionalExtends),
-                (t.conditional_true_type, LinkKind::ConditionalTrue),
-                (t.conditional_false_type, LinkKind::ConditionalFalse),
-                (t.keyof_type, LinkKind::Keyof),
-                (
-                    t.evolving_array_element_type,
-                    LinkKind::EvolvingArrayElement,
-                ),
-                (t.evolving_array_final_type, LinkKind::EvolvingArrayFinal),
-                (t.reverse_mapped_source_type, LinkKind::ReverseMappedSource),
-                (t.reverse_mapped_mapped_type, LinkKind::ReverseMappedMapped),
-                (
-                    t.reverse_mapped_constraint_type,
-                    LinkKind::ReverseMappedConstraint,
-                ),
-                (t.alias_type, LinkKind::Alias),
-            ] {
-                if let Some(target) = opt_target {
-                    add_link(src, target, kind);
-                }
-            }
-
-            // Array relationships
-            for (opt_targets, kind) in [
-                (t.alias_type_arguments.as_ref(), LinkKind::AliasTypeArgument),
-                (t.intersection_types.as_ref(), LinkKind::Intersection),
-                (t.union_types.as_ref(), LinkKind::Union),
-                (t.type_arguments.as_ref(), LinkKind::TypeArgument),
-            ] {
-                if let Some(targets) = opt_targets {
-                    for &target in targets {
-                        add_link(src, target, kind.clone());
-                    }
+            for link in get_relationships_for_type(t) {
+                let source_exists = link.source <= last_type_id;
+                let target_exists = link.target <= last_type_id;
+                if source_exists && target_exists {
+                    new_links.push(link);
                 }
             }
         }
+
+        self.links.extend(new_links);
     }
 
     fn calculate_link_stats(&mut self, types: &TypesJsonSchema) {
@@ -401,6 +355,63 @@ impl TypeGraph {
         }
         self.stats = GraphStats { count };
     }
+}
+
+pub fn get_relationships_for_type(t: &ResolvedType) -> Vec<GraphLink> {
+    let mut relations = Vec::new();
+
+    // Single relationships
+    for (opt_target, kind) in [
+        (t.instantiated_type, LinkKind::Instantiated),
+        (t.substitution_base_type, LinkKind::SubstitutionBase),
+        (t.constraint_type, LinkKind::Constraint),
+        (t.indexed_access_object_type, LinkKind::IndexedAccessObject),
+        (t.indexed_access_index_type, LinkKind::IndexedAccessIndex),
+        (t.conditional_check_type, LinkKind::ConditionalCheck),
+        (t.conditional_extends_type, LinkKind::ConditionalExtends),
+        (t.conditional_true_type, LinkKind::ConditionalTrue),
+        (t.conditional_false_type, LinkKind::ConditionalFalse),
+        (t.keyof_type, LinkKind::Keyof),
+        (
+            t.evolving_array_element_type,
+            LinkKind::EvolvingArrayElement,
+        ),
+        (t.evolving_array_final_type, LinkKind::EvolvingArrayFinal),
+        (t.reverse_mapped_source_type, LinkKind::ReverseMappedSource),
+        (t.reverse_mapped_mapped_type, LinkKind::ReverseMappedMapped),
+        (
+            t.reverse_mapped_constraint_type,
+            LinkKind::ReverseMappedConstraint,
+        ),
+        (t.alias_type, LinkKind::Alias),
+    ] {
+        if let Some(target) = opt_target {
+            relations.push(GraphLink {
+                source: t.id,
+                target,
+                kind: kind.clone(),
+            });
+        }
+    }
+
+    for (opt_targets, kind) in [
+        (t.alias_type_arguments.as_ref(), LinkKind::AliasTypeArgument),
+        (t.intersection_types.as_ref(), LinkKind::Intersection),
+        (t.union_types.as_ref(), LinkKind::Union),
+        (t.type_arguments.as_ref(), LinkKind::TypeArgument),
+    ] {
+        if let Some(targets) = opt_targets {
+            for &target in targets {
+                relations.push(GraphLink {
+                    source: t.id,
+                    target,
+                    kind: kind.clone(),
+                });
+            }
+        }
+    }
+
+    return relations;
 }
 
 /// Build the in-memory graph from the loaded `types_json` and store in AppData via `State`.

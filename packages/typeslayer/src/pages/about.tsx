@@ -1,21 +1,11 @@
 import { Box, Divider, Link, Stack, Typography } from "@mui/material";
-import { openUrl } from "@tauri-apps/plugin-opener";
-import type { MouseEvent } from "react";
+
 import dimitropoulosAvatar from "../assets/dimitropoulos.png";
 import { MITS_DISCORD } from "../components/constants";
 import { InlineCode } from "../components/inline-code";
+import { createOpenHandler } from "../components/utils";
 
 export function AboutPage() {
-  const createOpenHandler =
-    (url: string) => async (event: MouseEvent<HTMLAnchorElement>) => {
-      event.preventDefault();
-      try {
-        await openUrl(url);
-      } catch (error) {
-        console.error("Failed to open external link", error);
-      }
-    };
-
   return (
     <Box sx={{ px: 4, py: 4, maxWidth: 960, margin: "0 auto" }}>
       <Stack spacing={3} sx={{ overflow: "auto" }}>

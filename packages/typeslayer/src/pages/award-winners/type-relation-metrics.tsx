@@ -1,5 +1,6 @@
 import {
   Alert,
+  AlertTitle,
   Box,
   Divider,
   List,
@@ -10,9 +11,11 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { useState } from "react";
+import type { TypeId } from "@typeslayer/validate";
+import { useMemo, useState } from "react";
 import { CenterLoader } from "../../components/center-loader";
 import { DisplayRecursiveType } from "../../components/display-recursive-type";
+import { InlineCode } from "../../components/inline-code";
 import { NoData } from "../../components/no-data";
 import { ShowMoreChildren } from "../../components/show-more-children";
 import {
@@ -20,7 +23,11 @@ import {
   SimpleTypeSummary,
   TypeSummary,
 } from "../../components/type-summary";
-import { useTypeGraph } from "../../hooks/tauri-hooks";
+import {
+  useGetResolvedTypeById,
+  useGetResolvedTypesByIds,
+  useTypeGraph,
+} from "../../hooks/tauri-hooks";
 import { AwardNavItem } from "./award-nav-item";
 import {
   AWARD_SELECTOR_COLUMN_WIDTH,
@@ -30,7 +37,6 @@ import {
 } from "./awards";
 import { InlineBarGraph } from "./inline-bar-graph";
 import { TitleSubtitle } from "./title-subtitle";
-import { useTypeRegistry } from "./use-type-registry";
 
 export function RelationAward({
   awardId,
@@ -39,8 +45,7 @@ export function RelationAward({
 }) {
   const { title, description, icon: Icon, unit } = awards[awardId];
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const { data: typeGraph, isLoading } = useTypeGraph();
-  const { typeRegistry } = useTypeRegistry();
+  const { data: typeGraph, isLoading: isLoadingTypeGraph } = useTypeGraph();
 
   const handleListItemClick = (
     _event: React.MouseEvent<HTMLDivElement, MouseEvent>,
@@ -53,7 +58,17 @@ export function RelationAward({
   const edgeStatProperty = getLinkStatProperty(awardId);
   const linkStats = typeGraph?.linkStats[edgeStatProperty];
 
+  const targets = useMemo(() => {
+    return linkStats?.links.map(link => link.targetId) ?? [];
+  }, [linkStats]);
+
   const selectedItem = linkStats?.links[selectedIndex];
+  const {
+    data: partialIndexedTypeRegistry,
+    isLoading: isLoadingPartialIndexedTypeRegistry,
+  } = useGetResolvedTypesByIds(targets);
+
+  const isLoading = isLoadingTypeGraph || isLoadingPartialIndexedTypeRegistry;
 
   const hasItems = linkStats && linkStats.links.length > 0;
 
@@ -64,43 +79,51 @@ export function RelationAward({
       }}
     >
       <Alert severity="info">
-        You codebase has no types with this relation.
-        <br />
-        <br />
-        That's not necessarily a good or bad thing.
-        <br />
-        <br />
-        Just.. a thing.
+        <AlertTitle>
+          No <InlineCode>"{title}"</InlineCode> Relations Found
+        </AlertTitle>
+        <Stack gap={1}>
+          <Typography>
+            Your codebase has no types with this relation.
+          </Typography>
+          <Typography>That's not necessarily a good or bad thing.</Typography>
+          <Typography>Just.. a thing.</Typography>
+        </Stack>
       </Alert>
     </Box>
   );
 
   const items = (
     <List>
-      {linkStats?.links.map(({ targetId, sourceIds, path }, index) => (
-        <ListItemButton
-          selected={index === selectedIndex}
-          onClick={event => handleListItemClick(event, index)}
-          key={targetId}
-        >
-          <ListItemText>
-            <Stack sx={{ flexGrow: 1 }} gap={0}>
-              <SimpleTypeSummary
-                id={targetId}
-                name={getHumanReadableName(typeRegistry[targetId])}
-                suppressActions
-              />
-              <Stack gap={0.5}>
-                <MaybePathCaption maybePath={path} />
-                <InlineBarGraph
-                  label={`${sourceIds.length.toLocaleString()} ${unit}`}
-                  width={`${(sourceIds.length / linkStats.max) * 100}%`}
+      {linkStats?.links.map(({ targetId, sourceIds, path }, index) => {
+        return (
+          <ListItemButton
+            selected={index === selectedIndex}
+            onClick={event => handleListItemClick(event, index)}
+            key={targetId}
+          >
+            <ListItemText>
+              <Stack sx={{ flexGrow: 1 }} gap={0}>
+                <SimpleTypeSummary
+                  id={targetId}
+                  loading={isLoadingPartialIndexedTypeRegistry}
+                  name={getHumanReadableName(
+                    partialIndexedTypeRegistry?.[targetId],
+                  )}
+                  suppressActions
                 />
+                <Stack gap={0.5}>
+                  <MaybePathCaption maybePath={path} />
+                  <InlineBarGraph
+                    label={`${sourceIds.length.toLocaleString()} ${unit}`}
+                    width={`${(sourceIds.length / linkStats.max) * 100}%`}
+                  />
+                </Stack>
               </Stack>
-            </Stack>
-          </ListItemText>
-        </ListItemButton>
-      ))}
+            </ListItemText>
+          </ListItemButton>
+        );
+      })}
     </List>
   );
 
@@ -113,7 +136,6 @@ export function RelationAward({
           width: AWARD_SELECTOR_COLUMN_WIDTH,
           background: hasItems ? "#000000" : "transparent",
           flexShrink: 0,
-          gap: 2,
           p: 1,
           pt: 2,
           overflowY: "auto",
@@ -163,33 +185,9 @@ export function RelationAward({
                   </Typography>
                   <List dense sx={{ backgroundColor: "transparent" }}>
                     <ShowMoreChildren incrementsOf={50}>
-                      {selectedItem.sourceIds.map(sourceId => {
-                        const sourceType = typeRegistry[sourceId];
-                        return sourceType ? (
-                          <ListItem
-                            key={sourceId}
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 1,
-                              flexWrap: "nowrap",
-                            }}
-                          >
-                            <TypeSummary resolvedType={sourceType} />
-
-                            <Stack
-                              className="action-buttons"
-                              sx={{
-                                opacity: 0,
-                                pointerEvents: "none",
-                                flexDirection: "row",
-                                gap: 0.5,
-                                flexShrink: 0,
-                              }}
-                            ></Stack>
-                          </ListItem>
-                        ) : null;
-                      })}
+                      {selectedItem.sourceIds.map(sourceId => (
+                        <TypeMetricsListItem key={sourceId} typeId={sourceId} />
+                      ))}
                     </ShowMoreChildren>
                   </List>
                 </Stack>
@@ -201,6 +199,50 @@ export function RelationAward({
     </Stack>
   );
 }
+
+const TypeMetricsListItem = ({ typeId }: { typeId: TypeId }) => {
+  const { data: resolvedType, isLoading } = useGetResolvedTypeById(typeId);
+
+  const sx = {
+    display: "flex",
+    alignItems: "center",
+    gap: 1,
+    flexWrap: "nowrap",
+  };
+
+  if (isLoading) {
+    return (
+      <ListItem sx={sx}>
+        <CenterLoader />
+      </ListItem>
+    );
+  }
+
+  if (!resolvedType) {
+    return (
+      <ListItem sx={sx}>
+        <Alert severity="error">Type not found</Alert>
+      </ListItem>
+    );
+  }
+
+  return (
+    <ListItem sx={sx}>
+      <TypeSummary resolvedType={resolvedType} />
+
+      <Stack
+        className="action-buttons"
+        sx={{
+          opacity: 0,
+          pointerEvents: "none",
+          flexDirection: "row",
+          gap: 0.5,
+          flexShrink: 0,
+        }}
+      ></Stack>
+    </ListItem>
+  );
+};
 
 const typeRelationMetrics = [
   "relation_union",

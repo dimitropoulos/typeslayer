@@ -3,9 +3,9 @@ import { type AwardId, awards } from "./awards";
 import { useAwardId } from "./use-award-id";
 
 /** format a number to be no more than 4 chars, using K for thousands and M for millions */
-const formatNumber = (num: number): string => {
+const formatNumber = (num: number): string | null => {
   if (num === 0) {
-    return "    ";
+    return null;
   }
   if (num >= 1000000) {
     return `${(num / 1000000).toFixed(1)}M`;
@@ -27,7 +27,7 @@ export const AwardNavItem = ({
 
   const { title, icon: Icon } = awards[awardId];
   const selected = activeAward === awardId;
-  const displayValue = formatNumber(value);
+  const count = formatNumber(value);
   return (
     <ListItemButton
       key={awardId}
@@ -51,7 +51,7 @@ export const AwardNavItem = ({
           fontFamily: "monospace",
         }}
       >
-        {displayValue}
+        {count === null ? <>&nbsp;&nbsp;&nbsp;</> : count}
       </Box>
     </ListItemButton>
   );

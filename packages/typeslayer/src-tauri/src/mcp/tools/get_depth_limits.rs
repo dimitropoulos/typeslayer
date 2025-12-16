@@ -1,4 +1,5 @@
 use crate::{
+    analyze_trace::DepthLimitKind,
     app_data::AppData,
     mcp::tools::{ToolDefinition, ToolParameter},
 };
@@ -12,7 +13,7 @@ pub const DESCRIPTION: &str = "Returns depth limit events grouped by category (e
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DepthLimitCategory {
-    pub category: String,
+    pub category: DepthLimitKind,
     pub count: usize,
     pub events: Vec<DepthLimitEvent>,
 }
@@ -51,7 +52,7 @@ pub fn tool_definition() -> ToolDefinition<GetDepthLimitsExample> {
         }],
         returns: GetDepthLimitsExample {
             categories: vec![DepthLimitCategory {
-                category: "instantiateType_DepthLimit".to_string(),
+                category: DepthLimitKind::InstantiateType,
                 count: 3,
                 events: vec![DepthLimitEvent {
                     timestamp: 123456.789,

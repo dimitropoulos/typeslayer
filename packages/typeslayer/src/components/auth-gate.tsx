@@ -17,15 +17,11 @@ export const AuthGate: FC<AuthGateProps> = ({ onAuthorized }) => {
   useEffect(() => {
     (async () => {
       try {
-        console.log("[AuthGate] Checking is_authorized...");
         const authorized = await invoke<boolean>("is_authorized");
-        console.log("[AuthGate] is_authorized result:", authorized);
         if (authorized) {
-          console.log("[AuthGate] Auto-authorized! Calling onAuthorized()");
           onAuthorized();
           return;
         }
-        console.log("[AuthGate] Not authorized, showing gate");
       } catch (err) {
         console.error("[AuthGate] Auth check failed:", err);
       } finally {
