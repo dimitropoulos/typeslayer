@@ -1,15 +1,14 @@
 mod analyze_trace;
 pub mod app_data;
-mod auth;
+mod commands;
 mod http_server;
 mod layercake;
 pub mod log;
 mod mcp;
 mod process_controller;
-mod screenshot;
 mod treemap;
 mod type_graph;
-mod utils;
+pub mod utils;
 mod validate;
 
 use std::sync::{Arc, Mutex};
@@ -17,6 +16,8 @@ use tauri::Manager;
 
 pub use http_server::run_http_server;
 pub use mcp::run_mcp_server;
+
+use crate::utils::compute_window_title;
 
 pub fn run_tauri_app(app_data: Arc<Mutex<app_data::AppData>>) {
     tauri::Builder::default()
@@ -36,7 +37,7 @@ pub fn run_tauri_app(app_data: Arc<Mutex<app_data::AppData>>) {
                 .state::<Arc<Mutex<app_data::AppData>>>()
                 .lock()
                 .ok()
-                .map(|data| data.compute_window_title())
+                .map(|data| compute_window_title(data.project_root.clone()))
             {
                 if let Some(win) = app.get_webview_window("main") {
                     let _ = win.set_title(&title);
@@ -48,77 +49,76 @@ pub fn run_tauri_app(app_data: Arc<Mutex<app_data::AppData>>) {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
-            app_data::clear_outputs,
-            app_data::create_bug_report,
-            app_data::generate_analyze_trace,
-            app_data::generate_cpu_profile,
-            app_data::generate_trace,
-            app_data::get_analyze_trace,
-            app_data::get_analyze_trace_preview,
-            app_data::get_app_stats,
-            app_data::get_apply_tsc_project_flag,
-            app_data::get_auto_start,
-            app_data::get_available_editors,
-            app_data::get_bug_report_files,
-            app_data::get_cpu_profile,
-            app_data::get_cpu_profile_preview,
-            app_data::get_current_dir,
-            app_data::get_data_dir,
-            app_data::get_default_extra_tsc_flags,
-            app_data::get_extra_tsc_flags,
-            app_data::get_links_to_type_id,
-            app_data::get_max_old_space_size,
-            app_data::get_max_stack_size,
-            app_data::get_output_file_sizes,
-            app_data::get_prefer_editor_open,
-            app_data::get_preferred_editor,
-            app_data::get_project_root,
-            app_data::get_recursive_resolved_types,
-            app_data::get_relative_paths,
-            app_data::get_resolved_type_by_id,
-            app_data::get_resolved_types_by_ids,
-            app_data::get_selected_tsconfig,
-            app_data::get_trace_json,
-            app_data::get_trace_json_preview,
-            app_data::get_traces_related_to_typeid,
-            app_data::get_treemap_data,
-            app_data::get_tsc_example_call,
-            app_data::get_tsconfig_paths,
-            app_data::get_types_json,
-            app_data::get_types_json_preview,
-            app_data::open_file,
-            app_data::set_apply_tsc_project_flag,
-            app_data::set_auto_start,
-            app_data::set_extra_tsc_flags,
-            app_data::set_max_old_space_size,
-            app_data::set_max_stack_size,
-            app_data::set_prefer_editor_open,
-            app_data::set_preferred_editor,
-            app_data::set_project_root,
-            app_data::set_relative_paths,
-            app_data::set_selected_tsconfig,
-            app_data::set_window_title_from_project,
-            app_data::upload_analyze_trace,
-            app_data::upload_cpu_profile,
-            app_data::upload_trace_json,
-            app_data::upload_type_graph,
-            app_data::upload_types_json,
-            app_data::validate_trace_json,
-            app_data::validate_types_json,
-            app_data::verify_analyze_trace,
-            app_data::verify_cpu_profile,
-            app_data::verify_trace_json,
-            app_data::verify_types_json,
-            auth::is_authorized,
-            auth::validate_auth_code,
-            mcp::status::get_available_mcp_resources,
-            mcp::status::get_available_mcp_tools,
-            mcp::status::get_mcp_running_tools,
-            screenshot::take_screenshot,
-            type_graph::generate_type_graph,
-            type_graph::get_type_graph,
-            type_graph::get_type_graph_preview,
-            type_graph::verify_type_graph,
+            commands::app_data::clear_outputs,
+            commands::trivia::get_available_editors,
+            commands::trivia::get_tsc_example_call,
+            commands::trivia::get_output_file_sizes,
+            commands::trivia::get_app_stats,
+            commands::actions::open_file,
+            commands::actions::set_window_title_from_project,
+            commands::actions::take_screenshot,
+            commands::app_data::get_analyze_trace,
+            commands::app_data::get_cpu_profile,
+            commands::app_data::get_data_dir,
+            commands::app_data::get_project_root,
+            commands::app_data::get_selected_tsconfig,
+            commands::app_data::get_trace_json,
+            commands::app_data::get_tsconfig_paths,
+            commands::app_data::get_type_graph,
+            commands::app_data::get_types_json,
+            commands::app_data::set_project_root,
+            commands::app_data::set_selected_tsconfig,
+            commands::auth::is_authorized,
+            commands::auth::validate_auth_code,
+            commands::bug_report::create_bug_report,
+            commands::bug_report::get_bug_report_files,
+            commands::generate::generate_analyze_trace,
+            commands::generate::generate_cpu_profile,
+            commands::generate::generate_trace,
+            commands::generate::generate_type_graph,
+            commands::mcp::get_available_mcp_resources,
+            commands::mcp::get_available_mcp_tools,
+            commands::mcp::get_mcp_running_tools,
+            commands::preview::get_analyze_trace_preview,
+            commands::preview::get_cpu_profile_preview,
+            commands::preview::get_trace_json_preview,
+            commands::preview::get_type_graph_preview,
+            commands::preview::get_types_json_preview,
+            commands::query::get_links_to_type_id,
+            commands::query::get_recursive_resolved_types,
+            commands::query::get_resolved_type_by_id,
+            commands::query::get_resolved_types_by_ids,
+            commands::query::get_traces_related_to_typeid,
+            commands::settings::get_apply_tsc_project_flag,
+            commands::settings::get_auto_start,
+            commands::settings::get_default_extra_tsc_flags,
+            commands::settings::get_extra_tsc_flags,
+            commands::settings::get_max_old_space_size,
+            commands::settings::get_max_stack_size,
+            commands::settings::get_prefer_editor_open,
+            commands::settings::get_preferred_editor,
+            commands::settings::get_relative_paths,
+            commands::settings::set_apply_tsc_project_flag,
+            commands::settings::set_auto_start,
+            commands::settings::set_extra_tsc_flags,
+            commands::settings::set_max_old_space_size,
+            commands::settings::set_max_stack_size,
+            commands::settings::set_prefer_editor_open,
+            commands::settings::set_preferred_editor,
+            commands::settings::set_relative_paths,
+            commands::treemap::get_treemap_data,
+            commands::upload::upload_analyze_trace,
+            commands::upload::upload_cpu_profile,
+            commands::upload::upload_trace_json,
+            commands::upload::upload_type_graph,
+            commands::upload::upload_types_json,
+            commands::validate::validate_trace_json,
+            commands::validate::validate_type_graph,
+            commands::validate::validate_types_json,
+            commands::validate::verify_analyze_trace,
+            commands::validate::verify_cpu_profile,
+            commands::validate::verify_trace_json,
+            commands::validate::verify_types_json,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

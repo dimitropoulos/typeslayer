@@ -2,11 +2,7 @@ use serde::ser::Error as _;
 use serde::{Deserialize, Serialize, Serializer};
 use serde_json::value::RawValue;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use tauri::{AppHandle, State};
 
-use crate::app_data::AppData;
-use crate::utils::get_output_file_preview;
 use crate::validate::types_json::{Flag, ResolvedType, TypesJsonSchema};
 use crate::validate::utils::TypeId;
 
@@ -412,111 +408,4 @@ pub fn get_relationships_for_type(t: &ResolvedType) -> Vec<GraphLink> {
     }
 
     return relations;
-}
-
-/// Build the in-memory graph from the loaded `types_json` and store in AppData via `State`.
-#[tauri::command]
-pub fn generate_type_graph(
-    _app: AppHandle,
-    state: State<'_, Arc<Mutex<AppData>>>,
-) -> Result<(), String> {
-    let types: TypesJsonSchema = {
-        let app_data = state
-            .lock()
-            .map_err(|_| "AppData mutex poisoned".to_string())?;
-
-        // Check if both types.json and trace.json exist
-        if app_data.types_json.is_empty() {
-            return Err("Cannot build type graph: types.json is required".to_string());
-        }
-
-        if app_data.trace_json.is_empty() {
-            return Err("Cannot build type graph: trace.json is required".to_string());
-        }
-
-        app_data.types_json.clone()
-    };
-
-    // Build the graph
-    let graph = TypeGraph::from_types(&types);
-
-    // Attach to LayerCake or settings? Keep simple: stash in `cake` extras via BTreeMap
-    // For now, we add it to an ad-hoc static holder in AppData via lazy BTreeMap-like cache.
-    // Since AppData does not yet include a graph field, we use a simple file cache as fallback.
-    // To keep everything in-memory, we store it on the `auth_code` field comment-free by extending AppData later if needed.
-    // Minimal approach: serialize into a ForceGraphData and keep as text output for retrieval.
-
-    // Store in AppData for quick in-memory access
-    {
-        let mut app_data = state
-            .lock()
-            .map_err(|_| "AppData mutex poisoned".to_string())?;
-        app_data.type_graph = Some(graph);
-
-        // Persist to outputs/type-graph.json for refresh-on-boot
-        let outputs_dir = app_data.outputs_dir();
-        let path = outputs_dir.join(TYPE_GRAPH_FILENAME);
-        let json = serde_json::to_string_pretty(&app_data.type_graph)
-            .map_err(|e| format!("Failed to serialize type_graph: {e}"))?;
-        std::fs::create_dir_all(&outputs_dir)
-            .map_err(|e| format!("Failed to create outputs dir: {e}"))?;
-        std::fs::write(&path, json)
-            .map_err(|e| format!("Failed to write {}: {e}", path.display()))?;
-    }
-
-    Ok(())
-}
-
-/// Return the graph data formatted for react-force-graph. Builds if missing.
-#[tauri::command]
-pub fn get_type_graph(
-    app: AppHandle,
-    state: State<'_, Arc<Mutex<AppData>>>,
-) -> Result<TypeGraph, String> {
-    // If not yet built, build once
-    let needs_build = {
-        let app_data = state
-            .lock()
-            .map_err(|_| "AppData mutex poisoned".to_string())?;
-        app_data.type_graph.is_none()
-    };
-    if needs_build {
-        generate_type_graph(app.clone(), state.clone())?;
-    }
-
-    let app_data = state
-        .lock()
-        .map_err(|_| "AppData mutex poisoned".to_string())?;
-    let fg = app_data
-        .type_graph
-        .as_ref()
-        .ok_or_else(|| "type graph unavailable".to_string())?;
-    Ok(fg.clone())
-}
-
-#[tauri::command]
-pub async fn get_type_graph_preview(
-    state: State<'_, Arc<Mutex<AppData>>>,
-) -> Result<String, String> {
-    let filepath = {
-        let data = state.lock().map_err(|e| e.to_string())?;
-        data.outputs_dir()
-            .join(crate::type_graph::TYPE_GRAPH_FILENAME)
-    };
-    get_output_file_preview(&filepath).await
-}
-
-#[tauri::command]
-pub fn verify_type_graph(
-    _app: AppHandle,
-    state: State<'_, Arc<Mutex<AppData>>>,
-) -> Result<bool, String> {
-    let app_data = state
-        .lock()
-        .map_err(|_| "AppData mutex poisoned".to_string())?;
-    if app_data.type_graph.is_some() {
-        Ok(true)
-    } else {
-        Ok(false)
-    }
 }

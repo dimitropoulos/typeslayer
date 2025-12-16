@@ -275,7 +275,7 @@ pub fn parse_types_json(path_label: &str, json_string: &str) -> Result<TypesJson
     Ok(parsed)
 }
 
-pub async fn validate_types_json(path: String) -> Result<TypesJsonSchema, String> {
+pub async fn load_types_json(path: String) -> Result<TypesJsonSchema, String> {
     let json_string = tokio::fs::read_to_string(&path)
         .await
         .map_err(|e| format!("Failed to read '{path}': {e}"))?;

@@ -3,13 +3,13 @@
 
 use std::sync::{Arc, Mutex};
 
+use typeslayer_lib::{app_data::AppData, run_tauri_app, utils::get_typeslayer_base_data_dir};
+
 fn main() -> Result<(), String> {
-    let data_dir = typeslayer_lib::app_data::get_typeslayer_base_data_dir();
+    let data_dir = get_typeslayer_base_data_dir();
 
     // Create AppData as the root of our application (single instance shared by all components)
-    let app_data = Arc::new(Mutex::new(typeslayer_lib::app_data::AppData::new(
-        data_dir,
-    )?));
+    let app_data = Arc::new(Mutex::new(AppData::new(data_dir)?));
 
     let args: Vec<String> = std::env::args().collect();
     let is_mcp_mode = args.len() > 1 && args[1] == "mcp";
@@ -47,7 +47,7 @@ fn main() -> Result<(), String> {
         std::thread::sleep(std::time::Duration::from_millis(100));
 
         // Run Tauri GUI app with the shared AppData
-        typeslayer_lib::run_tauri_app(app_data);
+        run_tauri_app(app_data);
     }
 
     Ok(())

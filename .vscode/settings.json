@@ -20,6 +20,7 @@
     "Mitropoulos",
     "nvim",
     "perfetto",
+    "shlex",
     "speedscope",
     "subl",
     "tauri",
