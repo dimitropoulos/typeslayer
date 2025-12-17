@@ -1,7 +1,6 @@
 import { Insights } from "@mui/icons-material";
 import { Alert, Button, Stack } from "@mui/material";
 import { useNavigate } from "@tanstack/react-router";
-import { invoke } from "@tauri-apps/api/core";
 import {
   type Dispatch,
   type SetStateAction,
@@ -10,10 +9,12 @@ import {
 } from "react";
 import { BigAction } from "../../components/big-action";
 import {
+  useClearOutputs,
   useGenerateAnalyzeTrace,
   useGenerateCpuProfile,
   useGenerateTrace,
   useGenerateTypeGraph,
+  useTypeGraphNodesAndLinks,
 } from "../../hooks/tauri-hooks";
 import { ErrorDialog } from "./error-dialog";
 import { Step } from "./step";
@@ -26,6 +27,7 @@ export const Step3Diagnostics = ({
   setFadePhase: Dispatch<SetStateAction<0 | 1 | 2>>;
 }) => {
   const navigate = useNavigate();
+  const { mutateAsync: clearOutputs } = useClearOutputs();
 
   // Processing state
   const [processingStep, setProcessingStep] = useState<0 | 1 | 2 | 3 | 4>(0);
@@ -45,6 +47,8 @@ export const Step3Diagnostics = ({
   const { mutateAsync: onGenerateCpuProfile } = useGenerateCpuProfile();
   const { mutateAsync: onGenerateAnalyzeTrace } = useGenerateAnalyzeTrace();
   const { mutateAsync: onGenerateTypeGraph } = useGenerateTypeGraph();
+  const { refetch: refetchTypeGraphNodesAndLinks } =
+    useTypeGraphNodesAndLinks();
 
   // Sequential processing logic
   const processTypes = useCallback(async () => {
@@ -73,6 +77,7 @@ export const Step3Diagnostics = ({
 
       // done: trigger fade-to-black, animate logo morph over 1000ms, then navigate
       setProcessingStep(4);
+      await refetchTypeGraphNodesAndLinks();
       setIsFading(true);
       setFadePhase(1);
       setTimeout(() => setFadePhase(2), 500);
@@ -108,12 +113,13 @@ export const Step3Diagnostics = ({
     onGenerateTypeGraph,
     setFadePhase,
     setIsFading,
+    refetchTypeGraphNodesAndLinks,
   ]);
 
   const handleClearOrCancel = useCallback(async () => {
     setIsClearingOutputs(true);
     try {
-      await invoke<void>("clear_outputs", { cancelRunning: isProcessing });
+      await clearOutputs(isProcessing);
       setProcessingError(null);
       setProcessingErrorStdout(null);
       setProcessingErrorStderr(null);
@@ -134,7 +140,7 @@ export const Step3Diagnostics = ({
     } finally {
       setIsClearingOutputs(false);
     }
-  }, [isProcessing]);
+  }, [isProcessing, clearOutputs]);
 
   return (
     <>

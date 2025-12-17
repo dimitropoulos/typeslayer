@@ -25,7 +25,7 @@ import {
 import {
   useGetResolvedTypeById,
   useGetResolvedTypesByIds,
-  useTypeGraph,
+  useTypeGraphNodeAndLinkStats,
 } from "../../hooks/tauri-hooks";
 import { AwardNavItem } from "./award-nav-item";
 import {
@@ -44,7 +44,8 @@ export function RelationAward({
 }) {
   const { title, description, icon: Icon, unit } = awards[awardId];
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const { data: typeGraph, isLoading: isLoadingTypeGraph } = useTypeGraph();
+  const { data: typeGraph, isLoading: isLoadingTypeGraph } =
+    useTypeGraphNodeAndLinkStats();
 
   const handleListItemClick = (
     _event: React.MouseEvent<HTMLDivElement, MouseEvent>,
@@ -282,7 +283,7 @@ const getLinkStatProperty = <T extends AwardId>(property: T) =>
     : never;
 
 const useTypeRelationMetricsValue = () => {
-  const { data: typeGraph } = useTypeGraph();
+  const { data: typeGraph } = useTypeGraphNodeAndLinkStats();
   if (!typeGraph) {
     return () => 0;
   }

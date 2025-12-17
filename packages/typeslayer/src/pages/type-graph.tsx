@@ -28,7 +28,10 @@ import { CenterLoader } from "../components/center-loader";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
 import { NoData } from "../components/no-data";
 import { StatPill } from "../components/stat-pill";
-import { useGetAppStats, useTypeGraph } from "../hooks/tauri-hooks";
+import {
+  useTypeGraphNodesAndLinks,
+  useTypeGraphStats,
+} from "../hooks/tauri-hooks";
 import type { GraphLink, LinkKind } from "../types/type-graph";
 
 type EdgeConfig = {
@@ -129,61 +132,52 @@ const EDGE_CONFIGS: EdgeConfig[] = EDGE_RANKING.map((id, i) => {
 const EDGE_CONFIG_MAP = new Map(EDGE_CONFIGS.map(cfg => [cfg.id, cfg]));
 
 export const TypeGraph = () => {
-  const navigate = useNavigate();
-  const navigateRef = useRef(navigate);
   const params = useParams({ strict: false });
   const selectedTypeId = params.typeId as string | undefined;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<Graph | null>(null);
-  const [stats, setStats] = useState<{ nodes: number; links: number } | null>(
-    null,
-  );
   const [visibleStats, setVisibleStats] = useState<{
     nodes: number;
     links: number;
   } | null>(null);
 
-  const [paused, setPaused] = useState(false);
-  const pausedRef = useRef(paused);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const handlePointClickRef = useRef<((index: number) => void) | null>(null);
   const applySelectionVisualsRef = useRef<
     ((index: number | null) => void) | null
   >(null);
-  const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
-  const [activeFilters, setActiveFilters] = useState<Set<LinkKind>>(
-    new Set(EDGE_CONFIGS.map(c => c.id)),
-  );
-  const idToIndexRef = useRef<Map<number, number>>(new Map());
+
   const kindsBufferRef = useRef<LinkKind[]>([]);
   const linkPairsRef = useRef<Float32Array | null>(null);
   const allLinksRef = useRef<GraphLink[]>([]);
-  const originalPositionsRef = useRef<Float32Array | null>(null);
   const hiddenIndicesRef = useRef<Set<number>>(new Set());
   const [showFreeTypes, setShowFreeTypes] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(35); // percentage
   const [isResizing, setIsResizing] = useState(false);
   const [graphReady, setGraphReady] = useState(false);
   const spaceHoldRef = useRef({ active: false, previous: false });
-  const { data: appStats, isLoading: isAppStatsLoading } = useGetAppStats();
-  const { data: typeGraph, isLoading: isTypeGraphLoading } = useTypeGraph();
+  const { data: typeGraph, isLoading: isTypeGraphLoading } =
+    useTypeGraphNodesAndLinks();
 
-  const isLoading = isTypeGraphLoading || isAppStatsLoading;
-
-  const hasTypes =
-    typeof appStats?.typesCount === "number" && appStats.typesCount > 0;
-
-  const hasData = typeGraph !== undefined && hasTypes;
-
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(paused);
   useEffect(() => {
     pausedRef.current = paused;
   }, [paused]);
 
+  const navigate = useNavigate();
+  const navigateRef = useRef(navigate);
   useEffect(() => {
     navigateRef.current = navigate;
   }, [navigate]);
+
+  const isLoading = isTypeGraphLoading;
+
+  const hasTypes = typeof typeGraph?.nodes === "number" && typeGraph.nodes > 0;
+
+  const hasData = typeGraph !== undefined && hasTypes;
 
   const setSimulationPaused = useCallback((nextPaused: boolean) => {
     const graph = graphRef.current;
@@ -233,13 +227,13 @@ export const TypeGraph = () => {
         return;
       }
 
-      const n = typeGraph.nodes;
-      const pointColors = new Float32Array(n * 4);
-      const pointSizes = new Float32Array(n);
+      const { nodes } = typeGraph;
+      const pointColors = new Float32Array(nodes * 4);
+      const pointSizes = new Float32Array(nodes);
       const hidden = hiddenIndicesRef.current;
 
       // Base visuals: neutral grey for all nodes
-      for (let i = 0; i < n; i++) {
+      for (let i = 0; i < nodes; i++) {
         pointColors[i * 4] = 0.6;
         pointColors[i * 4 + 1] = 0.6;
         pointColors[i * 4 + 2] = 0.6;
@@ -355,7 +349,7 @@ export const TypeGraph = () => {
         }
 
         // Significantly mute non-connected nodes
-        for (let i = 0; i < n; i++) {
+        for (let i = 0; i < nodes; i++) {
           if (!connectedIndices.has(i)) {
             pointColors[i * 4 + 3] = 0.15; // Reduce opacity to 15%
           }
@@ -374,18 +368,6 @@ export const TypeGraph = () => {
     },
     [showFreeTypes, typeGraph],
   );
-
-  const focusNode = useCallback(() => {
-    if (selectedIndex === null || !graphReady || !graphRef.current) {
-      return;
-    }
-    const graph = graphRef.current;
-    const container = containerRef.current;
-    if (!graph || !container) {
-      return;
-    }
-    graph.zoomToPointByIndex(selectedIndex, 1.5);
-  }, [selectedIndex, graphReady]);
 
   // (callbacks refs are assigned after declarations)
 
@@ -409,144 +391,6 @@ export const TypeGraph = () => {
   // Keep refs pointing to latest callbacks
   handlePointClickRef.current = handlePointClick;
   applySelectionVisualsRef.current = applySelectionVisuals;
-
-  const applyFilters = useCallback(
-    (filters: Set<LinkKind>, showFreeTypesOverride?: boolean) => {
-      const graph = graphRef.current;
-      const allLinks = allLinksRef.current;
-      if (!graph || !typeGraph || allLinks.length === 0) {
-        return;
-      }
-
-      // Filter links by activeFilters
-      const filteredLinks = allLinks.filter(link => filters.has(link.kind));
-      const pairBuffer: number[] = [];
-      const kindsBuffer: LinkKind[] = [];
-      for (const link of filteredLinks) {
-        if (link.source !== undefined && link.target !== undefined) {
-          pairBuffer.push(link.source, link.target);
-          kindsBuffer.push(link.kind);
-        }
-      }
-      const linkPairs = new Float32Array(pairBuffer);
-      graph.setLinks(linkPairs);
-      linkPairsRef.current = linkPairs;
-      kindsBufferRef.current = kindsBuffer;
-
-      // Filter types if showFreeTypes is false
-      let visibleTypeIds: Set<number> | null = null;
-      const showFree = showFreeTypesOverride ?? showFreeTypes;
-      if (!showFree) {
-        const tmp = new Set<number>();
-        for (const link of filteredLinks) {
-          tmp.add(link.source);
-          tmp.add(link.target);
-        }
-        visibleTypeIds = tmp;
-      }
-
-      // Always rebuild link colors to match current filters and links
-      const arr = new Float32Array(kindsBuffer.length * 4);
-      for (let i = 0; i < kindsBuffer.length; i++) {
-        const kind = kindsBuffer[i];
-        const config = EDGE_CONFIG_MAP.get(kind);
-        const [r, g, b] = config?.colorRGB ?? [0.5, 0.5, 0.5];
-        arr[i * 4] = r;
-        arr[i * 4 + 1] = g;
-        arr[i * 4 + 2] = b;
-        arr[i * 4 + 3] = selectedId ? 0.3 : 1.0; // Default muted if selection active, else full
-      }
-      graph.setLinkColors(arr);
-
-      // Set positions: hide types with no visible links if needed
-      const currentPositions = graph.getPointPositions();
-      const currentCount = typeGraph.nodes;
-
-      if (!showFree) {
-        // Hide nodes without links in current filter
-        // Always capture latest positions before hiding, so we can restore accurately
-        originalPositionsRef.current = Float32Array.from(currentPositions);
-        const positions = new Float32Array(currentCount * 2);
-        const hidden = new Set<number>();
-        for (let i = 0; i < currentCount; i++) {
-          if (!visibleTypeIds || !visibleTypeIds.has(i)) {
-            positions[i * 2] = 1e6;
-            positions[i * 2 + 1] = 1e6;
-            hidden.add(i);
-          } else {
-            positions[i * 2] = currentPositions[i * 2];
-            positions[i * 2 + 1] = currentPositions[i * 2 + 1];
-          }
-        }
-        graph.setPointPositions(positions);
-        hiddenIndicesRef.current = hidden;
-
-        // Also hide points via alpha so they don't render
-        const pointColors = new Float32Array(currentCount * 4);
-        for (let i = 0; i < currentCount; i++) {
-          const isVisible = !hidden.has(i);
-          pointColors[i * 4] = 0.6;
-          pointColors[i * 4 + 1] = 0.6;
-          pointColors[i * 4 + 2] = 0.6;
-          pointColors[i * 4 + 3] = isVisible ? 1.0 : 0.0;
-        }
-
-        // Only set colors if no selection active; applySelectionVisuals will set them if needed
-        if (!selectedId) {
-          graph.setPointColors(pointColors);
-        }
-      } else if (originalPositionsRef.current) {
-        // Restore all nodes to their simulation positions when showing free types
-        // Restore previously hidden indices to their last-known positions
-        const positions = Float32Array.from(currentPositions);
-        const orig = originalPositionsRef.current;
-        const hidden = hiddenIndicesRef.current;
-        if (orig && hidden.size > 0) {
-          for (const i of hidden) {
-            positions[i * 2] = orig[i * 2];
-            positions[i * 2 + 1] = orig[i * 2 + 1];
-          }
-          graph.setPointPositions(positions);
-        }
-        hiddenIndicesRef.current.clear();
-
-        // Ensure all points are visible again
-        const pointColors = new Float32Array(currentCount * 4);
-        for (let i = 0; i < currentCount; i++) {
-          pointColors[i * 4] = 0.6;
-          pointColors[i * 4 + 1] = 0.6;
-          pointColors[i * 4 + 2] = 0.6;
-          pointColors[i * 4 + 3] = 1.0;
-        }
-        // Only set colors if no selection active; applySelectionVisuals will set them if needed
-        if (!selectedId) {
-          graph.setPointColors?.(pointColors);
-        }
-      }
-
-      const visibleNodeCount = showFree
-        ? typeGraph.nodes
-        : (visibleTypeIds?.size ?? 0);
-      setVisibleStats({
-        nodes: visibleNodeCount,
-        links: filteredLinks.length,
-      });
-
-      // Re-apply selection visuals if a node is selected (this handles both point and link colors)
-      if (selectedId) {
-        const idx = idToIndexRef.current.get(selectedId);
-        if (idx !== undefined) {
-          applySelectionVisuals(idx);
-        }
-      } else {
-        // Only render if no selection is active; applySelectionVisuals will render if active
-        graph.render();
-      }
-
-      // no-op for removed debug view info
-    },
-    [selectedId, showFreeTypes, applySelectionVisuals, typeGraph],
-  );
 
   useEffect(() => {
     const handleKeyDown = (e: globalThis.KeyboardEvent) => {
@@ -698,10 +542,6 @@ export const TypeGraph = () => {
           }
         });
 
-        setStats({
-          nodes: nodes,
-          links: links.length,
-        });
         setVisibleStats({
           nodes: nodes,
           links: links.length,
@@ -743,13 +583,310 @@ export const TypeGraph = () => {
     }
   }, [isResizing]);
 
+  const graphView = (
+    <>
+      <TypeGraphUtilityPanel
+        setShowFreeTypes={setShowFreeTypes}
+        showFreeTypes={showFreeTypes}
+        graphReady={graphReady}
+        selectedIndex={selectedIndex}
+        selectedId={selectedId}
+        graphRef={graphRef}
+        containerRef={containerRef}
+        linkPairsRef={linkPairsRef}
+        kindsBufferRef={kindsBufferRef}
+        allLinksRef={allLinksRef}
+        hiddenIndicesRef={hiddenIndicesRef}
+        applySelectionVisuals={applySelectionVisuals}
+        setVisibleStats={setVisibleStats}
+        selectedTypeId={selectedTypeId}
+        setSimulationPaused={setSimulationPaused}
+        paused={paused}
+        pausedRef={pausedRef}
+        visibleStats={visibleStats}
+      />
+      <Box sx={{ flex: 1, position: "relative", minHeight: 0 }}>
+        <div
+          ref={containerRef}
+          style={{
+            position: "absolute",
+            inset: 0,
+          }}
+        />
+        {selectedId && (
+          <Box
+            sx={{
+              position: "absolute",
+              top: 0,
+              right: 0,
+              bottom: 0,
+              width: `${sidebarWidth}%`,
+              bgcolor: "background.paper",
+              borderLeft: "1px solid",
+              borderColor: "divider",
+              p: 2,
+              overflow: "auto",
+              zIndex: 10,
+            }}
+          >
+            <Box
+              onMouseDown={() => setIsResizing(true)}
+              sx={{
+                position: "absolute",
+                left: -4,
+                top: 0,
+                bottom: 0,
+                width: 8,
+                cursor: "ew-resize",
+                zIndex: 11,
+                "&:hover": {
+                  bgcolor: "primary.main",
+                  opacity: 0.3,
+                },
+              }}
+            />
+            {hasTypes ? (
+              <DisplayRecursiveType id={Number(selectedId)} />
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                Loading type details…
+              </Typography>
+            )}
+          </Box>
+        )}
+      </Box>
+    </>
+  );
+
+  const noData = (
+    <Box sx={{ my: 2, mr: 2 }}>
+      <NoData />
+    </Box>
+  );
+
+  return (
+    <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+      {isLoading ? <CenterLoader /> : hasData ? graphView : noData}
+    </Box>
+  );
+};
+
+const TypeGraphUtilityPanel = ({
+  setShowFreeTypes,
+  showFreeTypes,
+  graphReady,
+  selectedIndex,
+  selectedId,
+  graphRef,
+  containerRef,
+  linkPairsRef,
+  kindsBufferRef,
+  allLinksRef,
+  hiddenIndicesRef,
+  applySelectionVisuals,
+  setVisibleStats,
+  selectedTypeId,
+  setSimulationPaused,
+  paused,
+  pausedRef,
+  visibleStats,
+}: {
+  setShowFreeTypes: (next: boolean) => void;
+  showFreeTypes: boolean;
+  graphReady: boolean;
+  selectedIndex: number | null;
+  selectedId: number | null;
+  graphRef: React.RefObject<Graph | null>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  linkPairsRef: React.RefObject<Float32Array | null>;
+  kindsBufferRef: React.RefObject<LinkKind[]>;
+  allLinksRef: React.RefObject<GraphLink[]>;
+  hiddenIndicesRef: React.RefObject<Set<number>>;
+  applySelectionVisuals: (index: number | null) => void;
+  setVisibleStats: (stats: { nodes: number; links: number } | null) => void;
+  selectedTypeId: string | undefined;
+  setSimulationPaused: (nextPaused: boolean) => void;
+  paused: boolean;
+  pausedRef: React.RefObject<boolean>;
+  visibleStats: { nodes: number; links: number } | null;
+}) => {
+  const { data: typeGraph } = useTypeGraphNodesAndLinks();
+  const navigate = useNavigate();
+  const originalPositionsRef = useRef<Float32Array | null>(null);
+  const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
+  const [activeFilters, setActiveFilters] = useState<Set<LinkKind>>(
+    new Set(EDGE_CONFIGS.map(c => c.id)),
+  );
+  const idToIndexRef = useRef<Map<number, number>>(new Map());
+
+  const focusNode = useCallback(() => {
+    if (selectedIndex === null || !graphReady || !graphRef.current) {
+      return;
+    }
+    const graph = graphRef.current;
+    const container = containerRef.current;
+    if (!graph || !container) {
+      return;
+    }
+    graph.zoomToPointByIndex(selectedIndex, 1.5);
+  }, [selectedIndex, graphReady, containerRef.current, graphRef.current]);
+
+  const applyFilters = useCallback(
+    (filters: Set<LinkKind>, showFreeTypesOverride?: boolean) => {
+      const graph = graphRef.current;
+      const allLinks = allLinksRef.current;
+      if (!graph || !typeGraph || allLinks.length === 0) {
+        return;
+      }
+
+      // Filter links by activeFilters
+      const filteredLinks = allLinks.filter(link => filters.has(link.kind));
+      const pairBuffer: number[] = [];
+      const kindsBuffer: LinkKind[] = [];
+      for (const link of filteredLinks) {
+        if (link.source !== undefined && link.target !== undefined) {
+          pairBuffer.push(link.source, link.target);
+          kindsBuffer.push(link.kind);
+        }
+      }
+      const linkPairs = new Float32Array(pairBuffer);
+      graph.setLinks(linkPairs);
+      linkPairsRef.current = linkPairs;
+      kindsBufferRef.current = kindsBuffer;
+
+      // Filter types if showFreeTypes is false
+      let visibleTypeIds: Set<number> | null = null;
+      const showFree = showFreeTypesOverride ?? showFreeTypes;
+      if (!showFree) {
+        const tmp = new Set<number>();
+        for (const link of filteredLinks) {
+          tmp.add(link.source);
+          tmp.add(link.target);
+        }
+        visibleTypeIds = tmp;
+      }
+
+      // Always rebuild link colors to match current filters and links
+      const arr = new Float32Array(kindsBuffer.length * 4);
+      for (let i = 0; i < kindsBuffer.length; i++) {
+        const kind = kindsBuffer[i];
+        const config = EDGE_CONFIG_MAP.get(kind);
+        const [r, g, b] = config?.colorRGB ?? [0.5, 0.5, 0.5];
+        arr[i * 4] = r;
+        arr[i * 4 + 1] = g;
+        arr[i * 4 + 2] = b;
+        arr[i * 4 + 3] = selectedId ? 0.3 : 1.0; // Default muted if selection active, else full
+      }
+      graph.setLinkColors(arr);
+
+      // Set positions: hide types with no visible links if needed
+      const currentPositions = graph.getPointPositions();
+      const currentCount = typeGraph.nodes;
+
+      if (!showFree) {
+        // Hide nodes without links in current filter
+        // Always capture latest positions before hiding, so we can restore accurately
+        originalPositionsRef.current = Float32Array.from(currentPositions);
+        const positions = new Float32Array(currentCount * 2);
+        const hidden = new Set<number>();
+        for (let i = 0; i < currentCount; i++) {
+          if (!visibleTypeIds || !visibleTypeIds.has(i)) {
+            positions[i * 2] = 1e6;
+            positions[i * 2 + 1] = 1e6;
+            hidden.add(i);
+          } else {
+            positions[i * 2] = currentPositions[i * 2];
+            positions[i * 2 + 1] = currentPositions[i * 2 + 1];
+          }
+        }
+        graph.setPointPositions(positions);
+        hiddenIndicesRef.current = hidden;
+
+        // Also hide points via alpha so they don't render
+        const pointColors = new Float32Array(currentCount * 4);
+        for (let i = 0; i < currentCount; i++) {
+          const isVisible = !hidden.has(i);
+          pointColors[i * 4] = 0.6;
+          pointColors[i * 4 + 1] = 0.6;
+          pointColors[i * 4 + 2] = 0.6;
+          pointColors[i * 4 + 3] = isVisible ? 1.0 : 0.0;
+        }
+
+        // Only set colors if no selection active; applySelectionVisuals will set them if needed
+        if (!selectedId) {
+          graph.setPointColors(pointColors);
+        }
+      } else if (originalPositionsRef.current) {
+        // Restore all nodes to their simulation positions when showing free types
+        // Restore previously hidden indices to their last-known positions
+        const positions = Float32Array.from(currentPositions);
+        const orig = originalPositionsRef.current;
+        const hidden = hiddenIndicesRef.current;
+        if (orig && hidden.size > 0) {
+          for (const i of hidden) {
+            positions[i * 2] = orig[i * 2];
+            positions[i * 2 + 1] = orig[i * 2 + 1];
+          }
+          graph.setPointPositions(positions);
+        }
+        hiddenIndicesRef.current.clear();
+
+        // Ensure all points are visible again
+        const pointColors = new Float32Array(currentCount * 4);
+        for (let i = 0; i < currentCount; i++) {
+          pointColors[i * 4] = 0.6;
+          pointColors[i * 4 + 1] = 0.6;
+          pointColors[i * 4 + 2] = 0.6;
+          pointColors[i * 4 + 3] = 1.0;
+        }
+        // Only set colors if no selection active; applySelectionVisuals will set them if needed
+        if (!selectedId) {
+          graph.setPointColors?.(pointColors);
+        }
+      }
+
+      const visibleNodeCount = showFree
+        ? typeGraph.nodes
+        : (visibleTypeIds?.size ?? 0);
+      setVisibleStats({
+        nodes: visibleNodeCount,
+        links: filteredLinks.length,
+      });
+
+      // Re-apply selection visuals if a node is selected (this handles both point and link colors)
+      if (selectedId) {
+        const idx = idToIndexRef.current.get(selectedId);
+        if (idx !== undefined) {
+          applySelectionVisuals(idx);
+        }
+      } else {
+        // Only render if no selection is active; applySelectionVisuals will render if active
+        graph.render();
+      }
+
+      // no-op for removed debug view info
+    },
+    [
+      allLinksRef.current,
+      graphRef.current,
+      kindsBufferRef,
+      showFreeTypes,
+      setVisibleStats,
+      selectedId,
+      hiddenIndicesRef,
+      linkPairsRef,
+      applySelectionVisuals,
+      typeGraph,
+    ],
+  );
+
   const toggleShowFreeTypes = useCallback(() => {
     const nextShowFree = !showFreeTypes;
     setShowFreeTypes(nextShowFree);
     applyFilters(activeFilters, nextShowFree);
-  }, [showFreeTypes, activeFilters, applyFilters]);
+  }, [showFreeTypes, activeFilters, applyFilters, setShowFreeTypes]);
 
-  const utilityPanel = (
+  return (
     <>
       <Box sx={{ py: 2, px: 4 }}>
         <Stack direction="row" spacing={2} alignItems="flex-end">
@@ -826,7 +963,7 @@ export const TypeGraph = () => {
           <span style={{ flex: 1 }} />
 
           {(() => {
-            const statsToRender = visibleStats ?? stats;
+            const statsToRender = visibleStats;
             if (!statsToRender) {
               return null;
             }
@@ -846,183 +983,150 @@ export const TypeGraph = () => {
           })()}
         </Stack>
       </Box>
-      <Popover
-        open={Boolean(filterAnchor)}
-        anchorEl={filterAnchor}
-        onClose={() => setFilterAnchor(null)}
-        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-        disableScrollLock
-        slotProps={{
-          paper: {
-            onMouseLeave: () => setFilterAnchor(null),
-          },
-        }}
-      >
-        <Box
-          sx={{
-            width: 320,
-            display: "flex",
-            flexDirection: "column",
-            position: "relative",
-          }}
-        >
-          <Stack sx={{ px: 2, py: 1, overflowY: "auto", gap: 1 }}>
-            {EDGE_CONFIGS.map(
-              config =>
-                [config, typeGraph?.stats.count[config.id] ?? 0] as const,
-            )
-              .sort((a, b) => b[1] - a[1])
-              .map(([config, count], index, arr) => {
-                const isFirstZero =
-                  count === 0 && (index === 0 || arr[index - 1][1] > 0);
-                return (
-                  <div key={config.id}>
-                    {isFirstZero && <Divider sx={{ my: 1 }} />}
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={activeFilters.has(config.id)}
-                          onChange={e => {
-                            const newFilters = new Set(activeFilters);
-                            if (e.target.checked) {
-                              newFilters.add(config.id);
-                            } else {
-                              newFilters.delete(config.id);
-                            }
-                            setActiveFilters(newFilters);
-                            applyFilters(newFilters, showFreeTypes);
-                          }}
-                        />
-                      }
-                      label={
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <Box
-                            sx={{
-                              width: 16,
-                              height: 16,
-                              bgcolor: config.color,
-                            }}
-                          />
-                          <Typography variant="body2">
-                            {config.label}
-                            <span style={{ color: "#888", marginLeft: 4 }}>
-                              ({count.toLocaleString()})
-                            </span>
-                          </Typography>
-                        </Stack>
-                      }
-                    />
-                  </div>
-                );
-              })}
-          </Stack>
-          <Box
-            sx={{
-              position: "sticky",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              bgcolor: "background.paper",
-              p: 1,
-              zIndex: 1,
-              display: "flex",
-              gap: 2,
-              justifyContent: "center",
-            }}
-          >
-            <Button
-              variant="contained"
-              size="small"
-              onClick={() => {
-                const all = new Set(EDGE_CONFIGS.map(c => c.id));
-                setActiveFilters(all);
-                applyFilters(all, showFreeTypes);
-              }}
-            >
-              ALL
-            </Button>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={() => {
-                const none = new Set<LinkKind>();
-                setActiveFilters(none);
-                applyFilters(none, showFreeTypes);
-              }}
-            >
-              NONE
-            </Button>
-          </Box>
-        </Box>
-      </Popover>
+      <TypeGraphPopover
+        activeFilters={activeFilters}
+        applyFilters={applyFilters}
+        filterAnchor={filterAnchor}
+        setFilterAnchor={setFilterAnchor}
+        showFreeTypes={showFreeTypes}
+        setActiveFilters={setActiveFilters}
+      />
     </>
   );
+};
 
-  const graphView = (
-    <>
-      {utilityPanel}
-      <Box sx={{ flex: 1, position: "relative", minHeight: 0 }}>
-        <div
-          ref={containerRef}
-          style={{
-            position: "absolute",
-            inset: 0,
-          }}
-        />
-        {selectedId && (
-          <Box
-            sx={{
-              position: "absolute",
-              top: 0,
-              right: 0,
-              bottom: 0,
-              width: `${sidebarWidth}%`,
-              bgcolor: "background.paper",
-              borderLeft: "1px solid",
-              borderColor: "divider",
-              p: 2,
-              overflow: "auto",
-              zIndex: 10,
-            }}
-          >
-            <Box
-              onMouseDown={() => setIsResizing(true)}
-              sx={{
-                position: "absolute",
-                left: -4,
-                top: 0,
-                bottom: 0,
-                width: 8,
-                cursor: "ew-resize",
-                zIndex: 11,
-                "&:hover": {
-                  bgcolor: "primary.main",
-                  opacity: 0.3,
-                },
-              }}
-            />
-            {hasTypes ? (
-              <DisplayRecursiveType id={Number(selectedId)} />
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                Loading type details…
-              </Typography>
-            )}
-          </Box>
-        )}
-      </Box>
-    </>
-  );
-
-  const noData = (
-    <Box sx={{ my: 2, mr: 2 }}>
-      <NoData />
-    </Box>
-  );
+const TypeGraphPopover = ({
+  activeFilters,
+  applyFilters,
+  filterAnchor,
+  setFilterAnchor,
+  showFreeTypes,
+  setActiveFilters,
+}: {
+  activeFilters: Set<LinkKind>;
+  applyFilters: (
+    filters: Set<LinkKind>,
+    showFreeTypesOverride?: boolean,
+  ) => void;
+  filterAnchor: HTMLElement | null;
+  setFilterAnchor: (anchor: HTMLElement | null) => void;
+  showFreeTypes: boolean;
+  setActiveFilters: (filters: Set<LinkKind>) => void;
+}) => {
+  const { data: stats } = useTypeGraphStats();
 
   return (
-    <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
-      {isLoading ? <CenterLoader /> : hasData ? graphView : noData}
-    </Box>
+    <Popover
+      open={Boolean(filterAnchor)}
+      anchorEl={filterAnchor}
+      onClose={() => setFilterAnchor(null)}
+      anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+      disableScrollLock
+      slotProps={{
+        paper: {
+          onMouseLeave: () => setFilterAnchor(null),
+          sx: {
+            background: "#00000050",
+          },
+        },
+      }}
+    >
+      <Box
+        sx={{
+          width: 320,
+          display: "flex",
+          flexDirection: "column",
+          position: "relative",
+        }}
+      >
+        <Stack sx={{ px: 2, py: 1, overflowY: "auto", gap: 0 }}>
+          {EDGE_CONFIGS.map(
+            config => [config, stats?.count[config.id] ?? 0] as const,
+          )
+            .sort((a, b) => b[1] - a[1])
+            .map(([config, count], index, arr) => {
+              const isFirstZero =
+                count === 0 && (index === 0 || arr[index - 1][1] > 0);
+              return (
+                <div key={config.id}>
+                  {isFirstZero && <Divider sx={{ my: 1 }} />}
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={activeFilters.has(config.id)}
+                        onChange={e => {
+                          const newFilters = new Set(activeFilters);
+                          if (e.target.checked) {
+                            newFilters.add(config.id);
+                          } else {
+                            newFilters.delete(config.id);
+                          }
+                          setActiveFilters(newFilters);
+                          applyFilters(newFilters, showFreeTypes);
+                        }}
+                      />
+                    }
+                    label={
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Box
+                          sx={{
+                            width: 16,
+                            height: 16,
+                            bgcolor: config.color,
+                          }}
+                        />
+                        <Typography variant="body2">
+                          {config.label}
+                          <span style={{ color: "#888", marginLeft: 4 }}>
+                            ({count.toLocaleString()})
+                          </span>
+                        </Typography>
+                      </Stack>
+                    }
+                  />
+                </div>
+              );
+            })}
+        </Stack>
+        <Box
+          sx={{
+            position: "sticky",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            borderTop: 1,
+            borderColor: "divider",
+            p: 2,
+            zIndex: 1,
+            display: "flex",
+            gap: 3,
+            justifyContent: "center",
+          }}
+        >
+          <Button
+            variant="contained"
+            size="small"
+            onClick={() => {
+              const all = new Set(EDGE_CONFIGS.map(c => c.id));
+              setActiveFilters(all);
+              applyFilters(all, showFreeTypes);
+            }}
+          >
+            ALL
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => {
+              const none = new Set<LinkKind>();
+              setActiveFilters(none);
+              applyFilters(none, showFreeTypes);
+            }}
+          >
+            NONE
+          </Button>
+        </Box>
+      </Box>
+    </Popover>
   );
 };

@@ -1,12 +1,12 @@
 use crate::{
     analyze_trace::{AnalyzeTraceResult, constants::ANALYZE_TRACE_FILENAME},
     app_data::AppData,
-    commands::generate::generate_type_graph,
     process_controller::ProcessController,
-    type_graph::TypeGraph,
+    type_graph::{GraphLink, GraphLinkStats, GraphNodeStats, GraphStats},
     utils::{compute_window_title, set_window_title},
-    validate::{trace_json::TraceEvent, types_json::TypesJsonSchema},
+    validate::trace_json::TraceEvent,
 };
+use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, State};
 use tokio::sync::Mutex;
@@ -34,13 +34,6 @@ pub async fn set_project_root(
     set_window_title(&app, window_title).await?;
     data.set_project_root(path_buf).await?;
     Ok(())
-}
-
-#[tauri::command]
-pub async fn get_types_json(state: State<'_, &Mutex<AppData>>) -> Result<TypesJsonSchema, String> {
-    let data = state.lock().await;
-    debug!("[get_types_json] returning {} types", data.types_json.len());
-    Ok(data.types_json.clone())
 }
 
 #[tauri::command]
@@ -157,24 +150,61 @@ pub async fn get_data_dir(state: State<'_, &Mutex<AppData>>) -> Result<String, S
     Ok(data.data_dir.to_string_lossy().to_string())
 }
 
-/// Return the graph data formatted for react-force-graph. Builds if missing.
-#[tauri::command]
-pub async fn get_type_graph(
-    app: AppHandle,
-    state: State<'_, &Mutex<AppData>>,
-) -> Result<TypeGraph, String> {
-    let data = state.lock().await;
-    // If not yet built, build once
-    let needs_build = data.type_graph.is_none();
-    if needs_build {
-        generate_type_graph(app.clone(), state.clone()).await?;
-    }
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NodesAndLinks {
+    pub nodes: usize,
+    pub links: Vec<GraphLink>,
+}
 
-    let fg = data
+#[tauri::command]
+pub async fn get_type_graph_nodes_and_links(
+    state: State<'_, &Mutex<AppData>>,
+) -> Result<NodesAndLinks, String> {
+    let data = state.lock().await;
+
+    let tg = data
         .type_graph
         .as_ref()
         .ok_or_else(|| "type graph unavailable".to_string())?;
-    Ok(fg.clone())
+    Ok(NodesAndLinks {
+        nodes: tg.nodes,
+        links: tg.links.clone(),
+    })
+}
+
+#[tauri::command]
+pub async fn get_type_graph_stats(state: State<'_, &Mutex<AppData>>) -> Result<GraphStats, String> {
+    let data = state.lock().await;
+
+    let tg = data
+        .type_graph
+        .as_ref()
+        .ok_or_else(|| "type graph unavailable".to_string())?;
+    Ok(tg.stats.clone())
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NodeAndLinkStats {
+    pub node_stats: GraphNodeStats,
+    pub link_stats: GraphLinkStats,
+}
+
+#[tauri::command]
+pub async fn get_type_graph_node_and_link_stats(
+    state: State<'_, &Mutex<AppData>>,
+) -> Result<NodeAndLinkStats, String> {
+    let data = state.lock().await;
+
+    let tg = data
+        .type_graph
+        .as_ref()
+        .ok_or_else(|| "type graph unavailable".to_string())?;
+    Ok(NodeAndLinkStats {
+        node_stats: tg.node_stats.clone(),
+        link_stats: tg.link_stats.clone(),
+    })
 }
 
 #[tauri::command]

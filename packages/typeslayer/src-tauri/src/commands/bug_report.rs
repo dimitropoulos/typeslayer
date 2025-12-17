@@ -8,9 +8,11 @@ use crate::{
         utils::CPU_PROFILE_FILENAME,
     },
 };
-use std::io::Write;
+use std::io::{Read, Write};
+use std::path::Path;
 use tauri::State;
 use tokio::sync::Mutex;
+use tracing::debug;
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct BugReportFile {
@@ -202,4 +204,83 @@ pub async fn create_bug_report(
     .map_err(|e| e.to_string())??;
 
     Ok(zip_path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub async fn upload_bug_report(
+    state: State<'_, &Mutex<AppData>>,
+    zip_path: String,
+) -> Result<(), String> {
+    let zip_path = Path::new(&zip_path);
+    if !zip_path.exists() {
+        debug!("Zip file does not exist: {}", zip_path.display());
+        return Err("Zip file does not exist".to_string());
+    }
+
+    let (outputs_dir, data_dir) = {
+        let data = state.lock().await;
+        (data.outputs_dir().clone(), data.data_dir.clone())
+    };
+
+    // Clone paths for the blocking unzip task so originals remain available
+    let outputs_dir_for_unzip = outputs_dir.clone();
+    let data_dir_for_unzip = data_dir.clone();
+
+    // Clear the outputs directory first
+    {
+        let mut data = state.lock().await;
+        data.clear_outputs_dir().await?;
+    }
+
+    // Unzip and process files in a blocking task
+    let zip_path = zip_path.to_path_buf();
+    tauri::async_runtime::spawn_blocking(move || {
+        let file = std::fs::File::open(&zip_path)
+            .map_err(|e| format!("Failed to open zip file: {}", e))?;
+
+        let mut archive =
+            zip::ZipArchive::new(file).map_err(|e| format!("Failed to read zip archive: {}", e))?;
+
+        // Extract each file
+        for i in 0..archive.len() {
+            let mut file = archive
+                .by_index(i)
+                .map_err(|e| format!("Failed to read zip entry: {}", e))?;
+
+            let filename = file.name().to_string();
+
+            // Determine destination path
+            let dest_path = if filename == CONFIG_FILENAME {
+                // typeslayer.toml goes to data directory
+                data_dir_for_unzip.join(&filename)
+            } else {
+                // All other files go to outputs directory
+                outputs_dir_for_unzip.join(&filename)
+            };
+
+            // Read file contents
+            let mut contents = Vec::new();
+            file.read_to_end(&mut contents)
+                .map_err(|e| format!("Failed to read {}: {}", &filename, &e))?;
+
+            debug!("Extracting {} to {}", filename, dest_path.display());
+            std::fs::write(&dest_path, contents)
+                .map_err(|e| format!("Failed to write {}: {}", &filename, &e))?;
+        }
+
+        Ok::<(), String>(())
+    })
+    .await
+    .map_err(|e| e.to_string())??;
+
+    let new_app_data = AppData::new(data_dir.clone())
+        .await
+        .map_err(|e| format!("Failed to reinitialize app data: {}", e))?;
+
+    {
+        let mut data = state.lock().await;
+        *data = new_app_data;
+    }
+
+    Ok(())
 }

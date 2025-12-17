@@ -149,7 +149,7 @@ export const RawData = () => {
     <Stack direction="row" sx={{ height: "100%" }}>
       <List
         sx={{
-          minWidth: 300,
+          minWidth: 320,
           borderRight: 1,
           borderColor: "divider",
         }}

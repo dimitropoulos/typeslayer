@@ -110,7 +110,7 @@ pub struct LinkStats {
     pub links: Vec<LinkStatLink>,
 }
 
-type GraphLinkStats = HashMap<LinkKind, LinkStats>;
+pub type GraphLinkStats = HashMap<LinkKind, LinkStats>;
 
 #[derive(Eq, PartialEq, Hash, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -138,7 +138,7 @@ pub struct NodeStatCategory {
     pub nodes: Vec<NodeStatNode>,
 }
 
-type GraphNodeStats = HashMap<NodeStatKind, NodeStatCategory>;
+pub type GraphNodeStats = HashMap<NodeStatKind, NodeStatCategory>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
@@ -202,7 +202,12 @@ impl TypeGraph {
     }
 
     fn calculate_nodes(&mut self, types: &TypesJsonSchema) {
-        self.nodes = types.len();
+        // TypeIds start at 1, but we add an index at 0 so it always lines up
+        if types.is_empty() {
+            self.nodes = 0;
+            return;
+        }
+        self.nodes = types.len() - 1;
     }
 
     fn calculate_links(&mut self, types: &TypesJsonSchema) {

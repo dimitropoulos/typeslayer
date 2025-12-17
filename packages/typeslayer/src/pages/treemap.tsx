@@ -124,9 +124,7 @@ export const Treemap = () => {
         const path = formatPath(info.data?.path || info.name || "");
         const valueMs =
           typeof info.value === "number"
-            ? (info.value / 1000)
-                .toFixed(2)
-                .replace(/\B(?=(\d{3})+(?!\d))/g, " ")
+            ? (info.value / 1000).toLocaleString()
             : "0";
         return `
           <div style="padding: 8px;">

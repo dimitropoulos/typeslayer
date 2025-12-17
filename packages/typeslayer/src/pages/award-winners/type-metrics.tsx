@@ -13,7 +13,7 @@ import { CenterLoader } from "../../components/center-loader";
 import { DisplayRecursiveType } from "../../components/display-recursive-type";
 import { NoData } from "../../components/no-data";
 import { TypeSummary } from "../../components/type-summary";
-import { useTypeGraph } from "../../hooks/tauri-hooks";
+import { useTypeGraphNodeAndLinkStats } from "../../hooks/tauri-hooks";
 import { AwardNavItem } from "./award-nav-item";
 import {
   AWARD_SELECTOR_COLUMN_WIDTH,
@@ -39,7 +39,7 @@ const getTypeStatProperty = <T extends TypeMetricsAwardId>(awardId: T) => {
 };
 
 const useTypeMetricsValue = () => {
-  const { data: typeGraph } = useTypeGraph();
+  const { data: typeGraph } = useTypeGraphNodeAndLinkStats();
   if (!typeGraph) {
     return () => 0;
   }
@@ -81,7 +81,7 @@ export function TypeMetricsAward({ awardId }: { awardId: TypeMetricsAwardId }) {
   const { title, description, icon: Icon, unit } = awards[awardId];
 
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const { data: typeGraph, isLoading } = useTypeGraph();
+  const { data: typeGraph, isLoading } = useTypeGraphNodeAndLinkStats();
 
   const hasData = typeGraph !== undefined;
 

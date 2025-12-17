@@ -15,7 +15,8 @@
         "title": "TypeSlayer",
         "width": 1920,
         "height": 1080,
-        "zoomHotkeysEnabled": true
+        "zoomHotkeysEnabled": true,
+        "dragDropEnabled": true
       }
     ],
     "security": {

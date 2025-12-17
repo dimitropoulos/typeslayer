@@ -328,10 +328,32 @@ export function useTraceJson() {
   });
 }
 
-export function useTypeGraph() {
+export function useTypeGraphNodesAndLinks() {
   return useQuery({
-    queryKey: ["type_graph"],
-    queryFn: () => invoke<TypeGraph>("get_type_graph"),
+    queryKey: ["type_graph_nodes_and_links"],
+    queryFn: () =>
+      invoke<Pick<TypeGraph, "nodes" | "links">>(
+        "get_type_graph_nodes_and_links",
+      ),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+export function useTypeGraphStats() {
+  return useQuery({
+    queryKey: ["type_graph_stats"],
+    queryFn: () => invoke<TypeGraph["stats"]>("get_type_graph_stats"),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+export function useTypeGraphNodeAndLinkStats() {
+  return useQuery({
+    queryKey: ["type_graph_node_and_link_stats"],
+    queryFn: () =>
+      invoke<Pick<TypeGraph, "linkStats" | "nodeStats">>(
+        "get_type_graph_node_and_link_stats",
+      ),
     staleTime: Number.POSITIVE_INFINITY,
   });
 }
@@ -362,20 +384,19 @@ export function useTsconfigPaths() {
 
 const refreshGenerateTrace = (queryClient: QueryClient) => async () => {
   // trace.json
-  queryClient.invalidateQueries({ queryKey: ["trace_json"] });
   queryClient.invalidateQueries({ queryKey: ["get_trace_json_preview"] });
+  queryClient.invalidateQueries({ queryKey: ["trace_json"] });
 
   // types.json
   queryClient.invalidateQueries({ queryKey: ["get_types_json_preview"] });
   queryClient.invalidateQueries({ queryKey: ["resolved_type"] });
 
   // type-graph.json
-  queryClient.invalidateQueries({ queryKey: ["type_graph"] });
-  queryClient.invalidateQueries({ queryKey: ["get_type_graph_preview"] });
+  await refreshTypeGraph(queryClient)();
 
   // analyze-trace.json
-  queryClient.invalidateQueries({ queryKey: ["analyze_trace"] });
   queryClient.invalidateQueries({ queryKey: ["get_analyze_trace_preview"] });
+  queryClient.invalidateQueries({ queryKey: ["analyze_trace"] });
 
   // metadata
   queryClient.invalidateQueries({ queryKey: ["get_app_stats"] });
@@ -466,9 +487,11 @@ export function useUploadAnalyzeTrace() {
 }
 
 const refreshTypeGraph = (queryClient: QueryClient) => async () => {
-  const typeGraph = await invoke<TypeGraph>("get_type_graph");
-  queryClient.setQueryData(["type_graph"], typeGraph);
-
+  queryClient.invalidateQueries({ queryKey: ["type_graph_nodes_and_links"] });
+  queryClient.invalidateQueries({
+    queryKey: ["type_graph_node_and_link_stats"],
+  });
+  queryClient.invalidateQueries({ queryKey: ["type_graph_stats"] });
   queryClient.invalidateQueries({ queryKey: ["get_type_graph_preview"] });
   queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
   queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
@@ -854,5 +877,17 @@ export const useGetAppStats = () => {
     queryKey: ["get_app_stats"],
     queryFn: () => invoke<AppStats>("get_app_stats"),
     staleTime: Number.POSITIVE_INFINITY,
+  });
+};
+
+export const useClearOutputs = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (cancelRunning: boolean) =>
+      invoke<void>("clear_outputs", { cancelRunning }),
+    onSettled: () => {
+      // Invalidate all queries to clear out the data
+      queryClient.invalidateQueries();
+    },
   });
 };

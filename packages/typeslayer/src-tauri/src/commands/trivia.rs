@@ -24,7 +24,11 @@ pub async fn get_app_stats(state: State<'_, &Mutex<AppData>>) -> Result<AppStats
     let data = state.lock().await;
     Ok(AppStats {
         // we synthetically insert id:0 to make it so you can just index the vec to lookup by id
-        types_count: data.types_json.len() - 1,
+        types_count: if data.types_json.len() == 0 {
+            0
+        } else {
+            data.types_json.len() - 1
+        },
         links_count: data
             .type_graph
             .as_ref()
