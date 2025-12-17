@@ -35,7 +35,11 @@ import { useCallback, useMemo } from "react";
 import { CenterLoader } from "../components/center-loader";
 import { Code } from "../components/code";
 import { InlineCode } from "../components/inline-code";
-import { formatBytesSize, serverBaseUrl } from "../components/utils";
+import {
+  detectPlatformSlash,
+  formatBytesSize,
+  serverBaseUrl,
+} from "../components/utils";
 import { type ToastData, useToast } from "../contexts/toast-context";
 import {
   useDataDir,
@@ -231,7 +235,8 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
   const onDownload = useCallback(async () => {
     try {
       const base = await downloadDir();
-      const dest = `${base}${base.endsWith("/") ? "" : "/"}${filename}`;
+      const platformSlash = detectPlatformSlash();
+      const dest = `${base}${base.endsWith(platformSlash) ? "" : platformSlash}${filename}`;
       const url = `${serverBaseUrl}/outputs/${filename}`;
       await download(url, dest);
 

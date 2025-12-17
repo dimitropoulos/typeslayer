@@ -14,8 +14,9 @@ import {
   Typography,
 } from "@mui/material";
 import { invoke } from "@tauri-apps/api/core";
-import { type ReactNode, useCallback } from "react";
+import { type ReactNode, useCallback, useMemo } from "react";
 import { InlineCode } from "../components/inline-code";
+import { detectPlatformSlash } from "../components/utils";
 import {
   useAutoStart,
   useAvailableEditors,
@@ -82,9 +83,11 @@ export const SettingsPage = () => {
     [preferredEditor.set],
   );
 
-  const projectRootDisplay = projectRoot.data?.endsWith("/package.json")
-    ? projectRoot.data.slice(0, -13)
-    : projectRoot.data || "";
+  const pathSeparator = useMemo(detectPlatformSlash, []);
+
+  const projectRootDisplay = projectRoot.data?.endsWith(pathSeparator)
+    ? projectRoot.data
+    : `${projectRoot.data}${pathSeparator}`;
 
   const handleOpenDataDir = useCallback(async () => {
     if (!dataDir.data) {
@@ -128,12 +131,14 @@ export const SettingsPage = () => {
             <br />
             and you have a file at
             <br />
-            <InlineCode primary>{projectRootDisplay}/</InlineCode>
-            <InlineCode>src/index.ts</InlineCode>
+            <InlineCode primary>{projectRootDisplay}</InlineCode>
+            <InlineCode>src{pathSeparator}index.ts</InlineCode>
             <br />
             that file's path will be displayed as
             <br />
-            <InlineCode>./src/index.ts</InlineCode>
+            <InlineCode>
+              .{pathSeparator}src{pathSeparator}index.ts
+            </InlineCode>
           </Typography>
         </FormGroup>
       </Setting>

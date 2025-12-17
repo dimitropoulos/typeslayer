@@ -27,6 +27,7 @@ import {
   useGetResolvedTypesByIds,
   useTypeGraphNodeAndLinkStats,
 } from "../../hooks/tauri-hooks";
+import { compactLinksStatsLinkIndex } from "../../types/type-graph";
 import { AwardNavItem } from "./award-nav-item";
 import {
   AWARD_SELECTOR_COLUMN_WIDTH,
@@ -59,7 +60,10 @@ export function RelationAward({
   const linkStats = typeGraph?.linkStats[edgeStatProperty];
 
   const targets = useMemo(() => {
-    return linkStats?.links.map(link => link.targetId) ?? [];
+    return (
+      linkStats?.links.map(link => link[compactLinksStatsLinkIndex.targetId]) ??
+      []
+    );
   }, [linkStats]);
 
   const selectedItem = linkStats?.links[selectedIndex];
@@ -95,7 +99,7 @@ export function RelationAward({
 
   const items = (
     <List>
-      {linkStats?.links.map(({ targetId, sourceIds, path }, index) => {
+      {linkStats?.links.map(([targetId, path, sourceIds], index) => {
         const maybeResolvedType = partialIndexedTypeRegistry?.[targetId];
         return (
           <ListItemButton
@@ -175,23 +179,30 @@ export function RelationAward({
       >
         {hasItems && selectedItem ? (
           <Stack gap={3}>
-            <DisplayRecursiveType id={selectedItem.targetId} />
+            <DisplayRecursiveType
+              id={selectedItem[compactLinksStatsLinkIndex.targetId]}
+            />
 
             {selectedItem && hasItems && (
               <>
                 <Divider />
                 <Stack gap={1}>
                   <Typography variant="h6">
-                    {selectedItem.sourceIds.length.toLocaleString()} {unit}
+                    {selectedItem[
+                      compactLinksStatsLinkIndex.sourceIds
+                    ].length.toLocaleString()}{" "}
+                    {unit}
                   </Typography>
                   <List dense sx={{ backgroundColor: "transparent" }}>
                     <ShowMoreChildren incrementsOf={50}>
-                      {selectedItem.sourceIds.map((sourceId, index) => (
-                        <TypeMetricsListItem
-                          key={`${index}-${sourceId}`}
-                          typeId={sourceId}
-                        />
-                      ))}
+                      {selectedItem[compactLinksStatsLinkIndex.sourceIds].map(
+                        (sourceId, index) => (
+                          <TypeMetricsListItem
+                            key={`${index}-${sourceId}`}
+                            typeId={sourceId}
+                          />
+                        ),
+                      )}
                     </ShowMoreChildren>
                   </List>
                 </Stack>

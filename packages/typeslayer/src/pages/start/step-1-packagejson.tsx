@@ -1,6 +1,7 @@
 import { Button, Stack, TextField, Typography } from "@mui/material";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useState } from "react";
+import { PACKAGE_JSON } from "../../components/constants";
 import { InlineCode } from "../../components/inline-code";
 import { useProjectRoot } from "../../hooks/tauri-hooks";
 import { Step } from "./step";
@@ -39,21 +40,16 @@ export const Step1PackageJson = () => {
 
   const locatePackageJson = useCallback(async () => {
     try {
-      const selected = await open({
+      const pkgPath = await open({
         multiple: false,
-        filters: [{ name: "package.json", extensions: ["json"] }],
+        filters: [{ name: PACKAGE_JSON, extensions: ["json"] }],
       });
-      if (selected && typeof selected === "string") {
-        // Normalize to package.json path
-        let pkgPath = selected;
-        if (!pkgPath.endsWith("package.json")) {
-          // If it's a directory, append package.json
-          if (!pkgPath.endsWith("/")) {
-            pkgPath += "/";
-          }
-          pkgPath += "package.json";
-        }
-        await applyProjectRoot(pkgPath);
+      if (pkgPath && typeof pkgPath === "string") {
+        await applyProjectRoot(
+          pkgPath.endsWith(PACKAGE_JSON)
+            ? pkgPath.slice(0, -PACKAGE_JSON.length)
+            : pkgPath,
+        );
       }
     } catch (error) {
       console.error("Failed to open file picker:", error);
@@ -65,7 +61,7 @@ export const Step1PackageJson = () => {
       <Stack gap={1} sx={{ width: "100%" }}>
         <Typography>
           locate the <InlineCode>package.json</InlineCode> of the package you'd
-          like to investigate
+          like to investigate or type in the directory here
         </Typography>
 
         <Stack direction="row" gap={1} width="100%">

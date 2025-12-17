@@ -75,7 +75,7 @@ pub async fn generate_trace(
         "TypeScript compilation with trace generation",
     )
     .await
-    .map_err(|e| format!("generate_trace join error: {}", e))?;
+    .map_err(|e| format!("[generate_trace] join error: {}", e))?;
 
     info!(
         "[generate_trace] Listing files in output directory: {}",

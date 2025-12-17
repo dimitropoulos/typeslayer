@@ -72,6 +72,20 @@ pub struct GraphLink {
     pub kind: LinkKind,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompactGraphLink(
+    TypeId, // sourceId
+    TypeId, // targetId
+    LinkKind,
+);
+
+impl From<GraphLink> for CompactGraphLink {
+    fn from(v: GraphLink) -> Self {
+        CompactGraphLink(v.source, v.target, v.kind)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct GraphStats {
@@ -99,6 +113,34 @@ pub struct LinkStatLink {
     pub source_ids: Vec<TypeId>,
 }
 
+/// The compact on-the-wire representation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompactLinkStatLink(
+    // targetId
+    TypeId,
+    // human readable name
+    Option<String>,
+    // sourceIds
+    Vec<TypeId>,
+);
+
+impl From<LinkStatLink> for CompactLinkStatLink {
+    fn from(v: LinkStatLink) -> Self {
+        CompactLinkStatLink(v.target_id, v.path, v.source_ids)
+    }
+}
+
+impl From<CompactLinkStatLink> for LinkStatLink {
+    fn from(v: CompactLinkStatLink) -> Self {
+        LinkStatLink {
+            target_id: v.0,
+            path: v.1,
+            source_ids: v.2,
+        }
+    }
+}
+
 /// Stats for a specific link kind: ordered list of (target_id, [source_ids])
 /// Ordered by number of sources (most connected first)
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -110,7 +152,26 @@ pub struct LinkStats {
     pub links: Vec<LinkStatLink>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct CompactLinkStats {
+    /// Largest source count across entries
+    pub max: usize,
+    /// sorted by source_ids count descending
+    pub links: Vec<CompactLinkStatLink>,
+}
+
+impl From<LinkStats> for CompactLinkStats {
+    fn from(v: LinkStats) -> Self {
+        CompactLinkStats {
+            max: v.max,
+            links: v.links.into_iter().map(|link| link.into()).collect(),
+        }
+    }
+}
+
 pub type GraphLinkStats = HashMap<LinkKind, LinkStats>;
+pub type CompactGraphLinkStats = HashMap<LinkKind, CompactLinkStats>;
 
 #[derive(Eq, PartialEq, Hash, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

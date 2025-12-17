@@ -158,3 +158,8 @@ export const processTscExample = ({
       ].join("\n")
     : "<error>";
 };
+
+export const detectPlatformSlash = () => {
+  const platform = window.navigator.platform.toLowerCase();
+  return platform.includes("win") ? "\\" : "/";
+};

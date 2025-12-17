@@ -32,6 +32,7 @@ import { useToast } from "../contexts/toast-context";
 import { useBugReportFiles, useCreateBugReport } from "../hooks/tauri-hooks";
 import { CenterLoader } from "./center-loader";
 import { InlineCode } from "./inline-code";
+import { detectPlatformSlash } from "./utils";
 
 const supportEmail = "typeslayer@dimitrimitropoulos.com";
 
@@ -162,7 +163,7 @@ const CreateABugReport = ({
       };
 
       showToast({
-        message: `Bug report downloaded to: ${zipPath.split("/").pop()}`,
+        message: `Bug report downloaded to: ${zipPath.split(detectPlatformSlash()).pop()}`,
         severity: "success",
         duration: 10000,
         action: {

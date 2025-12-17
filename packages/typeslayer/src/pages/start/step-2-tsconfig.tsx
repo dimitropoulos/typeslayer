@@ -10,6 +10,7 @@ import {
 import { useCallback, useState } from "react";
 import { FlagsCustomizationDialog } from "../../components/flags-customization-dialog";
 import { InlineCode } from "../../components/inline-code";
+import { detectPlatformSlash } from "../../components/utils";
 import { useSelectedTsconfig, useTsconfigPaths } from "../../hooks/tauri-hooks";
 import { Step } from "./step";
 
@@ -25,6 +26,8 @@ export const Step2Tsconfig = () => {
     },
     [selectedTsconfig.set],
   );
+
+  const platformSlash = detectPlatformSlash();
 
   return (
     <Step step={2}>
@@ -57,7 +60,8 @@ export const Step2Tsconfig = () => {
                   );
                 }
                 // Extract just the filename for display
-                const filename = selected.split("/").pop() || selected;
+                const filename =
+                  selected.split(platformSlash).pop() || selected;
                 return (
                   <Stack>
                     <Typography>{filename}</Typography>
@@ -86,7 +90,7 @@ export const Step2Tsconfig = () => {
                 </Stack>
               </MenuItem>
               {(tsconfigPaths.data ?? []).map(path => {
-                const filename = path.split("/").pop() || path;
+                const filename = path.split(platformSlash).pop() || path;
                 return (
                   <MenuItem key={path} value={path}>
                     <Stack>

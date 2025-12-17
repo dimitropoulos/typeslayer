@@ -15,7 +15,13 @@ import {
 } from "@typeslayer/validate";
 import { useEffect } from "react";
 import { friendlyPath } from "../components/utils";
-import type { LinkKind, TypeGraph } from "../types/type-graph";
+import type {
+  CompactGraphLink,
+  GraphLinkStats,
+  GraphNodeStats,
+  GraphStats,
+  LinkKind,
+} from "../types/type-graph";
 
 export const useGetRecursiveResolvedTypes = (typeId: TypeId | undefined) => {
   const queryClient = useQueryClient();
@@ -332,7 +338,7 @@ export function useTypeGraphNodesAndLinks() {
   return useQuery({
     queryKey: ["type_graph_nodes_and_links"],
     queryFn: () =>
-      invoke<Pick<TypeGraph, "nodes" | "links">>(
+      invoke<{ nodes: number; links: CompactGraphLink[] }>(
         "get_type_graph_nodes_and_links",
       ),
     staleTime: Number.POSITIVE_INFINITY,
@@ -342,7 +348,7 @@ export function useTypeGraphNodesAndLinks() {
 export function useTypeGraphStats() {
   return useQuery({
     queryKey: ["type_graph_stats"],
-    queryFn: () => invoke<TypeGraph["stats"]>("get_type_graph_stats"),
+    queryFn: () => invoke<GraphStats>("get_type_graph_stats"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 }
@@ -351,9 +357,10 @@ export function useTypeGraphNodeAndLinkStats() {
   return useQuery({
     queryKey: ["type_graph_node_and_link_stats"],
     queryFn: () =>
-      invoke<Pick<TypeGraph, "linkStats" | "nodeStats">>(
-        "get_type_graph_node_and_link_stats",
-      ),
+      invoke<{
+        linkStats: GraphLinkStats;
+        nodeStats: GraphNodeStats;
+      }>("get_type_graph_node_and_link_stats"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 }
@@ -493,6 +500,7 @@ const refreshTypeGraph = (queryClient: QueryClient) => async () => {
   });
   queryClient.invalidateQueries({ queryKey: ["type_graph_stats"] });
   queryClient.invalidateQueries({ queryKey: ["get_type_graph_preview"] });
+  queryClient.invalidateQueries({ queryKey: ["get_links_to_type_id"] });
   queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
   queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
 };

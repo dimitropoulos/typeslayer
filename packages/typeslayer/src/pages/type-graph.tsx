@@ -32,7 +32,11 @@ import {
   useTypeGraphNodesAndLinks,
   useTypeGraphStats,
 } from "../hooks/tauri-hooks";
-import type { GraphLink, LinkKind } from "../types/type-graph";
+import {
+  type CompactGraphLink,
+  compactGraphLinkIndex,
+  type LinkKind,
+} from "../types/type-graph";
 
 type EdgeConfig = {
   id: LinkKind;
@@ -151,7 +155,7 @@ export const TypeGraph = () => {
 
   const kindsBufferRef = useRef<LinkKind[]>([]);
   const linkPairsRef = useRef<Float32Array | null>(null);
-  const allLinksRef = useRef<GraphLink[]>([]);
+  const allLinksRef = useRef<CompactGraphLink[]>([]);
   const hiddenIndicesRef = useRef<Set<number>>(new Set());
   const [showFreeTypes, setShowFreeTypes] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(35); // percentage
@@ -492,9 +496,15 @@ export const TypeGraph = () => {
         const pairBuffer: number[] = [];
         const kindsBuffer: LinkKind[] = [];
         for (const link of links) {
-          if (link.source !== undefined && link.target !== undefined) {
-            pairBuffer.push(link.source, link.target);
-            kindsBuffer.push(link.kind);
+          if (
+            link[compactGraphLinkIndex.sourceId] !== undefined &&
+            link[compactGraphLinkIndex.targetId] !== undefined
+          ) {
+            pairBuffer.push(
+              link[compactGraphLinkIndex.sourceId],
+              link[compactGraphLinkIndex.targetId],
+            );
+            kindsBuffer.push(link[compactGraphLinkIndex.kind]);
           }
         }
         const linkPairs = new Float32Array(pairBuffer);
@@ -700,7 +710,7 @@ const TypeGraphUtilityPanel = ({
   containerRef: React.RefObject<HTMLDivElement | null>;
   linkPairsRef: React.RefObject<Float32Array | null>;
   kindsBufferRef: React.RefObject<LinkKind[]>;
-  allLinksRef: React.RefObject<GraphLink[]>;
+  allLinksRef: React.RefObject<CompactGraphLink[]>;
   hiddenIndicesRef: React.RefObject<Set<number>>;
   applySelectionVisuals: (index: number | null) => void;
   setVisibleStats: (stats: { nodes: number; links: number } | null) => void;
@@ -740,13 +750,21 @@ const TypeGraphUtilityPanel = ({
       }
 
       // Filter links by activeFilters
-      const filteredLinks = allLinks.filter(link => filters.has(link.kind));
+      const filteredLinks = allLinks.filter(link =>
+        filters.has(link[compactGraphLinkIndex.kind]),
+      );
       const pairBuffer: number[] = [];
       const kindsBuffer: LinkKind[] = [];
       for (const link of filteredLinks) {
-        if (link.source !== undefined && link.target !== undefined) {
-          pairBuffer.push(link.source, link.target);
-          kindsBuffer.push(link.kind);
+        if (
+          link[compactGraphLinkIndex.sourceId] !== undefined &&
+          link[compactGraphLinkIndex.targetId] !== undefined
+        ) {
+          pairBuffer.push(
+            link[compactGraphLinkIndex.sourceId],
+            link[compactGraphLinkIndex.targetId],
+          );
+          kindsBuffer.push(link[compactGraphLinkIndex.kind]);
         }
       }
       const linkPairs = new Float32Array(pairBuffer);
@@ -760,8 +778,8 @@ const TypeGraphUtilityPanel = ({
       if (!showFree) {
         const tmp = new Set<number>();
         for (const link of filteredLinks) {
-          tmp.add(link.source);
-          tmp.add(link.target);
+          tmp.add(link[compactGraphLinkIndex.sourceId]);
+          tmp.add(link[compactGraphLinkIndex.targetId]);
         }
         visibleTypeIds = tmp;
       }

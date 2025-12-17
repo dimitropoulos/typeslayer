@@ -2,7 +2,7 @@ use crate::{
     analyze_trace::{AnalyzeTraceResult, constants::ANALYZE_TRACE_FILENAME},
     app_data::AppData,
     process_controller::ProcessController,
-    type_graph::{GraphLink, GraphLinkStats, GraphNodeStats, GraphStats},
+    type_graph::{CompactGraphLink, CompactGraphLinkStats, GraphNodeStats, GraphStats},
     utils::{compute_window_title, set_window_title},
     validate::trace_json::TraceEvent,
 };
@@ -154,7 +154,7 @@ pub async fn get_data_dir(state: State<'_, &Mutex<AppData>>) -> Result<String, S
 #[serde(rename_all = "camelCase")]
 pub struct NodesAndLinks {
     pub nodes: usize,
-    pub links: Vec<GraphLink>,
+    pub links: Vec<CompactGraphLink>,
 }
 
 #[tauri::command]
@@ -169,7 +169,7 @@ pub async fn get_type_graph_nodes_and_links(
         .ok_or_else(|| "type graph unavailable".to_string())?;
     Ok(NodesAndLinks {
         nodes: tg.nodes,
-        links: tg.links.clone(),
+        links: tg.links.iter().map(|l| l.clone().into()).collect(),
     })
 }
 
@@ -188,7 +188,7 @@ pub async fn get_type_graph_stats(state: State<'_, &Mutex<AppData>>) -> Result<G
 #[serde(rename_all = "camelCase")]
 pub struct NodeAndLinkStats {
     pub node_stats: GraphNodeStats,
-    pub link_stats: GraphLinkStats,
+    pub link_stats: CompactGraphLinkStats,
 }
 
 #[tauri::command]
@@ -201,9 +201,16 @@ pub async fn get_type_graph_node_and_link_stats(
         .type_graph
         .as_ref()
         .ok_or_else(|| "type graph unavailable".to_string())?;
+
+    let compact_link_stats = tg
+        .link_stats
+        .iter()
+        .map(|(kind, stats)| (kind.clone(), stats.clone().into()))
+        .collect();
+
     Ok(NodeAndLinkStats {
         node_stats: tg.node_stats.clone(),
-        link_stats: tg.link_stats.clone(),
+        link_stats: compact_link_stats,
     })
 }
 

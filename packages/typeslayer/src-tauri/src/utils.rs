@@ -1,11 +1,8 @@
-use std::{
-    path::{Path, PathBuf},
-    process::Stdio,
-};
+use std::path::{Path, PathBuf};
 
 use shlex::Quoter;
 use tauri::{AppHandle, Manager};
-use tokio::{fs, process::Command};
+use tokio::fs;
 use tracing::debug;
 
 pub fn quote_if_needed(s: &str) -> String {
@@ -42,33 +39,6 @@ pub const AVAILABLE_EDITORS: &[(&str, &str)] = &[
     ("lapce", "Lapce"),
     ("lite-xl", "Lite XL"),
 ];
-
-pub async fn command_exists(cmd: &str) -> bool {
-    #[cfg(target_os = "windows")]
-    {
-        Command::new("where")
-            .arg(cmd)
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .await
-            .map(|s| s.success())
-            .unwrap_or(false)
-    }
-
-    #[cfg(not(target_os = "windows"))]
-    {
-        Command::new("command")
-            .arg("-v")
-            .arg(cmd)
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .await
-            .map(|s| s.success())
-            .unwrap_or(false)
-    }
-}
 
 pub fn get_typeslayer_base_data_dir() -> PathBuf {
     if let Ok(env_dir) = std::env::var("TYPESLAYER_DATA_DIR") {
@@ -107,7 +77,7 @@ pub fn detect_project_root_from_cwd() -> Option<PathBuf> {
     );
     if pkg_path.exists() {
         debug!("found package.json in cwd: {}", pkg_path.display());
-        return Some(pkg_path);
+        return Some(cwd);
     }
 
     // Also check PWD environment variable in case cwd was changed
@@ -122,7 +92,7 @@ pub fn detect_project_root_from_cwd() -> Option<PathBuf> {
                 "[detect_project_root_from_cwd] found package.json in PWD: {}",
                 pwd_path.display()
             );
-            return Some(pwd_path);
+            return Some(PathBuf::from(pwd));
         }
     }
 
@@ -130,9 +100,14 @@ pub fn detect_project_root_from_cwd() -> Option<PathBuf> {
     None
 }
 
+/// Validates and normalizes a project root path to always return a directory.
+/// If given a package.json file path, returns its parent directory.
+/// If given a directory, returns it as-is.
+/// Accepts any valid path - package.json is not required.
 pub fn validate_project_root_path(s: &str) -> Result<PathBuf, String> {
     let p = Path::new(s);
 
+    // If it's explicitly a package.json file, return its parent directory
     if p.file_name()
         .map(|f| f == PACKAGE_JSON_FILENAME)
         .unwrap_or(false)
@@ -140,19 +115,19 @@ pub fn validate_project_root_path(s: &str) -> Result<PathBuf, String> {
         if !p.exists() {
             return Err(format!("package.json not found at: {}", s));
         }
+        return Ok(p
+            .parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| PathBuf::from(".")));
+    }
+
+    // If it's a directory, return it
+    if p.is_dir() || !p.exists() {
         return Ok(p.to_path_buf());
     }
 
-    if p.exists() && p.is_dir() {
-        let pkg_path = p.join(PACKAGE_JSON_FILENAME);
-        if !pkg_path.exists() {
-            return Err(format!("package.json not found in directory: {}", s));
-        }
-        return Ok(pkg_path);
-    }
-
     Err(format!(
-        "Path must be an existing package.json file or directory containing one: {}",
+        "Path must be a directory or package.json file: {}",
         s
     ))
 }
@@ -173,8 +148,9 @@ pub async fn file_mtime_iso(path: &Path) -> Option<String> {
 
 pub async fn compute_window_title(project_root: PathBuf) -> String {
     let default_title = "TypeSlayer".to_string();
+    let package_json_path = project_root.join("package.json");
     // Attempt to read and parse the package.json name; fallback to default on any error.
-    match fs::read_to_string(project_root)
+    match fs::read_to_string(package_json_path)
         .await
         .ok()
         .and_then(|contents| serde_json::from_str::<serde_json::Value>(&contents).ok())

@@ -1,12 +1,9 @@
-use crate::{
-    app_data::AppData,
-    layercake::ResolveStringArgs,
-    utils::{AVAILABLE_EDITORS, command_exists},
-};
+use crate::{app_data::AppData, layercake::ResolveStringArgs, utils::AVAILABLE_EDITORS};
 use std::path::Path;
 use tauri::State;
 use tauri::{AppHandle, Manager, WebviewWindow};
 use tokio::{fs, process::Command, sync::Mutex};
+use tracing::debug;
 
 #[tauri::command]
 pub async fn take_screenshot(app: AppHandle) -> Result<String, String> {
@@ -128,6 +125,12 @@ pub async fn open_file(state: State<'_, &Mutex<AppData>>, path: String) -> Resul
             .or_else(|| data.settings.preferred_editor.clone())
             .or_else(|| available_editors.first().map(|(cmd, _)| cmd.clone()));
 
+        debug!("[open_file] editor_to_use: {:?}", editor_to_use);
+        debug!(
+            "[open_file] preferred_editor setting: {:?}",
+            data.settings.preferred_editor
+        );
+
         // Build list of editors to try
         let editors_to_try: Vec<String> = if let Some(ref editor) = editor_to_use {
             let mut eds = vec![editor.clone()];
@@ -144,23 +147,43 @@ pub async fn open_file(state: State<'_, &Mutex<AppData>>, path: String) -> Resul
                 .collect()
         };
 
+        debug!("[open_file] editors_to_try: {:?}", editors_to_try);
+
         // Try each editor in order
         for ed in editors_to_try.iter() {
-            if !command_exists(ed).await {
-                continue;
-            }
             // VS Code supports --goto path:line:col; others we just pass file path.
             let attempt = if ed == "code" { &path } else { &file_path };
+            debug!(
+                "[open_file] trying to open with '{}' using path: {}",
+                ed, attempt
+            );
             let status = if ed == "code" {
                 Command::new(ed).arg("--goto").arg(attempt).status()
             } else {
                 Command::new(ed).arg(attempt).status()
             };
             match status.await {
-                Ok(s) if s.success() => return Ok(()),
-                _ => continue,
+                Ok(s) if s.success() => {
+                    debug!(
+                        "[open_file] opened file with editor: {} using {}",
+                        ed, attempt
+                    );
+                    return Ok(());
+                }
+                Ok(s) => {
+                    debug!(
+                        "[open_file] editor '{}' returned non-success status: {:?}",
+                        ed, s
+                    );
+                    continue;
+                }
+                Err(e) => {
+                    debug!("[open_file] failed to run editor '{}': {}", ed, e);
+                    continue;
+                }
             }
         }
+        debug!("[open_file] all editors failed, falling back to system opener");
         // Fall through to system opener if editors failed.
     }
 
@@ -176,6 +199,8 @@ pub async fn open_file(state: State<'_, &Mutex<AppData>>, path: String) -> Resul
         .arg("")
         .arg(&file_path)
         .status();
+
+    debug!("[open_file] falling back");
 
     match fallback_status.await {
         Ok(s) if s.success() => Ok(()),

@@ -11,7 +11,7 @@ import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useCallback, useMemo, useState } from "react";
 import { StatPill } from "../components/stat-pill";
-import { friendlyPath } from "../components/utils";
+import { detectPlatformSlash, friendlyPath } from "../components/utils";
 import { useToast } from "../contexts/toast-context";
 import {
   type TreemapNode,
@@ -43,7 +43,10 @@ export const Treemap = () => {
         return "";
       }
       // Don't try to format the series name or non-path strings
-      if (path === "TypeScript Compilation" || !path.includes("/")) {
+      if (
+        path === "TypeScript Compilation" ||
+        !path.includes(detectPlatformSlash())
+      ) {
         return path;
       }
       return friendlyPath(path, projectRoot.data, relativePaths.data);

@@ -29,12 +29,12 @@ pub async fn get_bug_report_files(
 
     let outputs_dir = data.outputs_dir();
 
-    // Check typescript.toml in data directory
-    let typescript_toml_path = data.data_dir.join(CONFIG_FILENAME);
-    if typescript_toml_path.exists() {
+    // Check typeslayer.toml in data directory
+    let typeslayer_toml_path = data.data_dir.join(CONFIG_FILENAME);
+    if typeslayer_toml_path.exists() {
         files.push(BugReportFile {
-            name: "typescript.toml".to_string(),
-            description: "TypeScript configuration".to_string(),
+            name: CONFIG_FILENAME.to_string(),
+            description: "TypeSlayer config file".to_string(),
         });
     }
 
@@ -73,28 +73,13 @@ pub async fn get_bug_report_files(
         }
     }
 
-    // Check if package.json exists
     let project_root = &data.project_root;
-    let pkg_json_path = project_root;
-    if pkg_json_path.exists()
-        && pkg_json_path.is_file()
-        && pkg_json_path
-            .file_name()
-            .map(|f| f == PACKAGE_JSON_FILENAME)
-            .unwrap_or(false)
-    {
+    let pkg_json_path = project_root.join(PACKAGE_JSON_FILENAME);
+    if pkg_json_path.exists() {
         files.push(BugReportFile {
             name: PACKAGE_JSON_FILENAME.to_string(),
             description: "Project package configuration".to_string(),
         });
-    } else if pkg_json_path.is_dir() {
-        let pkg_json_in_dir = pkg_json_path.join(PACKAGE_JSON_FILENAME);
-        if pkg_json_in_dir.exists() {
-            files.push(BugReportFile {
-                name: PACKAGE_JSON_FILENAME.to_string(),
-                description: "Project package configuration".to_string(),
-            });
-        }
     }
 
     // Check if selected tsconfig exists
@@ -177,7 +162,7 @@ pub async fn create_bug_report(
         // Add each file to the zip
         for filename in files_to_include {
             let file_path = if filename == CONFIG_FILENAME {
-                // typescript.toml is in the data directory
+                // typeslayer.toml is in the data directory
                 data_dir.join(filename)
             } else {
                 // Other files are in the outputs directory

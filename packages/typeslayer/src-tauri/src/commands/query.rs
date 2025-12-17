@@ -22,7 +22,7 @@ pub async fn get_links_to_type_id(
                     .entry(link.kind.clone())
                     .or_insert_with(Vec::<(TypeId, String)>::new)
                     .push((
-                        type_id,
+                        link.source,
                         human_readable_name(
                             data.types_json
                                 .get(link.source)

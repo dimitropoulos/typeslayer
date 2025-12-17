@@ -25,28 +25,40 @@ export type LinkKind =
   | "aliasTypeArgument"
   | "intersection";
 
-export type GraphLink = {
-  source: number;
-  target: number;
-  kind: LinkKind;
-};
+export type CompactGraphLink = [source: TypeId, target: TypeId, kind: LinkKind];
+
+export const compactGraphLinkIndex = {
+  sourceId: 0,
+  targetId: 1,
+  kind: 2,
+} as const;
 
 export type GraphStats = {
   count: Record<LinkKind, number>;
 };
 
-export type LinkStatLink = {
-  targetId: TypeId;
-  sourceIds: TypeId[];
-  path?: string | undefined;
-};
+/**
+ * to save lots of time/energy/space over the wire (and also memory and disk space)
+ * we store this as a tuple to avoid needing to repeat the property names over and over
+ */
+export type CompactLinkStatLink = [
+  target: TypeId,
+  humanReadableName: string | null,
+  sourceIds: TypeId[],
+];
 
-type LinkStats = {
+export const compactLinksStatsLinkIndex = {
+  targetId: 0,
+  humanReadableName: 1,
+  sourceIds: 2,
+} as const;
+
+export type CompactLinkStats = {
   max: number;
-  links: LinkStatLink[];
+  links: CompactLinkStatLink[];
 };
 
-export type GraphLinkStats = Record<LinkKind, LinkStats>;
+export type GraphLinkStats = Record<LinkKind, CompactLinkStats>;
 
 export type NodeStatKind =
   | "typeArguments"
@@ -67,11 +79,3 @@ type NodeStatCategory = {
 };
 
 export type GraphNodeStats = Record<NodeStatKind, NodeStatCategory>;
-
-export type TypeGraph = {
-  nodes: number;
-  links: GraphLink[];
-  stats: GraphStats;
-  linkStats: GraphLinkStats;
-  nodeStats: GraphNodeStats;
-};

@@ -4,7 +4,7 @@ use crate::{
     layercake::{LayerCake, ResolveBoolArgs, ResolveStringArgs},
     type_graph::{TYPE_GRAPH_FILENAME, TypeGraph},
     utils::{
-        AVAILABLE_EDITORS, PACKAGE_JSON_FILENAME, TSCONFIG_FILENAME, default_extra_tsc_flags,
+        AVAILABLE_EDITORS, TSCONFIG_FILENAME, default_extra_tsc_flags,
         detect_project_root_from_cwd, validate_project_root_path,
     },
     validate::{
@@ -22,14 +22,12 @@ pub fn init_project_root(cake: &LayerCake) -> PathBuf {
     // from overriding local runs.
     let no_env_or_flag = !cake.has_env("PROJECT_ROOT") && !cake.has_flag("--project-root");
     if no_env_or_flag {
-        if let Some(cwd_pkg) = detect_project_root_from_cwd() {
-            if let Ok(validated) = validate_project_root_path(&cwd_pkg.to_string_lossy()) {
-                info!(
-                    "[init_project_root] using project_root from current directory: {}",
-                    validated.display()
-                );
-                return validated;
-            }
+        if let Some(cwd_dir) = detect_project_root_from_cwd() {
+            info!(
+                "[init_project_root] using project_root from current directory: {}",
+                cwd_dir.display()
+            );
+            return cwd_dir;
         }
     }
 
@@ -39,8 +37,8 @@ pub fn init_project_root(cake: &LayerCake) -> PathBuf {
         file: "project_root",
         default: || {
             std::env::current_dir()
-                .map(|p| p.join(PACKAGE_JSON_FILENAME).to_string_lossy().to_string())
-                .unwrap_or_else(|_| "./package.json".to_string())
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_else(|_| ".".to_string())
         },
         validate: |s| validate_project_root_path(s).map(|p| p.to_string_lossy().to_string()),
     });
@@ -53,14 +51,9 @@ pub fn init_project_root(cake: &LayerCake) -> PathBuf {
 }
 
 pub fn init_types_json(outputs_dir: &Path, project_root: &Path) -> TypesJsonSchema {
-    let project_dir = project_root
-        .parent()
-        .map(|p| p.to_path_buf())
-        .unwrap_or_else(|| PathBuf::from("."));
-
     let type_paths = [
         outputs_dir.join(TYPES_JSON_FILENAME.trim_start_matches('/')),
-        project_dir.join(TYPES_JSON_FILENAME.trim_start_matches('/')),
+        project_root.join(TYPES_JSON_FILENAME.trim_start_matches('/')),
     ];
     for p in type_paths.iter() {
         if p.exists() {
@@ -85,14 +78,9 @@ pub fn init_types_json(outputs_dir: &Path, project_root: &Path) -> TypesJsonSche
 }
 
 pub fn init_trace_json(outputs_dir: &Path, project_root: &Path) -> Vec<TraceEvent> {
-    let project_dir = project_root
-        .parent()
-        .map(|p| p.to_path_buf())
-        .unwrap_or_else(|| PathBuf::from("."));
-
     let trace_paths = [
         outputs_dir.join(TRACE_JSON_FILENAME.trim_start_matches('/')),
-        project_dir.join(TRACE_JSON_FILENAME.trim_start_matches('/')),
+        project_root.join(TRACE_JSON_FILENAME.trim_start_matches('/')),
     ];
     for p in trace_paths.iter() {
         if p.exists() {

@@ -14,6 +14,7 @@ import { useCallback, useState } from "react";
 import { CenterLoader } from "../../components/center-loader";
 import { NoData } from "../../components/no-data";
 import { OpenablePath } from "../../components/openable-path";
+import { detectPlatformSlash } from "../../components/utils";
 import {
   useAnalyzeTrace,
   useProjectRoot,
@@ -33,7 +34,7 @@ const getFilename = (path: string | undefined) => {
   if (!path) {
     return "<no file>";
   }
-  return path?.split("/").slice(-1)[0];
+  return path?.split(detectPlatformSlash()).slice(-1)[0];
 };
 
 const ShowHotSpots = () => {

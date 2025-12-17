@@ -14,6 +14,7 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { Code } from "../components/code";
 import { InlineCode } from "../components/inline-code";
+import { UsefulLinks } from "../components/useful-links";
 import { createOpenHandler } from "../components/utils";
 import { Step } from "./start/step";
 import { step4 } from "./start/step-0-prerequisites";
@@ -157,7 +158,7 @@ export const DocsPage = () => {
       description: (
         <Stack gap={1}>
           <Typography>
-            while I expect{" "}
+            while I hope and expect{" "}
             <Link
               href="https://github.com/microsoft/typescript-go"
               onClick={createOpenHandler(
@@ -178,9 +179,12 @@ export const DocsPage = () => {
           </Typography>
           <Typography>
             so in the meantime, if you're looking for a way to generate trace,
-            you can still use <InlineCode>tsc</InlineCode> to get the same
-            information whether or not you're already on{" "}
-            <InlineCode>tsgo</InlineCode>.
+            <strong>
+              you can still use <InlineCode>tsc</InlineCode> to get the same
+              type relations information whether or not you're already on{" "}
+              <InlineCode>tsgo</InlineCode>
+            </strong>
+            .
           </Typography>
           <Typography>
             after all, the trace file reports information about the types in
@@ -484,6 +488,19 @@ export const DocsPage = () => {
                 things you want to address, whether or not you're concerned with
                 slowness.
               </Typography>
+            </Stack>
+          </Step>
+          <Step step={5}>
+            <Stack direction="column" gap={1}>
+              <Typography variant="h5">
+                sometimes, you still gotta RTFM
+              </Typography>
+              <Typography>
+                if you feel lost <em>conceptually speaking</em>, you might need
+                to take a few minutes and read through TypeScript's own
+                documentation on performance tracing.
+              </Typography>
+              <UsefulLinks />
             </Stack>
           </Step>
         </Stack>

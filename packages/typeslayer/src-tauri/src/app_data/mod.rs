@@ -142,15 +142,8 @@ impl AppData {
     pub async fn discover_tsconfigs(&mut self) -> Result<(), String> {
         self.tsconfig_paths.clear();
 
-        // Get the directory containing the package.json
-        let project_dir = self
-            .project_root
-            .parent()
-            .map(|p| p.to_path_buf())
-            .unwrap_or_else(|| PathBuf::from("."));
-
         // Search for tsconfig*.json files in the project directory and subdirectories
-        let mut entries = fs::read_dir(&project_dir)
+        let mut entries = fs::read_dir(&self.project_root)
             .await
             .map_err(|e| format!("Could not read dir {}", e))?;
         loop {
@@ -270,10 +263,7 @@ impl AppData {
 
         let tsc_command = self.get_tsc_call(&flag)?;
 
-        let cwd = self
-            .project_root
-            .parent()
-            .ok_or_else(|| "project_root must be a package.json file")?;
+        let cwd = &self.project_root;
 
         info!("[run_tsc] Executing command: {}", tsc_command);
         info!("[run_tsc] Working directory: {:?}", cwd);
@@ -444,10 +434,23 @@ impl AppData {
 
     pub async fn find_package_manager(project_root: PathBuf) -> Result<PackageManager, String> {
         tauri::async_runtime::spawn_blocking(move || {
-            let package_json = File::open(&project_root)
-                .map_err(|e| format!("could not open {}: {e}", project_root.to_string_lossy()))?;
-            let package_json: PackageJSON = serde_json::from_reader(BufReader::new(package_json))
-                .map_err(|e| format!("{e}"))?;
+            let package_json_path = project_root.join("package.json");
+
+            // If package.json doesn't exist, default to npm
+            let package_json = match File::open(&package_json_path) {
+                Ok(file) => file,
+                Err(_) => {
+                    info!(
+                        "[find_package_manager] No package.json found at {}, defaulting to npm",
+                        package_json_path.display()
+                    );
+                    return Ok(PackageManager::NPM);
+                }
+            };
+
+            let package_json: PackageJSON =
+                serde_json::from_reader(BufReader::new(package_json))
+                    .map_err(|e| format!("Failed to parse package.json: {e}"))?;
 
             match package_json.package_manager {
                 Some(package_manager) => {
@@ -465,7 +468,7 @@ impl AppData {
                     debug!(
                         "[find_package_manager] Detected packageManager '{}' in {:?}, using {:?}",
                         package_manager,
-                        project_root,
+                        package_json_path,
                         result.as_ref().ok()
                     );
                     result
@@ -473,9 +476,9 @@ impl AppData {
                 None => {
                     info!(
                         "[find_package_manager] No packageManager field in {}, defaulting to npm",
-                        project_root.display()
+                        package_json_path.display()
                     );
-                    return Ok(PackageManager::NPM);
+                    Ok(PackageManager::NPM)
                 }
             }
         })
