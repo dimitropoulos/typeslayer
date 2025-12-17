@@ -46,16 +46,17 @@ pub fn create_depth_limits(
     }
 
     for ev in trace_file.iter() {
-        if let Some(kind) = kind_from_event_name(ev.name.as_str()) {
+        if let Some(kind) = kind_from_event_name(ev.name()) {
             if let Some(vec) = depth_limits.get_mut(&kind) {
                 vec.push(ev.clone());
             }
         }
     }
 
-    // Helpers to extract numeric args
+    // Helpers to extract numeric args from specific event types
     fn num_arg(ev: &TraceEvent, key: &str) -> f64 {
-        match ev.args.get(key) {
+        let val = serde_json::to_value(ev).ok();
+        match val.and_then(|v| v.get(key).cloned()) {
             Some(serde_json::Value::Number(n)) => n.as_f64().unwrap_or(0.0),
             _ => 0.0,
         }

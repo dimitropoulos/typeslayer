@@ -91,8 +91,8 @@ pub async fn execute(app_data: &Mutex<AppData>) -> String {
                 .iter()
                 .take(limit)
                 .map(|ev| DepthLimitEvent {
-                    timestamp: ev.ts,
-                    args: ev.args.clone(),
+                    timestamp: ev.common().ts,
+                    args: serde_json::to_value(ev).unwrap_or(serde_json::Value::Null),
                 })
                 .collect();
 

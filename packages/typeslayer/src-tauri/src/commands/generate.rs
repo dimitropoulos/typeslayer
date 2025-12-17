@@ -206,19 +206,10 @@ pub async fn generate_type_graph(
         &app_data.types_json
     };
 
-    // Build the graph
     let graph = TypeGraph::from_types(types);
 
-    // Attach to LayerCake or settings? Keep simple: stash in `cake` extras via BTreeMap
-    // For now, we add it to an ad-hoc static holder in AppData via lazy BTreeMap-like cache.
-    // Since AppData does not yet include a graph field, we use a simple file cache as fallback.
-    // To keep everything in-memory, we store it on the `auth_code` field comment-free by extending AppData later if needed.
-    // Minimal approach: serialize into a ForceGraphData and keep as text output for retrieval.
-
-    // Store in AppData for quick in-memory access
     app_data.type_graph = Some(graph);
 
-    // Persist to outputs/type-graph.json for refresh-on-boot
     let outputs_dir = app_data.outputs_dir();
     let path = outputs_dir.join(TYPE_GRAPH_FILENAME);
     let json = serde_json::to_string_pretty(&app_data.type_graph)

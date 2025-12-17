@@ -185,8 +185,11 @@ export function RelationAward({
                   </Typography>
                   <List dense sx={{ backgroundColor: "transparent" }}>
                     <ShowMoreChildren incrementsOf={50}>
-                      {selectedItem.sourceIds.map(sourceId => (
-                        <TypeMetricsListItem key={sourceId} typeId={sourceId} />
+                      {selectedItem.sourceIds.map((sourceId, index) => (
+                        <TypeMetricsListItem
+                          key={`${index}-${sourceId}`}
+                          typeId={sourceId}
+                        />
                       ))}
                     </ShowMoreChildren>
                   </List>

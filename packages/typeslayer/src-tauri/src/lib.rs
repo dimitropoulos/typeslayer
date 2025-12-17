@@ -112,13 +112,11 @@ pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
             commands::upload::upload_trace_json,
             commands::upload::upload_type_graph,
             commands::upload::upload_types_json,
+            commands::validate::validate_analyze_trace,
+            commands::validate::validate_cpu_profile,
             commands::validate::validate_trace_json,
-            commands::validate::validate_type_graph,
             commands::validate::validate_types_json,
-            commands::validate::verify_analyze_trace,
-            commands::validate::verify_cpu_profile,
-            commands::validate::verify_trace_json,
-            commands::validate::verify_types_json,
+            commands::validate::validate_type_graph,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

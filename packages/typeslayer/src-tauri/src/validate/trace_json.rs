@@ -3,745 +3,1236 @@ use serde_json::Value;
 
 pub const TRACE_JSON_FILENAME: &str = "trace.json";
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
+pub enum EventName {
+    // Metadata events
+    TracingStartedInBrowser,
+    #[serde(rename = "process_name")]
+    ProcessName,
+    #[serde(rename = "thread_name")]
+    ThreadName,
+
+    // Parse phase events
+    CreateSourceFile,
+    ParseJsonSourceFileConfigFileContent,
+
+    // Program phase events
+    CreateProgram,
+    FindSourceFile,
+    ProcessRootFiles,
+    ProcessTypeReferenceDirective,
+    ProcessTypeReferences,
+    ResolveLibrary,
+    ResolveModuleNamesWorker,
+    ResolveTypeReferenceDirectiveNamesWorker,
+    ShouldProgramCreateNewSourceFiles,
+    TryReuseStructureFromOldProgram,
+
+    // Bind phase events
+    BindSourceFile,
+
+    // Check phase events
+    CheckExpression,
+    CheckSourceFile,
+    CheckVariableDeclaration,
+    CheckDeferredNode,
+    CheckSourceFileNodes,
+
+    // CheckTypes phase events
+    CheckTypeParameterDeferred,
+    GetVariancesWorker,
+    StructuredTypeRelatedTo,
+
+    // CheckTypes depth limit events
+    #[serde(rename = "checkCrossProductUnion_DepthLimit")]
+    CheckCrossProductUnionDepthLimit,
+    #[serde(rename = "checkTypeRelatedTo_DepthLimit")]
+    CheckTypeRelatedToDepthLimit,
+    #[serde(rename = "getTypeAtFlowNode_DepthLimit")]
+    GetTypeAtFlowNodeDepthLimit,
+    #[serde(rename = "instantiateType_DepthLimit")]
+    InstantiateTypeDepthLimit,
+    #[serde(rename = "recursiveTypeRelatedTo_DepthLimit")]
+    RecursiveTypeRelatedToDepthLimit,
+    #[serde(rename = "removeSubtypes_DepthLimit")]
+    RemoveSubtypesDepthLimit,
+    #[serde(rename = "traceUnionsOrIntersectionsTooLarge_DepthLimit")]
+    TraceUnionsOrIntersectionsTooLargeDepthLimit,
+    #[serde(rename = "typeRelatedToDiscriminatedType_DepthLimit")]
+    TypeRelatedToDiscriminatedTypeDepthLimit,
+
+    // Emit phase events
+    Emit,
+    EmitBuildInfo,
+    EmitDeclarationFileOrBundle,
+    EmitJsFileOrBundle,
+    TransformNodes,
+
+    // Session phase events
+    CancellationThrown,
+    CommandCanceled,
+    CommandError,
+    CreateConfiguredProject,
+    CreatedDocumentRegistryBucket,
+    DocumentRegistryBucketOverlap,
+    ExecuteCommand,
+    FinishCachingPerDirectoryResolution,
+    GetPackageJsonAutoImportProvider,
+    GetUnresolvedImports,
+    LoadConfiguredProject,
+    RegionSemanticCheck,
+    Request,
+    Response,
+    SemanticCheck,
+    StepAction,
+    StepCanceled,
+    StepError,
+    SuggestionCheck,
+    SyntacticCheck,
+    UpdateGraph,
+}
+
+// Common event structures
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct TraceEvent {
+pub struct EventCommon {
     pub pid: u64,
     pub tid: u64,
     pub ts: f64,
+}
+
+// Phase types
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum EventPhase {
+    #[serde(rename = "B")]
+    Begin,
+    #[serde(rename = "E")]
+    End,
+    #[serde(rename = "X")]
+    Complete,
+    #[serde(rename = "M")]
+    Metadata,
+    #[serde(rename = "I")]
+    Instant,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum InstantScope {
+    #[serde(rename = "t")]
+    Thread,
+    #[serde(rename = "g")]
+    Global,
+    #[serde(rename = "p")]
+    Process,
+}
+
+// Metadata Events
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct TracingStartedInBrowserArgs {}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcessNameArgs {
     pub name: String,
-    pub cat: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub ph: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub dur: Option<f64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub s: Option<String>,
-    #[serde(default = "default_args")]
-    pub args: Value,
 }
 
-fn default_args() -> Value {
-    Value::Object(serde_json::Map::new())
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ThreadNameArgs {
+    pub name: String,
 }
 
-fn validate_args_object(args: &Value) -> Result<&serde_json::Map<String, Value>, String> {
-    match args {
-        Value::Object(map) => Ok(map),
-        _ => Err("args must be an object".to_string()),
-    }
+// Parse Events
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PathArgs {
+    pub path: String,
 }
 
-fn expect_string_field(map: &serde_json::Map<String, Value>, key: &str) -> Result<(), String> {
-    match map.get(key) {
-        Some(Value::String(_)) => Ok(()),
-        _ => Err(format!("args.{key} must be a string")),
-    }
+// Program Events
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConfigFilePathArgs {
+    #[serde(rename = "configFilePath")]
+    pub config_file_path: String,
 }
 
-fn expect_number_field(
-    map: &serde_json::Map<String, Value>,
-    key: &str,
-    positive: bool,
-) -> Result<(), String> {
-    match map.get(key) {
-        Some(Value::Number(n)) => {
-            if positive && !(n.as_f64().unwrap_or(0.0) > 0.0) {
-                return Err(format!("args.{key} must be positive"));
-            }
-            Ok(())
-        }
-        _ => Err(format!("args.{key} must be a number")),
-    }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FindSourceFileArgs {
+    #[serde(rename = "fileName")]
+    pub file_name: String,
+    #[serde(rename = "fileIncludeKind")]
+    pub file_include_kind: String,
 }
 
-fn validate_event(event: &TraceEvent) -> Result<(), String> {
-    if event.pid == 0 || event.tid == 0 || event.ts == 0.0 {
-        return Err("pid, tid, ts must be positive".to_string());
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CountArgs {
+    pub count: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcessTypeReferenceDirectiveArgs {
+    pub directive: String,
+    #[serde(rename = "hasResolved")]
+    pub has_resolved: bool,
+    #[serde(rename = "refKind")]
+    pub ref_kind: u64,
+    #[serde(rename = "refPath", skip_serializing_if = "Option::is_none")]
+    pub ref_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResolveFromArgs {
+    #[serde(rename = "resolveFrom")]
+    pub resolve_from: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContainingFileNameArgs {
+    #[serde(rename = "containingFileName")]
+    pub containing_file_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HasOldProgramArgs {
+    #[serde(rename = "hasOldProgram")]
+    pub has_old_program: bool,
+}
+
+// Check Events
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CheckExpressionArgs {
+    pub kind: u64,
+    pub pos: u64,
+    pub end: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CheckNodeArgs {
+    pub kind: u64,
+    pub pos: u64,
+    pub end: u64,
+    pub path: String,
+}
+
+// CheckTypes Events
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CheckTypeParameterDeferredArgs {
+    pub parent: i64,
+    pub id: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VarianceResults {
+    pub variances: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GetVariancesWorkerArgs {
+    pub arity: u64,
+    pub id: i64,
+    pub results: VarianceResults,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StructuredTypeRelatedToArgs {
+    #[serde(rename = "sourceId")]
+    pub source_id: i64,
+    #[serde(rename = "targetId")]
+    pub target_id: i64,
+}
+
+// CheckTypes Depth Limit Events
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CheckCrossProductUnionDepthLimitArgs {
+    #[serde(rename = "typeIds")]
+    pub type_ids: Vec<i64>,
+    pub size: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CheckTypeRelatedToDepthLimitArgs {
+    #[serde(rename = "sourceId")]
+    pub source_id: i64,
+    #[serde(rename = "targetId")]
+    pub target_id: i64,
+    pub depth: u64,
+    #[serde(rename = "targetDepth")]
+    pub target_depth: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GetTypeAtFlowNodeDepthLimitArgs {
+    #[serde(rename = "flowId")]
+    pub flow_id: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstantiateTypeDepthLimitArgs {
+    #[serde(rename = "typeId")]
+    pub type_id: i64,
+    #[serde(rename = "instantiationDepth")]
+    pub instantiation_depth: i64,
+    #[serde(rename = "instantiationCount")]
+    pub instantiation_count: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RecursiveTypeRelatedToDepthLimitArgs {
+    #[serde(rename = "sourceId")]
+    pub source_id: i64,
+    #[serde(rename = "sourceIdStack")]
+    pub source_id_stack: Vec<i64>,
+    #[serde(rename = "targetId")]
+    pub target_id: i64,
+    #[serde(rename = "targetIdStack")]
+    pub target_id_stack: Vec<i64>,
+    pub depth: u64,
+    #[serde(rename = "targetDepth")]
+    pub target_depth: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RemoveSubtypesDepthLimitArgs {
+    #[serde(rename = "typeIds")]
+    pub type_ids: Vec<i64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TraceUnionsOrIntersectionsTooLargeDepthLimitArgs {
+    #[serde(rename = "sourceId")]
+    pub source_id: i64,
+    #[serde(rename = "sourceSize")]
+    pub source_size: u64,
+    #[serde(rename = "targetId")]
+    pub target_id: i64,
+    #[serde(rename = "targetSize")]
+    pub target_size: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pos: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TypeRelatedToDiscriminatedTypeDepthLimitArgs {
+    #[serde(rename = "sourceId")]
+    pub source_id: i64,
+    #[serde(rename = "targetId")]
+    pub target_id: i64,
+    #[serde(rename = "numCombinations")]
+    pub num_combinations: u64,
+}
+
+// Emit Events
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct EmitArgs {}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct EmitBuildInfoArgs {
+    #[serde(rename = "buildInfoPath", skip_serializing_if = "Option::is_none")]
+    pub build_info_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmitDeclarationFileOrBundleArgs {
+    #[serde(rename = "declarationFilePath")]
+    pub declaration_file_path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmitJsFileOrBundleArgs {
+    #[serde(rename = "jsFilePath")]
+    pub js_file_path: String,
+}
+
+// Session Events
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CancellationThrownArgs {
+    pub kind: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommandArgs {
+    pub seq: u64,
+    pub command: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommandErrorArgs {
+    pub seq: u64,
+    pub command: String,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocumentRegistryBucketArgs {
+    #[serde(rename = "configFilePath")]
+    pub config_file_path: String,
+    pub key: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocumentRegistryBucketOverlapArgs {
+    pub path: String,
+    pub key1: String,
+    pub key2: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GetUnresolvedImportsArgs {
+    pub count: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileAndConfigArgs {
+    pub file: String,
+    #[serde(rename = "configFilePath")]
+    pub config_file_path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SeqArgs {
+    pub seq: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StepCanceledArgs {
+    pub seq: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub early: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StepErrorArgs {
+    pub seq: u64,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResponseArgs {
+    pub seq: u64,
+    pub command: String,
+    pub success: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateGraphArgs {
+    pub name: String,
+    pub kind: u64,
+}
+
+// Discriminated union for all trace events
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "name")]
+pub enum TraceEvent {
+    TracingStartedInBrowser {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        #[serde(default)]
+        args: TracingStartedInBrowserArgs,
+    },
+    #[serde(rename = "process_name")]
+    ProcessName {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        args: ProcessNameArgs,
+    },
+    #[serde(rename = "thread_name")]
+    ThreadName {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        args: ThreadNameArgs,
+    },
+    #[serde(rename = "createSourceFile")]
+    CreateSourceFile {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        args: PathArgs,
+    },
+    #[serde(rename = "parseJsonSourceFileConfigFileContent")]
+    ParseJsonSourceFileConfigFileContent {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        dur: f64,
+        args: PathArgs,
+    },
+    #[serde(rename = "createProgram")]
+    CreateProgram {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        args: ConfigFilePathArgs,
+    },
+    #[serde(rename = "findSourceFile")]
+    FindSourceFile {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        dur: f64,
+        args: FindSourceFileArgs,
+    },
+    #[serde(rename = "processRootFiles")]
+    ProcessRootFiles {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        dur: f64,
+        args: CountArgs,
+    },
+    #[serde(rename = "processTypeReferenceDirective")]
+    ProcessTypeReferenceDirective {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        dur: f64,
+        args: ProcessTypeReferenceDirectiveArgs,
+    },
+    #[serde(rename = "processTypeReferences")]
+    ProcessTypeReferences {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        dur: f64,
+        args: CountArgs,
+    },
+    #[serde(rename = "resolveLibrary")]
+    ResolveLibrary {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        dur: f64,
+        args: ResolveFromArgs,
+    },
+    #[serde(rename = "resolveModuleNamesWorker")]
+    ResolveModuleNamesWorker {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        dur: f64,
+        args: ContainingFileNameArgs,
+    },
+    #[serde(rename = "resolveTypeReferenceDirectiveNamesWorker")]
+    ResolveTypeReferenceDirectiveNamesWorker {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        dur: f64,
+        args: ContainingFileNameArgs,
+    },
+    #[serde(rename = "shouldProgramCreateNewSourceFiles")]
+    ShouldProgramCreateNewSourceFiles {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        s: InstantScope,
+        args: HasOldProgramArgs,
+    },
+    #[serde(rename = "tryReuseStructureFromOldProgram")]
+    TryReuseStructureFromOldProgram {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        dur: f64,
+        #[serde(default)]
+        args: EmitArgs,
+    },
+    #[serde(rename = "bindSourceFile")]
+    BindSourceFile {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        args: PathArgs,
+    },
+    #[serde(rename = "checkExpression")]
+    CheckExpression {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        dur: f64,
+        args: CheckExpressionArgs,
+    },
+    #[serde(rename = "checkSourceFile")]
+    CheckSourceFile {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        args: PathArgs,
+    },
+    #[serde(rename = "checkVariableDeclaration")]
+    CheckVariableDeclaration {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        dur: f64,
+        args: CheckNodeArgs,
+    },
+    #[serde(rename = "checkDeferredNode")]
+    CheckDeferredNode {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        dur: f64,
+        args: CheckNodeArgs,
+    },
+    #[serde(rename = "checkSourceFileNodes")]
+    CheckSourceFileNodes {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        dur: f64,
+        args: PathArgs,
+    },
+    #[serde(rename = "checkTypeParameterDeferred")]
+    CheckTypeParameterDeferred {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        dur: f64,
+        args: CheckTypeParameterDeferredArgs,
+    },
+    #[serde(rename = "getVariancesWorker")]
+    GetVariancesWorker {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        dur: f64,
+        args: GetVariancesWorkerArgs,
+    },
+    #[serde(rename = "structuredTypeRelatedTo")]
+    StructuredTypeRelatedTo {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        dur: f64,
+        args: StructuredTypeRelatedToArgs,
+    },
+    #[serde(rename = "checkCrossProductUnion_DepthLimit")]
+    CheckCrossProductUnionDepthLimit {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        s: InstantScope,
+        args: CheckCrossProductUnionDepthLimitArgs,
+    },
+    #[serde(rename = "checkTypeRelatedTo_DepthLimit")]
+    CheckTypeRelatedToDepthLimit {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        s: InstantScope,
+        args: CheckTypeRelatedToDepthLimitArgs,
+    },
+    #[serde(rename = "getTypeAtFlowNode_DepthLimit")]
+    GetTypeAtFlowNodeDepthLimit {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        s: InstantScope,
+        args: GetTypeAtFlowNodeDepthLimitArgs,
+    },
+    #[serde(rename = "instantiateType_DepthLimit")]
+    InstantiateTypeDepthLimit {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        s: InstantScope,
+        args: InstantiateTypeDepthLimitArgs,
+    },
+    #[serde(rename = "recursiveTypeRelatedTo_DepthLimit")]
+    RecursiveTypeRelatedToDepthLimit {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        s: InstantScope,
+        args: RecursiveTypeRelatedToDepthLimitArgs,
+    },
+    #[serde(rename = "removeSubtypes_DepthLimit")]
+    RemoveSubtypesDepthLimit {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        s: InstantScope,
+        args: RemoveSubtypesDepthLimitArgs,
+    },
+    #[serde(rename = "traceUnionsOrIntersectionsTooLarge_DepthLimit")]
+    TraceUnionsOrIntersectionsTooLargeDepthLimit {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        s: InstantScope,
+        args: TraceUnionsOrIntersectionsTooLargeDepthLimitArgs,
+    },
+    #[serde(rename = "typeRelatedToDiscriminatedType_DepthLimit")]
+    TypeRelatedToDiscriminatedTypeDepthLimit {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        s: InstantScope,
+        args: TypeRelatedToDiscriminatedTypeDepthLimitArgs,
+    },
+    #[serde(rename = "emit")]
+    Emit {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        #[serde(default)]
+        args: EmitArgs,
+    },
+    #[serde(rename = "emitBuildInfo")]
+    EmitBuildInfo {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        dur: Option<f64>,
+        #[serde(default)]
+        args: EmitBuildInfoArgs,
+    },
+    #[serde(rename = "emitDeclarationFileOrBundle")]
+    EmitDeclarationFileOrBundle {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        dur: f64,
+        args: EmitDeclarationFileOrBundleArgs,
+    },
+    #[serde(rename = "emitJsFileOrBundle")]
+    EmitJsFileOrBundle {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        dur: f64,
+        args: EmitJsFileOrBundleArgs,
+    },
+    #[serde(rename = "transformNodes")]
+    TransformNodes {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        dur: f64,
+        args: PathArgs,
+    },
+    #[serde(rename = "cancellationThrown")]
+    CancellationThrown {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        args: CancellationThrownArgs,
+    },
+    #[serde(rename = "commandCanceled")]
+    CommandCanceled {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        args: CommandArgs,
+    },
+    #[serde(rename = "commandError")]
+    CommandError {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        args: CommandErrorArgs,
+    },
+    #[serde(rename = "createConfiguredProject")]
+    CreateConfiguredProject {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        args: ConfigFilePathArgs,
+    },
+    #[serde(rename = "createdDocumentRegistryBucket")]
+    CreatedDocumentRegistryBucket {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        args: DocumentRegistryBucketArgs,
+    },
+    #[serde(rename = "documentRegistryBucketOverlap")]
+    DocumentRegistryBucketOverlap {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        args: DocumentRegistryBucketOverlapArgs,
+    },
+    #[serde(rename = "executeCommand")]
+    ExecuteCommand {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        args: CommandArgs,
+    },
+    #[serde(rename = "finishCachingPerDirectoryResolution")]
+    FinishCachingPerDirectoryResolution {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        s: InstantScope,
+        #[serde(default)]
+        args: EmitArgs,
+    },
+    #[serde(rename = "getPackageJsonAutoImportProvider")]
+    GetPackageJsonAutoImportProvider {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        dur: f64,
+        #[serde(default)]
+        args: EmitArgs,
+    },
+    #[serde(rename = "getUnresolvedImports")]
+    GetUnresolvedImports {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        dur: f64,
+        args: GetUnresolvedImportsArgs,
+    },
+    #[serde(rename = "loadConfiguredProject")]
+    LoadConfiguredProject {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        args: ConfigFilePathArgs,
+    },
+    #[serde(rename = "regionSemanticCheck")]
+    RegionSemanticCheck {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        args: FileAndConfigArgs,
+    },
+    #[serde(rename = "request")]
+    Request {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        args: CommandArgs,
+    },
+    #[serde(rename = "response")]
+    Response {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        args: ResponseArgs,
+    },
+    #[serde(rename = "semanticCheck")]
+    SemanticCheck {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        args: FileAndConfigArgs,
+    },
+    #[serde(rename = "stepAction")]
+    StepAction {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        s: InstantScope,
+        args: SeqArgs,
+    },
+    #[serde(rename = "stepCanceled")]
+    StepCanceled {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        args: StepCanceledArgs,
+    },
+    #[serde(rename = "stepError")]
+    StepError {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        args: StepErrorArgs,
+    },
+    #[serde(rename = "suggestionCheck")]
+    SuggestionCheck {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        args: FileAndConfigArgs,
+    },
+    #[serde(rename = "syntacticCheck")]
+    SyntacticCheck {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        args: FileAndConfigArgs,
+    },
+    #[serde(rename = "updateGraph")]
+    UpdateGraph {
+        #[serde(flatten)]
+        common: EventCommon,
+        cat: String,
+        ph: EventPhase,
+        args: UpdateGraphArgs,
+    },
+}
+
+impl TraceEvent {
+    /// Get the common fields (pid, tid, ts) from any event variant
+    pub fn common(&self) -> &EventCommon {
+        match self {
+            TraceEvent::TracingStartedInBrowser { common, .. } => common,
+            TraceEvent::ProcessName { common, .. } => common,
+            TraceEvent::ThreadName { common, .. } => common,
+            TraceEvent::CreateSourceFile { common, .. } => common,
+            TraceEvent::ParseJsonSourceFileConfigFileContent { common, .. } => common,
+            TraceEvent::CreateProgram { common, .. } => common,
+            TraceEvent::FindSourceFile { common, .. } => common,
+            TraceEvent::ProcessRootFiles { common, .. } => common,
+            TraceEvent::ProcessTypeReferenceDirective { common, .. } => common,
+            TraceEvent::ProcessTypeReferences { common, .. } => common,
+            TraceEvent::ResolveLibrary { common, .. } => common,
+            TraceEvent::ResolveModuleNamesWorker { common, .. } => common,
+            TraceEvent::ResolveTypeReferenceDirectiveNamesWorker { common, .. } => common,
+            TraceEvent::ShouldProgramCreateNewSourceFiles { common, .. } => common,
+            TraceEvent::TryReuseStructureFromOldProgram { common, .. } => common,
+            TraceEvent::BindSourceFile { common, .. } => common,
+            TraceEvent::CheckExpression { common, .. } => common,
+            TraceEvent::CheckSourceFile { common, .. } => common,
+            TraceEvent::CheckVariableDeclaration { common, .. } => common,
+            TraceEvent::CheckDeferredNode { common, .. } => common,
+            TraceEvent::CheckSourceFileNodes { common, .. } => common,
+            TraceEvent::CheckTypeParameterDeferred { common, .. } => common,
+            TraceEvent::GetVariancesWorker { common, .. } => common,
+            TraceEvent::StructuredTypeRelatedTo { common, .. } => common,
+            TraceEvent::CheckCrossProductUnionDepthLimit { common, .. } => common,
+            TraceEvent::CheckTypeRelatedToDepthLimit { common, .. } => common,
+            TraceEvent::GetTypeAtFlowNodeDepthLimit { common, .. } => common,
+            TraceEvent::InstantiateTypeDepthLimit { common, .. } => common,
+            TraceEvent::RecursiveTypeRelatedToDepthLimit { common, .. } => common,
+            TraceEvent::RemoveSubtypesDepthLimit { common, .. } => common,
+            TraceEvent::TraceUnionsOrIntersectionsTooLargeDepthLimit { common, .. } => common,
+            TraceEvent::TypeRelatedToDiscriminatedTypeDepthLimit { common, .. } => common,
+            TraceEvent::Emit { common, .. } => common,
+            TraceEvent::EmitBuildInfo { common, .. } => common,
+            TraceEvent::EmitDeclarationFileOrBundle { common, .. } => common,
+            TraceEvent::EmitJsFileOrBundle { common, .. } => common,
+            TraceEvent::TransformNodes { common, .. } => common,
+            TraceEvent::CancellationThrown { common, .. } => common,
+            TraceEvent::CommandCanceled { common, .. } => common,
+            TraceEvent::CommandError { common, .. } => common,
+            TraceEvent::CreateConfiguredProject { common, .. } => common,
+            TraceEvent::CreatedDocumentRegistryBucket { common, .. } => common,
+            TraceEvent::DocumentRegistryBucketOverlap { common, .. } => common,
+            TraceEvent::ExecuteCommand { common, .. } => common,
+            TraceEvent::FinishCachingPerDirectoryResolution { common, .. } => common,
+            TraceEvent::GetPackageJsonAutoImportProvider { common, .. } => common,
+            TraceEvent::GetUnresolvedImports { common, .. } => common,
+            TraceEvent::LoadConfiguredProject { common, .. } => common,
+            TraceEvent::RegionSemanticCheck { common, .. } => common,
+            TraceEvent::Request { common, .. } => common,
+            TraceEvent::Response { common, .. } => common,
+            TraceEvent::SemanticCheck { common, .. } => common,
+            TraceEvent::StepAction { common, .. } => common,
+            TraceEvent::StepCanceled { common, .. } => common,
+            TraceEvent::StepError { common, .. } => common,
+            TraceEvent::SuggestionCheck { common, .. } => common,
+            TraceEvent::SyntacticCheck { common, .. } => common,
+            TraceEvent::UpdateGraph { common, .. } => common,
+        }
     }
 
-    let args_obj = validate_args_object(&event.args)?;
-
-    match event.name.as_str() {
-        // METADATA
-        "TracingStartedInBrowser" => {
-            if event.cat != "disabled-by-default-devtools.timeline"
-                || event.ph.as_deref() != Some("M")
-            {
-                return Err("TracingStartedInBrowser invalid cat or ph".to_string());
+    /// Get the event name as a string
+    pub fn name(&self) -> &'static str {
+        match self {
+            TraceEvent::TracingStartedInBrowser { .. } => "TracingStartedInBrowser",
+            TraceEvent::ProcessName { .. } => "process_name",
+            TraceEvent::ThreadName { .. } => "thread_name",
+            TraceEvent::CreateSourceFile { .. } => "createSourceFile",
+            TraceEvent::ParseJsonSourceFileConfigFileContent { .. } => {
+                "parseJsonSourceFileConfigFileContent"
             }
+            TraceEvent::CreateProgram { .. } => "createProgram",
+            TraceEvent::FindSourceFile { .. } => "findSourceFile",
+            TraceEvent::ProcessRootFiles { .. } => "processRootFiles",
+            TraceEvent::ProcessTypeReferenceDirective { .. } => "processTypeReferenceDirective",
+            TraceEvent::ProcessTypeReferences { .. } => "processTypeReferences",
+            TraceEvent::ResolveLibrary { .. } => "resolveLibrary",
+            TraceEvent::ResolveModuleNamesWorker { .. } => "resolveModuleNamesWorker",
+            TraceEvent::ResolveTypeReferenceDirectiveNamesWorker { .. } => {
+                "resolveTypeReferenceDirectiveNamesWorker"
+            }
+            TraceEvent::ShouldProgramCreateNewSourceFiles { .. } => {
+                "shouldProgramCreateNewSourceFiles"
+            }
+            TraceEvent::TryReuseStructureFromOldProgram { .. } => "tryReuseStructureFromOldProgram",
+            TraceEvent::BindSourceFile { .. } => "bindSourceFile",
+            TraceEvent::CheckExpression { .. } => "checkExpression",
+            TraceEvent::CheckSourceFile { .. } => "checkSourceFile",
+            TraceEvent::CheckVariableDeclaration { .. } => "checkVariableDeclaration",
+            TraceEvent::CheckDeferredNode { .. } => "checkDeferredNode",
+            TraceEvent::CheckSourceFileNodes { .. } => "checkSourceFileNodes",
+            TraceEvent::CheckTypeParameterDeferred { .. } => "checkTypeParameterDeferred",
+            TraceEvent::GetVariancesWorker { .. } => "getVariancesWorker",
+            TraceEvent::StructuredTypeRelatedTo { .. } => "structuredTypeRelatedTo",
+            TraceEvent::CheckCrossProductUnionDepthLimit { .. } => {
+                "checkCrossProductUnion_DepthLimit"
+            }
+            TraceEvent::CheckTypeRelatedToDepthLimit { .. } => "checkTypeRelatedTo_DepthLimit",
+            TraceEvent::GetTypeAtFlowNodeDepthLimit { .. } => "getTypeAtFlowNode_DepthLimit",
+            TraceEvent::InstantiateTypeDepthLimit { .. } => "instantiateType_DepthLimit",
+            TraceEvent::RecursiveTypeRelatedToDepthLimit { .. } => {
+                "recursiveTypeRelatedTo_DepthLimit"
+            }
+            TraceEvent::RemoveSubtypesDepthLimit { .. } => "removeSubtypes_DepthLimit",
+            TraceEvent::TraceUnionsOrIntersectionsTooLargeDepthLimit { .. } => {
+                "traceUnionsOrIntersectionsTooLarge_DepthLimit"
+            }
+            TraceEvent::TypeRelatedToDiscriminatedTypeDepthLimit { .. } => {
+                "typeRelatedToDiscriminatedType_DepthLimit"
+            }
+            TraceEvent::Emit { .. } => "emit",
+            TraceEvent::EmitBuildInfo { .. } => "emitBuildInfo",
+            TraceEvent::EmitDeclarationFileOrBundle { .. } => "emitDeclarationFileOrBundle",
+            TraceEvent::EmitJsFileOrBundle { .. } => "emitJsFileOrBundle",
+            TraceEvent::TransformNodes { .. } => "transformNodes",
+            TraceEvent::CancellationThrown { .. } => "cancellationThrown",
+            TraceEvent::CommandCanceled { .. } => "commandCanceled",
+            TraceEvent::CommandError { .. } => "commandError",
+            TraceEvent::CreateConfiguredProject { .. } => "createConfiguredProject",
+            TraceEvent::CreatedDocumentRegistryBucket { .. } => "createdDocumentRegistryBucket",
+            TraceEvent::DocumentRegistryBucketOverlap { .. } => "documentRegistryBucketOverlap",
+            TraceEvent::ExecuteCommand { .. } => "executeCommand",
+            TraceEvent::FinishCachingPerDirectoryResolution { .. } => {
+                "finishCachingPerDirectoryResolution"
+            }
+            TraceEvent::GetPackageJsonAutoImportProvider { .. } => {
+                "getPackageJsonAutoImportProvider"
+            }
+            TraceEvent::GetUnresolvedImports { .. } => "getUnresolvedImports",
+            TraceEvent::LoadConfiguredProject { .. } => "loadConfiguredProject",
+            TraceEvent::RegionSemanticCheck { .. } => "regionSemanticCheck",
+            TraceEvent::Request { .. } => "request",
+            TraceEvent::Response { .. } => "response",
+            TraceEvent::SemanticCheck { .. } => "semanticCheck",
+            TraceEvent::StepAction { .. } => "stepAction",
+            TraceEvent::StepCanceled { .. } => "stepCanceled",
+            TraceEvent::StepError { .. } => "stepError",
+            TraceEvent::SuggestionCheck { .. } => "suggestionCheck",
+            TraceEvent::SyntacticCheck { .. } => "syntacticCheck",
+            TraceEvent::UpdateGraph { .. } => "updateGraph",
         }
-        "process_name" => {
-            if event.cat != "__metadata" || event.ph.as_deref() != Some("M") {
-                return Err("process_name invalid cat or ph".to_string());
-            }
-            match args_obj.get("name") {
-                Some(Value::String(s)) if s == "tsc" => {}
-                _ => return Err("process_name args.name must be 'tsc'".to_string()),
-            }
-        }
-        "thread_name" => {
-            if event.cat != "__metadata" || event.ph.as_deref() != Some("M") {
-                return Err("thread_name invalid cat or ph".to_string());
-            }
-            match args_obj.get("name") {
-                Some(Value::String(s)) if s == "Main" => {}
-                _ => return Err("thread_name args.name must be 'Main'".to_string()),
-            }
-        }
-
-        // PARSE
-        "createSourceFile" => {
-            if event.cat != "parse" {
-                return Err("createSourceFile cat must be 'parse'".to_string());
-            }
-            if event.ph.is_none() {
-                return Err("createSourceFile requires ph".to_string());
-            }
-            expect_string_field(args_obj, "path")?;
-        }
-        "parseJsonSourceFileConfigFileContent" => {
-            if event.cat != "parse" {
-                return Err("parseJsonSourceFileConfigFileContent cat must be 'parse'".to_string());
-            }
-            if event.dur.is_none() {
-                return Err("parseJsonSourceFileConfigFileContent must have dur".to_string());
-            }
-            expect_string_field(args_obj, "path")?;
-        }
-
-        // PROGRAM
-        "createProgram" => {
-            if event.cat != "program" {
-                return Err("createProgram cat must be 'program'".to_string());
-            }
-            if event.ph.is_none() {
-                return Err("createProgram requires ph".to_string());
-            }
-            expect_string_field(args_obj, "configFilePath")?;
-        }
-        "findSourceFile" => {
-            if event.cat != "program" {
-                return Err("findSourceFile cat must be 'program'".to_string());
-            }
-            if event.dur.is_none() {
-                return Err("findSourceFile must have dur".to_string());
-            }
-            expect_string_field(args_obj, "fileName")?;
-        }
-        "processRootFiles" => {
-            if event.cat != "program" {
-                return Err("processRootFiles cat must be 'program'".to_string());
-            }
-            if event.dur.is_none() {
-                return Err("processRootFiles must have dur".to_string());
-            }
-            expect_number_field(args_obj, "count", true)?;
-        }
-        "processTypeReferenceDirective" => {
-            if event.cat != "program" {
-                return Err("processTypeReferenceDirective cat must be 'program'".to_string());
-            }
-            if event.dur.is_none() {
-                return Err("processTypeReferenceDirective must have dur".to_string());
-            }
-            expect_string_field(args_obj, "directive")?;
-        }
-        "processTypeReferences" => {
-            if event.cat != "program" {
-                return Err("processTypeReferences cat must be 'program'".to_string());
-            }
-            if event.dur.is_none() {
-                return Err("processTypeReferences must have dur".to_string());
-            }
-            expect_number_field(args_obj, "count", true)?;
-        }
-        "resolveLibrary" => {
-            if event.cat != "program" {
-                return Err("resolveLibrary cat must be 'program'".to_string());
-            }
-            expect_string_field(args_obj, "resolveFrom")?;
-        }
-        "resolveModuleNamesWorker" => {
-            if event.cat != "program" {
-                return Err("resolveModuleNamesWorker cat must be 'program'".to_string());
-            }
-            expect_string_field(args_obj, "containingFileName")?;
-        }
-        "resolveTypeReferenceDirectiveNamesWorker" => {
-            if event.cat != "program" {
-                return Err(
-                    "resolveTypeReferenceDirectiveNamesWorker cat must be 'program'".to_string(),
-                );
-            }
-            expect_string_field(args_obj, "containingFileName")?;
-        }
-        "shouldProgramCreateNewSourceFiles" => {
-            if event.cat != "program" {
-                return Err("shouldProgramCreateNewSourceFiles cat must be 'program'".to_string());
-            }
-            if event.ph.as_deref() != Some("I") {
-                return Err("shouldProgramCreateNewSourceFiles must be instant".to_string());
-            }
-            if event.s.is_none() {
-                return Err("shouldProgramCreateNewSourceFiles requires scope 's'".to_string());
-            }
-            if args_obj.get("hasOldProgram").is_none() {
-                return Err("hasOldProgram missing".to_string());
-            }
-        }
-        "tryReuseStructureFromOldProgram" => {
-            if event.cat != "program" {
-                return Err("tryReuseStructureFromOldProgram cat must be 'program'".to_string());
-            }
-            if event.dur.is_none() {
-                return Err("tryReuseStructureFromOldProgram must have dur".to_string());
-            }
-        }
-
-        // BIND
-        "bindSourceFile" => {
-            if event.cat != "bind" {
-                return Err("bindSourceFile cat must be 'bind'".to_string());
-            }
-            if event.ph.is_none() {
-                return Err("bindSourceFile requires ph".to_string());
-            }
-            expect_string_field(args_obj, "path")?;
-        }
-
-        // CHECK
-        "checkExpression" => {
-            if event.cat != "check" {
-                return Err("checkExpression cat must be 'check'".to_string());
-            }
-            if event.dur.is_none() {
-                return Err("checkExpression must have dur".to_string());
-            }
-            expect_number_field(args_obj, "kind", false)?;
-            expect_number_field(args_obj, "pos", false)?;
-            expect_number_field(args_obj, "end", false)?;
-        }
-        "checkSourceFile" => {
-            if event.cat != "check" {
-                return Err("checkSourceFile cat must be 'check'".to_string());
-            }
-            if event.ph.is_none() {
-                return Err("checkSourceFile requires ph".to_string());
-            }
-            expect_string_field(args_obj, "path")?;
-        }
-        "checkVariableDeclaration" => {
-            if event.cat != "check" {
-                return Err("checkVariableDeclaration cat must be 'check'".to_string());
-            }
-            if event.dur.is_none() {
-                return Err("checkVariableDeclaration must have dur".to_string());
-            }
-            expect_number_field(args_obj, "kind", false)?;
-            expect_number_field(args_obj, "pos", false)?;
-            expect_number_field(args_obj, "end", false)?;
-            expect_string_field(args_obj, "path")?;
-        }
-        "checkDeferredNode" => {
-            if event.cat != "check" {
-                return Err("checkDeferredNode cat must be 'check'".to_string());
-            }
-            if event.dur.is_none() {
-                return Err("checkDeferredNode must have dur".to_string());
-            }
-            expect_number_field(args_obj, "kind", false)?;
-            expect_number_field(args_obj, "pos", false)?;
-            expect_number_field(args_obj, "end", false)?;
-            expect_string_field(args_obj, "path")?;
-        }
-        "checkSourceFileNodes" => {
-            if event.cat != "check" {
-                return Err("checkSourceFileNodes cat must be 'check'".to_string());
-            }
-            if event.dur.is_none() {
-                return Err("checkSourceFileNodes must have dur".to_string());
-            }
-            expect_string_field(args_obj, "path")?;
-        }
-
-        // CHECKTYPES
-        "checkTypeParameterDeferred" => {
-            if event.cat != "checkTypes" {
-                return Err("checkTypeParameterDeferred cat must be 'checkTypes'".to_string());
-            }
-            if event.dur.is_none() {
-                return Err("checkTypeParameterDeferred must have dur".to_string());
-            }
-            expect_number_field(args_obj, "parent", true)?;
-            expect_number_field(args_obj, "id", true)?;
-        }
-        "getVariancesWorker" => {
-            if event.cat != "checkTypes" {
-                return Err("getVariancesWorker cat must be 'checkTypes'".to_string());
-            }
-            if event.dur.is_none() {
-                return Err("getVariancesWorker must have dur".to_string());
-            }
-            expect_number_field(args_obj, "arity", true)?;
-            expect_number_field(args_obj, "id", true)?;
-            match args_obj.get("results") {
-                Some(Value::Object(o)) => match o.get("variances") {
-                    Some(Value::Array(arr)) => {
-                        for v in arr {
-                            if !v.is_string() {
-                                return Err("variance must be string".to_string());
-                            }
-                        }
-                    }
-                    _ => return Err("results.variances must be array".to_string()),
-                },
-                _ => return Err("results must be object".to_string()),
-            }
-        }
-        "structuredTypeRelatedTo" => {
-            if event.cat != "checkTypes" {
-                return Err("structuredTypeRelatedTo cat must be 'checkTypes'".to_string());
-            }
-            if event.dur.is_none() {
-                return Err("structuredTypeRelatedTo must have dur".to_string());
-            }
-            expect_number_field(args_obj, "sourceId", true)?;
-            expect_number_field(args_obj, "targetId", true)?;
-        }
-
-        // CHECKTYPES DEPTH LIMITS
-        "checkCrossProductUnion_DepthLimit" => {
-            if event.cat != "checkTypes" {
-                return Err(
-                    "checkCrossProductUnion_DepthLimit cat must be 'checkTypes'".to_string()
-                );
-            }
-            if event.ph.as_deref() != Some("I") {
-                return Err("checkCrossProductUnion_DepthLimit must be instant".to_string());
-            }
-            if event.s.is_none() {
-                return Err("checkCrossProductUnion_DepthLimit requires scope 's'".to_string());
-            }
-            match args_obj.get("typeIds") {
-                Some(Value::Array(arr)) => {
-                    if arr.is_empty() {
-                        return Err("args.typeIds must be non-empty array".to_string());
-                    }
-                    for t in arr {
-                        if !t.is_number() {
-                            return Err("typeIds entries must be numbers".to_string());
-                        }
-                    }
-                }
-                _ => return Err("args.types must be array".to_string()),
-            }
-            expect_number_field(args_obj, "size", true)?;
-        }
-        "checkTypeRelatedTo_DepthLimit" => {
-            if event.cat != "checkTypes" {
-                return Err("checkTypeRelatedTo_DepthLimit cat must be 'checkTypes'".to_string());
-            }
-            if event.ph.as_deref() != Some("I") {
-                return Err("checkTypeRelatedTo_DepthLimit must be instant".to_string());
-            }
-            if event.s.is_none() {
-                return Err("checkTypeRelatedTo_DepthLimit requires scope 's'".to_string());
-            }
-            expect_number_field(args_obj, "sourceId", false)?;
-            expect_number_field(args_obj, "targetId", false)?;
-            expect_number_field(args_obj, "depth", true)?;
-            expect_number_field(args_obj, "targetDepth", true)?;
-        }
-        "getTypeAtFlowNode_DepthLimit" => {
-            if event.cat != "checkTypes" {
-                return Err("getTypeAtFlowNode_DepthLimit cat must be 'checkTypes'".to_string());
-            }
-            if event.ph.as_deref() != Some("I") {
-                return Err("getTypeAtFlowNode_DepthLimit must be instant".to_string());
-            }
-            if event.s.is_none() {
-                return Err("getTypeAtFlowNode_DepthLimit requires scope 's'".to_string());
-            }
-            expect_number_field(args_obj, "flowId", true)?;
-        }
-        "instantiateType_DepthLimit" => {
-            if event.cat != "checkTypes" {
-                return Err("instantiateType_DepthLimit cat must be 'checkTypes'".to_string());
-            }
-            if event.ph.as_deref() != Some("I") {
-                return Err("instantiateType_DepthLimit must be instant".to_string());
-            }
-            if event.s.is_none() {
-                return Err("instantiateType_DepthLimit requires scope 's'".to_string());
-            }
-            expect_number_field(args_obj, "typeId", false)?;
-            expect_number_field(args_obj, "instantiationDepth", false)?;
-            expect_number_field(args_obj, "instantiationCount", true)?;
-        }
-        "recursiveTypeRelatedTo_DepthLimit" => {
-            if event.cat != "checkTypes" {
-                return Err(
-                    "recursiveTypeRelatedTo_DepthLimit cat must be 'checkTypes'".to_string()
-                );
-            }
-            if event.ph.as_deref() != Some("I") {
-                return Err("recursiveTypeRelatedTo_DepthLimit must be instant".to_string());
-            }
-            if event.s.is_none() {
-                return Err("recursiveTypeRelatedTo_DepthLimit requires scope 's'".to_string());
-            }
-            expect_number_field(args_obj, "sourceId", false)?;
-            expect_number_field(args_obj, "targetId", false)?;
-            expect_number_field(args_obj, "depth", true)?;
-            expect_number_field(args_obj, "targetDepth", true)?;
-            for key in ["sourceIdStack", "targetIdStack"] {
-                match args_obj.get(key) {
-                    Some(Value::Array(_)) => {}
-                    _ => return Err(format!("{key} must be array")),
-                }
-            }
-        }
-        "removeSubtypes_DepthLimit" => {
-            if event.cat != "checkTypes" {
-                return Err("removeSubtypes_DepthLimit cat must be 'checkTypes'".to_string());
-            }
-            if event.ph.as_deref() != Some("I") {
-                return Err("removeSubtypes_DepthLimit must be instant".to_string());
-            }
-            if event.s.is_none() {
-                return Err("removeSubtypes_DepthLimit requires scope 's'".to_string());
-            }
-            match args_obj.get("typeIds") {
-                Some(Value::Array(arr)) => {
-                    if arr.is_empty() {
-                        return Err("args.typeIds must be non-empty array".to_string());
-                    }
-                    for t in arr {
-                        if !t.is_number() {
-                            return Err("typeIds entries must be numbers".to_string());
-                        }
-                    }
-                }
-                _ => return Err("args.typeIds must be array".to_string()),
-            }
-        }
-        "traceUnionsOrIntersectionsTooLarge_DepthLimit" => {
-            if event.cat != "checkTypes" {
-                return Err(
-                    "traceUnionsOrIntersectionsTooLarge_DepthLimit cat must be 'checkTypes'"
-                        .to_string(),
-                );
-            }
-            if event.ph.as_deref() != Some("I") {
-                return Err(
-                    "traceUnionsOrIntersectionsTooLarge_DepthLimit must be instant".to_string(),
-                );
-            }
-            if event.s.is_none() {
-                return Err(
-                    "traceUnionsOrIntersectionsTooLarge_DepthLimit requires scope 's'".to_string(),
-                );
-            }
-            expect_number_field(args_obj, "sourceId", false)?;
-            expect_number_field(args_obj, "sourceSize", true)?;
-            expect_number_field(args_obj, "targetId", false)?;
-            expect_number_field(args_obj, "targetSize", true)?;
-            if let Some(v) = args_obj.get("pos") {
-                if !v.is_number() {
-                    return Err("args.pos must be a number".to_string());
-                }
-            }
-            if let Some(v) = args_obj.get("end") {
-                if !v.is_number() {
-                    return Err("args.end must be a number".to_string());
-                }
-            }
-        }
-        "typeRelatedToDiscriminatedType_DepthLimit" => {
-            if event.cat != "checkTypes" {
-                return Err(
-                    "typeRelatedToDiscriminatedType_DepthLimit cat must be 'checkTypes'"
-                        .to_string(),
-                );
-            }
-            if event.ph.as_deref() != Some("I") {
-                return Err("typeRelatedToDiscriminatedType_DepthLimit must be instant".to_string());
-            }
-            if event.s.is_none() {
-                return Err(
-                    "typeRelatedToDiscriminatedType_DepthLimit requires scope 's'".to_string(),
-                );
-            }
-            expect_number_field(args_obj, "sourceId", false)?;
-            expect_number_field(args_obj, "targetId", false)?;
-            expect_number_field(args_obj, "numCombinations", true)?;
-        }
-
-        // EMIT
-        "emit" => {
-            if event.cat != "emit" {
-                return Err("emit cat must be 'emit'".to_string());
-            }
-            if event.ph.is_none() {
-                return Err("emit requires ph".to_string());
-            }
-        }
-        "emitBuildInfo" => {
-            if event.cat != "emit" {
-                return Err("emitBuildInfo cat must be 'emit'".to_string());
-            }
-        }
-        "emitDeclarationFileOrBundle" => {
-            if event.cat != "emit" {
-                return Err("emitDeclarationFileOrBundle cat must be 'emit'".to_string());
-            }
-            if event.dur.is_none() {
-                return Err("emitDeclarationFileOrBundle must have dur".to_string());
-            }
-            expect_string_field(args_obj, "declarationFilePath")?;
-        }
-        "emitJsFileOrBundle" => {
-            if event.cat != "emit" {
-                return Err("emitJsFileOrBundle cat must be 'emit'".to_string());
-            }
-            if event.dur.is_none() {
-                return Err("emitJsFileOrBundle must have dur".to_string());
-            }
-            expect_string_field(args_obj, "jsFilePath")?;
-        }
-        "transformNodes" => {
-            if event.cat != "emit" {
-                return Err("transformNodes cat must be 'emit'".to_string());
-            }
-            if event.dur.is_none() {
-                return Err("transformNodes must have dur".to_string());
-            }
-            expect_string_field(args_obj, "path")?;
-        }
-
-        // SESSION
-        "cancellationThrown" => {
-            if event.cat != "session" {
-                return Err("cancellationThrown cat must be 'session'".to_string());
-            }
-            if event.ph.as_deref() != Some("I") {
-                return Err("cancellationThrown must be instant".to_string());
-            }
-            if let Some(Value::String(_)) = args_obj.get("kind") {
-            } else {
-                return Err("args.kind must be string".to_string());
-            }
-        }
-        "commandCanceled" => {
-            if event.cat != "session" {
-                return Err("commandCanceled cat must be 'session'".to_string());
-            }
-            if event.ph.as_deref() != Some("I") {
-                return Err("commandCanceled must be instant".to_string());
-            }
-            expect_number_field(args_obj, "seq", false)?;
-            expect_string_field(args_obj, "command")?;
-        }
-        "commandError" => {
-            if event.cat != "session" {
-                return Err("commandError cat must be 'session'".to_string());
-            }
-            if event.ph.as_deref() != Some("I") {
-                return Err("commandError must be instant".to_string());
-            }
-            expect_number_field(args_obj, "seq", false)?;
-            expect_string_field(args_obj, "command")?;
-            expect_string_field(args_obj, "message")?;
-        }
-        "createConfiguredProject" => {
-            if event.cat != "session" {
-                return Err("createConfiguredProject cat must be 'session'".to_string());
-            }
-            if event.ph.as_deref() != Some("I") {
-                return Err("createConfiguredProject must be instant".to_string());
-            }
-            expect_string_field(args_obj, "configFilePath")?;
-        }
-        "createdDocumentRegistryBucket" => {
-            if event.cat != "session" {
-                return Err("createdDocumentRegistryBucket cat must be 'session'".to_string());
-            }
-            if event.ph.as_deref() != Some("I") {
-                return Err("createdDocumentRegistryBucket must be instant".to_string());
-            }
-            expect_string_field(args_obj, "configFilePath")?;
-            expect_string_field(args_obj, "key")?;
-        }
-        "documentRegistryBucketOverlap" => {
-            if event.cat != "session" {
-                return Err("documentRegistryBucketOverlap cat must be 'session'".to_string());
-            }
-            if event.ph.as_deref() != Some("I") {
-                return Err("documentRegistryBucketOverlap must be instant".to_string());
-            }
-            expect_string_field(args_obj, "path")?;
-            expect_string_field(args_obj, "key1")?;
-            expect_string_field(args_obj, "key2")?;
-        }
-        "executeCommand" => {
-            if event.cat != "session" {
-                return Err("executeCommand cat must be 'session'".to_string());
-            }
-            if event.ph.is_none() {
-                return Err("executeCommand requires ph".to_string());
-            }
-            expect_number_field(args_obj, "seq", false)?;
-            expect_string_field(args_obj, "command")?;
-        }
-        "finishCachingPerDirectoryResolution" => {
-            if event.cat != "session" {
-                return Err("finishCachingPerDirectoryResolution cat must be 'session'".to_string());
-            }
-            if event.ph.as_deref() != Some("I") {
-                return Err("finishCachingPerDirectoryResolution must be instant".to_string());
-            }
-            if event.s.is_none() {
-                return Err("finishCachingPerDirectoryResolution requires scope 's'".to_string());
-            }
-        }
-        "getPackageJsonAutoImportProvider" => {
-            if event.cat != "session" {
-                return Err("getPackageJsonAutoImportProvider cat must be 'session'".to_string());
-            }
-            if event.dur.is_none() {
-                return Err("getPackageJsonAutoImportProvider must have dur".to_string());
-            }
-        }
-        "getUnresolvedImports" => {
-            if event.cat != "session" {
-                return Err("getUnresolvedImports cat must be 'session'".to_string());
-            }
-            if event.dur.is_none() {
-                return Err("getUnresolvedImports must have dur".to_string());
-            }
-            expect_number_field(args_obj, "count", false)?;
-        }
-        "loadConfiguredProject" => {
-            if event.cat != "session" {
-                return Err("loadConfiguredProject cat must be 'session'".to_string());
-            }
-            if event.ph.is_none() {
-                return Err("loadConfiguredProject requires ph".to_string());
-            }
-            expect_string_field(args_obj, "configFilePath")?;
-        }
-        "regionSemanticCheck" => {
-            if event.cat != "session" {
-                return Err("regionSemanticCheck cat must be 'session'".to_string());
-            }
-            if event.ph.is_none() {
-                return Err("regionSemanticCheck requires ph".to_string());
-            }
-            expect_string_field(args_obj, "file")?;
-            expect_string_field(args_obj, "configFilePath")?;
-        }
-        "request" => {
-            if event.cat != "session" {
-                return Err("request cat must be 'session'".to_string());
-            }
-            if event.ph.as_deref() != Some("I") {
-                return Err("request must be instant".to_string());
-            }
-            expect_number_field(args_obj, "seq", false)?;
-            expect_string_field(args_obj, "command")?;
-        }
-        "response" => {
-            if event.cat != "session" {
-                return Err("response cat must be 'session'".to_string());
-            }
-            if event.ph.as_deref() != Some("I") {
-                return Err("response must be instant".to_string());
-            }
-            expect_number_field(args_obj, "seq", false)?;
-            expect_string_field(args_obj, "command")?;
-            match args_obj.get("success") {
-                Some(Value::Bool(_)) => {}
-                _ => return Err("args.success must be boolean".to_string()),
-            }
-        }
-        "semanticCheck" => {
-            if event.cat != "session" {
-                return Err("semanticCheck cat must be 'session'".to_string());
-            }
-            if event.ph.is_none() {
-                return Err("semanticCheck requires ph".to_string());
-            }
-            expect_string_field(args_obj, "file")?;
-            expect_string_field(args_obj, "configFilePath")?;
-        }
-        "stepAction" => {
-            if event.cat != "session" {
-                return Err("stepAction cat must be 'session'".to_string());
-            }
-            if event.ph.as_deref() != Some("I") {
-                return Err("stepAction must be instant".to_string());
-            }
-            if event.s.is_none() {
-                return Err("stepAction requires scope 's'".to_string());
-            }
-            expect_number_field(args_obj, "seq", false)?;
-        }
-        "stepCanceled" => {
-            if event.cat != "session" {
-                return Err("stepCanceled cat must be 'session'".to_string());
-            }
-            if event.ph.as_deref() != Some("I") {
-                return Err("stepCanceled must be instant".to_string());
-            }
-            expect_number_field(args_obj, "seq", false)?;
-        }
-        "stepError" => {
-            if event.cat != "session" {
-                return Err("stepError cat must be 'session'".to_string());
-            }
-            if event.ph.as_deref() != Some("I") {
-                return Err("stepError must be instant".to_string());
-            }
-            expect_number_field(args_obj, "seq", false)?;
-            expect_string_field(args_obj, "message")?;
-        }
-        "suggestionCheck" => {
-            if event.cat != "session" {
-                return Err("suggestionCheck cat must be 'session'".to_string());
-            }
-            if event.ph.is_none() {
-                return Err("suggestionCheck requires ph".to_string());
-            }
-            expect_string_field(args_obj, "file")?;
-            expect_string_field(args_obj, "configFilePath")?;
-        }
-        "syntacticCheck" => {
-            if event.cat != "session" {
-                return Err("syntacticCheck cat must be 'session'".to_string());
-            }
-            if event.ph.is_none() {
-                return Err("syntacticCheck requires ph".to_string());
-            }
-            expect_string_field(args_obj, "file")?;
-            expect_string_field(args_obj, "configFilePath")?;
-        }
-        "updateGraph" => {
-            if event.cat != "session" {
-                return Err("updateGraph cat must be 'session'".to_string());
-            }
-            if event.ph.is_none() {
-                return Err("updateGraph requires ph".to_string());
-            }
-            expect_string_field(args_obj, "name")?;
-            if args_obj.get("kind").is_none() {
-                return Err("kind missing".to_string());
-            }
-        }
-
-        other => return Err(format!("Unknown event name '{other}'")),
     }
-    Ok(())
+
+    /// Get the category
+    pub fn cat(&self) -> &str {
+        match self {
+            TraceEvent::TracingStartedInBrowser { cat, .. } => cat,
+            TraceEvent::ProcessName { cat, .. } => cat,
+            TraceEvent::ThreadName { cat, .. } => cat,
+            TraceEvent::CreateSourceFile { cat, .. } => cat,
+            TraceEvent::ParseJsonSourceFileConfigFileContent { cat, .. } => cat,
+            TraceEvent::CreateProgram { cat, .. } => cat,
+            TraceEvent::FindSourceFile { cat, .. } => cat,
+            TraceEvent::ProcessRootFiles { cat, .. } => cat,
+            TraceEvent::ProcessTypeReferenceDirective { cat, .. } => cat,
+            TraceEvent::ProcessTypeReferences { cat, .. } => cat,
+            TraceEvent::ResolveLibrary { cat, .. } => cat,
+            TraceEvent::ResolveModuleNamesWorker { cat, .. } => cat,
+            TraceEvent::ResolveTypeReferenceDirectiveNamesWorker { cat, .. } => cat,
+            TraceEvent::ShouldProgramCreateNewSourceFiles { cat, .. } => cat,
+            TraceEvent::TryReuseStructureFromOldProgram { cat, .. } => cat,
+            TraceEvent::BindSourceFile { cat, .. } => cat,
+            TraceEvent::CheckExpression { cat, .. } => cat,
+            TraceEvent::CheckSourceFile { cat, .. } => cat,
+            TraceEvent::CheckVariableDeclaration { cat, .. } => cat,
+            TraceEvent::CheckDeferredNode { cat, .. } => cat,
+            TraceEvent::CheckSourceFileNodes { cat, .. } => cat,
+            TraceEvent::CheckTypeParameterDeferred { cat, .. } => cat,
+            TraceEvent::GetVariancesWorker { cat, .. } => cat,
+            TraceEvent::StructuredTypeRelatedTo { cat, .. } => cat,
+            TraceEvent::CheckCrossProductUnionDepthLimit { cat, .. } => cat,
+            TraceEvent::CheckTypeRelatedToDepthLimit { cat, .. } => cat,
+            TraceEvent::GetTypeAtFlowNodeDepthLimit { cat, .. } => cat,
+            TraceEvent::InstantiateTypeDepthLimit { cat, .. } => cat,
+            TraceEvent::RecursiveTypeRelatedToDepthLimit { cat, .. } => cat,
+            TraceEvent::RemoveSubtypesDepthLimit { cat, .. } => cat,
+            TraceEvent::TraceUnionsOrIntersectionsTooLargeDepthLimit { cat, .. } => cat,
+            TraceEvent::TypeRelatedToDiscriminatedTypeDepthLimit { cat, .. } => cat,
+            TraceEvent::Emit { cat, .. } => cat,
+            TraceEvent::EmitBuildInfo { cat, .. } => cat,
+            TraceEvent::EmitDeclarationFileOrBundle { cat, .. } => cat,
+            TraceEvent::EmitJsFileOrBundle { cat, .. } => cat,
+            TraceEvent::TransformNodes { cat, .. } => cat,
+            TraceEvent::CancellationThrown { cat, .. } => cat,
+            TraceEvent::CommandCanceled { cat, .. } => cat,
+            TraceEvent::CommandError { cat, .. } => cat,
+            TraceEvent::CreateConfiguredProject { cat, .. } => cat,
+            TraceEvent::CreatedDocumentRegistryBucket { cat, .. } => cat,
+            TraceEvent::DocumentRegistryBucketOverlap { cat, .. } => cat,
+            TraceEvent::ExecuteCommand { cat, .. } => cat,
+            TraceEvent::FinishCachingPerDirectoryResolution { cat, .. } => cat,
+            TraceEvent::GetPackageJsonAutoImportProvider { cat, .. } => cat,
+            TraceEvent::GetUnresolvedImports { cat, .. } => cat,
+            TraceEvent::LoadConfiguredProject { cat, .. } => cat,
+            TraceEvent::RegionSemanticCheck { cat, .. } => cat,
+            TraceEvent::Request { cat, .. } => cat,
+            TraceEvent::Response { cat, .. } => cat,
+            TraceEvent::SemanticCheck { cat, .. } => cat,
+            TraceEvent::StepAction { cat, .. } => cat,
+            TraceEvent::StepCanceled { cat, .. } => cat,
+            TraceEvent::StepError { cat, .. } => cat,
+            TraceEvent::SuggestionCheck { cat, .. } => cat,
+            TraceEvent::SyntacticCheck { cat, .. } => cat,
+            TraceEvent::UpdateGraph { cat, .. } => cat,
+        }
+    }
+
+    /// Get the phase
+    pub fn ph(&self) -> &EventPhase {
+        match self {
+            TraceEvent::TracingStartedInBrowser { ph, .. } => ph,
+            TraceEvent::ProcessName { ph, .. } => ph,
+            TraceEvent::ThreadName { ph, .. } => ph,
+            TraceEvent::CreateSourceFile { ph, .. } => ph,
+            TraceEvent::ParseJsonSourceFileConfigFileContent { ph, .. } => ph,
+            TraceEvent::CreateProgram { ph, .. } => ph,
+            TraceEvent::FindSourceFile { ph, .. } => ph,
+            TraceEvent::ProcessRootFiles { ph, .. } => ph,
+            TraceEvent::ProcessTypeReferenceDirective { ph, .. } => ph,
+            TraceEvent::ProcessTypeReferences { ph, .. } => ph,
+            TraceEvent::ResolveLibrary { ph, .. } => ph,
+            TraceEvent::ResolveModuleNamesWorker { ph, .. } => ph,
+            TraceEvent::ResolveTypeReferenceDirectiveNamesWorker { ph, .. } => ph,
+            TraceEvent::ShouldProgramCreateNewSourceFiles { ph, .. } => ph,
+            TraceEvent::TryReuseStructureFromOldProgram { ph, .. } => ph,
+            TraceEvent::BindSourceFile { ph, .. } => ph,
+            TraceEvent::CheckExpression { ph, .. } => ph,
+            TraceEvent::CheckSourceFile { ph, .. } => ph,
+            TraceEvent::CheckVariableDeclaration { ph, .. } => ph,
+            TraceEvent::CheckDeferredNode { ph, .. } => ph,
+            TraceEvent::CheckSourceFileNodes { ph, .. } => ph,
+            TraceEvent::CheckTypeParameterDeferred { ph, .. } => ph,
+            TraceEvent::GetVariancesWorker { ph, .. } => ph,
+            TraceEvent::StructuredTypeRelatedTo { ph, .. } => ph,
+            TraceEvent::CheckCrossProductUnionDepthLimit { ph, .. } => ph,
+            TraceEvent::CheckTypeRelatedToDepthLimit { ph, .. } => ph,
+            TraceEvent::GetTypeAtFlowNodeDepthLimit { ph, .. } => ph,
+            TraceEvent::InstantiateTypeDepthLimit { ph, .. } => ph,
+            TraceEvent::RecursiveTypeRelatedToDepthLimit { ph, .. } => ph,
+            TraceEvent::RemoveSubtypesDepthLimit { ph, .. } => ph,
+            TraceEvent::TraceUnionsOrIntersectionsTooLargeDepthLimit { ph, .. } => ph,
+            TraceEvent::TypeRelatedToDiscriminatedTypeDepthLimit { ph, .. } => ph,
+            TraceEvent::Emit { ph, .. } => ph,
+            TraceEvent::EmitBuildInfo { ph, .. } => ph,
+            TraceEvent::EmitDeclarationFileOrBundle { ph, .. } => ph,
+            TraceEvent::EmitJsFileOrBundle { ph, .. } => ph,
+            TraceEvent::TransformNodes { ph, .. } => ph,
+            TraceEvent::CancellationThrown { ph, .. } => ph,
+            TraceEvent::CommandCanceled { ph, .. } => ph,
+            TraceEvent::CommandError { ph, .. } => ph,
+            TraceEvent::CreateConfiguredProject { ph, .. } => ph,
+            TraceEvent::CreatedDocumentRegistryBucket { ph, .. } => ph,
+            TraceEvent::DocumentRegistryBucketOverlap { ph, .. } => ph,
+            TraceEvent::ExecuteCommand { ph, .. } => ph,
+            TraceEvent::FinishCachingPerDirectoryResolution { ph, .. } => ph,
+            TraceEvent::GetPackageJsonAutoImportProvider { ph, .. } => ph,
+            TraceEvent::GetUnresolvedImports { ph, .. } => ph,
+            TraceEvent::LoadConfiguredProject { ph, .. } => ph,
+            TraceEvent::RegionSemanticCheck { ph, .. } => ph,
+            TraceEvent::Request { ph, .. } => ph,
+            TraceEvent::Response { ph, .. } => ph,
+            TraceEvent::SemanticCheck { ph, .. } => ph,
+            TraceEvent::StepAction { ph, .. } => ph,
+            TraceEvent::StepCanceled { ph, .. } => ph,
+            TraceEvent::StepError { ph, .. } => ph,
+            TraceEvent::SuggestionCheck { ph, .. } => ph,
+            TraceEvent::SyntacticCheck { ph, .. } => ph,
+            TraceEvent::UpdateGraph { ph, .. } => ph,
+        }
+    }
+
+    /// Get duration if present
+    pub fn dur(&self) -> Option<f64> {
+        match self {
+            TraceEvent::ParseJsonSourceFileConfigFileContent { dur, .. }
+            | TraceEvent::FindSourceFile { dur, .. }
+            | TraceEvent::ProcessRootFiles { dur, .. }
+            | TraceEvent::ProcessTypeReferenceDirective { dur, .. }
+            | TraceEvent::ProcessTypeReferences { dur, .. }
+            | TraceEvent::ResolveLibrary { dur, .. }
+            | TraceEvent::ResolveModuleNamesWorker { dur, .. }
+            | TraceEvent::ResolveTypeReferenceDirectiveNamesWorker { dur, .. }
+            | TraceEvent::TryReuseStructureFromOldProgram { dur, .. }
+            | TraceEvent::CheckExpression { dur, .. }
+            | TraceEvent::CheckVariableDeclaration { dur, .. }
+            | TraceEvent::CheckDeferredNode { dur, .. }
+            | TraceEvent::CheckSourceFileNodes { dur, .. }
+            | TraceEvent::CheckTypeParameterDeferred { dur, .. }
+            | TraceEvent::GetVariancesWorker { dur, .. }
+            | TraceEvent::StructuredTypeRelatedTo { dur, .. }
+            | TraceEvent::EmitDeclarationFileOrBundle { dur, .. }
+            | TraceEvent::EmitJsFileOrBundle { dur, .. }
+            | TraceEvent::TransformNodes { dur, .. }
+            | TraceEvent::GetPackageJsonAutoImportProvider { dur, .. }
+            | TraceEvent::GetUnresolvedImports { dur, .. } => Some(*dur),
+            TraceEvent::EmitBuildInfo { dur, .. } => *dur,
+            _ => None,
+        }
+    }
 }
 
 fn get_context_lines(contents: &str, error_line: usize) -> String {
@@ -784,13 +1275,8 @@ pub fn parse_trace_json(path_label: &str, contents: &str) -> Result<Vec<TraceEve
     };
     let mut events: Vec<TraceEvent> = Vec::with_capacity(arr.len());
     for (i, v) in arr.into_iter().enumerate() {
-        let ev: TraceEvent = serde_json::from_value(v)
-            .map_err(|e| format!("trace.json event[{i}] structural error: {e}"))?;
-        validate_event(&ev).map_err(|e| {
-            let event_json = serde_json::to_string_pretty(&ev)
-                .unwrap_or_else(|_| "<failed to serialize event>".to_string());
-            format!("trace.json event[{i}] validation error: {e}\nExpected type: {event_json}")
-        })?;
+        let ev: TraceEvent =
+            serde_json::from_value(v).map_err(|e| format!("trace.json event[{i}] error: {e}"))?;
         events.push(ev);
     }
     Ok(events)

@@ -16,15 +16,11 @@ pub fn get_node_module_paths(trace_json: &[TraceEvent]) -> NodeModulePaths {
     let regex = package_name_regex();
 
     for event in trace_json {
-        if event.name != "findSourceFile" {
-            continue;
-        }
-
-        if let Some(file_name) = event.args.get("fileName").and_then(|v| v.as_str()) {
-            for captures in regex.captures_iter(file_name) {
+        if let TraceEvent::FindSourceFile { args, .. } = event {
+            for captures in regex.captures_iter(&args.file_name) {
                 if let Some(package_name_match) = captures.get(1) {
                     let package_name = package_name_match.as_str().to_string();
-                    let package_path = &file_name[..captures.get(0).unwrap().end()];
+                    let package_path = &args.file_name[..captures.get(0).unwrap().end()];
 
                     node_module_paths
                         .entry(package_name)

@@ -173,7 +173,8 @@ function TargetsTabs({ linksToTypeId }: { linksToTypeId: LinksToType }) {
         p: 2,
         spacing: 1,
         flexShrink: 0,
-        overflow: "hidden",
+        overflowY: "hidden",
+        overflowX: "auto",
       }}
     >
       {isSmallWidth ? (

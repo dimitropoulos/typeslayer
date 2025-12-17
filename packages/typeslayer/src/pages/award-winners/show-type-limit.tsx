@@ -1,5 +1,6 @@
 import {
   Alert,
+  AlertTitle,
   Box,
   List,
   ListItemButton,
@@ -105,11 +106,23 @@ export const ShowTypeLimit = <L extends LimitType>({
 
   const nonePresent = (
     <Alert severity="success" sx={{ mx: 1 }}>
-      {notFound}
-      <br />
-      <br />
+      <AlertTitle>{notFound}</AlertTitle>
       That's a good thing!
     </Alert>
+  );
+
+  const items = (
+    <List>
+      {data.map((current, index) => (
+        <LimitListItem
+          typeId={getTypeId(current)}
+          key={getKey(current)}
+          inlineBarGraph={inlineBarGraph(current, first)}
+          onClick={() => handleTypeClick(index)}
+          selected={index === selectedIndex}
+        />
+      ))}
+    </List>
   );
 
   return (
@@ -127,7 +140,7 @@ export const ShowTypeLimit = <L extends LimitType>({
           flexShrink: 0,
           gap: 2,
           p: 1,
-          pt: 2,
+          pb: 2,
           overflowY: "auto",
           maxHeight: "100%",
           minHeight: "100%",
@@ -145,17 +158,7 @@ export const ShowTypeLimit = <L extends LimitType>({
           <CenterLoader />
         ) : hasData ? (
           hasItems ? (
-            <List>
-              {data.map((current, index) => (
-                <LimitListItem
-                  typeId={getTypeId(current)}
-                  key={getKey(current)}
-                  inlineBarGraph={inlineBarGraph(current, first)}
-                  onClick={() => handleTypeClick(index)}
-                  selected={index === selectedIndex}
-                />
-              ))}
-            </List>
+            items
           ) : (
             nonePresent
           )
@@ -167,7 +170,8 @@ export const ShowTypeLimit = <L extends LimitType>({
       {hasItems ? (
         <Box
           sx={{
-            p: 3,
+            px: 2,
+            pb: 2,
             overflowY: "auto",
             maxHeight: "100%",
             width: "100%",

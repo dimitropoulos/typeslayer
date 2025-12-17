@@ -774,11 +774,11 @@ export const useMaxStackSize = () => {
   };
 };
 
-export const useVerifyAnalyzeTrace = () => {
+export const useValidateAnalyzeTrace = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => invoke<void>("verify_analyze_trace"),
+    mutationFn: async () => invoke<void>("validate_analyze_trace"),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["analyze_trace"] });
       queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
@@ -787,29 +787,29 @@ export const useVerifyAnalyzeTrace = () => {
   });
 };
 
-export const useVerifyTraceJson = () => {
+export const useValidateTraceJson = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => invoke<void>("verify_trace_json"),
+    mutationFn: async () => invoke<void>("validate_trace_json"),
     onSettled: refreshGenerateTrace(queryClient),
   });
 };
 
-export const useVerifyTypesJson = () => {
+export const useValidateTypesJson = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => invoke<void>("verify_types_json"),
+    mutationFn: async () => invoke<void>("validate_types_json"),
     onSettled: refreshGenerateTrace(queryClient),
   });
 };
 
-export const useVerifyTypeGraph = () => {
+export const useValidateTypeGraph = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => invoke<void>("verify_type_graph"),
+    mutationFn: async () => invoke<void>("validate_type_graph"),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["type_graph"] });
       queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
@@ -818,11 +818,11 @@ export const useVerifyTypeGraph = () => {
   });
 };
 
-export const useVerifyCpuProfile = () => {
+export const useValidateCpuProfile = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => invoke<void>("verify_cpu_profile"),
+    mutationFn: async () => invoke<void>("validate_cpu_profile"),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["cpu_profile"] });
       queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });

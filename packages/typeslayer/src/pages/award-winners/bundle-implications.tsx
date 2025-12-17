@@ -1,4 +1,10 @@
-import { Alert, ListSubheader, Stack, Typography } from "@mui/material";
+import {
+  Alert,
+  AlertTitle,
+  ListSubheader,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { useCallback } from "react";
 import { CenterLoader } from "../../components/center-loader";
 import { InlineCode } from "../../components/inline-code";
@@ -16,9 +22,7 @@ const DuplicatePackages = () => {
 
   const noneFound = (
     <Alert severity="success" sx={{ mx: 1 }}>
-      No duplicate packages found.
-      <br />
-      <br />
+      <AlertTitle>No duplicate packages found.</AlertTitle>
       That's a good thing!
     </Alert>
   );

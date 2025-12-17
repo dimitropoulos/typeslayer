@@ -21,7 +21,7 @@ pub fn build_treemap_from_trace(events: &[TraceEvent]) -> Result<Vec<TreemapNode
     let last_span_end = if parse_result.last_span_end.is_finite() {
         parse_result.last_span_end
     } else if let Some(last_event) = events.last() {
-        last_event.ts
+        last_event.common().ts
     } else {
         0.0
     };
@@ -30,7 +30,7 @@ pub fn build_treemap_from_trace(events: &[TraceEvent]) -> Result<Vec<TreemapNode
     // timestamp so they still contribute deterministically.
     let mut spans: Vec<EventSpan> = parse_result.spans;
     for event in parse_result.unclosed_stack.into_iter() {
-        let start = event.ts;
+        let start = event.common().ts;
         spans.push(EventSpan {
             event: EventSpanEvent::TraceEvent(event),
             start,
@@ -47,12 +47,8 @@ pub fn build_treemap_from_trace(events: &[TraceEvent]) -> Result<Vec<TreemapNode
             continue;
         };
 
-        if event.name != "checkSourceFile" {
-            continue;
-        }
-
-        if let Some(path) = event.args.get("path").and_then(|v| v.as_str()) {
-            *file_durations.entry(path.to_string()).or_insert(0.0) += span.duration;
+        if let TraceEvent::CheckSourceFile { args, .. } = event {
+            *file_durations.entry(args.path.clone()).or_insert(0.0) += span.duration;
         }
     }
 

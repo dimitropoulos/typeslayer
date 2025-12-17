@@ -1,33 +1,35 @@
 use crate::analyze_trace::types::{AnalyzeTraceOptions, EventSpan, EventSpanEvent, ParseResult};
-use crate::validate::trace_json::TraceEvent;
+use crate::validate::trace_json::{EventPhase, TraceEvent};
 
 pub fn create_spans(trace_file: &[TraceEvent]) -> Result<ParseResult, String> {
     let mut unclosed_stack: Vec<TraceEvent> = Vec::new();
     let mut spans: Vec<EventSpan> = Vec::new();
 
     for event in trace_file {
-        match event.ph.as_deref() {
-            Some("B") => {
+        match event.ph() {
+            EventPhase::Begin => {
                 // Begin event
                 unclosed_stack.push(event.clone());
             }
-            Some("E") => {
+            EventPhase::End => {
                 // End event
                 let begin_event = unclosed_stack
                     .pop()
                     .ok_or_else(|| "Unmatched end event".to_string())?;
+                let begin_ts = begin_event.common().ts;
+                let end_ts = event.common().ts;
                 spans.push(EventSpan {
                     event: EventSpanEvent::TraceEvent(begin_event.clone()),
-                    start: begin_event.ts,
-                    end: event.ts,
-                    duration: event.ts - begin_event.ts,
+                    start: begin_ts,
+                    end: end_ts,
+                    duration: end_ts - begin_ts,
                     children: Vec::new(),
                 });
             }
-            Some("X") | None => {
+            EventPhase::Complete => {
                 // Treat events with a duration (dur) as complete events.
-                if let Some(duration) = event.dur {
-                    let start = event.ts;
+                if let Some(duration) = event.dur() {
+                    let start = event.common().ts;
                     spans.push(EventSpan {
                         event: EventSpanEvent::TraceEvent(event.clone()),
                         start,
@@ -37,12 +39,9 @@ pub fn create_spans(trace_file: &[TraceEvent]) -> Result<ParseResult, String> {
                     });
                 }
             }
-            Some("i") | Some("I") | Some("M") => {
-                // Instant (lowercase or uppercase) or metadata - skip
+            EventPhase::Instant | EventPhase::Metadata => {
+                // Instant or metadata - skip
                 continue;
-            }
-            _ => {
-                return Err(format!("Unknown event phase: {:?}", event.ph));
             }
         }
     }
@@ -69,7 +68,7 @@ pub fn create_span_tree(parse_result: ParseResult, options: &AnalyzeTraceOptions
 
     // Add unclosed events to the spans
     for event in unclosed_stack.iter().rev() {
-        let start = event.ts;
+        let start = event.common().ts;
         let end = last_span_end;
         spans.push(EventSpan {
             event: EventSpanEvent::TraceEvent(event.clone()),

@@ -8,7 +8,7 @@ import {
   Stack,
 } from "@mui/material";
 import type { TypeId } from "@typeslayer/validate";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { CenterLoader } from "../../components/center-loader";
 import { DisplayRecursiveType } from "../../components/display-recursive-type";
 import { NoData } from "../../components/no-data";
@@ -85,12 +85,12 @@ export function TypeMetricsAward({ awardId }: { awardId: TypeMetricsAwardId }) {
 
   const hasData = typeGraph !== undefined;
 
-  const handleListItemClick = (
-    _event: React.MouseEvent<HTMLDivElement, MouseEvent>,
-    index: number,
-  ) => {
-    setSelectedIndex(index);
-  };
+  const handleListItemClick = useCallback(
+    (_event: React.MouseEvent<HTMLDivElement, MouseEvent>, index: number) => {
+      setSelectedIndex(index);
+    },
+    [],
+  );
 
   const nodeStat = awardId.replace("type_", "") as
     | "unionTypes"

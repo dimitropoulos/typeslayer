@@ -18,8 +18,25 @@ fn get_hotspots_worker(
 
     // Update current file if this is a check event
     if let EventSpanEvent::TraceEvent(event) = &span.event {
-        if event.cat == "check" {
-            if let Some(path) = event.args.get("path").and_then(|v| v.as_str()) {
+        if event.cat() == "check" {
+            // Try to extract path from various check events
+            let path_opt = match event {
+                crate::validate::trace_json::TraceEvent::CheckExpression { args, .. } => {
+                    args.path.as_deref()
+                }
+                crate::validate::trace_json::TraceEvent::CheckVariableDeclaration {
+                    args, ..
+                }
+                | crate::validate::trace_json::TraceEvent::CheckDeferredNode { args, .. } => {
+                    Some(args.path.as_str())
+                }
+                crate::validate::trace_json::TraceEvent::CheckSourceFile { args, .. }
+                | crate::validate::trace_json::TraceEvent::CheckSourceFileNodes { args, .. } => {
+                    Some(args.path.as_str())
+                }
+                _ => None,
+            };
+            if let Some(path) = path_opt {
                 current_file = Some(path.to_string());
             }
         }
@@ -46,14 +63,11 @@ fn make_hot_frame(span: &EventSpan, children: Vec<HotSpot>) -> Result<HotSpot, V
     let time_ms = (span.duration / 1000.0).round() as i64;
 
     if let EventSpanEvent::TraceEvent(event) = &span.event {
-        match event.name.as_str() {
-            "checkSourceFile" => {
-                let file_path = event
-                    .args
-                    .get("path")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("");
-                let normalized_path = Path::new(file_path).to_string_lossy().to_string();
+        use crate::validate::trace_json::TraceEvent;
+
+        match event {
+            TraceEvent::CheckSourceFile { args, .. } => {
+                let normalized_path = Path::new(&args.path).to_string_lossy().to_string();
 
                 Ok(HotSpot {
                     description: format!("Check file {}", normalized_path),
@@ -69,61 +83,60 @@ fn make_hot_frame(span: &EventSpan, children: Vec<HotSpot>) -> Result<HotSpot, V
                     end_offset: None,
                 })
             }
-            "structuredTypeRelatedTo" => {
-                let source_id = event
-                    .args
-                    .get("sourceId")
-                    .and_then(|v| v.as_i64())
-                    .unwrap_or(-1);
-                let target_id = event
-                    .args
-                    .get("targetId")
-                    .and_then(|v| v.as_i64())
-                    .unwrap_or(-1);
-
-                Ok(HotSpot {
-                    description: format!("Compare types {} and {}", source_id, target_id),
-                    time_ms,
-                    children,
-                    types: Some(vec![source_id, target_id]),
-                    path: None,
-                    start_line: None,
-                    start_char: None,
-                    start_offset: None,
-                    end_line: None,
-                    end_char: None,
-                    end_offset: None,
-                })
-            }
-            "getVariancesWorker" => {
-                let id = event.args.get("id").and_then(|v| v.as_i64()).unwrap_or(-1);
-
-                Ok(HotSpot {
-                    description: format!("Determine variance of type {}", id),
-                    time_ms,
-                    children,
-                    types: Some(vec![id]),
-                    path: None,
-                    start_line: None,
-                    start_char: None,
-                    start_offset: None,
-                    end_line: None,
-                    end_char: None,
-                    end_offset: None,
-                })
-            }
-            "checkExpression" | "checkVariableDeclaration" => {
-                let path = event
-                    .args
-                    .get("path")
-                    .and_then(|v| v.as_str())
+            TraceEvent::StructuredTypeRelatedTo { args, .. } => Ok(HotSpot {
+                description: format!("Compare types {} and {}", args.source_id, args.target_id),
+                time_ms,
+                children,
+                types: Some(vec![args.source_id, args.target_id]),
+                path: None,
+                start_line: None,
+                start_char: None,
+                start_offset: None,
+                end_line: None,
+                end_char: None,
+                end_offset: None,
+            }),
+            TraceEvent::GetVariancesWorker { args, .. } => Ok(HotSpot {
+                description: format!("Determine variance of type {}", args.id),
+                time_ms,
+                children,
+                types: Some(vec![args.id]),
+                path: None,
+                start_line: None,
+                start_char: None,
+                start_offset: None,
+                end_line: None,
+                end_char: None,
+                end_offset: None,
+            }),
+            TraceEvent::CheckExpression { args, .. } => {
+                let path = args
+                    .path
+                    .as_ref()
                     .map(|p| Path::new(p).to_string_lossy().to_string());
 
                 Ok(HotSpot {
-                    description: event.name.clone(),
+                    description: event.name().to_string(),
                     time_ms,
                     path,
-                    children: Vec::new(),
+                    children,
+                    types: None,
+                    start_line: None,
+                    start_char: None,
+                    start_offset: None,
+                    end_line: None,
+                    end_char: None,
+                    end_offset: None,
+                })
+            }
+            TraceEvent::CheckVariableDeclaration { args, .. } => {
+                let path = Some(Path::new(&args.path).to_string_lossy().to_string());
+
+                Ok(HotSpot {
+                    description: event.name().to_string(),
+                    time_ms,
+                    path,
+                    children,
                     types: None,
                     start_line: None,
                     start_char: None,

@@ -25,6 +25,7 @@ impl Default for AnalyzeTraceOptions {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct EventSpan {
     pub event: EventSpanEvent,
     pub start: f64,
@@ -75,12 +76,14 @@ pub struct HotSpot {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DuplicatedPackageInstance {
     pub path: String,
     pub version: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DuplicatedPackage {
     pub name: String,
     pub instances: Vec<DuplicatedPackageInstance>,

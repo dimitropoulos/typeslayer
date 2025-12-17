@@ -53,11 +53,11 @@ import {
   useUploadTrace,
   useUploadTypeGraph,
   useUploadTypes,
-  useVerifyAnalyzeTrace,
-  useVerifyCpuProfile,
-  useVerifyTraceJson,
-  useVerifyTypeGraph,
-  useVerifyTypesJson,
+  useValidateAnalyzeTrace,
+  useValidateCpuProfile,
+  useValidateTraceJson,
+  useValidateTypeGraph,
+  useValidateTypesJson,
 } from "../hooks/tauri-hooks";
 import { TYPE_GRAPH_FILENAME } from "../types/type-graph";
 
@@ -70,7 +70,7 @@ const RAW_ITEMS: Record<
     filename: string;
     description: string;
     usePreview: () => UseQueryResult<string, Error>;
-    useVerify: () => UseMutationResult<void, Error, void, unknown>;
+    useValidate: () => UseMutationResult<void, Error, void, unknown>;
     useRegenerate: () => UseMutationResult<unknown, Error, void, unknown>;
     useUpload: () => UseMutationResult<unknown, Error, string, unknown>;
   }
@@ -81,7 +81,7 @@ const RAW_ITEMS: Record<
     description:
       "Summary insights extracted from trace.json, including hotspots and duplicate packages.",
     usePreview: useGetAnalyzeTracePreview,
-    useVerify: useVerifyAnalyzeTrace,
+    useValidate: useValidateAnalyzeTrace,
     useRegenerate: useGenerateAnalyzeTrace,
     useUpload: useUploadAnalyzeTrace,
   },
@@ -92,7 +92,7 @@ const RAW_ITEMS: Record<
     description:
       "Raw event trace emitted by the TypeScript compiler during type checking.",
     usePreview: useGetTraceJsonPreview,
-    useVerify: useVerifyTraceJson,
+    useValidate: useValidateTraceJson,
     useRegenerate: useGenerateTrace,
     useUpload: useUploadTrace,
   },
@@ -102,7 +102,7 @@ const RAW_ITEMS: Record<
     filename: TYPES_JSON_FILENAME,
     description: "Resolved types catalog containing metadata for each type id.",
     usePreview: useGetTypesJsonPreview,
-    useVerify: useVerifyTypesJson,
+    useValidate: useValidateTypesJson,
     useRegenerate: useGenerateTrace,
     useUpload: useUploadTypes,
   },
@@ -113,7 +113,7 @@ const RAW_ITEMS: Record<
     description:
       "V8 CPU profile generated during the TypeScript compilation run.",
     usePreview: useGetCpuProfilePreview,
-    useVerify: useVerifyCpuProfile,
+    useValidate: useValidateCpuProfile,
     useRegenerate: useGenerateCpuProfile,
     useUpload: useUploadAnalyzeTrace,
   },
@@ -124,7 +124,7 @@ const RAW_ITEMS: Record<
     description:
       "Type graph representing relationships between types in the TypeScript project.",
     usePreview: useGetTypeGraphPreview,
-    useVerify: useVerifyTypeGraph,
+    useValidate: useValidateTypeGraph,
     useRegenerate: useGenerateTypeGraph,
     useUpload: useUploadTypeGraph,
   },
@@ -190,7 +190,7 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
   const {
     filename,
     description,
-    useVerify,
+    useValidate,
     useRegenerate,
     useUpload,
     usePreview,
@@ -200,7 +200,7 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
   const { mutateAsync: upload, isPending: isUploading } = useUpload();
   const { data: preview, isLoading: previewIsLoading } = usePreview();
   const { data: fileSizes } = useOutputFileSizes();
-  const verify = useVerify();
+  const validate = useValidate();
   const { showToast: showToastOriginal } = useToast();
   const showToast = useCallback(
     (toastData: ToastData) => {
@@ -257,14 +257,14 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
     }
   }, [filename, showToast]);
 
-  const onVerify = useCallback(async () => {
+  const onValidate = useCallback(async () => {
     try {
-      await verify.mutateAsync();
+      await validate.mutateAsync();
       showToast({ message: "Verified: OK", severity: "success" });
     } catch (_e) {
-      showToast({ message: "Verify failed", severity: "error" });
+      showToast({ message: "Validate failed", severity: "error" });
     }
-  }, [verify.mutateAsync, showToast]);
+  }, [validate.mutateAsync, showToast]);
 
   const fileSize = fileSizes ? fileSizes[filename] : null;
 
@@ -312,11 +312,11 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
       <Stack direction="row" gap={2}>
         <Button
           variant="outlined"
-          onClick={onVerify}
+          onClick={onValidate}
           startIcon={<VerifiedUser />}
-          loading={verify.isPending}
+          loading={validate.isPending}
         >
-          Verify
+          Validate
         </Button>
 
         <Button

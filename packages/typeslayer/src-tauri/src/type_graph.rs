@@ -144,10 +144,10 @@ type GraphNodeStats = HashMap<NodeStatKind, NodeStatCategory>;
 #[serde(rename_all = "camelCase")]
 pub struct TypeGraph {
     pub nodes: usize,
+    pub stats: GraphStats,
     pub link_stats: GraphLinkStats,
     pub node_stats: GraphNodeStats,
     pub links: Vec<GraphLink>,
-    pub stats: GraphStats,
 }
 
 /// Return a human-readable type name similar to frontend's getHumanReadableName

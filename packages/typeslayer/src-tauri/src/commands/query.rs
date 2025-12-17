@@ -3,7 +3,7 @@ use crate::{
     type_graph::{LinkKind, get_relationships_for_type, human_readable_name},
     validate::{trace_json::TraceEvent, types_json::ResolvedType, utils::TypeId},
 };
-use std::{collections::HashMap};
+use std::collections::HashMap;
 use tauri::State;
 use tokio::sync::Mutex;
 
@@ -118,39 +118,32 @@ pub async fn get_traces_related_to_typeid(
     let events = data
         .trace_json
         .iter()
-        .filter(|event| match event.name.as_str() {
-            "checkTypeParameterDeferred" => {
-                event.args.get("parent").and_then(|v| v.as_i64()) == Some(typeid)
-                    || event.args.get("id").and_then(|v| v.as_i64()) == Some(typeid)
+        .filter(|event| match event {
+            TraceEvent::CheckTypeParameterDeferred { args, .. } => {
+                args.parent == typeid || args.id == typeid
             }
-            "checkTypeRelatedTo_DepthLimit"
-            | "structuredTypeRelatedTo"
-            | "traceUnionsOrIntersectionsTooLarge_DepthLimit"
-            | "typeRelatedToDiscriminatedType_DepthLimit" => {
-                event.args.get("sourceId").and_then(|v| v.as_i64()) == Some(typeid)
-                    || event.args.get("targetId").and_then(|v| v.as_i64()) == Some(typeid)
+            TraceEvent::CheckTypeRelatedToDepthLimit { args, .. } => {
+                args.source_id == typeid || args.target_id == typeid
             }
-            "checkCrossProductUnion_DepthLimit" | "removeSubtypes_DepthLimit" => event
-                .args
-                .get("typeIds")
-                .and_then(|v| v.as_array())
-                .map_or(false, |arr| arr.iter().any(|v| v.as_i64() == Some(typeid))),
-            "instantiateType_DepthLimit" => {
-                event.args.get("typeId").and_then(|v| v.as_i64()) == Some(typeid)
+            TraceEvent::StructuredTypeRelatedTo { args, .. } => {
+                args.source_id == typeid || args.target_id == typeid
             }
-            "recursiveTypeRelatedTo_DepthLimit" => {
-                event.args.get("sourceId").and_then(|v| v.as_i64()) == Some(typeid)
-                    || event.args.get("targetId").and_then(|v| v.as_i64()) == Some(typeid)
-                    || event
-                        .args
-                        .get("sourceIdStack")
-                        .and_then(|v| v.as_array())
-                        .map_or(false, |arr| arr.iter().any(|v| v.as_i64() == Some(typeid)))
-                    || event
-                        .args
-                        .get("targetIdStack")
-                        .and_then(|v| v.as_array())
-                        .map_or(false, |arr| arr.iter().any(|v| v.as_i64() == Some(typeid)))
+            TraceEvent::TypeRelatedToDiscriminatedTypeDepthLimit { args, .. } => {
+                args.source_id == typeid || args.target_id == typeid
+            }
+            TraceEvent::TraceUnionsOrIntersectionsTooLargeDepthLimit { args, .. } => {
+                args.source_id == typeid || args.target_id == typeid
+            }
+            TraceEvent::CheckCrossProductUnionDepthLimit { args, .. } => {
+                args.type_ids.contains(&typeid)
+            }
+            TraceEvent::RemoveSubtypesDepthLimit { args, .. } => args.type_ids.contains(&typeid),
+            TraceEvent::InstantiateTypeDepthLimit { args, .. } => args.type_id == typeid,
+            TraceEvent::RecursiveTypeRelatedToDepthLimit { args, .. } => {
+                args.source_id == typeid
+                    || args.target_id == typeid
+                    || args.source_id_stack.contains(&typeid)
+                    || args.target_id_stack.contains(&typeid)
             }
             _ => false,
         })
