@@ -14,6 +14,7 @@ import typeslayerLogo from "./assets/typeslayer.png";
 import typeslayerNightmareLogo from "./assets/typeslayer-nightmare.png";
 import { AuthGate } from "./components/auth-gate";
 import { NAVIGATION, RenderNavItem } from "./components/navigation";
+import { useTaskProgressEvents } from "./hooks/tauri-hooks";
 
 function AppBrand({
   collapsed,
@@ -51,6 +52,7 @@ export function App() {
   const [open, setOpen] = useState<boolean>(isMdUp);
   const [collapsed, setCollapsed] = useState<boolean>(false);
   const [authenticated, setAuthenticated] = useState<boolean>(false);
+  useTaskProgressEvents();
 
   // keep open state in sync with screen size
   useEffect(() => {

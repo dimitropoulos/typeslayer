@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::{
     app_data::AppData,
     mcp::tools::{ToolDefinition, ToolParameter},
@@ -13,7 +15,7 @@ pub const DESCRIPTION: &str = "Analyzes TypeScript compilation traces to identif
 pub struct HotTypeInfo {
     pub time_ms: i64,
     pub description: String,
-    pub file_path: Option<String>,
+    pub file_path: Option<PathBuf>,
     pub types_count: usize,
 }
 

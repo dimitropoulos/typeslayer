@@ -1,10 +1,12 @@
 import {
   type QueryClient,
   useMutation,
+  useQueries,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import type { AnalyzeTraceResult } from "@typeslayer/analyze-trace/browser";
 import {
   extractPackageName,
@@ -22,6 +24,78 @@ import type {
   GraphStats,
   LinkKind,
 } from "../types/type-graph";
+
+export type TaskId =
+  | "generate_trace"
+  | "generate_cpu_profile"
+  | "generate_analyze_trace"
+  | "generate_type_graph";
+
+export type TaskProgress = {
+  taskId: TaskId;
+  start: number;
+  done: boolean;
+};
+
+export function useTaskProgressEvents() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    let unlisten: null | (() => void) = null;
+
+    (async () => {
+      unlisten = await listen<TaskProgress>(
+        "tasks",
+        ({ payload: { taskId, start, done } }) => {
+          if (done) {
+            queryClient.invalidateQueries({ queryKey: ["task", taskId] });
+          } else {
+            queryClient.setQueryData(["task", taskId], {
+              taskId,
+              start,
+              done,
+            });
+          }
+        },
+      );
+    })();
+
+    return () => {
+      unlisten?.();
+    };
+  }, [queryClient]);
+}
+
+export function useTaskProgress(taskId: TaskId) {
+  return useQuery<TaskProgress | null>({
+    queryKey: ["task", taskId],
+    queryFn: () => null,
+    initialData: null,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+export function useAllTaskProgress() {
+  const taskIds: TaskId[] = [
+    "generate_trace",
+    "generate_cpu_profile",
+    "generate_analyze_trace",
+    "generate_type_graph",
+  ];
+
+  const results = useQueries({
+    queries: taskIds.map(taskId => ({
+      queryKey: ["task", taskId],
+      queryFn: () => null,
+      initialData: null,
+      staleTime: Number.POSITIVE_INFINITY,
+    })),
+  });
+
+  return results
+    .map(result => result.data as TaskProgress | null)
+    .filter((data): data is TaskProgress => data !== null);
+}
 
 export const useGetRecursiveResolvedTypes = (typeId: TypeId | undefined) => {
   const queryClient = useQueryClient();
@@ -389,26 +463,28 @@ export function useTsconfigPaths() {
   });
 }
 
+const refreshGenerateTraceInvalidations = new Set([
+  "analyze_trace",
+  "bug_report_files",
+  "bug_report_files",
+  "get_analyze_trace_preview",
+  "get_app_stats",
+  "get_links_to_type_id",
+  "get_output_file_sizes",
+  "get_trace_json_preview",
+  "get_type_graph_preview",
+  "get_types_json_preview",
+  "resolved_type",
+  "trace_json",
+  "type_graph_node_and_link_stats",
+  "type_graph_nodes_and_links",
+  "type_graph_stats",
+]);
+
 const refreshGenerateTrace = (queryClient: QueryClient) => async () => {
-  // trace.json
-  queryClient.invalidateQueries({ queryKey: ["get_trace_json_preview"] });
-  queryClient.invalidateQueries({ queryKey: ["trace_json"] });
-
-  // types.json
-  queryClient.invalidateQueries({ queryKey: ["get_types_json_preview"] });
-  queryClient.invalidateQueries({ queryKey: ["resolved_type"] });
-
-  // type-graph.json
-  await refreshTypeGraph(queryClient)();
-
-  // analyze-trace.json
-  queryClient.invalidateQueries({ queryKey: ["get_analyze_trace_preview"] });
-  queryClient.invalidateQueries({ queryKey: ["analyze_trace"] });
-
-  // metadata
-  queryClient.invalidateQueries({ queryKey: ["get_app_stats"] });
-  queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
-  queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
+  refreshGenerateTraceInvalidations.forEach(queryKey => {
+    queryClient.invalidateQueries({ queryKey: [queryKey] });
+  });
 };
 
 export function useGenerateTrace() {
@@ -440,10 +516,17 @@ export function useUploadTypes() {
   });
 }
 
+const refreshCpuProfileInvalidations = new Set([
+  "cpu_profile",
+  "get_cpu_profile_preview",
+  "get_output_file_sizes",
+  "bug_report_files",
+]);
+
 export const refreshCpuProfile = (queryClient: QueryClient) => async () => {
-  queryClient.invalidateQueries({ queryKey: ["get_cpu_profile_preview"] });
-  queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
-  queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
+  refreshCpuProfileInvalidations.forEach(queryKey => {
+    queryClient.invalidateQueries({ queryKey: [queryKey] });
+  });
 };
 
 export function useGenerateCpuProfile() {
@@ -465,13 +548,17 @@ export function useUploadCpuProfile() {
   });
 }
 
-const refreshAnalyzeTrace = (queryClient: QueryClient) => async () => {
-  const analyzeTrace = await invoke<AnalyzeTraceResult>("get_analyze_trace");
-  queryClient.setQueryData(["analyze_trace"], analyzeTrace);
+const refreshAnalyzeTraceInvalidations = new Set([
+  "analyze_trace",
+  "get_analyze_trace_preview",
+  "get_output_file_sizes",
+  "bug_report_files",
+]);
 
-  queryClient.invalidateQueries({ queryKey: ["get_analyze_trace_preview"] });
-  queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
-  queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
+const refreshAnalyzeTrace = (queryClient: QueryClient) => async () => {
+  refreshAnalyzeTraceInvalidations.forEach(queryKey => {
+    queryClient.invalidateQueries({ queryKey: [queryKey] });
+  });
 };
 
 export function useGenerateAnalyzeTrace() {
@@ -493,16 +580,20 @@ export function useUploadAnalyzeTrace() {
   });
 }
 
+const refreshTypeGraphInvalidations = new Set([
+  "type_graph_nodes_and_links",
+  "type_graph_node_and_link_stats",
+  "type_graph_stats",
+  "get_type_graph_preview",
+  "get_links_to_type_id",
+  "get_output_file_sizes",
+  "bug_report_files",
+]);
+
 const refreshTypeGraph = (queryClient: QueryClient) => async () => {
-  queryClient.invalidateQueries({ queryKey: ["type_graph_nodes_and_links"] });
-  queryClient.invalidateQueries({
-    queryKey: ["type_graph_node_and_link_stats"],
+  refreshTypeGraphInvalidations.forEach(queryKey => {
+    queryClient.invalidateQueries({ queryKey: [queryKey] });
   });
-  queryClient.invalidateQueries({ queryKey: ["type_graph_stats"] });
-  queryClient.invalidateQueries({ queryKey: ["get_type_graph_preview"] });
-  queryClient.invalidateQueries({ queryKey: ["get_links_to_type_id"] });
-  queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
-  queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
 };
 
 export function useGenerateTypeGraph() {
@@ -513,6 +604,16 @@ export function useGenerateTypeGraph() {
     onSettled: refreshTypeGraph(queryClient),
   });
 }
+
+export const useGenerateAll = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => invoke<void>("generate_all"),
+    onMutate: async () => {
+      queryClient.invalidateQueries();
+    },
+  });
+};
 
 export function useUploadTypeGraph() {
   const queryClient = useQueryClient();
@@ -859,6 +960,12 @@ export const useValidateCpuProfile = () => {
       queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
       queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
     },
+  });
+};
+
+export const useCancelGeneration = () => {
+  return useMutation({
+    mutationFn: async () => invoke<void>("cancel_generation"),
   });
 };
 

@@ -37,7 +37,7 @@ export const Step2Tsconfig = () => {
             select the <InlineCode>tsconfig.json</InlineCode> to use for type
             checking (TypeSlayer will run <InlineCode>tsc</InlineCode> with it)
           </Typography>
-          <Stack direction="row" gap={1}>
+          <Stack sx={{ flexDirection: "row", gap: 1, flexWrap: "wrap" }}>
             <Select
               value={selectedTsconfig.data ?? ""}
               onChange={onTsconfigChange}
@@ -112,7 +112,7 @@ export const Step2Tsconfig = () => {
               title="Customize Compiler Flags"
               variant="text"
               startIcon={<Flag fontSize="large" />}
-              sx={{ px: 2 }}
+              sx={{ px: 2, flexShrink: 0 }}
             >
               Customize Flags
             </Button>

@@ -74,6 +74,8 @@ pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
             commands::bug_report::create_bug_report,
             commands::bug_report::get_bug_report_files,
             commands::bug_report::upload_bug_report,
+            commands::generate::cancel_generation,
+            commands::generate::generate_all,
             commands::generate::generate_analyze_trace,
             commands::generate::generate_cpu_profile,
             commands::generate::generate_trace,

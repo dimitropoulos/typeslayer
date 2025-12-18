@@ -24,6 +24,7 @@ import { useLocation, useNavigate } from "@tanstack/react-router";
 import type { FC, JSX } from "react";
 import dimitropoulosAvatar from "../assets/dimitropoulos.png";
 import { AiMcpProgress } from "../pages/mcp";
+import { StartProgress } from "../pages/start/start";
 import { ActionBar } from "./action-bar";
 
 export type HeaderNavigationItem = {
@@ -65,6 +66,7 @@ export const NAVIGATION = [
     segment: "start/select-code",
     title: "Start",
     icon: <PlayCircle />,
+    progress: <StartProgress />,
   },
   {
     kind: "segment",

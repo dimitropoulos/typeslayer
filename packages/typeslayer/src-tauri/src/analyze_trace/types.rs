@@ -1,6 +1,7 @@
 use crate::{analyze_trace::depth_limits::DepthLimitKind, validate::trace_json::TraceEvent};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -57,7 +58,7 @@ pub struct HotSpot {
     #[serde(rename = "timeMs")]
     pub time_ms: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub path: Option<String>,
+    pub path: Option<PathBuf>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub types: Option<Vec<i64>>,
     #[serde(skip_serializing_if = "Option::is_none")]

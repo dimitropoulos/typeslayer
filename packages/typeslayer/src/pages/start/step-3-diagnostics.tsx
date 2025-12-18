@@ -1,36 +1,24 @@
 import { Insights } from "@mui/icons-material";
 import { Alert, Button, Stack } from "@mui/material";
-import { useNavigate } from "@tanstack/react-router";
-import {
-  type Dispatch,
-  type SetStateAction,
-  useCallback,
-  useState,
-} from "react";
+import { useCallback, useState } from "react";
 import { BigAction } from "../../components/big-action";
 import {
+  useCancelGeneration,
   useClearOutputs,
-  useGenerateAnalyzeTrace,
-  useGenerateCpuProfile,
-  useGenerateTrace,
-  useGenerateTypeGraph,
-  useTypeGraphNodesAndLinks,
+  useGenerateAll,
 } from "../../hooks/tauri-hooks";
 import { ErrorDialog } from "./error-dialog";
 import { Step } from "./step";
 
 export const Step3Diagnostics = ({
-  setIsFading,
-  setFadePhase,
+  onComplete,
 }: {
-  setIsFading: Dispatch<SetStateAction<boolean>>;
-  setFadePhase: Dispatch<SetStateAction<0 | 1 | 2>>;
+  onComplete: () => void;
 }) => {
-  const navigate = useNavigate();
   const { mutateAsync: clearOutputs } = useClearOutputs();
+  const { mutateAsync: cancelGeneration } = useCancelGeneration();
 
   // Processing state
-  const [processingStep, setProcessingStep] = useState<0 | 1 | 2 | 3 | 4>(0);
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [processingErrorStdout, setProcessingErrorStdout] = useState<
     string | null
@@ -43,12 +31,7 @@ export const Step3Diagnostics = ({
 
   const [isClearingOutputs, setIsClearingOutputs] = useState(false);
 
-  const { mutateAsync: onGenerateTrace } = useGenerateTrace();
-  const { mutateAsync: onGenerateCpuProfile } = useGenerateCpuProfile();
-  const { mutateAsync: onGenerateAnalyzeTrace } = useGenerateAnalyzeTrace();
-  const { mutateAsync: onGenerateTypeGraph } = useGenerateTypeGraph();
-  const { refetch: refetchTypeGraphNodesAndLinks } =
-    useTypeGraphNodesAndLinks();
+  const { mutateAsync: onGenerateAll } = useGenerateAll();
 
   // Sequential processing logic
   const processTypes = useCallback(async () => {
@@ -59,33 +42,8 @@ export const Step3Diagnostics = ({
     setIsErrorDialogOpen(false);
 
     try {
-      // 1. generate_trace
-      setProcessingStep(0);
-      await onGenerateTrace();
-
-      // 2. generate_cpu_profile
-      setProcessingStep(1);
-      await onGenerateCpuProfile();
-
-      // 3. generate_analyze_trace
-      setProcessingStep(2);
-      await onGenerateAnalyzeTrace();
-
-      // 4. build relations graph
-      setProcessingStep(3);
-      await onGenerateTypeGraph();
-
-      // done: trigger fade-to-black, animate logo morph over 1000ms, then navigate
-      setProcessingStep(4);
-      await refetchTypeGraphNodesAndLinks();
-      setIsFading(true);
-      setFadePhase(1);
-      setTimeout(() => setFadePhase(2), 500);
-      setTimeout(() => {
-        navigate({
-          to: "/type-graph",
-        });
-      }, 1500);
+      await onGenerateAll();
+      onComplete();
     } catch (e) {
       const rawMessage = e instanceof Error ? e.message : String(e);
       const normalizedMessage = normalizeInvokeError(rawMessage);
@@ -93,7 +51,6 @@ export const Step3Diagnostics = ({
         setProcessingError(null);
         setProcessingErrorStdout(null);
         setProcessingErrorStderr(null);
-        setProcessingStep(0);
       } else {
         const { summary, stdout, stderr } =
           splitCompilerError(normalizedMessage);
@@ -105,28 +62,22 @@ export const Step3Diagnostics = ({
     } finally {
       setIsProcessing(false);
     }
-  }, [
-    navigate,
-    onGenerateTrace,
-    onGenerateCpuProfile,
-    onGenerateAnalyzeTrace,
-    onGenerateTypeGraph,
-    setFadePhase,
-    setIsFading,
-    refetchTypeGraphNodesAndLinks,
-  ]);
+  }, [onGenerateAll, onComplete]);
 
   const handleClearOrCancel = useCallback(async () => {
     setIsClearingOutputs(true);
     try {
-      await clearOutputs(isProcessing);
-      setProcessingError(null);
-      setProcessingErrorStdout(null);
-      setProcessingErrorStderr(null);
-      setIsErrorDialogOpen(false);
-      setProcessingStep(0);
       if (isProcessing) {
+        // Cancel any running generation
+        await cancelGeneration();
         setIsProcessing(false);
+      } else {
+        // Clear outputs when not processing
+        await clearOutputs(false);
+        setProcessingError(null);
+        setProcessingErrorStdout(null);
+        setProcessingErrorStderr(null);
+        setIsErrorDialogOpen(false);
       }
     } catch (error) {
       console.error("Failed to clear outputs:", error);
@@ -140,7 +91,7 @@ export const Step3Diagnostics = ({
     } finally {
       setIsClearingOutputs(false);
     }
-  }, [isProcessing, clearOutputs]);
+  }, [isProcessing, clearOutputs, cancelGeneration]);
 
   return (
     <>
@@ -167,25 +118,25 @@ export const Step3Diagnostics = ({
               title="Identify Types"
               description="generates event traces and and identification for all types from the TypeScript compiler checking your codebase"
               unlocks={["Search Types", "Perfetto"]}
-              isLoading={isProcessing && processingStep === 0}
+              taskId="generate_trace"
             />
             <BigAction
               title="CPU Profile"
               description="a v8 CPU profile from the TypeScript compiler during type checking (a critical tool for identifying bottlenecks)"
               unlocks={["SpeedScope"]}
-              isLoading={isProcessing && processingStep === 1}
+              taskId="generate_cpu_profile"
             />
             <BigAction
               title="Analyze Hot Spots"
               description="identifies computational hot-spots in your type checking, duplicate type packages inclusions, and unterminated events"
               unlocks={["Treemap", "Award Winners"]}
-              isLoading={isProcessing && processingStep === 2}
+              taskId="generate_analyze_trace"
             />
             <BigAction
               title="Type Graph"
               description="creates a graph of all types and their relationships to visualize complex type dependencies"
               unlocks={["Type Graph"]}
-              isLoading={isProcessing && processingStep === 3}
+              taskId="generate_type_graph"
             />
           </Stack>
           <Stack direction="row" gap={2} alignItems="center">

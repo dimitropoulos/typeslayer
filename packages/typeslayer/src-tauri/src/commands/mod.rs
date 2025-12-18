@@ -7,6 +7,7 @@ pub mod mcp;
 pub mod preview;
 pub mod query;
 pub mod settings;
+pub mod tasks;
 pub mod treemap;
 pub mod trivia;
 pub mod upload;

@@ -3,6 +3,7 @@ use crate::{
         AnalyzeTraceOptions, AnalyzeTraceResult, analyze_trace, constants::ANALYZE_TRACE_FILENAME,
     },
     app_data::AppData,
+    commands::tasks::{TaskId, start_task},
     process_controller::ProcessController,
     type_graph::{TYPE_GRAPH_FILENAME, TypeGraph},
     utils::make_cli_arg,
@@ -58,10 +59,12 @@ pub async fn validate_types_and_trace_async(
 
 #[tauri::command]
 pub async fn generate_trace(
+    app: AppHandle,
     app_data: State<'_, &Mutex<AppData>>,
     process_controller: State<'_, ProcessController>,
 ) -> Result<(), String> {
-    // Clone the entire AppData to move into the blocking task
+    let _guard = start_task(app, TaskId::GenerateTrace)?;
+
     let mut data = app_data.lock().await;
     let outputs_dir = data.outputs_dir().to_string_lossy().to_string();
 
@@ -109,9 +112,12 @@ pub async fn generate_trace(
 
 #[tauri::command]
 pub async fn generate_cpu_profile(
+    app: AppHandle,
     state: State<'_, &Mutex<AppData>>,
     process_controller: State<'_, ProcessController>,
 ) -> Result<(), String> {
+    let _guard = start_task(app, TaskId::GenerateCpuProfile)?;
+
     let mut data = state.lock().await;
     let outputs_dir = data.outputs_dir().to_string_lossy().to_string();
 
@@ -146,9 +152,12 @@ pub async fn generate_cpu_profile(
 
 #[tauri::command]
 pub async fn generate_analyze_trace(
+    app: AppHandle,
     state: State<'_, &Mutex<AppData>>,
     options: Option<AnalyzeTraceOptions>,
 ) -> Result<(), String> {
+    let _guard = start_task(app, TaskId::GenerateAnalyzeTrace)?;
+
     let mut data = state.lock().await;
     let outputs_dir = data.outputs_dir().to_string_lossy().to_string();
     debug!(
@@ -189,9 +198,11 @@ pub async fn generate_analyze_trace(
 /// Build the in-memory graph from the loaded `types_json` and store in AppData via `State`.
 #[tauri::command]
 pub async fn generate_type_graph(
-    _app: AppHandle,
+    app: AppHandle,
     state: State<'_, &Mutex<AppData>>,
 ) -> Result<(), String> {
+    let _guard = start_task(app, TaskId::GenerateTypeGraph)?;
+
     let mut app_data = state.lock().await;
     let types: &TypesJsonSchema = {
         // Check if both types.json and trace.json exist
@@ -222,4 +233,24 @@ pub async fn generate_type_graph(
         .map_err(|e| format!("Failed to write {}: {e}", path.display()))?;
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn generate_all(
+    app: AppHandle,
+    state: State<'_, &Mutex<AppData>>,
+    process_controller: State<'_, ProcessController>,
+) -> Result<(), String> {
+    generate_trace(app.clone(), state.clone(), process_controller.clone()).await?;
+    generate_cpu_profile(app.clone(), state.clone(), process_controller.clone()).await?;
+    generate_analyze_trace(app.clone(), state.clone(), None).await?;
+    generate_type_graph(app.clone(), state.clone()).await?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn cancel_generation(
+    process_controller: State<'_, ProcessController>,
+) -> Result<(), String> {
+    process_controller.request_cancel()
 }

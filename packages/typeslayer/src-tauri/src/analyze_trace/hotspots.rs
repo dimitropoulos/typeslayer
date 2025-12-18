@@ -1,4 +1,7 @@
-use crate::analyze_trace::types::{AnalyzeTraceOptions, EventSpan, EventSpanEvent, HotSpot};
+use crate::{
+    analyze_trace::types::{AnalyzeTraceOptions, EventSpan, EventSpanEvent, HotSpot},
+    validate::trace_json::TraceEvent,
+};
 use std::path::Path;
 
 pub fn get_hotspots(
@@ -21,19 +24,11 @@ fn get_hotspots_worker(
         if event.cat() == "check" {
             // Try to extract path from various check events
             let path_opt = match event {
-                crate::validate::trace_json::TraceEvent::CheckExpression { args, .. } => {
-                    args.path.as_deref()
-                }
-                crate::validate::trace_json::TraceEvent::CheckVariableDeclaration {
-                    args, ..
-                }
-                | crate::validate::trace_json::TraceEvent::CheckDeferredNode { args, .. } => {
-                    Some(args.path.as_str())
-                }
-                crate::validate::trace_json::TraceEvent::CheckSourceFile { args, .. }
-                | crate::validate::trace_json::TraceEvent::CheckSourceFileNodes { args, .. } => {
-                    Some(args.path.as_str())
-                }
+                TraceEvent::CheckExpression { args, .. } => args.path.as_deref(),
+                TraceEvent::CheckVariableDeclaration { args, .. }
+                | TraceEvent::CheckDeferredNode { args, .. } => Some(args.path.as_str()),
+                TraceEvent::CheckSourceFile { args, .. }
+                | TraceEvent::CheckSourceFileNodes { args, .. } => Some(args.path.as_str()),
                 _ => None,
             };
             if let Some(path) = path_opt {
@@ -63,16 +58,16 @@ fn make_hot_frame(span: &EventSpan, children: Vec<HotSpot>) -> Result<HotSpot, V
     let time_ms = (span.duration / 1000.0).round() as i64;
 
     if let EventSpanEvent::TraceEvent(event) = &span.event {
-        use crate::validate::trace_json::TraceEvent;
+        use TraceEvent;
 
         match event {
             TraceEvent::CheckSourceFile { args, .. } => {
-                let normalized_path = Path::new(&args.path).to_string_lossy().to_string();
+                let path = Path::new(&args.path).to_path_buf();
 
                 Ok(HotSpot {
-                    description: format!("Check file {}", normalized_path),
+                    description: format!("Check file {}", path.display()),
                     time_ms,
-                    path: Some(normalized_path),
+                    path: Some(path),
                     children,
                     types: None,
                     start_line: None,
@@ -110,10 +105,7 @@ fn make_hot_frame(span: &EventSpan, children: Vec<HotSpot>) -> Result<HotSpot, V
                 end_offset: None,
             }),
             TraceEvent::CheckExpression { args, .. } => {
-                let path = args
-                    .path
-                    .as_ref()
-                    .map(|p| Path::new(p).to_string_lossy().to_string());
+                let path = args.path.as_ref().map(|p| Path::new(p).to_path_buf());
 
                 Ok(HotSpot {
                     description: event.name().to_string(),
@@ -130,7 +122,7 @@ fn make_hot_frame(span: &EventSpan, children: Vec<HotSpot>) -> Result<HotSpot, V
                 })
             }
             TraceEvent::CheckVariableDeclaration { args, .. } => {
-                let path = Some(Path::new(&args.path).to_string_lossy().to_string());
+                let path = Some(Path::new(&args.path).to_path_buf());
 
                 Ok(HotSpot {
                     description: event.name().to_string(),

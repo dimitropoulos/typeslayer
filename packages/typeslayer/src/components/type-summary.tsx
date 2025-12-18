@@ -183,7 +183,10 @@ export function TypeSummary({
         "&:hover .summaryAction": { visibility: "visible" },
       }}
     >
-      <Typography color="secondary" sx={{ fontFamily: "monospace" }}>
+      <Typography
+        color="secondary"
+        sx={{ fontFamily: "monospace", whiteSpace: "nowrap" }}
+      >
         {name}
       </Typography>
       <Typography sx={{ fontFamily: "monospace" }}>id:{typeId}</Typography>

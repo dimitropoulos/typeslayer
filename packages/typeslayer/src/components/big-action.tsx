@@ -3,7 +3,8 @@ import { Box, Chip, Stack, useTheme } from "@mui/material";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { type TaskId, useTaskProgress } from "../hooks/tauri-hooks";
 import { NAVIGATION, type NavigationItem } from "./navigation";
 
 type ItemsWithTitle<
@@ -24,58 +25,34 @@ export function BigAction({
   title,
   description,
   unlocks,
-  isLoading,
+  taskId,
 }: {
   title: string;
   description: string;
   unlocks: Unlocks;
-  isLoading: boolean;
+  taskId: TaskId;
 }) {
   const theme = useTheme();
-  const [elapsedMs, setElapsedMs] = useState<number | null>(null);
-  const startTimeRef = useRef<number | null>(null);
-  const timerRef = useRef<number | null>(null);
+  const [now, setNow] = useState(Date.now());
+  const { data: taskProgress } = useTaskProgress(taskId);
+
+  const isLoading = taskProgress && !taskProgress.done;
 
   useEffect(() => {
-    if (isLoading) {
-      if (startTimeRef.current === null) {
-        startTimeRef.current = Date.now();
-        setElapsedMs(0);
-      }
-      if (timerRef.current === null) {
-        timerRef.current = window.setInterval(() => {
-          if (startTimeRef.current !== null) {
-            setElapsedMs(Date.now() - startTimeRef.current);
-          }
-        }, 1000);
-      }
-    } else {
-      if (timerRef.current !== null) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      startTimeRef.current = null;
-      setElapsedMs(null);
+    if (!isLoading) {
+      return;
     }
 
-    return () => {
-      if (timerRef.current !== null && !isLoading) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    };
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+
+    return () => clearInterval(interval);
   }, [isLoading]);
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current !== null) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, []);
-
-  const elapsedSeconds = Math.max(0, Math.floor((elapsedMs ?? 0) / 1000));
-  const showStopwatch = isLoading && elapsedMs !== null;
+  const elapsedMs = isLoading ? now - taskProgress.start : 0;
+  const elapsedSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
+  const showStopwatch = isLoading;
   return (
     <Card
       sx={{
@@ -83,20 +60,22 @@ export function BigAction({
         maxWidth: 525,
         transition: "all 0.3s ease-in-out",
         border: `1px solid ${theme.palette.divider}`,
-        ...(isLoading && {
-          outline: "3px solid",
-          outlineColor: "primary.main",
-          boxShadow: `0 0 20px ${theme.palette.secondary.main}80`,
-          animation: "pulse 2s ease-in-out infinite",
-          "@keyframes pulse": {
-            "0%, 100%": {
+        ...(isLoading
+          ? {
+              outline: "3px solid",
+              outlineColor: "primary.main",
               boxShadow: `0 0 20px ${theme.palette.secondary.main}80`,
-            },
-            "50%": {
-              boxShadow: `0 0 30px ${theme.palette.secondary.main}80`,
-            },
-          },
-        }),
+              animation: "pulse 2s ease-in-out infinite",
+              "@keyframes pulse": {
+                "0%, 100%": {
+                  boxShadow: `0 0 20px ${theme.palette.secondary.main}80`,
+                },
+                "50%": {
+                  boxShadow: `0 0 30px ${theme.palette.secondary.main}80`,
+                },
+              },
+            }
+          : {}),
         ".MuiCardContent-root:last-child": {
           pb: 2,
         },
