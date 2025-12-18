@@ -193,25 +193,16 @@ impl AppData {
 
         let mut args = vec![];
         match self.package_manager {
-            PackageManager::Bun => args.extend(["bun", "x"]),
-            PackageManager::NPM => args.extend(["npm", "exec"]),
-            PackageManager::PNPM => args.extend(["pnpm", "exec"]),
-            PackageManager::Yarn => args.extend(["yarn"]),
+            // Yarn PNP may be enabled which puts dependencies in a .zip file.
+            // `require` is patched by Yarn to support this.
+            // This means it's critically important Node is run through Yarn.
+            PackageManager::Yarn => args.extend(["yarn", "node"]),
+
+            // Everything else is unlikely to be different but better safe than sorry.
+            PackageManager::PNPM => args.extend(["pnpm", "exec", "node"]),
+            PackageManager::Bun => args.extend(["bun", "run", "node"]),
+            PackageManager::NPM => args.extend(["node"]),
         };
-
-        #[cfg(target_os = "windows")]
-        args.push("\"--\""); // this is absolutely insane that this is required on windows.  how.  just HOW.
-        #[cfg(not(target_os = "windows"))]
-        args.push("--");
-        args.push("tsc");
-
-        if self.settings.extra_tsc_flags != "" {
-            args.push(&self.settings.extra_tsc_flags);
-        }
-
-        if user_flags != "" {
-            args.push(user_flags);
-        }
 
         // Only here to satisfy lifetimes. Super let when?
         let max_stack_size_string: String;
@@ -219,6 +210,32 @@ impl AppData {
             args.push("--stack-size");
             max_stack_size_string = size.to_string();
             args.push(&max_stack_size_string);
+        }
+
+        // Only here to satisfy lifetimes. Super let when?
+        let max_old_space_size_string: String;
+        if let Some(max_old_space_size) = self.settings.max_old_space_size {
+            args.push("--max-old-space-size");
+            max_old_space_size_string = format!("{max_old_space_size}");
+            args.push(&max_old_space_size_string);
+        }
+
+        args.push("--eval");
+        args.push(r#"'require("typescript/bin/tsc")'"#);
+
+        // This "dummy-arg" is seemingly unavoidable for three reasons:
+        // 1) TypeScript itself expects to be called as `node path/to/tsc.js` which results in the first two args to `process.argv` being set to something like `["path/to-node", "path/to/tsc.js", ...]`.
+        //    Therefore it ignores the first two args but when `node --eval` is called `process.argv` would ordinarily be set to just `["path/to/node", ...]`.
+        // 2) Something like `node --eval 'require("typescript/bin/tsc")' --project ...` will interpret `--project` as a flag to Node and error with "node: bad option: --project".
+        // 3) The `--` pattern that is more idiomatic is unfortunately always completely stripped by `yarn node` in 1.0, even if there are multiple. Though even if it didn't it'd need to be `-- --` because Node will strip the first `--`, correctly, as that indicates the end of its args leaving TypeScript still needing a dummy arg.
+        args.push("dummy-arg");
+
+        if self.settings.extra_tsc_flags != "" {
+            args.push(&self.settings.extra_tsc_flags);
+        }
+
+        if user_flags != "" {
+            args.push(user_flags);
         }
 
         // Only here to satisfy lifetimes. Super let when?
@@ -232,20 +249,10 @@ impl AppData {
             }
         }
 
-        let mut env = Vec::new();
-        if self.settings.max_old_space_size.is_some() {
-            let size = self.settings.max_old_space_size.unwrap();
-            env.push((
-                "NODE_OPTIONS".to_string(),
-                format!("--max-old-space-size={size}"),
-            ));
-        }
-
         Ok(TSCCommand {
             shell,
             shell_arg: shell_arg.to_string(),
             command: args.join(" "),
-            env,
         })
     }
 
@@ -284,7 +291,7 @@ impl AppData {
         #[cfg(not(target_os = "windows"))]
         cmd.arg(tsc_command.command);
 
-        cmd.current_dir(&cwd).envs(tsc_command.env);
+        cmd.current_dir(&cwd);
 
         let output = process_controller.run_command(cmd).await?;
         let Some(mut output) = output else {
