@@ -57,16 +57,14 @@ const maxStackSizeOptions = [
   { value: 984, label: "(the Node.js default)" },
   {
     value: 2048,
-    label: "(the fact that you have to do this at all is sorta worrying)",
+    label: "(the fact that you have to do this at all is sorta concerning, tbh)",
   },
-  { value: 4096, label: "(why wasn't doubling the default enough? srsly?)" },
+  { value: 4096, label: "(why wasn't doubling the default enough?? srsly?)" },
   {
     value: 16384,
     label: "(looks like someone's getting a segfault for Christmas.)",
   },
 ];
-
-const STILL_CANT_PASS_NODE_OPTIONS_AS_AN_ENV_VAR_OR_AT_LEAST_HAVE_SOME_WAY_TO_PASS_THEM_AS_A_COMMAND_LINE_ARGUMENT_TO_A_PACKAGE_MANAGER = true;
 
 export function FlagsCustomizationDialog({
   open,
@@ -261,7 +259,6 @@ export function FlagsCustomizationDialog({
           ) : null}
         </FormGroup>
 
-        {STILL_CANT_PASS_NODE_OPTIONS_AS_AN_ENV_VAR_OR_AT_LEAST_HAVE_SOME_WAY_TO_PASS_THEM_AS_A_COMMAND_LINE_ARGUMENT_TO_A_PACKAGE_MANAGER ? null : (
           <FormGroup
             sx={{
               mt: 1,
@@ -303,7 +300,6 @@ export function FlagsCustomizationDialog({
               </Select>
             ) : null}
           </FormGroup>
-        )}
 
         <Typography variant="h6" sx={{ mt: 4, mb: 1 }}>
           Example
