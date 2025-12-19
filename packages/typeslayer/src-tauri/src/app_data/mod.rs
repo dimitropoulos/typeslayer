@@ -225,7 +225,16 @@ impl AppData {
         }
 
         args.push("--eval");
-        args.push(r#"'require("typescript/bin/tsc")'"#);
+
+        // Only here to satisfy lifetimes. Super let when?
+        let compiler_require: String;
+        let compiler_variant = self.settings.typescript_compiler_variant;
+        compiler_require = format!(
+            r#"'require("{}/bin/{}")'"#,
+            compiler_variant.npm_package(),
+            compiler_variant.as_str()
+        );
+        args.push(&compiler_require);
 
         // This "dummy-arg" `slay-gurrrl-slay` is seemingly unavoidable for three reasons:
         // 1) TypeScript itself expects to be called as `node path/to/tsc.js` which results in the first two args to `process.argv` being set to something like `["path/to-node", "path/to/tsc.js", ...]`.

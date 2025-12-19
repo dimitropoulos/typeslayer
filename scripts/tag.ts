@@ -43,6 +43,10 @@ const packages = [
     name: "@typeslayer/win32-x64",
     path: join(rootDir, "npm", "win32-x64", "package.json"),
   },
+  {
+    name: "tauri.conf.json",
+    path: join(rootDir, "packages", "typeslayer", "src-tauri", "tauri.conf.json"),
+  },
 ];
 
 let allMatch = true;

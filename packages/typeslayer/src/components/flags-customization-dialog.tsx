@@ -6,8 +6,11 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
   FormControlLabel,
   FormGroup,
+  FormHelperText,
+  InputLabel,
   MenuItem,
   Select,
   type SelectChangeEvent,
@@ -23,10 +26,16 @@ import {
   useMaxStackSize,
   useProjectRoot,
   useTscExample,
+  useTypeScriptCompilerVariant,
 } from "../hooks/tauri-hooks";
 import { Code } from "./code";
 import { InlineCode } from "./inline-code";
-import { formatBytesSize, processTscExample } from "./utils";
+import {
+  formatBytesSize,
+  processTscExample,
+  type TypeScriptCompilerVariant,
+  typeScriptCompilerVariants,
+} from "./utils";
 
 export type FlagsCustomizationDialogProps = {
   readonly open: boolean;
@@ -81,6 +90,9 @@ export function FlagsCustomizationDialog({
   const { data: tscExample } = useTscExample();
   const { data: applyTscProjectFlag, set: setApplyTscProjectFlag } =
     useApplyTscProjectFlag();
+
+  const { data: typescriptCompilerVariant, set: setTypeScriptCompilerVariant } =
+    useTypeScriptCompilerVariant();
 
   const {
     data: maxOldSpaceSize,
@@ -171,7 +183,44 @@ export function FlagsCustomizationDialog({
     >
       <DialogTitle>Customize TypeScript Compiler Flags</DialogTitle>
       <DialogContent dividers>
-        <Stack sx={{ flexDirection: "row", gap: 2, mt: 1 }}>
+        <FormControl
+          error={typescriptCompilerVariant === "tsgo"}
+          sx={{ mb: 2 }}
+        >
+          <InputLabel id="typescript-compiler-variant-label">
+            TypeScript Compiler
+          </InputLabel>
+          <Select
+            labelId="typescript-compiler-variant-label"
+            value={typescriptCompilerVariant}
+            onChange={async e => {
+              await setTypeScriptCompilerVariant(
+                e.target.value as TypeScriptCompilerVariant,
+              );
+            }}
+            size="small"
+            disabled={isLoading}
+          >
+            {typeScriptCompilerVariants.map(variant => (
+              <MenuItem key={variant} value={variant}>
+                <InlineCode>{variant}</InlineCode>
+              </MenuItem>
+            ))}
+          </Select>
+
+          {typescriptCompilerVariant === "tsgo" ? (
+            <FormHelperText>
+              I'm not gonna stop you, but just so you know: at the time of this
+              version of TypeSlayer, <InlineCode>tsgo</InlineCode> doesn't yet
+              have the capability to generate the trace files required to make
+              TypeSlayer do its slaying. you're free to try, but please don't
+              report when it doesn't work - the flags literally aren't
+              implemented yet.
+            </FormHelperText>
+          ) : null}
+        </FormControl>
+
+        <Stack sx={{ flexDirection: "row", gap: 2, mt: 1, mb: 3 }}>
           <TextField
             fullWidth
             label="Extra TSC Flags"
@@ -182,6 +231,13 @@ export function FlagsCustomizationDialog({
             onKeyDown={handleKeyDown}
             autoFocus
             disabled={isLoading}
+            slotProps={{
+              inputLabel: {
+                sx: {
+                  mb: 0,
+                },
+              },
+            }}
           />
           <Button
             onClick={handleResetToDefault}

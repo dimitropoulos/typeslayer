@@ -9,6 +9,7 @@ import "@fontsource/roboto/400.css";
 import "@fontsource/roboto/500.css";
 import "@fontsource/roboto/700.css";
 import { ThemeProvider } from "@mui/material";
+import { LogoFadeProvider } from "./contexts/logo-fade-context";
 import { ToastProvider } from "./contexts/toast-context";
 import { theme } from "./theme";
 
@@ -41,7 +42,9 @@ ReactDOM.createRoot(root).render(
     <ThemeProvider theme={theme}>
       <ToastProvider>
         <CssBaseline />
-        <AppRouterProvider />
+        <LogoFadeProvider>
+          <AppRouterProvider />
+        </LogoFadeProvider>
       </ToastProvider>
     </ThemeProvider>
     {/* <ReactQueryDevtools initialIsOpen={false} /> */}

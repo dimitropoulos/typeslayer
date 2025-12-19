@@ -42,13 +42,16 @@ const LastDitchEffort = ({ typeId }: { typeId: number }) => {
     return (
       <Stack gap={1}>
         <Typography color="textSecondary">
-          no types found with relations to <InlineCode>{typeId}</InlineCode>.
+          no other types reference <InlineCode>{typeId}</InlineCode>
         </Typography>
         <Typography color="textDisabled" maxWidth="610px">
-          that means that TypeScript didn't record any more information about
-          this type other than that it exists in your code. it's pretty common -
-          basically this is a type that was either a top level export or was
-          never used by anything else in your program (or both).
+          that means that there are no other types that have relations pointing
+          to this type. this type may still have types it points to (which
+          you'll see on the panel to the left). TypeSlayer also went ahead and
+          searched all trace events for references to this type and didn't find
+          anything. it's pretty common - basically this is a type that was
+          either a top level export or was never used by anything else in your
+          program (or both).
         </Typography>
       </Stack>
     );

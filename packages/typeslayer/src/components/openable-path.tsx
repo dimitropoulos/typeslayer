@@ -73,6 +73,7 @@ export function OpenablePath({
         },
         alignItems: "center",
         gap: 1,
+        wordBreak: "break-all",
       }}
       key={exactLocation}
       onClick={findInPage}

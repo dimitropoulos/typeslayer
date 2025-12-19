@@ -314,7 +314,7 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
         <Typography>{description}</Typography>
       </Stack>
 
-      <Stack direction="row" gap={2}>
+      <Stack sx={{ gap: 1, flexDirection: "row", flexWrap: "wrap" }}>
         <Button
           variant="outlined"
           onClick={onValidate}

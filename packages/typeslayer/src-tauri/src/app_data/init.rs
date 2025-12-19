@@ -1,6 +1,6 @@
 use crate::{
     analyze_trace::{AnalyzeTraceResult, constants::ANALYZE_TRACE_FILENAME},
-    app_data::Settings,
+    app_data::{Settings, settings::TypeScriptCompilerVariant},
     layercake::{LayerCake, ResolveBoolArgs, ResolveStringArgs},
     type_graph::{TYPE_GRAPH_FILENAME, TypeGraph},
     utils::{
@@ -266,6 +266,22 @@ pub fn init_settings(cake: &LayerCake) -> Settings {
             Some(val.parse::<i32>().unwrap())
         }
     };
+    let typescript_compiler_variant = {
+        let variant_str = cake.resolve_string(ResolveStringArgs {
+            env: "TYPESCRIPT_COMPILER_VARIANT",
+            flag: "--typescript-compiler-variant",
+            file: "settings.typescriptCompilerVariant",
+            default: || TypeScriptCompilerVariant::default().as_str().to_string(),
+            validate: |s| {
+                s.parse::<TypeScriptCompilerVariant>()
+                    .map(|_| s.to_string())
+                    .map_err(|_| format!("Invalid TypeScript compiler variant '{}'", s))
+            },
+        });
+        variant_str
+            .parse::<TypeScriptCompilerVariant>()
+            .unwrap_or_else(|_| TypeScriptCompilerVariant::default())
+    };
     Settings {
         relative_paths,
         prefer_editor_open,
@@ -275,6 +291,7 @@ pub fn init_settings(cake: &LayerCake) -> Settings {
         apply_tsc_project_flag,
         max_old_space_size,
         max_stack_size,
+        typescript_compiler_variant,
     }
 }
 

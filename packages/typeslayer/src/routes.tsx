@@ -16,6 +16,7 @@ import { RawData } from "./pages/raw-data";
 import { SearchTypes } from "./pages/search";
 import { SettingsPage } from "./pages/settings";
 import { SpeedScope } from "./pages/speedscope";
+import { LogoFade } from "./pages/start/logo-fade";
 import { Start } from "./pages/start/start";
 import { Treemap } from "./pages/treemap";
 import { TypeGraph } from "./pages/type-graph";
@@ -185,7 +186,12 @@ const router = createRouter({
 
 // Export the router provider
 export function AppRouterProvider() {
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <RouterProvider router={router} />
+      <LogoFade router={router} />
+    </>
+  );
 }
 
 // Type augmentation for router

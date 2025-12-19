@@ -1,5 +1,12 @@
 import { Hub, Search, Share } from "@mui/icons-material";
-import { Chip, IconButton, Skeleton, Stack, Typography } from "@mui/material";
+import {
+  Chip,
+  IconButton,
+  Skeleton,
+  Stack,
+  type SxProps,
+  Typography,
+} from "@mui/material";
 import { useNavigate } from "@tanstack/react-router";
 import type { ResolvedType } from "@typeslayer/validate";
 import { useCallback, useState } from "react";
@@ -161,6 +168,7 @@ export function TypeSummary({
   name,
   suppressActions = false,
   typeId,
+  sx = {},
 }: {
   flags: ResolvedType["flags"];
   loading?: boolean;
@@ -168,6 +176,7 @@ export function TypeSummary({
   showFlags: boolean;
   suppressActions?: boolean;
   typeId: number;
+  sx?: SxProps | undefined;
 }) {
   if (loading) {
     return <TypeSummarySkeleton showFlags={showFlags} />;
@@ -181,6 +190,7 @@ export function TypeSummary({
         alignItems: "center",
         "& .summaryAction": { visibility: "hidden" },
         "&:hover .summaryAction": { visibility: "visible" },
+        ...sx,
       }}
     >
       <Typography

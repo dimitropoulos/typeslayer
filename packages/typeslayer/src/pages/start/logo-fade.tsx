@@ -1,8 +1,9 @@
 import { Box } from "@mui/material";
-import { useNavigate } from "@tanstack/react-router";
+import type { Register } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import typeslayerLogo from "../../assets/typeslayer.png";
 import typeslayerNightmareLogo from "../../assets/typeslayer-nightmare.png";
+import { useLogoFade } from "../../contexts/logo-fade-context";
 import { useTypeGraphNodesAndLinks } from "../../hooks/tauri-hooks";
 
 const phase = {
@@ -13,10 +14,10 @@ const phase = {
 } as const;
 
 const timeTo = {
-  startFirstLogo: 500,
-  startSecondLogo: 1000,
+  startFirstLogo: 250,
+  startSecondLogo: 750,
 
-  transitionOpacity: 1000,
+  transitionBackground: 500,
   transitionFirstLogo: 500,
   transitionNightmare: 1500,
 };
@@ -30,41 +31,67 @@ const imgSx = {
   objectFit: "contain",
 } as const;
 
-export const LogoFade = () => {
-  const navigate = useNavigate();
+export const LogoFade = ({ router }: { router: Register["router"] }) => {
   const { refetch: refetchTypeGraphNodesAndLinks } =
     useTypeGraphNodesAndLinks();
+  const { shouldShowLogoFade, setShouldShowLogoFade } = useLogoFade();
 
   const [fadePhase, setFadePhase] = useState<
     (typeof phase)[keyof typeof phase]
   >(phase.clear);
 
+  console.log({ shouldShowLogoFade, fadePhase });
+
   useEffect(() => {
-    console.log("starting logo fade", Date.now());
+    if (!shouldShowLogoFade) {
+      return;
+    }
+
     setFadePhase(phase.fadeToBlack);
 
     const timeoutFirstLogoIn = setTimeout(() => {
       setFadePhase(phase.firstLogoIn);
     }, timeTo.startFirstLogo);
 
+    let closingUp: NodeJS.Timeout;
+
     const timeoutSecondLogoIn = setTimeout(() => {
       setFadePhase(phase.secondLogoIn);
-      refetchTypeGraphNodesAndLinks()
-        .then(() => {
-          navigate({
-            to: "/type-graph",
-          });
-        })
+      console.log("navigating to /type-graph");
+      const action = async () => {
+        await refetchTypeGraphNodesAndLinks();
+        await router.navigate({
+          to: "/type-graph",
+        });
+      };
+
+      action()
         .catch(err => {
           console.error("error refetching type graph nodes and links", err);
+        })
+        .finally(() => {
+          setFadePhase(phase.clear);
+          closingUp = setTimeout(() => {
+            setShouldShowLogoFade(false);
+          }, timeTo.transitionBackground);
         });
     }, timeTo.startSecondLogo);
 
     return () => {
       clearTimeout(timeoutFirstLogoIn);
       clearTimeout(timeoutSecondLogoIn);
+      clearTimeout(closingUp);
     };
-  }, [navigate, refetchTypeGraphNodesAndLinks]);
+  }, [
+    shouldShowLogoFade,
+    router.navigate,
+    refetchTypeGraphNodesAndLinks,
+    setShouldShowLogoFade,
+  ]);
+
+  if (!shouldShowLogoFade) {
+    return null;
+  }
 
   return (
     <Box
@@ -72,15 +99,15 @@ export const LogoFade = () => {
         position: "fixed",
         height: "100vh",
         width: "100vw",
+        display: "flex",
         alignItems: "center",
         justifyContent: "center",
         overflow: "hidden",
         inset: 0,
-        opacity: fadePhase > phase.clear ? 1 : 0,
-        bgcolor: "black",
-        pointerEvents: "none",
-        display: "flex",
-        transition: `opacity ${timeTo.transitionOpacity}ms ease-in`,
+        opacity: fadePhase >= phase.fadeToBlack ? 1 : 0,
+        backgroundColor: "black",
+        pointerEvents: "auto",
+        transition: `opacity ${timeTo.transitionBackground}ms ease-in-out`,
         zIndex: t => t.zIndex.modal + 1,
       }}
     >
@@ -91,7 +118,7 @@ export const LogoFade = () => {
           style={{
             ...imgSx,
             opacity: fadePhase >= phase.firstLogoIn ? 1 : 0,
-            transition: `opacity ${timeTo.transitionFirstLogo}ms ease-in`,
+            transition: `opacity ${timeTo.transitionFirstLogo}ms ease-in-out`,
           }}
         />
         <img
@@ -101,7 +128,7 @@ export const LogoFade = () => {
             ...imgSx,
             paddingTop: "14px",
             opacity: fadePhase >= phase.secondLogoIn ? 1 : 0,
-            transition: `opacity ${timeTo.transitionNightmare}ms ease-in`,
+            transition: `opacity ${timeTo.transitionNightmare}ms ease-in-out`,
           }}
         />
       </Box>

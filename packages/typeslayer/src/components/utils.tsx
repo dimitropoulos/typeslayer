@@ -163,3 +163,8 @@ export const detectPlatformSlash = () => {
   const platform = window.navigator.platform.toLowerCase();
   return platform.includes("win") ? "\\" : "/";
 };
+
+export const typeScriptCompilerVariants = ["tsc", "vue-tsc", "tsgo"] as const;
+
+export type TypeScriptCompilerVariant =
+  (typeof typeScriptCompilerVariants)[number];

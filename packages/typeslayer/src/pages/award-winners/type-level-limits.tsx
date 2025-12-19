@@ -109,7 +109,8 @@ export const TypeLevelLimitAward = ({
           getKey={current =>
             `${current.args.typeId}-${current.args.instantiationCount}-${current.args.instantiationDepth}:${current.ts}`
           }
-          getTypeId={current => current.args.typeId}
+          getListItemTypeId={current => current.args.typeId}
+          tabs={event => [{ tabName: "Type", content: event.args.typeId }]}
         />
       );
 
@@ -130,7 +131,13 @@ export const TypeLevelLimitAward = ({
           getKey={current =>
             `${current.args.sourceId}-${current.args.sourceId}:${current.ts}`
           }
-          getTypeId={current => current.args.sourceId}
+          getListItemTypeId={current => current.args.sourceId}
+          tabs={event => [
+            { tabName: "Source", content: event.args.sourceId },
+            { tabName: "Source Stack", content: event.args.sourceIdStack },
+            { tabName: "Target", content: event.args.targetId },
+            { tabName: "Target Stack", content: event.args.targetIdStack },
+          ]}
         />
       );
 
@@ -154,7 +161,11 @@ export const TypeLevelLimitAward = ({
           getKey={current =>
             `${current.args.sourceId}-${current.args.targetId}:${current.ts}`
           }
-          getTypeId={current => current.args.sourceId}
+          getListItemTypeId={current => current.args.sourceId}
+          tabs={event => [
+            { tabName: "Source", content: event.args.sourceId },
+            { tabName: "Target", content: event.args.targetId },
+          ]}
         />
       );
 
@@ -173,7 +184,13 @@ export const TypeLevelLimitAward = ({
             />
           )}
           getKey={current => `${current.args.typeIds.join("-")}:${current.ts}`}
-          getTypeId={current => current.args.typeIds[0]}
+          getListItemTypeId={current => current.args.typeIds[0]} // TODO this is wrong.  show many.
+          tabs={event => [
+            {
+              tabName: "Types",
+              content: event.args.typeIds,
+            },
+          ]}
         />
       );
 
@@ -194,7 +211,11 @@ export const TypeLevelLimitAward = ({
           getKey={current =>
             `${current.args.sourceId}-${current.args.targetId}:${current.ts}`
           }
-          getTypeId={current => current.args.sourceId}
+          getListItemTypeId={current => current.args.sourceId}
+          tabs={event => [
+            { tabName: "Source", content: event.args.sourceId },
+            { tabName: "Target", content: event.args.targetId },
+          ]}
         />
       );
 
@@ -213,7 +234,8 @@ export const TypeLevelLimitAward = ({
             />
           )}
           getKey={current => `${current.args.flowId}:${current.ts}`}
-          getTypeId={current => current.args.flowId}
+          getListItemTypeId={current => current.args.flowId}
+          tabs={event => [{ tabName: "Type", content: event.args.flowId }]}
         />
       );
 
@@ -229,7 +251,13 @@ export const TypeLevelLimitAward = ({
             <InlineBarGraph label={`limit hit`} width={`100%`} />
           )}
           getKey={current => `${current.args.typeIds.join("-")}:${current.ts}`}
-          getTypeId={current => current.args.typeIds[0]}
+          getListItemTypeId={current => current.args.typeIds[0]}
+          tabs={event => [
+            {
+              tabName: "Types",
+              content: event.args.typeIds,
+            },
+          ]}
         />
       );
 
@@ -250,7 +278,11 @@ export const TypeLevelLimitAward = ({
           getKey={current =>
             `${current.args.sourceId}-${current.args.targetId}:${current.ts}`
           }
-          getTypeId={current => current.args.sourceId}
+          getListItemTypeId={current => current.args.sourceId}
+          tabs={event => [
+            { tabName: "Source", content: event.args.sourceId },
+            { tabName: "Target", content: event.args.targetId },
+          ]}
         />
       );
 

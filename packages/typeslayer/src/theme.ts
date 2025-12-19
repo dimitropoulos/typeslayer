@@ -282,6 +282,12 @@ export const theme: Theme = createTheme({
         },
       },
     },
+    MuiTabs: {
+      defaultProps: {
+        variant: "scrollable",
+        scrollButtons: "auto",
+      },
+    },
     MuiTab: {
       styleOverrides: {
         root: {

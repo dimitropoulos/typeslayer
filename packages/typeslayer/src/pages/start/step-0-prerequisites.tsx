@@ -10,7 +10,7 @@ import { Step } from "./step";
 
 export const step4 = (
   <Step step={4}>
-    <Stack spacing={0.5}>
+    <Stack gap={0.5}>
       <Typography variant="h5">
         mindset: after a build, all code is "your code"
       </Typography>
@@ -64,9 +64,9 @@ export const Step0Prerequisites = () => {
           <Typography variant="h4">prerequisites</Typography>
         </DialogTitle>
         <DialogContent>
-          <Stack spacing={2}>
+          <Stack gap={2}>
             <Step step={1}>
-              <Stack spacing={0.5}>
+              <Stack gap={0.5}>
                 <Typography variant="h5">
                   plain ol' <InlineCode>tsc</InlineCode> can run
                 </Typography>
@@ -96,7 +96,7 @@ export const Step0Prerequisites = () => {
               </Stack>
             </Step>{" "}
             <Step step={2}>
-              <Stack spacing={0.5}>
+              <Stack gap={0.5}>
                 <Typography variant="h5">
                   prepare <em>your project's</em> prerequisites
                 </Typography>
@@ -108,7 +108,7 @@ export const Step0Prerequisites = () => {
               </Stack>
             </Step>
             <Step step={3}>
-              <Stack spacing={0.5}>
+              <Stack gap={0.5}>
                 <Typography variant="h5">no type errors</Typography>
                 <Typography>
                   TypeScript's internal tooling simply can't do a full type

@@ -1,7 +1,8 @@
 use crate::{
-    app_data::AppData,
+    app_data::{AppData, settings::TypeScriptCompilerVariant},
     utils::{AVAILABLE_EDITORS, default_extra_tsc_flags},
 };
+use std::str::FromStr;
 use tauri::State;
 use tokio::sync::Mutex;
 use tracing::debug;
@@ -160,6 +161,32 @@ pub async fn set_max_stack_size(
 ) -> Result<(), String> {
     let mut data = state.lock().await;
     data.settings.max_stack_size = size;
+    data.update_typeslayer_config_toml().await;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_typescript_compiler_variant(
+    state: State<'_, &Mutex<AppData>>,
+) -> Result<String, String> {
+    let data = state.lock().await;
+    Ok(data
+        .settings
+        .typescript_compiler_variant
+        .as_str()
+        .to_string())
+}
+
+#[tauri::command]
+pub async fn set_typescript_compiler_variant(
+    state: State<'_, &Mutex<AppData>>,
+    variant: String,
+) -> Result<(), String> {
+    let compiler_variant = TypeScriptCompilerVariant::from_str(&variant)
+        .map_err(|_| format!("Invalid TypeScript compiler variant: {}", variant))?;
+
+    let mut data = state.lock().await;
+    data.settings.typescript_compiler_variant = compiler_variant;
     data.update_typeslayer_config_toml().await;
     Ok(())
 }

@@ -178,7 +178,7 @@ const McpTools = () => {
   }
 
   return (
-    <Stack spacing={2}>
+    <Stack gap={2}>
       {tools.map(tool => (
         <ToolCard key={tool.command} tool={tool} />
       ))}
@@ -219,17 +219,17 @@ const ToolCard = ({
         </Stack>
       </AccordionSummary>
       <AccordionDetails>
-        <Stack spacing={2}>
-          <Stack spacing={1}>
+        <Stack gap={2}>
+          <Stack gap={1}>
             <Typography variant="h4">{displayName}</Typography>
             <Typography>{description}</Typography>
           </Stack>
 
-          <Stack spacing={1}>
+          <Stack gap={1}>
             <Typography variant="h6">Parameters</Typography>
             {parameters.map(param => (
               <Stack key={param.name} sx={{ mb: 1 }}>
-                <Stack direction="row" spacing={1}>
+                <Stack direction="row" gap={1}>
                   <InlineCode>{param.name}</InlineCode>
                   <Typography color="textSecondary">
                     {param.optional
@@ -243,7 +243,7 @@ const ToolCard = ({
             ))}
           </Stack>
 
-          <Stack spacing={1}>
+          <Stack gap={1}>
             <Typography variant="h6">Returns</Typography>
             <Code value={JSON.stringify(returns, null, 2)} />
           </Stack>
@@ -346,7 +346,7 @@ export const McpResources = () => {
   }
 
   return (
-    <Stack spacing={2}>
+    <Stack gap={2}>
       {resources.map(resource => (
         <ResourceCard key={resource.uri} resource={resource} />
       ))}
@@ -397,19 +397,19 @@ const ResourceCard = ({ resource }: { resource: ManagedResource }) => {
         </Stack>
       </AccordionSummary>
       <AccordionDetails>
-        <Stack spacing={2}>
-          <Stack spacing={1}>
+        <Stack gap={2}>
+          <Stack gap={1}>
             <Typography variant="h6">Details</Typography>
             {resource.description && (
               <Typography>{resource.description}</Typography>
             )}
-            <Stack direction="row" spacing={1}>
+            <Stack direction="row" gap={1}>
               <Typography variant="body2" color="textSecondary">
                 URI:
               </Typography>
               <InlineCode>{resource.uri}</InlineCode>
             </Stack>
-            <Stack direction="row" spacing={1}>
+            <Stack direction="row" gap={1}>
               <Typography variant="body2" color="textSecondary">
                 MIME Type:
               </Typography>
@@ -424,7 +424,7 @@ const ResourceCard = ({ resource }: { resource: ManagedResource }) => {
             </Alert>
           )}
           {content && !isLoading && (
-            <Stack spacing={1}>
+            <Stack gap={1}>
               <Typography variant="h6">Content</Typography>
               <Code value={content} />
             </Stack>
@@ -437,7 +437,7 @@ const ResourceCard = ({ resource }: { resource: ManagedResource }) => {
 
 const McpPrompts = () => {
   return (
-    <Stack spacing={2}>
+    <Stack gap={2}>
       <Typography>
         Here's how you might use TypeSlayer with an AI agent to diagnose and fix
         type performance issues:
@@ -512,7 +512,7 @@ const providerLinks = [
 
 const Setup = () => {
   return (
-    <Stack spacing={2}>
+    <Stack gap={2}>
       <Typography variant="h4" gutterBottom>
         Quick Setup
       </Typography>
@@ -564,7 +564,7 @@ const Setup = () => {
 
 const Troubleshooting = () => {
   return (
-    <Stack spacing={3}>
+    <Stack gap={3}>
       <Box>
         <Typography variant="h6" gutterBottom>
           "No analyze-trace data available"

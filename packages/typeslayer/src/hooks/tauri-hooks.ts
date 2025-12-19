@@ -16,7 +16,10 @@ import {
   type TypeId,
 } from "@typeslayer/validate";
 import { useEffect } from "react";
-import { friendlyPath } from "../components/utils";
+import {
+  friendlyPath,
+  type TypeScriptCompilerVariant,
+} from "../components/utils";
 import type {
   CompactGraphLink,
   GraphLinkStats,
@@ -1005,4 +1008,34 @@ export const useClearOutputs = () => {
       queryClient.invalidateQueries();
     },
   });
+};
+
+export const useTypeScriptCompilerVariant = () => {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ["typescript_compiler_variant"],
+    queryFn: () =>
+      invoke<TypeScriptCompilerVariant>("get_typescript_compiler_variant"),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  const mutation = useMutation({
+    mutationFn: (variant: TypeScriptCompilerVariant) =>
+      invoke<void>("set_typescript_compiler_variant", { variant }),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
+    },
+    onSuccess: (_, variant) => {
+      queryClient.setQueryData(["typescript_compiler_variant"], variant);
+    },
+  });
+
+  return {
+    data: query.data,
+    isLoading: query.isLoading,
+    error: query.error,
+    set: mutation.mutateAsync,
+    isSettingValue: mutation.isPending,
+  };
 };

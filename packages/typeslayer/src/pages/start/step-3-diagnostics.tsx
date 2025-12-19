@@ -2,19 +2,14 @@ import { Insights } from "@mui/icons-material";
 import { Alert, Button, Stack } from "@mui/material";
 import { useCallback, useState } from "react";
 import { BigAction } from "../../components/big-action";
-import {
-  useCancelGeneration,
-  useClearOutputs,
-  useGenerateAll,
-} from "../../hooks/tauri-hooks";
+import { useLogoFade } from "../../contexts/logo-fade-context";
+import { useCancelGeneration, useClearOutputs } from "../../hooks/tauri-hooks";
 import { ErrorDialog } from "./error-dialog";
 import { Step } from "./step";
 
-export const Step3Diagnostics = ({
-  onComplete,
-}: {
-  onComplete: () => void;
-}) => {
+export const Step3Diagnostics = () => {
+  const { startGeneratingAll: triggerLogoFade } = useLogoFade();
+
   const { mutateAsync: clearOutputs } = useClearOutputs();
   const { mutateAsync: cancelGeneration } = useCancelGeneration();
 
@@ -31,8 +26,6 @@ export const Step3Diagnostics = ({
 
   const [isClearingOutputs, setIsClearingOutputs] = useState(false);
 
-  const { mutateAsync: onGenerateAll } = useGenerateAll();
-
   // Sequential processing logic
   const processTypes = useCallback(async () => {
     setIsProcessing(true);
@@ -42,8 +35,8 @@ export const Step3Diagnostics = ({
     setIsErrorDialogOpen(false);
 
     try {
-      await onGenerateAll();
-      onComplete();
+      // This calls onGenerateAll and waits for it to complete
+      await triggerLogoFade();
     } catch (e) {
       const rawMessage = e instanceof Error ? e.message : String(e);
       const normalizedMessage = normalizeInvokeError(rawMessage);
@@ -62,7 +55,7 @@ export const Step3Diagnostics = ({
     } finally {
       setIsProcessing(false);
     }
-  }, [onGenerateAll, onComplete]);
+  }, [triggerLogoFade]);
 
   const handleClearOrCancel = useCallback(async () => {
     setIsClearingOutputs(true);

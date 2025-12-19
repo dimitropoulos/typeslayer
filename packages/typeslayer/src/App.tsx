@@ -24,7 +24,7 @@ function AppBrand({
   nightmare?: boolean;
 }) {
   return (
-    <Stack direction="row" spacing={2} alignItems="center" sx={{ p: 2 }}>
+    <Stack direction="row" gap={2} alignItems="center" sx={{ p: 2 }}>
       <img
         src={
           collapsed

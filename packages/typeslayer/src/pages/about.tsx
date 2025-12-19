@@ -9,7 +9,7 @@ import { createOpenHandler } from "../components/utils";
 export function AboutPage() {
   return (
     <Box sx={{ px: 4, py: 4, maxWidth: 960, margin: "0 auto" }}>
-      <Stack spacing={3} sx={{ overflow: "auto" }}>
+      <Stack gap={3} sx={{ overflow: "auto" }}>
         <Box>
           <Typography variant="h3">About TypeSlayer</Typography>
           <Typography variant="subtitle1" color="text.secondary">

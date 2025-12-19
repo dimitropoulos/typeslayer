@@ -557,13 +557,21 @@ export const DocsPage = () => {
           <Typography>
             if you don't want to run that script, you can always just run the
             platform-specific binary directly. you can find the download links
-            for all platforms by <Link href="https://www.npmjs.com/search?q=%40typeslayer" onClick={createOpenHandler("https://www.npmjs.com/search?q=%40typeslayer")}>searching <InlineCode>@typeslayer</InlineCode>{' '}
-            on npm.</Link>
+            for all platforms by{" "}
+            <Link
+              href="https://www.npmjs.com/search?q=%40typeslayer"
+              onClick={createOpenHandler(
+                "https://www.npmjs.com/search?q=%40typeslayer",
+              )}
+            >
+              searching <InlineCode>@typeslayer</InlineCode> on npm.
+            </Link>
           </Typography>
           <Typography>
             for example you can do{" "}
             <InlineCode>npx @typeslayer/linux-x64</InlineCode> on Linux,{" "}
-            <InlineCode>npx @typeslayer/darwin-x64</InlineCode> on Apple Silicon, or <InlineCode>npx @typeslayer/win32-x64</InlineCode> on
+            <InlineCode>npx @typeslayer/darwin-x64</InlineCode> on Apple
+            Silicon, or <InlineCode>npx @typeslayer/win32-x64</InlineCode> on
             Windows on Intel.
           </Typography>
         </Stack>

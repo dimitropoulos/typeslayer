@@ -195,7 +195,7 @@ export const Treemap = () => {
   return (
     <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
       <Box sx={{ p: 1, mt: 3, mx: 2 }}>
-        <Stack direction="row" spacing={1}>
+        <Stack direction="row" gap={1}>
           <Typography variant="h2">Compilation Time Treemap</Typography>
           <Popover
             id={id}

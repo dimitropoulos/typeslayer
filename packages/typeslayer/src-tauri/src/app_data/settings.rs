@@ -1,3 +1,42 @@
+use strum_macros::EnumString;
+
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize, EnumString)]
+pub enum TypeScriptCompilerVariant {
+    #[serde(rename = "tsc")]
+    #[strum(serialize = "tsc")]
+    Strata,
+    #[serde(rename = "vue-tsc")]
+    #[strum(serialize = "vue-tsc")]
+    Vue,
+    #[serde(rename = "tsgo")]
+    #[strum(serialize = "tsgo")]
+    Corsa,
+}
+
+impl Default for TypeScriptCompilerVariant {
+    fn default() -> Self {
+        Self::Strata
+    }
+}
+
+impl TypeScriptCompilerVariant {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Strata => "tsc",
+            Self::Vue => "vue-tsc",
+            Self::Corsa => "tsgo",
+        }
+    }
+
+    pub fn npm_package(&self) -> &'static str {
+        match self {
+            Self::Strata => "typescript",
+            Self::Vue => "vue-tsc",
+            Self::Corsa => "@typescript/native-preview",
+        }
+    }
+}
+
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
@@ -9,6 +48,7 @@ pub struct Settings {
     pub apply_tsc_project_flag: bool,
     pub max_old_space_size: Option<i32>,
     pub max_stack_size: Option<i32>,
+    pub typescript_compiler_variant: TypeScriptCompilerVariant,
 }
 
 impl Default for Settings {
@@ -22,6 +62,7 @@ impl Default for Settings {
             apply_tsc_project_flag: true,
             max_old_space_size: None,
             max_stack_size: None,
+            typescript_compiler_variant: TypeScriptCompilerVariant::default(),
         }
     }
 }

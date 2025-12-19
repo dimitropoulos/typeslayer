@@ -904,43 +904,56 @@ const TypeGraphUtilityPanel = ({
     applyFilters(activeFilters, nextShowFree);
   }, [showFreeTypes, activeFilters, applyFilters, setShowFreeTypes]);
 
+  const onSearch = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const value = event.target.value;
+      if (!value) {
+        navigate({ to: "/type-graph" });
+      } else {
+        navigate({ to: `/type-graph/${value}` });
+      }
+    },
+    [navigate],
+  );
+
   return (
     <>
-      <Box sx={{ py: 2, px: 4 }}>
-        <Stack direction="row" spacing={2} alignItems="flex-end">
-          <TextField
-            placeholder="search by type id"
-            size="small"
-            value={selectedTypeId || ""}
-            type="number"
-            onChange={event => {
-              const value = event.target.value;
-              if (!value) {
-                navigate({ to: "/type-graph" });
-              } else {
-                navigate({ to: `/type-graph/${value}` });
-              }
-            }}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search
-                      fontSize="small"
-                      sx={{ opacity: selectedTypeId ? 1 : 0.5 }}
-                    />
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
-          <Button
-            variant="outlined"
-            startIcon={<FilterList />}
-            onClick={e => setFilterAnchor(e.currentTarget)}
-          >
-            Filter Relations
-          </Button>
+      <Stack
+        sx={{
+          gap: 1,
+          p: 2,
+          flexDirection: "row",
+          alignItems: "flex-end",
+          flexWrap: "wrap",
+        }}
+      >
+        <TextField
+          placeholder="search by type id"
+          size="small"
+          value={selectedTypeId || ""}
+          type="number"
+          onChange={onSearch}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search
+                    fontSize="small"
+                    sx={{ opacity: selectedTypeId ? 1 : 0.5 }}
+                  />
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
+        <Button
+          variant="outlined"
+          startIcon={<FilterList />}
+          onClick={e => setFilterAnchor(e.currentTarget)}
+        >
+          Filter Relations
+        </Button>
+        <Stack sx={{ flexDirection: "row", gap: 1 }}>
           <IconButton
             onClick={() => {
               setSimulationPaused(!pausedRef.current);
@@ -977,30 +990,26 @@ const TypeGraphUtilityPanel = ({
           >
             <FilterCenterFocus />
           </IconButton>
-
-          <span style={{ flex: 1 }} />
-
-          {(() => {
-            const statsToRender = visibleStats;
-            if (!statsToRender) {
-              return null;
-            }
-            return (
-              <Stack
-                sx={{
-                  flexDirection: "row",
-                  gap: 1,
-                  flexWrap: "wrap",
-                  justifyContent: "flex-end",
-                }}
-              >
-                <StatPill label="types" value={statsToRender.nodes} />
-                <StatPill label="relations" value={statsToRender.links} />
-              </Stack>
-            );
-          })()}
         </Stack>
-      </Box>
+
+        {visibleStats ? (
+          <>
+            <span style={{ flex: 1 }} />
+            <Stack sx={{ gap: 1, flexDirection: "row" }}>
+              <StatPill
+                label="types"
+                value={visibleStats.nodes}
+                sx={{ mt: "-1px" }}
+              />
+              <StatPill
+                label="relations"
+                value={visibleStats.links}
+                sx={{ mt: "-1px" }}
+              />
+            </Stack>
+          </>
+        ) : null}
+      </Stack>
       <TypeGraphPopover
         activeFilters={activeFilters}
         applyFilters={applyFilters}
@@ -1085,7 +1094,7 @@ const TypeGraphPopover = ({
                       />
                     }
                     label={
-                      <Stack direction="row" spacing={1} alignItems="center">
+                      <Stack direction="row" gap={1} alignItems="center">
                         <Box
                           sx={{
                             width: 16,
