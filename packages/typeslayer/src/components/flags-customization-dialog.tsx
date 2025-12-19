@@ -57,7 +57,8 @@ const maxStackSizeOptions = [
   { value: 984, label: "(the Node.js default)" },
   {
     value: 2048,
-    label: "(the fact that you have to do this at all is sorta concerning, tbh)",
+    label:
+      "(the fact that you have to do this at all is sorta concerning, tbh)",
   },
   { value: 4096, label: "(why wasn't doubling the default enough?? srsly?)" },
   {
@@ -259,47 +260,47 @@ export function FlagsCustomizationDialog({
           ) : null}
         </FormGroup>
 
-          <FormGroup
-            sx={{
-              mt: 1,
-              display: "flex",
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 2,
-            }}
-          >
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={maxStackSizeEnabled}
-                  disabled={maxStackSizeIsLoading}
-                  onChange={async e => {
-                    toggleMaxStackSize(e.target.checked);
-                  }}
-                />
-              }
-              label={"give Node.js a bigger stack"}
-            />
+        <FormGroup
+          sx={{
+            mt: 1,
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={maxStackSizeEnabled}
+                disabled={maxStackSizeIsLoading}
+                onChange={async e => {
+                  toggleMaxStackSize(e.target.checked);
+                }}
+              />
+            }
+            label={"give Node.js a bigger stack"}
+          />
 
-            {maxStackSizeEnabled ? (
-              <Select<number>
-                size="small"
-                value={maxStackSize ?? undefined}
-                onChange={handleSelectMaxStackSize}
-                sx={{ "& .MuiSelect-select": { py: "3px !important" } }}
-              >
-                {maxStackSizeOptions.map(({ value, label }) => (
-                  <MenuItem
-                    key={value}
-                    value={value}
-                    selected={maxStackSize === value}
-                  >
-                    {`${formatBytesSize(value * kibibyte)} ${label}`}
-                  </MenuItem>
-                ))}
-              </Select>
-            ) : null}
-          </FormGroup>
+          {maxStackSizeEnabled ? (
+            <Select<number>
+              size="small"
+              value={maxStackSize ?? undefined}
+              onChange={handleSelectMaxStackSize}
+              sx={{ "& .MuiSelect-select": { py: "3px !important" } }}
+            >
+              {maxStackSizeOptions.map(({ value, label }) => (
+                <MenuItem
+                  key={value}
+                  value={value}
+                  selected={maxStackSize === value}
+                >
+                  {`${formatBytesSize(value * kibibyte)} ${label}`}
+                </MenuItem>
+              ))}
+            </Select>
+          ) : null}
+        </FormGroup>
 
         <Typography variant="h6" sx={{ mt: 4, mb: 1 }}>
           Example

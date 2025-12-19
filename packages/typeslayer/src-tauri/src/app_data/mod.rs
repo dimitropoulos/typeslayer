@@ -49,6 +49,7 @@ pub struct AppData {
     pub type_graph: Option<TypeGraph>,
     pub data_dir: PathBuf,
     pub platform: String,
+    pub version: String,
 }
 
 impl AppData {
@@ -94,6 +95,7 @@ impl AppData {
             type_graph,
             data_dir,
             platform,
+            version: "unknown".to_string(),
         };
         app.discover_tsconfigs().await?;
         app.selected_tsconfig = init_selected_tsconfig_with(&app.cake, &app.tsconfig_paths);
@@ -342,6 +344,7 @@ struct TypeSlayerConfig<'a> {
     outputs_dir: &'a str,
     verbose: bool,
     platform: &'a str,
+    version: &'a str,
     settings: &'a Settings,
     outputs: OutputTimestamps,
 }
@@ -370,6 +373,7 @@ impl AppData {
             outputs_dir: &outputs_dir.to_string_lossy(),
             verbose: self.verbose,
             platform: &self.platform,
+            version: &self.version,
             settings: &self.settings,
             outputs,
         };

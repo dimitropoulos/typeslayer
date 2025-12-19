@@ -506,6 +506,69 @@ export const DocsPage = () => {
         </Stack>
       ),
     },
+    {
+      id: "consulting",
+      title: <span>can I pay you to help me? 💸</span>,
+      description: (
+        <Stack gap={1}>
+          <Typography>
+            not me, Dimitri. I'm happily employed and not taking consulting gigs
+            at the moment.
+          </Typography>
+          <Typography>
+            <em>HOWEVZ</em> - Michigan TypeScript does have a small private
+            program with some (currently 3) extremely excellent TypeScript
+            experts that do consulting for exactly this kind of thing. I can
+            promise they're the best from personal experience because it's their
+            shoulder's that I cry on when I'm fighting with some arcane module
+            resolution problem.
+          </Typography>
+          <Typography>
+            of course, they're not cheap (
+            <Link
+              href="https://youtu.be/jE53O1PzmNU"
+              onClick={createOpenHandler("https://youtu.be/jE53O1PzmNU")}
+            >
+              see
+            </Link>
+            ), partly because they're literally the best in the world at this
+            stuff (you probably know their names and you definitely know their
+            work) - but I'm happy to connect you (enough people ask that we
+            formed this small group).
+          </Typography>
+          <Typography>
+            if and only if you're extremely interested:{" "}
+            <Link href="/about">hollatcha boy</Link>.
+          </Typography>
+        </Stack>
+      ),
+    },
+    {
+      id: "postinstall",
+      title: <span>but I refuse to run postinstall scripts..</span>,
+      description: (
+        <Stack gap={1}>
+          <Typography>
+            well lucky you, because although the{" "}
+            <InlineCode>npx typeslayer</InlineCode> command does run a tiny
+            postinstall script - all it does is download the TypeSlayer binary
+            for your platform.
+          </Typography>
+          <Typography>
+            if you don't want to run that script, you can always just run the
+            platform-specific binary directly. you can find the download links
+            for all platforms by <Link href="https://www.npmjs.com/search?q=%40typeslayer" onClick={createOpenHandler("https://www.npmjs.com/search?q=%40typeslayer")}>searching <InlineCode>@typeslayer</InlineCode>{' '}
+            on npm.</Link>
+          </Typography>
+          <Typography>
+            for example you can do{" "}
+            <InlineCode>npx @typeslayer/linux-x64</InlineCode> on Linux,{" "}
+            <InlineCode>npx @typeslayer/darwin-x64</InlineCode> on Apple Silicon, or <InlineCode>npx @typeslayer/win32-x64</InlineCode> on
+            Windows on Intel.
+          </Typography>
+        </Stack>
+      ),
+    },
   ];
 
   const params = useParams({ strict: false });

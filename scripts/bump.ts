@@ -87,4 +87,18 @@ for (const platform of platforms) {
   );
 }
 
+// Update tauri.conf.json
+const tauriConfigPath = join(
+  rootDir,
+  "packages",
+  "typeslayer",
+  "src-tauri",
+  "tauri.conf.json",
+);
+const tauriConfig = JSON.parse(readFileSync(tauriConfigPath, "utf-8"));
+const oldTauriVersion = tauriConfig.version;
+tauriConfig.version = newMainVersion;
+writeFileSync(tauriConfigPath, `${JSON.stringify(tauriConfig, null, 2)}\n`);
+console.log(`  ✅ tauri.conf.json: ${oldTauriVersion} → ${newMainVersion}`);
+
 console.log("\n✨ All packages bumped and synced!");
