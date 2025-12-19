@@ -36,6 +36,19 @@ where
     pub validate: V,
 }
 
+/// Named-argument container for resolving numbers.
+pub struct ResolveNumberArgs<'a, F, V>
+where
+    F: FnOnce() -> i32,
+    V: Fn(&i32) -> Result<i32, String>,
+{
+    pub env: &'a str,
+    pub flag: &'a str,
+    pub file: &'a str,
+    pub default: F,
+    pub validate: V,
+}
+
 /// Named-argument container for resolving booleans.
 pub struct ResolveBoolArgs<'a, F>
 where
@@ -191,6 +204,97 @@ impl LayerCake {
         (args.default)()
     }
 
+    /// Resolve a number (i32) using named arguments only.
+    /// Validate returns Result<i32, String>: Ok(transformed_value) or Err(message) which panics.
+    pub fn resolve_number<F, V>(&self, args: ResolveNumberArgs<F, V>) -> i32
+    where
+        F: FnOnce() -> i32,
+        V: Fn(&i32) -> Result<i32, String>,
+    {
+        if !args.flag.starts_with("--") {
+            panic!("[layercake] Flag '{}' must start with --", args.flag);
+        }
+        let env_key = if self.env_prefix.is_empty() {
+            args.env.to_string()
+        } else {
+            format!("{}{}", self.env_prefix, args.env)
+        };
+        for src in &self.precedence {
+            match src {
+                Source::Env => {
+                    if let Ok(v) = std::env::var(&env_key) {
+                        if !v.is_empty() {
+                            match v.parse::<i32>() {
+                                Ok(parsed) => match (args.validate)(&parsed) {
+                                    Ok(transformed) => {
+                                        debug!(
+                                            "[layercake] resolved {}={} from env {}",
+                                            args.env, transformed, env_key
+                                        );
+                                        return transformed;
+                                    }
+                                    Err(e) => {
+                                        panic!("Invalid {} from env {}: {}", args.env, env_key, e)
+                                    }
+                                },
+                                Err(e) => {
+                                    panic!(
+                                        "Failed to parse {} from env {}: {}",
+                                        args.env, env_key, e
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Source::Flag => {
+                    if let Some(v) = self.flags.get(args.flag) {
+                        match v.parse::<i32>() {
+                            Ok(parsed) => match (args.validate)(&parsed) {
+                                Ok(transformed) => {
+                                    debug!(
+                                        "[layercake] resolved {}={} from flag {}",
+                                        args.env, transformed, args.flag
+                                    );
+                                    return transformed;
+                                }
+                                Err(e) => {
+                                    panic!("Invalid {} from flag {}: {}", args.env, args.flag, e)
+                                }
+                            },
+                            Err(e) => {
+                                panic!(
+                                    "Failed to parse {} from flag {}: {}",
+                                    args.env, args.flag, e
+                                )
+                            }
+                        }
+                    }
+                }
+                Source::File => {
+                    if let Some(v) = self.get_config_i32(args.file) {
+                        match (args.validate)(&v) {
+                            Ok(transformed) => {
+                                debug!(
+                                    "[layercake] resolved {}={} from file key {}",
+                                    args.env, transformed, args.file
+                                );
+                                return transformed;
+                            }
+                            Err(e) => {
+                                panic!(
+                                    "[layercake] Invalid {} from file key {}: {}",
+                                    args.env, args.file, e
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        (args.default)()
+    }
+
     /// Resolve a boolean using named arguments only.
     pub fn resolve_bool<F>(&self, args: ResolveBoolArgs<F>) -> bool
     where
@@ -267,6 +371,14 @@ impl LayerCake {
             cur = cur.get(segment)?;
         }
         cur.as_bool()
+    }
+
+    fn get_config_i32(&self, key_path: &str) -> Option<i32> {
+        let mut cur = self.cfg.as_ref()?;
+        for segment in key_path.split('.') {
+            cur = cur.get(segment)?;
+        }
+        cur.as_integer().and_then(|i| i.try_into().ok())
     }
 
     /// Check whether a CLI flag was provided (e.g. `--project-root`).

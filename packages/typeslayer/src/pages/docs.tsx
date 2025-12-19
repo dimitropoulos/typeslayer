@@ -218,6 +218,18 @@ export const DocsPage = () => {
             <InlineCode>--generateTrace</InlineCode> flag. that's a
             prerequisites.
           </Typography>
+          <Typography>
+            for the case of Vue, there's an option in the{" "}
+            <InlineCode>Customize Flags</InlineCode> area of the Setup to use{" "}
+            <InlineCode>vue-tsc</InlineCode> instead of regular{" "}
+            <InlineCode>tsc</InlineCode>. can't make too many promises about
+            downstream/fractured ecosystem tools like that, but hey maybe it'll
+            work.
+          </Typography>
+          <Typography>
+            as for Svelte, I don't know much about it so how about you tell me
+            what it needs?
+          </Typography>
         </Stack>
       ),
     },
@@ -573,6 +585,53 @@ export const DocsPage = () => {
             <InlineCode>npx @typeslayer/darwin-x64</InlineCode> on Apple
             Silicon, or <InlineCode>npx @typeslayer/win32-x64</InlineCode> on
             Windows on Intel.
+          </Typography>
+        </Stack>
+      ),
+    },
+    {
+      id: "y-not-cli",
+      title: <span>why isn't this a CLI tool?</span>,
+      description: (
+        <Stack gap={1}>
+          <Typography>
+            a goal of the project is show intuitive/beautiful interactive
+            visualizations like treemaps and force graphs, inherently not
+            something a terminal can provide.
+          </Typography>
+          <Typography>
+            I don't like CLI tools. I view them as a last resort, at this point
+            in engineering history. if you're someone that stays up late into
+            the night staring at your dotfiles from neovim... I'm happy for you.
+            be happy for me too?
+          </Typography>
+        </Stack>
+      ),
+    },
+    {
+      id: "monorepo",
+      title: <span>how do I use this with a monorepo?</span>,
+      description: (
+        <Stack gap={1}>
+          <Typography>one step at a time.</Typography>
+          <Typography>
+            down, Lassie. right now, TypeSlayer is very single-package focused.
+          </Typography>
+          <Typography>
+            that will have to change in the future for the very-simple reason
+            that the people that need this tool the most are often the ones with
+            monorepos.
+          </Typography>
+          <Typography>
+            but for now, please just pick one package in your monorepo to
+            analyze at a time.
+          </Typography>
+          <Typography>
+            when you do, though, don't forget that you can just as easily run
+            <InlineCode>tsc --generateTrace</InlineCode> manually on every
+            package in your monorepo, and then gather all the traces and sort
+            them by file size. it's almost a guarantee that the ones at the top
+            of that list are the ones you most care about anyway.
           </Typography>
         </Stack>
       ),

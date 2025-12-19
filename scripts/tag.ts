@@ -45,7 +45,13 @@ const packages = [
   },
   {
     name: "tauri.conf.json",
-    path: join(rootDir, "packages", "typeslayer", "src-tauri", "tauri.conf.json"),
+    path: join(
+      rootDir,
+      "packages",
+      "typeslayer",
+      "src-tauri",
+      "tauri.conf.json",
+    ),
   },
 ];
 

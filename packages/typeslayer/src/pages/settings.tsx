@@ -21,11 +21,20 @@ import {
   useAutoStart,
   useAvailableEditors,
   useDataDir,
+  useMaxNodes,
   usePreferEditorOpen,
   usePreferredEditor,
   useProjectRoot,
   useRelativePaths,
 } from "../hooks/tauri-hooks";
+
+const limitNodes = [
+  { label: `I'm too young to die`, value: 500_000 },
+  { label: "Hey, not too rough", value: 1_000_000 },
+  { label: "Hurt me plenty", value: 1_500_000 },
+  { label: "Ultra-Violence", value: 2_000_000 },
+  { label: "Nightmare!", value: 5_000_000 },
+] as const;
 
 const Setting = ({
   children,
@@ -54,6 +63,7 @@ export const SettingsPage = () => {
   const availableEditors = useAvailableEditors();
   const preferredEditor = usePreferredEditor();
   const dataDir = useDataDir();
+  const { data: maxNodes, set: setMaxNodes } = useMaxNodes();
 
   const handleRelativePaths = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -194,6 +204,51 @@ export const SettingsPage = () => {
               </FormControl>
             )}
         </FormGroup>
+      </Setting>
+
+      <Setting title="Max Nodes in the Type Graph">
+        <Typography variant="body2" color="textSecondary" mb={1}>
+          some of you nerds have {(3_000).toLocaleString()}-package-monorepos
+          that need 60 GiB of ram to typecheck, producing multi-GiB{" "}
+          <InlineCode>trace.json</InlineCode> files.... and you act surprised
+          when you get 0.005fps when rendering the graph.
+        </Typography>
+        <Typography variant="body2" color="textSecondary" mb={1}>
+          TypeSlayer uses WebGL to render the Type Graph, but even then some of
+          you have more nodes than there are polygons in a frame of GTA6.{" "}
+          <em>there are limits</em>, here.
+        </Typography>
+        <FormControl>
+          <InputLabel id="max-nodes-label">Max Nodes</InputLabel>
+          <Select
+            value={maxNodes?.toString() || ""}
+            onChange={async event => {
+              const value = parseInt(event.target.value, 10);
+              await setMaxNodes(value);
+            }}
+            labelId="max-nodes-label"
+            label="Max Nodes"
+            disabled={maxNodes === undefined}
+            sx={{
+              width: 250,
+            }}
+          >
+            {limitNodes.map(({ label, value }) => (
+              <MenuItem key={value} value={value.toString()}>
+                <Stack>
+                  <Typography>{label}</Typography>
+                  <Typography
+                    variant="caption"
+                    fontFamily="monospace"
+                    color="textSecondary"
+                  >
+                    <InlineCode>{value.toLocaleString()}</InlineCode> nodes
+                  </Typography>
+                </Stack>
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
       </Setting>
 
       <Setting title="Auto Start">

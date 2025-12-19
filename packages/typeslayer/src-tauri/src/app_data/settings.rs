@@ -49,6 +49,7 @@ pub struct Settings {
     pub max_old_space_size: Option<i32>,
     pub max_stack_size: Option<i32>,
     pub typescript_compiler_variant: TypeScriptCompilerVariant,
+    pub max_nodes: i32,
 }
 
 impl Default for Settings {
@@ -63,6 +64,7 @@ impl Default for Settings {
             max_old_space_size: None,
             max_stack_size: None,
             typescript_compiler_variant: TypeScriptCompilerVariant::default(),
+            max_nodes: 3_000_000,
         }
     }
 }

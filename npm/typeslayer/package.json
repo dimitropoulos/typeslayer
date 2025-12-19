@@ -1,6 +1,6 @@
 {
   "name": "typeslayer",
-  "version": "0.1.24",
+  "version": "0.1.25",
   "description": "Slay your TypeScript types",
   "private": false,
   "type": "module",
@@ -43,8 +43,8 @@
     "postinstall": "node scripts/postinstall.js"
   },
   "optionalDependencies": {
-    "@typeslayer/linux-x64": "0.1.24",
-    "@typeslayer/darwin-arm64": "0.1.24",
-    "@typeslayer/win32-x64": "0.1.24"
+    "@typeslayer/linux-x64": "0.1.25",
+    "@typeslayer/darwin-arm64": "0.1.25",
+    "@typeslayer/win32-x64": "0.1.25"
   }
 }

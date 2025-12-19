@@ -190,3 +190,23 @@ pub async fn set_typescript_compiler_variant(
     data.update_typeslayer_config_toml().await;
     Ok(())
 }
+
+#[tauri::command]
+pub async fn get_max_nodes(state: State<'_, &Mutex<AppData>>) -> Result<i32, String> {
+    let data = state.lock().await;
+    Ok(data.settings.max_nodes)
+}
+
+#[tauri::command]
+pub async fn set_max_nodes(
+    state: State<'_, &Mutex<AppData>>,
+    max_nodes: i32,
+) -> Result<(), String> {
+    if max_nodes > 10_000_000 {
+        return Err("maxNodes must not exceed 10,000,000".to_string());
+    }
+    let mut data = state.lock().await;
+    data.settings.max_nodes = max_nodes;
+    data.update_typeslayer_config_toml().await;
+    Ok(())
+}

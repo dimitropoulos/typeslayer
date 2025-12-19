@@ -58,13 +58,9 @@ pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
-            commands::app_data::clear_outputs,
-            commands::trivia::get_available_editors,
-            commands::trivia::get_tsc_example_call,
-            commands::trivia::get_output_file_sizes,
-            commands::trivia::get_app_stats,
             commands::actions::open_file,
             commands::actions::take_screenshot,
+            commands::app_data::clear_outputs,
             commands::app_data::get_analyze_trace,
             commands::app_data::get_cpu_profile,
             commands::app_data::get_data_dir,
@@ -72,9 +68,9 @@ pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
             commands::app_data::get_selected_tsconfig,
             commands::app_data::get_trace_json,
             commands::app_data::get_tsconfig_paths,
+            commands::app_data::get_type_graph_node_and_link_stats,
             commands::app_data::get_type_graph_nodes_and_links,
             commands::app_data::get_type_graph_stats,
-            commands::app_data::get_type_graph_node_and_link_stats,
             commands::app_data::set_project_root,
             commands::app_data::set_selected_tsconfig,
             commands::auth::is_authorized,
@@ -105,6 +101,7 @@ pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
             commands::settings::get_auto_start,
             commands::settings::get_default_extra_tsc_flags,
             commands::settings::get_extra_tsc_flags,
+            commands::settings::get_max_nodes,
             commands::settings::get_max_old_space_size,
             commands::settings::get_max_stack_size,
             commands::settings::get_prefer_editor_open,
@@ -114,6 +111,7 @@ pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
             commands::settings::set_apply_tsc_project_flag,
             commands::settings::set_auto_start,
             commands::settings::set_extra_tsc_flags,
+            commands::settings::set_max_nodes,
             commands::settings::set_max_old_space_size,
             commands::settings::set_max_stack_size,
             commands::settings::set_prefer_editor_open,
@@ -121,6 +119,10 @@ pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
             commands::settings::set_relative_paths,
             commands::settings::set_typescript_compiler_variant,
             commands::treemap::get_treemap_data,
+            commands::trivia::get_app_stats,
+            commands::trivia::get_available_editors,
+            commands::trivia::get_output_file_sizes,
+            commands::trivia::get_tsc_example_call,
             commands::upload::upload_analyze_trace,
             commands::upload::upload_cpu_profile,
             commands::upload::upload_trace_json,
@@ -129,8 +131,8 @@ pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
             commands::validate::validate_analyze_trace,
             commands::validate::validate_cpu_profile,
             commands::validate::validate_trace_json,
-            commands::validate::validate_types_json,
             commands::validate::validate_type_graph,
+            commands::validate::validate_types_json,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

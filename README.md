@@ -23,15 +23,7 @@ in the root package you want to inspect (i.e. colocated to your package.json). T
 
 ## Frequently Asked Questions
 
-- will this ever get CI support for analysis file generation?
-  - yeah prolly eventually.
-- will this support monorepos?
-  - that's the hope.  one step at a time.
-- why isn't this just a CLI tool?
-  - a goal of the project is show intuitive/beautiful interactive visualizations like treemaps and force graphs, inherently not something a terminal can provide.
-  - I don't like CLI tools.  I view them as a last resort, at this point in engineering history.  if you're someone that stays up late into the night staring at your dotfiles from neovim... I'm happy for you.  be happy for me too?
-- will this work with ts-go?
-  - that's the hope but it ain't ready yet on the ts-go side
+see: [FAQ](./FAQ.md)
 
 # Who needs this stupid thing, anyway?
 
@@ -47,17 +39,15 @@ I made TypeSlayer because I learned delulu-levels-of-detail about TypeScript per
 
 I wanted to make it easy for others to put up PRs at their companies all like "I increased type-checking perf on this file by 380,000x and shaved 23 seconds off every CI run" (real story btw lol). I took what I learned about how to debug type performance and wrapped it all up into this tool.
 
-## Data / Security
+## Support
 
-TypeSlayer supports Linux x64 (glibc 2.39+), macOS ARM64 (Apple Silicon), and Windows x64.  Please note that next year is the year of the Linux desktop.
+TypeSlayer supports Linux x64 (glibc 2.39+), macOS ARM64 (Apple Silicon), and Windows x64.  Please note that next year is the year of the Linux desktop 📯.
 
-TypeSlayer currently does not collect any analytics - although it probably will try to collect "someone somewhere ran it at XYZ timestamp" data in the future.  all data is stored:
+# Security
 
-- Linux: `~/.local/share/typeslayer/`
-- macOS: `~/Library/Application Support/typeslayer/`
-- Windows: `%APPDATA%\typeslayer\`
+TypeSlayer currently does not collect any analytics - although it probably will try to collect "someone somewhere ran it at XYZ timestamp" data in the future (or possibly crashlytics).  If that day comes, of course you'll be able to opt out (including before app boot via config).
 
-TypeSlayer can read any file the running user can read and it can run package.json scripts (so treat it as you would your terminal).
+Actually TypeSlayer is a fully offline app - it does not make any network requests.
 
 ## Contributing
 

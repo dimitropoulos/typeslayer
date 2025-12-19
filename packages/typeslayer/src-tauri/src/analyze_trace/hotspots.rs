@@ -55,8 +55,6 @@ fn get_hotspots_worker(
 }
 
 fn make_hot_frame(span: &EventSpan, children: Vec<HotSpot>) -> Result<HotSpot, Vec<HotSpot>> {
-    let time_ms = (span.duration / 1000.0).round() as i64;
-
     if let EventSpanEvent::TraceEvent(event) = &span.event {
         use TraceEvent;
 
@@ -66,7 +64,9 @@ fn make_hot_frame(span: &EventSpan, children: Vec<HotSpot>) -> Result<HotSpot, V
 
                 Ok(HotSpot {
                     description: format!("Check file {}", path.display()),
-                    time_ms,
+                    start: span.start,
+                    end: span.end,
+                    duration: span.duration,
                     path: Some(path),
                     children,
                     types: None,
@@ -80,7 +80,9 @@ fn make_hot_frame(span: &EventSpan, children: Vec<HotSpot>) -> Result<HotSpot, V
             }
             TraceEvent::StructuredTypeRelatedTo { args, .. } => Ok(HotSpot {
                 description: format!("Compare types {} and {}", args.source_id, args.target_id),
-                time_ms,
+                start: span.start,
+                end: span.end,
+                duration: span.duration,
                 children,
                 types: Some(vec![args.source_id, args.target_id]),
                 path: None,
@@ -93,7 +95,9 @@ fn make_hot_frame(span: &EventSpan, children: Vec<HotSpot>) -> Result<HotSpot, V
             }),
             TraceEvent::GetVariancesWorker { args, .. } => Ok(HotSpot {
                 description: format!("Determine variance of type {}", args.id),
-                time_ms,
+                start: span.start,
+                end: span.end,
+                duration: span.duration,
                 children,
                 types: Some(vec![args.id]),
                 path: None,
@@ -109,7 +113,9 @@ fn make_hot_frame(span: &EventSpan, children: Vec<HotSpot>) -> Result<HotSpot, V
 
                 Ok(HotSpot {
                     description: event.name().to_string(),
-                    time_ms,
+                    start: span.start,
+                    end: span.end,
+                    duration: span.duration,
                     path,
                     children,
                     types: None,
@@ -126,7 +132,9 @@ fn make_hot_frame(span: &EventSpan, children: Vec<HotSpot>) -> Result<HotSpot, V
 
                 Ok(HotSpot {
                     description: event.name().to_string(),
-                    time_ms,
+                    start: span.start,
+                    end: span.end,
+                    duration: span.duration,
                     path,
                     children,
                     types: None,

@@ -52,7 +52,9 @@ export type HotType = z.infer<typeof hotType>;
 
 export const hotSpot = z.object({
   description: z.string(),
-  timeMs: z.number(),
+  duration: z.number(),
+  start: z.number(),
+  end: z.number(),
   get children() {
     return z.array(hotSpot);
   },

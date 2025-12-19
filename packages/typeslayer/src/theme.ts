@@ -203,6 +203,13 @@ export const theme: Theme = createTheme({
         },
       },
     },
+    MuiFormLabel: {
+      styleOverrides: {
+        root: {
+          marginBottom: "4px !important",
+        },
+      },
+    },
     MuiCssBaseline: {
       styleOverrides: {
         "@global": {

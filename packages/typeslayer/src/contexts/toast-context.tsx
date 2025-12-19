@@ -54,7 +54,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
         autoHideDuration={toast?.duration ?? 6000}
         onClose={handleClose}
         anchorOrigin={
-          toast?.anchorOrigin ?? { vertical: "bottom", horizontal: "right" }
+          toast?.anchorOrigin ?? { vertical: "top", horizontal: "center" }
         }
         sx={{ zIndex: 1500 }}
       >

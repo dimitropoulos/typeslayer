@@ -182,9 +182,8 @@ async function makeHotFrame({
   children: HotSpot[];
   typeRegistry: TypeRegistry;
 }): Promise<HotSpot | undefined> {
-  const { event, duration } = span;
+  const { event, duration, start, end } = span;
 
-  const timeMs = Math.round(duration / 1000);
   switch (event.name) {
     // case "findSourceFile":
     //     TODO (https://github.com/microsoft/typescript-analyze-trace/issues/2)
@@ -194,7 +193,9 @@ async function makeHotFrame({
       const normalizedPath = normalize(filePath);
       return {
         description: `Check file ${normalizedPath}`,
-        timeMs,
+        start,
+        end,
+        duration,
         path: normalizedPath,
 
         children,
@@ -204,7 +205,9 @@ async function makeHotFrame({
     case "structuredTypeRelatedTo":
       return {
         description: `Compare types ${event.args.sourceId} and ${event.args.targetId}`,
-        timeMs,
+        start,
+        end,
+        duration,
         children,
         types: [
           getHotType({
@@ -221,7 +224,9 @@ async function makeHotFrame({
     case "getVariancesWorker":
       return {
         description: `Determine variance of type ${event.args.id}`,
-        timeMs,
+        start,
+        end,
+        duration,
         children,
         types: [getHotType({ id: event.args.id, typeRegistry })],
       };
@@ -232,7 +237,9 @@ async function makeHotFrame({
       const path = filePath ? { path: normalize(filePath) } : {};
       const frame: HotSpot = {
         description: event.name,
-        timeMs,
+        start,
+        end,
+        duration,
         ...path,
         children: [],
       };

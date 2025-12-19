@@ -1,7 +1,7 @@
 use crate::{
     analyze_trace::{AnalyzeTraceResult, constants::ANALYZE_TRACE_FILENAME},
     app_data::{Settings, settings::TypeScriptCompilerVariant},
-    layercake::{LayerCake, ResolveBoolArgs, ResolveStringArgs},
+    layercake::{LayerCake, ResolveBoolArgs, ResolveNumberArgs, ResolveStringArgs},
     type_graph::{TYPE_GRAPH_FILENAME, TypeGraph},
     utils::{
         AVAILABLE_EDITORS, TSCONFIG_FILENAME, default_extra_tsc_flags,
@@ -282,6 +282,19 @@ pub fn init_settings(cake: &LayerCake) -> Settings {
             .parse::<TypeScriptCompilerVariant>()
             .unwrap_or_else(|_| TypeScriptCompilerVariant::default())
     };
+    let max_nodes = cake.resolve_number(ResolveNumberArgs {
+        env: "MAX_NODES",
+        flag: "--max-nodes",
+        file: "settings.maxNodes",
+        default: || Settings::default().max_nodes,
+        validate: |n| {
+            if *n <= 10_000_000 {
+                Ok(*n)
+            } else {
+                Err("maxNodes must not exceed 10,000,000".to_string())
+            }
+        },
+    });
     Settings {
         relative_paths,
         prefer_editor_open,
@@ -292,6 +305,7 @@ pub fn init_settings(cake: &LayerCake) -> Settings {
         max_old_space_size,
         max_stack_size,
         typescript_compiler_variant,
+        max_nodes,
     }
 }
 

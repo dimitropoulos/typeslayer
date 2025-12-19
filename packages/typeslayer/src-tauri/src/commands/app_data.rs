@@ -155,6 +155,7 @@ pub async fn get_data_dir(state: State<'_, &Mutex<AppData>>) -> Result<String, S
 pub struct NodesAndLinks {
     pub nodes: usize,
     pub links: Vec<CompactGraphLink>,
+    pub is_limited: bool,
 }
 
 #[tauri::command]
@@ -167,9 +168,24 @@ pub async fn get_type_graph_nodes_and_links(
         .type_graph
         .as_ref()
         .ok_or_else(|| "type graph unavailable".to_string())?;
+
+    let max_nodes = data.settings.max_nodes as usize;
+
+    // Filter nodes to only include those with ID < max_nodes
+    let filtered_nodes = tg.nodes.min(max_nodes);
+
+    // Filter links where both source and target are < max_nodes
+    let filtered_links: Vec<CompactGraphLink> = tg
+        .links
+        .iter()
+        .filter(|l| (l.source as usize) < max_nodes && (l.target as usize) < max_nodes)
+        .map(|l| l.clone().into())
+        .collect();
+
     Ok(NodesAndLinks {
-        nodes: tg.nodes,
-        links: tg.links.iter().map(|l| l.clone().into()).collect(),
+        nodes: filtered_nodes,
+        links: filtered_links,
+        is_limited: tg.nodes > max_nodes,
     })
 }
 

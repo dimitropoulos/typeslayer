@@ -2,6 +2,7 @@ import {
   Alert,
   AlertTitle,
   Box,
+  Button,
   List,
   ListItemButton,
   ListItemText,
@@ -15,6 +16,7 @@ import { CenterLoader } from "../../components/center-loader";
 import { NoData } from "../../components/no-data";
 import { OpenablePath } from "../../components/openable-path";
 import { detectPlatformSlash } from "../../components/utils";
+import { useToast } from "../../contexts/toast-context";
 import {
   useAnalyzeTrace,
   useProjectRoot,
@@ -68,10 +70,12 @@ const ShowHotSpots = () => {
 
   const selectedNode: HotSpot | undefined = hotSpots[selectedIndex];
 
+  console.log(selectedNode);
+
   const items = (
     <List>
-      {hotSpots.map(({ path, timeMs }, index) => {
-        const relativeTime = timeMs / firstHotSpot.timeMs;
+      {hotSpots.map(({ path, duration }, index) => {
+        const relativeTime = duration / firstHotSpot.duration;
         return (
           <ListItemButton
             key={path}
@@ -85,7 +89,7 @@ const ShowHotSpots = () => {
               <Stack gap={0.5}>
                 <MaybePathCaption maybePath={path} />
                 <InlineBarGraph
-                  label={`${timeMs.toLocaleString()}ms`}
+                  label={`${duration.toLocaleString()}ms`}
                   width={`${relativeTime * 100}%`}
                 />
               </Stack>
@@ -170,20 +174,31 @@ type CircularHotSpot = HotSpot & {
 
 const Span = ({
   hotSpot,
-  parentTimeMs,
+  parentDuration,
   onSelect,
   depth = 0,
+  parentStart,
 }: {
   hotSpot: CircularHotSpot;
-  parentTimeMs: number;
+  parentDuration: number;
+  parentStart: number;
+  parentEnd: number;
   onSelect: (hotSpot: CircularHotSpot) => void;
   depth?: number;
 }) => {
-  const widthPercentage = (hotSpot.timeMs / parentTimeMs) * 100;
+  const widthPercentage = (hotSpot.duration / parentDuration) * 100;
+  const offsetPercentage =
+    ((hotSpot.start - parentStart) / parentDuration) * 100;
   const hasChildren = hotSpot.children.length > 0;
 
   return (
-    <Stack sx={{ width: `${widthPercentage}%` }}>
+    <Stack
+      sx={{
+        position: "absolute",
+        left: `${offsetPercentage}%`,
+        width: `${widthPercentage}%`,
+      }}
+    >
       <Box
         onClick={() => onSelect(hotSpot)}
         sx={{
@@ -206,40 +221,75 @@ const Span = ({
           whiteSpace: "nowrap",
         }}
       >
-        {hotSpot.description} ({hotSpot.timeMs}ms)
+        {hotSpot.description}
       </Box>
       {hasChildren && (
-        <Stack direction="row" sx={{ width: "100%", gap: 0, mt: 0.5 }}>
+        <Box
+          sx={{
+            width: "100%",
+            position: "relative",
+            mt: 0.5,
+            minHeight: "24px",
+          }}
+        >
           {hotSpot.children.map((child: CircularHotSpot, index) => (
             <Span
               // biome-ignore lint/suspicious/noArrayIndexKey: fuck off bro
               key={index}
               hotSpot={child}
-              parentTimeMs={hotSpot.timeMs}
+              parentDuration={hotSpot.duration}
+              parentStart={hotSpot.start}
+              parentEnd={hotSpot.end}
               onSelect={onSelect}
               depth={depth + 1}
             />
           ))}
-        </Stack>
+        </Box>
       )}
     </Stack>
   );
 };
 
 const HotSpotItem = ({ hotSpot: rootHotSpot }: { hotSpot: HotSpot }) => {
+  const { showToast } = useToast();
   const [selectedSpan, setSelectedSpan] = useState<CircularHotSpot | null>(
     null,
   );
 
   const displayedSpan = selectedSpan || (rootHotSpot as CircularHotSpot);
-  const { path, timeMs, description, types } = displayedSpan;
+  const { path, duration, types } = displayedSpan;
+
+  const onCopyPath = useCallback(() => {
+    if (path) {
+      navigator.clipboard.writeText(path).then(() => {
+        showToast({
+          message:
+            "Path copied to clipboard.  Now search it in Perfetto to explore further.",
+          severity: "success",
+        });
+      });
+    }
+  }, [path, showToast]);
 
   return (
     <Stack gap={3}>
-      <Stack>
-        <Typography variant="h5" gutterBottom>
-          {description}
-        </Typography>
+      <Typography>
+        👋 Hi. this section got a quite big overhaul recently to show a lot more
+        information and be a lot more useful but it's not quite ready yet. in
+        the meantime, what you can do is take the file paths here for these
+        hotspots and search them in Perfetto. that'll give you all the same
+        stuff that this will eventually become.
+      </Typography>
+      <Stack sx={{ gap: 1 }}>
+        <Stack
+          sx={{ flexDirection: "row", alignItems: "center", gap: 2, mb: 1 }}
+        >
+          <Typography variant="h5">{getFilename(path)}</Typography>
+          <Button variant="outlined" size="small" onClick={onCopyPath}>
+            Copy Path
+          </Button>
+        </Stack>
+
         {path ? <OpenablePath absolutePath={path} /> : null}
         {types && (
           <Typography variant="body2" color="text.secondary">
@@ -247,17 +297,21 @@ const HotSpotItem = ({ hotSpot: rootHotSpot }: { hotSpot: HotSpot }) => {
           </Typography>
         )}
         <Typography variant="body2" color="text.secondary">
-          Time: {timeMs}ms
+          Time: {duration}ms
         </Typography>
       </Stack>
 
       <Stack gap={1}>
         <Typography variant="h6">Execution Tree</Typography>
-        <Span
-          hotSpot={rootHotSpot as CircularHotSpot}
-          parentTimeMs={rootHotSpot.timeMs}
-          onSelect={setSelectedSpan}
-        />
+        <Box sx={{ position: "relative" }}>
+          <Span
+            hotSpot={rootHotSpot as CircularHotSpot}
+            parentDuration={rootHotSpot.duration}
+            parentStart={rootHotSpot.start}
+            parentEnd={rootHotSpot.end}
+            onSelect={setSelectedSpan}
+          />
+        </Box>
       </Stack>
     </Stack>
   );

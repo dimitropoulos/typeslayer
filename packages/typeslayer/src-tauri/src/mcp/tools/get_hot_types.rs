@@ -13,7 +13,7 @@ pub const DESCRIPTION: &str = "Analyzes TypeScript compilation traces to identif
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HotTypeInfo {
-    pub time_ms: i64,
+    pub duration: f64,
     pub description: String,
     pub file_path: Option<PathBuf>,
     pub types_count: usize,
@@ -123,7 +123,7 @@ pub async fn execute(app_data: &Mutex<AppData>) -> String {
         hot_types: hot_types
             .iter()
             .map(|h| HotTypeInfo {
-                time_ms: h.time_ms,
+                duration: h.duration,
                 description: h.description.clone(),
                 file_path: h.path.clone(),
                 types_count: h.types.as_ref().map(|t| t.len()).unwrap_or(0),

@@ -415,7 +415,7 @@ export function useTypeGraphNodesAndLinks() {
   return useQuery({
     queryKey: ["type_graph_nodes_and_links"],
     queryFn: () =>
-      invoke<{ nodes: number; links: CompactGraphLink[] }>(
+      invoke<{ nodes: number; links: CompactGraphLink[]; isLimited: boolean }>(
         "get_type_graph_nodes_and_links",
       ),
     staleTime: Number.POSITIVE_INFINITY,
@@ -591,6 +591,7 @@ const refreshTypeGraphInvalidations = new Set([
   "get_links_to_type_id",
   "get_output_file_sizes",
   "bug_report_files",
+  "max_nodes",
 ]);
 
 const refreshTypeGraph = (queryClient: QueryClient) => async () => {
@@ -1028,6 +1029,34 @@ export const useTypeScriptCompilerVariant = () => {
     },
     onSuccess: (_, variant) => {
       queryClient.setQueryData(["typescript_compiler_variant"], variant);
+    },
+  });
+
+  return {
+    data: query.data,
+    isLoading: query.isLoading,
+    error: query.error,
+    set: mutation.mutateAsync,
+    isSettingValue: mutation.isPending,
+  };
+};
+
+// get_max_nodes getter and setter
+export const useMaxNodes = () => {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ["max_nodes"],
+    queryFn: () => invoke<number>("get_max_nodes"),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  const mutation = useMutation({
+    mutationFn: (maxNodes: number) =>
+      invoke<void>("set_max_nodes", { maxNodes }),
+    onSettled: refreshTypeGraph(queryClient),
+    onSuccess: (_, maxNodes) => {
+      queryClient.setQueryData(["max_nodes"], maxNodes);
     },
   });
 

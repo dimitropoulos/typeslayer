@@ -1,12 +1,15 @@
-import { Box, type SxProps, Typography } from "@mui/material";
+import { ErrorOutline } from "@mui/icons-material";
+import { Box, type SxProps, Tooltip, Typography } from "@mui/material";
 
 export const StatPill = ({
   label,
   value,
+  warning,
   sx = {},
 }: {
   label: string;
   value: number;
+  warning?: string | undefined;
   sx?: SxProps | undefined;
 }) => (
   <Box
@@ -24,6 +27,11 @@ export const StatPill = ({
     <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
       {value.toLocaleString()}
     </Typography>
+    {warning ? (
+      <Tooltip title={warning}>
+        <ErrorOutline color="warning" fontSize="small" />
+      </Tooltip>
+    ) : null}
     <Typography
       variant="caption"
       sx={{ textTransform: "uppercase", letterSpacing: 1 }}

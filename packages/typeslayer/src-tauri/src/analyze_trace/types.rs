@@ -55,8 +55,9 @@ pub struct ParseResult {
 #[serde(rename_all = "camelCase")]
 pub struct HotSpot {
     pub description: String,
-    #[serde(rename = "timeMs")]
-    pub time_ms: i64,
+    pub start: f64,
+    pub end: f64,
+    pub duration: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub path: Option<PathBuf>,
     #[serde(skip_serializing_if = "Option::is_none")]

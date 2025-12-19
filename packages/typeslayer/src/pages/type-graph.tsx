@@ -141,7 +141,7 @@ export const TypeGraph = () => {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<Graph | null>(null);
-  const [visibleStats, setVisibleStats] = useState<{
+  const [filteredStats, setFilteredStats] = useState<{
     nodes: number;
     links: number;
   } | null>(null);
@@ -477,17 +477,16 @@ export const TypeGraph = () => {
         });
         graphRef.current = graph;
 
-        const nodeCount = nodes;
         // Seed positions near observed settled center to reduce early drift
-        const positions = new Float32Array(nodeCount * 2);
+        const positions = new Float32Array(nodes * 2);
         const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
         const BASE_CENTER_X = 4150.6;
         const BASE_CENTER_Y = 4150.3;
         const R = 1300; // approx half of observed extent
-        for (let i = 0; i < nodeCount; i++) {
+        for (let i = 0; i < nodes; i++) {
           const t = i + 1;
           const angle = t * GOLDEN_ANGLE;
-          const r = Math.sqrt(t / nodeCount) * R;
+          const r = Math.sqrt(t / nodes) * R;
           positions[i * 2] = BASE_CENTER_X + Math.cos(angle) * r;
           positions[i * 2 + 1] = BASE_CENTER_Y + Math.sin(angle) * r;
         }
@@ -552,8 +551,8 @@ export const TypeGraph = () => {
           }
         });
 
-        setVisibleStats({
-          nodes: nodes,
+        setFilteredStats({
+          nodes,
           links: links.length,
         });
         setGraphReady(true);
@@ -608,12 +607,12 @@ export const TypeGraph = () => {
         allLinksRef={allLinksRef}
         hiddenIndicesRef={hiddenIndicesRef}
         applySelectionVisuals={applySelectionVisuals}
-        setVisibleStats={setVisibleStats}
+        setVisibleStats={setFilteredStats}
         selectedTypeId={selectedTypeId}
         setSimulationPaused={setSimulationPaused}
         paused={paused}
         pausedRef={pausedRef}
-        visibleStats={visibleStats}
+        filteredStats={filteredStats}
       />
       <Box sx={{ flex: 1, position: "relative", minHeight: 0 }}>
         <div
@@ -699,7 +698,7 @@ const TypeGraphUtilityPanel = ({
   setSimulationPaused,
   paused,
   pausedRef,
-  visibleStats,
+  filteredStats,
 }: {
   setShowFreeTypes: (next: boolean) => void;
   showFreeTypes: boolean;
@@ -718,7 +717,7 @@ const TypeGraphUtilityPanel = ({
   setSimulationPaused: (nextPaused: boolean) => void;
   paused: boolean;
   pausedRef: React.RefObject<boolean>;
-  visibleStats: { nodes: number; links: number } | null;
+  filteredStats: { nodes: number; links: number } | null;
 }) => {
   const { data: typeGraph } = useTypeGraphNodesAndLinks();
   const navigate = useNavigate();
@@ -992,18 +991,23 @@ const TypeGraphUtilityPanel = ({
           </IconButton>
         </Stack>
 
-        {visibleStats ? (
+        {filteredStats ? (
           <>
             <span style={{ flex: 1 }} />
             <Stack sx={{ gap: 1, flexDirection: "row" }}>
               <StatPill
                 label="types"
-                value={visibleStats.nodes}
+                value={filteredStats.nodes}
                 sx={{ mt: "-1px" }}
+                warning={
+                  typeGraph?.isLimited
+                    ? "the number of nodes in the graph is being limited because apparently you couldn't help yourself.  rewrite it in Rust or see Settings to raise the limit."
+                    : undefined
+                }
               />
               <StatPill
                 label="relations"
-                value={visibleStats.links}
+                value={filteredStats.links}
                 sx={{ mt: "-1px" }}
               />
             </Stack>
