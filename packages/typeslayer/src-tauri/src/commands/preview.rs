@@ -23,7 +23,7 @@ pub async fn get_output_file_preview(path: &PathBuf) -> Result<String, String> {
         n,
         path.display()
     );
-    String::from_utf8(buf).map_err(|e| format!("Invalid UTF-8: {}", e))
+    String::from_utf8(buf).map_err(|e| format!("Invalid UTF-8: {e}"))
 }
 
 #[tauri::command]

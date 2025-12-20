@@ -147,12 +147,12 @@ impl AppData {
         // Search for tsconfig*.json files in the project directory and subdirectories
         let mut entries = fs::read_dir(&self.project_root)
             .await
-            .map_err(|e| format!("Could not read dir {}", e))?;
+            .map_err(|e| format!("Could not read dir {e}"))?;
         loop {
             let entry = entries
                 .next_entry()
                 .await
-                .map_err(|e| format!("Could not read dir {}", e))?;
+                .map_err(|e| format!("Could not read dir {e}"))?;
             let Some(entry) = entry else {
                 break;
             };
@@ -168,10 +168,10 @@ impl AppData {
         self.tsconfig_paths.sort_by(|a, b| {
             let a_is_main = a
                 .file_name()
-                .map_or(false, |name| name == TSCONFIG_FILENAME);
+                .is_some_and(|name| name == TSCONFIG_FILENAME);
             let b_is_main = b
                 .file_name()
-                .map_or(false, |name| name == TSCONFIG_FILENAME);
+                .is_some_and(|name| name == TSCONFIG_FILENAME);
             match (a_is_main, b_is_main) {
                 (true, false) => Ordering::Less,
                 (false, true) => Ordering::Greater,
@@ -243,11 +243,11 @@ impl AppData {
         // 3) The `--` pattern that is more idiomatic is unfortunately always completely stripped by `yarn node` in 1.0, even if there are multiple. Though even if it didn't it'd need to be `-- --` because Node will strip the first `--`, correctly, as that indicates the end of its args leaving TypeScript still needing a dummy arg.
         args.push("slay-gurrrl-slay");
 
-        if self.settings.extra_tsc_flags != "" {
+        if !self.settings.extra_tsc_flags.is_empty() {
             args.push(&self.settings.extra_tsc_flags);
         }
 
-        if user_flags != "" {
+        if !user_flags.is_empty() {
             args.push(user_flags);
         }
 
@@ -257,7 +257,7 @@ impl AppData {
             if let Some(ref tsconfig) = self.selected_tsconfig {
                 args.push("--project");
 
-                tsconfig_string = quote_if_needed(&tsconfig.to_string_lossy().to_string());
+                tsconfig_string = quote_if_needed(&tsconfig.to_string_lossy());
                 args.push(&tsconfig_string);
             }
         }
@@ -304,7 +304,7 @@ impl AppData {
         #[cfg(not(target_os = "windows"))]
         cmd.arg(tsc_command.command);
 
-        cmd.current_dir(&cwd);
+        cmd.current_dir(cwd);
 
         let output = process_controller.run_command(cmd).await?;
         let Some(mut output) = output else {
@@ -420,7 +420,7 @@ impl AppData {
         if outputs_dir.exists() {
             let mut entries = fs::read_dir(&outputs_dir)
                 .await
-                .map_err(|e| format!("Could not read dir {}", e))?;
+                .map_err(|e| format!("Could not read dir {e}"))?;
             loop {
                 let entry = entries
                     .next_entry()
@@ -432,11 +432,11 @@ impl AppData {
                 if path.is_dir() {
                     fs::remove_dir_all(&path)
                         .await
-                        .map_err(|e| format!("failed to remove directory {:?}: {e}", path))?;
+                        .map_err(|e| format!("failed to remove directory {path:?}: {e}"))?;
                 } else {
                     fs::remove_file(&path)
                         .await
-                        .map_err(|e| format!("failed to remove file {:?}: {e}", path))?;
+                        .map_err(|e| format!("failed to remove file {path:?}: {e}"))?;
                 }
             }
         }

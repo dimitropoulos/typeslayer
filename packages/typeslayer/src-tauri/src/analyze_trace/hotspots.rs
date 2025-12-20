@@ -1,21 +1,17 @@
 use crate::{
-    analyze_trace::types::{AnalyzeTraceOptions, EventSpan, EventSpanEvent, HotSpot},
+    analyze_trace::types::{EventSpan, EventSpanEvent, HotSpot},
     validate::trace_json::TraceEvent,
 };
 use std::path::Path;
 
-pub fn get_hotspots(
-    hot_paths_tree: &EventSpan,
-    options: &AnalyzeTraceOptions,
-) -> Result<Vec<HotSpot>, String> {
+pub fn get_hotspots(hot_paths_tree: &EventSpan) -> Result<Vec<HotSpot>, String> {
     // `hot_paths_tree` is cloned ahead of time so that it can easily be sorted in-place without double-cloning.
-    get_hotspots_worker(&mut hot_paths_tree.clone(), &mut None, options)
+    get_hotspots_worker(&mut hot_paths_tree.clone(), &mut None)
 }
 
 fn get_hotspots_worker(
     span: &mut EventSpan,
     current_file: &mut Option<String>,
-    options: &AnalyzeTraceOptions,
 ) -> Result<Vec<HotSpot>, String> {
     let current_file_owned;
 
@@ -45,7 +41,7 @@ fn get_hotspots_worker(
         sorted_children.sort_by(|a, b| b.duration.total_cmp(&a.duration));
 
         for child in sorted_children.iter_mut() {
-            children.extend(get_hotspots_worker(child, current_file, options)?);
+            children.extend(get_hotspots_worker(child, current_file)?);
         }
     }
 

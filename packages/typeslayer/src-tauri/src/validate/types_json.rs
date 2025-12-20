@@ -124,7 +124,7 @@ impl std::fmt::Display for IntrinsicName {
             IntrinsicName::Number => "number",
             IntrinsicName::String => "string",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 

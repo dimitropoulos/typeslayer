@@ -71,8 +71,7 @@ pub fn is_valid_key(key: &str) -> bool {
         return false;
     }
     let encoded_entropy = general_purpose::STANDARD.encode(ENTROPY);
-    let valid = encoded_entropy.contains(key);
-    valid
+    encoded_entropy.contains(key)
 }
 
 #[tauri::command]

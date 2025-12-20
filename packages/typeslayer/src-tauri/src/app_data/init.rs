@@ -177,7 +177,7 @@ pub fn init_settings(cake: &LayerCake) -> Settings {
             if AVAILABLE_EDITORS.iter().any(|(cmd, _)| *cmd == s) {
                 Ok(s.to_string())
             } else {
-                Err(format!("Editor '{}' not in available editors list", s))
+                Err(format!("Editor {s:?} not in available editors list"))
             }
         },
     }));
@@ -212,7 +212,7 @@ pub fn init_settings(cake: &LayerCake) -> Settings {
                 } else {
                     s.parse::<i32>()
                         .map(|_| s.to_string())
-                        .map_err(|e| format!("Invalid maxOldSpaceSize value '{}': {}", s, e))
+                        .map_err(|e| format!("Invalid maxOldSpaceSize value {s:?}: {e}"))
                 }
             },
         });
@@ -235,7 +235,7 @@ pub fn init_settings(cake: &LayerCake) -> Settings {
                 } else {
                     s.parse::<i32>()
                         .map(|_| s.to_string())
-                        .map_err(|e| format!("Invalid maxStackSize value '{}': {}", s, e))
+                        .map_err(|e| format!("Invalid maxStackSize value {s:?}: {e}"))
                 }
             },
         });
@@ -317,7 +317,7 @@ pub fn init_selected_tsconfig_with(
         for path in tsconfig_paths.iter() {
             if path
                 .file_name()
-                .map_or(false, |name| name == TSCONFIG_FILENAME)
+                .is_some_and(|name| name == TSCONFIG_FILENAME)
             {
                 return path.to_string_lossy().to_string();
             }
@@ -337,7 +337,7 @@ pub fn init_selected_tsconfig_with(
             if s.is_empty() || tsconfig_paths.iter().any(|p| p.to_string_lossy() == s) {
                 Ok(s.to_string())
             } else {
-                Err(format!("tsconfig '{}' not found in discovered paths", s))
+                Err(format!("tsconfig {s:?} not found in discovered paths"))
             }
         },
     });

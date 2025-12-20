@@ -14,6 +14,12 @@ pub struct ProcessController {
     cancel: Arc<Notify>,
 }
 
+impl Default for ProcessController {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct CommandOutput {
     pub status: ExitStatus,
     pub stdout: ChildStdout,

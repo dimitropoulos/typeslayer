@@ -20,13 +20,13 @@ pub async fn take_screenshot(app: AppHandle) -> Result<String, String> {
 
     // Generate filename with timestamp
     let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
-    let filename = format!("typeslayer_{}.png", timestamp);
+    let filename = format!("typeslayer_{timestamp}.png");
     let screenshot_path = downloads_dir.join(&filename);
 
     // Save to file
     fs::write(&screenshot_path, &screenshot_bytes)
         .await
-        .map_err(|e| format!("Failed to save screenshot: {}", e))?;
+        .map_err(|e| format!("Failed to save screenshot: {e}"))?;
 
     // Copy image data to clipboard
     use tauri_plugin_clipboard_manager::ClipboardExt;
@@ -35,7 +35,7 @@ pub async fn take_screenshot(app: AppHandle) -> Result<String, String> {
 
     // Decode PNG to get RGBA data for clipboard
     let img = image::load_from_memory(&screenshot_bytes)
-        .map_err(|e| format!("Failed to decode image: {}", e))?;
+        .map_err(|e| format!("Failed to decode image: {e}"))?;
     let rgba_img = img.to_rgba8();
     let (width, height) = rgba_img.dimensions();
     let rgba_data = rgba_img.into_raw();
@@ -45,7 +45,7 @@ pub async fn take_screenshot(app: AppHandle) -> Result<String, String> {
 
     app.clipboard()
         .write_image(&clipboard_image)
-        .map_err(|e| format!("Failed to copy image to clipboard: {}", e))?;
+        .map_err(|e| format!("Failed to copy image to clipboard: {e}"))?;
 
     Ok(path_str)
 }
@@ -178,7 +178,7 @@ pub async fn open_file(state: State<'_, &Mutex<AppData>>, path: String) -> Resul
                     continue;
                 }
                 Err(e) => {
-                    debug!("[open_file] failed to run editor '{}': {}", ed, e);
+                    debug!("[open_file] failed to run editor {ed:?}: {e}");
                     continue;
                 }
             }

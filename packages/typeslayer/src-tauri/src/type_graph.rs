@@ -231,7 +231,7 @@ pub fn human_readable_name(t: &ResolvedType) -> String {
         return s.clone();
     }
     if let Some(i) = &t.intrinsic_name {
-        return format!("{}", i);
+        return format!("{i}");
     }
     "<anonymous>".to_string()
 }
@@ -309,9 +309,9 @@ impl TypeGraph {
             let source_id = link.source;
             let sources = link_stats_by_type_id
                 .entry(kind.clone())
-                .or_insert_with(HashMap::new)
+                .or_default()
                 .entry(target_id)
-                .or_insert_with(Vec::new);
+                .or_default();
             sources.push(source_id);
         }
 
@@ -473,5 +473,5 @@ pub fn get_relationships_for_type(t: &ResolvedType) -> Vec<GraphLink> {
         }
     }
 
-    return relations;
+    relations
 }

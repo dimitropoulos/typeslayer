@@ -26,10 +26,10 @@ async fn upload_file_with_validation<T, F, Fut, U>(
 where
     F: Fn(PathBuf) -> Fut,
     Fut: Future<Output = Result<T, String>>,
-    U: Fn(&mut AppData, T) -> (),
+    U: Fn(&mut AppData, T),
 {
     if !file_path.exists() {
-        return Err(format!("File does not exist: {:?}", &file_path));
+        return Err(format!("File does not exist: {file_path:?}"));
     }
 
     let parsed_data = parser(file_path.clone()).await?;
@@ -40,12 +40,12 @@ where
 
     tokio::fs::create_dir_all(&outputs_dir)
         .await
-        .map_err(|e| format!("Failed to create outputs directory: {}", e))?;
+        .map_err(|e| format!("Failed to create outputs directory: {e}"))?;
 
     let dest = outputs_dir.join(dest_filename);
     tokio::fs::copy(&file_path, &dest)
         .await
-        .map_err(|e| format!("Failed to copy file: {}", e))?;
+        .map_err(|e| format!("Failed to copy file: {e}"))?;
 
     // Update state
     state_updater(&mut data, parsed_data);
@@ -56,7 +56,7 @@ where
 
 // Helper to find paired trace/types files
 fn find_paired_file(path: &Path, from: &str, to: &str) -> PathBuf {
-    let default_name = format!("{}.json", from);
+    let default_name = format!("{from}.json");
     let filename = path
         .file_name()
         .and_then(|n| n.to_str())
@@ -100,12 +100,12 @@ async fn regenerate_analysis_after_upload(
         let outputs_dir = data.outputs_dir();
         let path = outputs_dir.join(TYPE_GRAPH_FILENAME);
         let json = serde_json::to_string_pretty(&data.type_graph)
-            .map_err(|e| format!("Failed to serialize type_graph: {}", e))?;
+            .map_err(|e| format!("Failed to serialize type_graph: {e}"))?;
 
         std::fs::create_dir_all(&outputs_dir)
-            .map_err(|e| format!("Failed to create outputs directory: {}", e))?;
+            .map_err(|e| format!("Failed to create outputs directory: {e}"))?;
         std::fs::write(&path, json)
-            .map_err(|e| format!("Failed to write type-graph.json: {}", e))?;
+            .map_err(|e| format!("Failed to write type-graph.json: {e}"))?;
     }
 
     // Update outputs after regeneration
@@ -124,7 +124,7 @@ pub async fn upload_trace_json(
         async |path: PathBuf| {
             load_trace_json(path)
                 .await
-                .map_err(|e| format!("Invalid trace.json format: {}", e))
+                .map_err(|e| format!("Invalid trace.json format: {e}"))
         },
         |data, parsed| {
             data.trace_json = parsed;
@@ -145,7 +145,7 @@ pub async fn upload_trace_json(
             async |path| {
                 load_types_json(path)
                     .await
-                    .map_err(|e| format!("Invalid types.json format: {}", e))
+                    .map_err(|e| format!("Invalid types.json format: {e}"))
             },
             |data, parsed| {
                 data.types_json = parsed;
@@ -157,7 +157,7 @@ pub async fn upload_trace_json(
 
     // Regenerate analyze trace and type graph after upload
     if let Err(e) = regenerate_analysis_after_upload(&state).await {
-        tracing::warn!("Failed to regenerate analysis after trace upload: {}", e);
+        tracing::warn!("Failed to regenerate analysis after trace upload: {e}");
     }
 
     Ok(())
@@ -176,7 +176,7 @@ pub async fn upload_types_json(
         async |path| {
             load_types_json(path)
                 .await
-                .map_err(|e| format!("Invalid types.json format: {}", e))
+                .map_err(|e| format!("Invalid types.json format: {e}"))
         },
         |data, parsed| {
             data.types_json = parsed;
@@ -197,7 +197,7 @@ pub async fn upload_types_json(
             async |path| {
                 load_trace_json(path)
                     .await
-                    .map_err(|e| format!("Invalid trace.json format: {}", e))
+                    .map_err(|e| format!("Invalid trace.json format: {e}"))
             },
             |data, parsed| {
                 data.trace_json = parsed;
@@ -209,7 +209,7 @@ pub async fn upload_types_json(
 
     // Regenerate analyze trace and type graph after upload
     if let Err(e) = regenerate_analysis_after_upload(&state).await {
-        tracing::warn!("Failed to regenerate analysis after types upload: {}", e);
+        tracing::warn!("Failed to regenerate analysis after types upload: {e}");
     }
 
     Ok(())
@@ -229,7 +229,7 @@ pub async fn upload_cpu_profile(
                     .map_err(|e| format!("could not open cpu profile at {path:?}: {e}"))?;
                 serde_json::from_reader(BufReader::new(file))
                     .map(|contents: serde_json::Value| contents.to_string())
-                    .map_err(|e| format!("Invalid CPU profile format (not valid JSON): {}", e))
+                    .map_err(|e| format!("Invalid CPU profile format (not valid JSON): {e}"))
             })
             .await
             .map_err(|e| e.to_string())?
@@ -257,7 +257,7 @@ pub async fn upload_analyze_trace(
                 let file = std::fs::File::open(&path)
                     .map_err(|e| format!("could not open cpu profile at {path:?}: {e}"))?;
                 serde_json::from_reader(BufReader::new(file))
-                    .map_err(|e| format!("Invalid CPU profile format (not valid JSON): {}", e))
+                    .map_err(|e| format!("Invalid CPU profile format (not valid JSON): {e}"))
             })
             .await
             .map_err(|e| e.to_string())?
@@ -285,7 +285,7 @@ pub async fn upload_type_graph(
                 let file = std::fs::File::open(&path)
                     .map_err(|e| format!("could not open cpu profile at {path:?}: {e}"))?;
                 serde_json::from_reader(BufReader::new(file))
-                    .map_err(|e| format!("Invalid CPU profile format (not valid JSON): {}", e))
+                    .map_err(|e| format!("Invalid CPU profile format (not valid JSON): {e}"))
             })
             .await
             .map_err(|e| e.to_string())?

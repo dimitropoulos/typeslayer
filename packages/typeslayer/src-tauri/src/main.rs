@@ -25,7 +25,7 @@ async fn main() -> Result<(), String> {
         // Run as MCP server (STDIO mode) with shared AppData
         // In MCP mode, stdout is reserved for JSON-RPC protocol, so no HTTP server or GUI
         if let Err(e) = run_mcp_server(app_data) {
-            eprintln!("MCP server error: {}", e);
+            eprintln!("MCP server error: {e}");
             std::process::exit(1);
         }
     } else {
@@ -41,7 +41,7 @@ async fn main() -> Result<(), String> {
             match typeslayer_lib::run_http_server(app_data, listener).await {
                 Ok(_) => println!("HTTP server stopped gracefully"),
                 Err(e) => {
-                    eprintln!("HTTP server error: {}", e);
+                    eprintln!("HTTP server error: {e}");
                     eprintln!("The app will continue but file serving won't work");
                 }
             }

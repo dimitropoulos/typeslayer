@@ -22,10 +22,8 @@ use tracing::{debug, error, info};
 pub async fn validate_types_and_trace_async(
     outputs_dir: &str,
 ) -> Result<(TypesJsonSchema, Vec<TraceEvent>), String> {
-    let types_path = Path::new(outputs_dir)
-        .join(TYPES_JSON_FILENAME.trim_start_matches('/'));
-    let trace_path = Path::new(outputs_dir)
-        .join(TRACE_JSON_FILENAME.trim_start_matches('/'));
+    let types_path = Path::new(outputs_dir).join(TYPES_JSON_FILENAME.trim_start_matches('/'));
+    let trace_path = Path::new(outputs_dir).join(TRACE_JSON_FILENAME.trim_start_matches('/'));
 
     // Read/parse concurrently
     let (types_res, trace_res) = tokio::join!(
@@ -35,14 +33,12 @@ pub async fn validate_types_and_trace_async(
 
     let types = types_res.map_err(|e| {
         format!(
-            "[init_types_json] types.json validation failed: {}\nExpected file at: {:?}",
-            e, types_path
+            "[init_types_json] types.json validation failed: {e}\nExpected file at: {types_path:?}",
         )
     })?;
     let trace = trace_res.map_err(|e| {
         format!(
-            "[init_trace_json] trace.json validation failed: {}\nExpected file at: {:?}",
-            e, trace_path
+            "[init_trace_json] trace.json validation failed: {e}\nExpected file at: {trace_path:?}",
         )
     })?;
     debug!(
@@ -69,17 +65,14 @@ pub async fn generate_trace(
     let flag = make_cli_arg("--generateTrace", &outputs_dir_for_closure);
 
     data.run_tsc(
-        &*process_controller,
+        &process_controller,
         flag,
         "TypeScript compilation with trace generation",
     )
     .await
-    .map_err(|e| format!("[generate_trace] join error: {}", e))?;
+    .map_err(|e| format!("[generate_trace] join error: {e}"))?;
 
-    info!(
-        "[generate_trace] Listing files in output directory: {}",
-        outputs_dir
-    );
+    info!("[generate_trace] Listing files in output directory: {outputs_dir}");
     if let Ok(entries) = std::fs::read_dir(&outputs_dir) {
         for entry in entries.flatten() {
             if let Ok(file_name) = entry.file_name().into_string() {
@@ -87,10 +80,7 @@ pub async fn generate_trace(
             }
         }
     } else {
-        info!(
-            "[generate_trace] Could not read outputs directory: {}",
-            outputs_dir
-        );
+        info!("[generate_trace] Could not read outputs directory: {outputs_dir}");
     }
 
     let (types, trace) = validate_types_and_trace_async(&outputs_dir).await?;
@@ -125,9 +115,9 @@ pub async fn generate_cpu_profile(
     let generation_path = Path::new(&outputs_dir_for_closure).join(CPU_PROFILE_FILENAME);
     let flag = make_cli_arg("--generateCpuProfile", &generation_path.to_string_lossy());
 
-    data.run_tsc(&*process_controller, flag, "TypeScript CPU profile run")
+    data.run_tsc(&process_controller, flag, "TypeScript CPU profile run")
         .await
-        .map_err(|e| format!("[generate_cpu_profile] errored: {}", e))?;
+        .map_err(|e| format!("[generate_cpu_profile] errored: {e}"))?;
 
     // On success, read and cache CPU profile contents
     let path = Path::new(&outputs_dir).join(CPU_PROFILE_FILENAME);
@@ -187,7 +177,7 @@ pub async fn generate_analyze_trace(
             debug!("[generate_analyze_trace] completed");
             Ok(())
         }
-        Err(e) => Err(format!("[generate_analyze_trace] join error: {}", e)),
+        Err(e) => Err(format!("[generate_analyze_trace] join error: {e}")),
     }
 }
 
