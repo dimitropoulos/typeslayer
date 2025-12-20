@@ -1,5 +1,27 @@
 # TypeSlayer FAQ
 
+- [TypeSlayer FAQ](#typeslayer-faq)
+  - ["but I just want to see my code"](#but-i-just-want-to-see-my-code)
+  - [why do I see lots of `<anonymous>` everywhere?](#why-do-i-see-lots-of-anonymous-everywhere)
+  - [what about `tsgo`?](#what-about-tsgo)
+  - [what about `Svelte` or `Vue`?](#what-about-svelte-or-vue)
+  - [where does TypeSlayer store my data?](#where-does-typeslayer-store-my-data)
+  - [how sensitive is the data in the outputs?](#how-sensitive-is-the-data-in-the-outputs)
+  - [does TypeSlayer track me?](#does-typeslayer-track-me)
+  - [why does the Type Graph keep moving?](#why-does-the-type-graph-keep-moving)
+  - [how is testing a library different?](#how-is-testing-a-library-different)
+  - [this is a lot. where do I start?](#this-is-a-lot-where-do-i-start)
+    - [1. is there _actually_ a problem?](#1-is-there-actually-a-problem)
+    - [2. is there an outlier in the Treemap?](#2-is-there-an-outlier-in-the-treemap)
+    - [3. does anything look weird in Perfetto?](#3-does-anything-look-weird-in-perfetto)
+    - [4. are there any Award Winners that stand out?](#4-are-there-any-award-winners-that-stand-out)
+    - [5. sometimes, you still gotta RTFM](#5-sometimes-you-still-gotta-rtfm)
+  - [can I pay you to help me? 💸](#can-i-pay-you-to-help-me-)
+  - [but I refuse to run postinstall scripts..](#but-i-refuse-to-run-postinstall-scripts)
+  - [why isn't this a CLI tool?](#why-isnt-this-a-cli-tool)
+  - [how do I use this with a monorepo?](#how-do-i-use-this-with-a-monorepo)
+  - [Who needs this stupid thing, anyway?](#who-needs-this-stupid-thing-anyway)
+
 ## "but I just want to see my code"
 
 here's a reminder from step 4 of the prerequisites in Start
@@ -204,3 +226,17 @@ that will have to change in the future for the very-simple reason that the peopl
 but for now, please just pick one package in your monorepo to analyze at a time.
 
 when you do, though, don't forget that you can just as easily run `tsc --generateTrace` manually on every package in your monorepo, and then gather all the traces and sort them by file size. it's almost a guarantee that the ones at the top of that list are the ones you most care about anyway.
+
+## Who needs this stupid thing, anyway?
+
+TypeSlayer is one of those things that most developers don't need.  others might just find it lulzy to play around with.
+
+but then there's the power users. the library authors. the people attending SquiggleConf. you know the kind.
+
+for the people pushing the boundaries of TypeScript (or at companies doing so intentionally or not), a tool like this is something we haven't seen before. there were ways to trash _hours_ messing with multi-hundred-megabyte JSON files. and that's not even counting the time required to learn how the TypeScript compiler works so you can understand the problem... it's a lot.
+
+consider the fact that this can sometimes feel like an impossible task for a library author because the code that actually exercises the library isn't directly accessible - it's in the _library user_'s code (which is usually private).
+
+I made TypeSlayer because I learned delulu-levels-of-detail about TypeScript performance tuning [while getting Doom to run in TypeScript types](https://youtu.be/0mCsluv5FXA), yet many of those techniques are still opaque to most people.
+
+I wanted to make it easy for others to put up PRs at their companies all like "I increased type-checking perf on this file by 380,000x and shaved 23 seconds off every CI run" (real story btw lol). I took what I learned about how to debug type performance and wrapped it all up into this tool.
