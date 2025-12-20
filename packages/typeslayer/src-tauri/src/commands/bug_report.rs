@@ -8,7 +8,7 @@ use crate::{
         utils::CPU_PROFILE_FILENAME,
     },
 };
-use std::io::{Read, Write};
+use std::io::Write;
 use std::path::Path;
 use tauri::State;
 use tokio::sync::Mutex;
@@ -170,12 +170,12 @@ pub async fn create_bug_report(
             };
 
             if file_path.exists() {
-                let contents = std::fs::read(&file_path)
-                    .map_err(|e| format!("Failed to read {}: {}", filename, e))?;
+                let mut file = std::fs::File::open(&file_path)
+                    .map_err(|e| format!("Failed to open {}: {}", filename, e))?;
 
                 zip.start_file(filename, options)
                     .map_err(|e| format!("Failed to add {} to zip: {}", filename, e))?;
-                zip.write_all(&contents)
+                std::io::copy(&mut file, &mut zip)
                     .map_err(|e| format!("Failed to write {} to zip: {}", filename, e))?;
             }
         }
@@ -243,14 +243,10 @@ pub async fn upload_bug_report(
                 outputs_dir_for_unzip.join(&filename)
             };
 
-            // Read file contents
-            let mut contents = Vec::new();
-            file.read_to_end(&mut contents)
-                .map_err(|e| format!("Failed to read {}: {}", &filename, &e))?;
-
-            debug!("Extracting {} to {}", filename, dest_path.display());
-            std::fs::write(&dest_path, contents)
-                .map_err(|e| format!("Failed to write {}: {}", &filename, &e))?;
+            let mut dest = std::fs::File::create(dest_path)
+                .map_err(|e| format!("could not create file: {e}"))?;
+            std::io::copy(&mut file, &mut dest)
+                .map_err(|e| format!("Failed to extract {}: {}", &filename, &e))?;
         }
 
         Ok::<(), String>(())

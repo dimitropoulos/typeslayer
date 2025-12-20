@@ -1,3 +1,5 @@
+use std::{io::BufReader, path::PathBuf};
+
 use super::utils::{Location, TypeId};
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -231,9 +233,9 @@ pub struct ResolvedType {
 /// `typesJsonSchema` – an array of `ResolvedType`
 pub type TypesJsonSchema = Vec<ResolvedType>;
 
-pub fn parse_types_json(path_label: &str, json_string: &str) -> Result<TypesJsonSchema, String> {
-    let mut parsed: TypesJsonSchema = serde_json::from_str(json_string)
-        .map_err(|e| format!("Failed to parse '{path_label}': {e}"))?;
+pub fn parse_types_json(path: PathBuf, json_reader: impl std::io::Read) -> Result<TypesJsonSchema, String> {
+    let mut parsed: TypesJsonSchema = serde_json::from_reader(json_reader)
+        .map_err(|e| format!("Failed to parse {path:?}: {e}"))?;
 
     parsed.insert(
         0,
@@ -275,9 +277,12 @@ pub fn parse_types_json(path_label: &str, json_string: &str) -> Result<TypesJson
     Ok(parsed)
 }
 
-pub async fn load_types_json(path: String) -> Result<TypesJsonSchema, String> {
-    let json_string = tokio::fs::read_to_string(&path)
-        .await
-        .map_err(|e| format!("Failed to read '{path}': {e}"))?;
-    parse_types_json(&path, &json_string)
+pub async fn load_types_json(path: PathBuf) -> Result<TypesJsonSchema, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let json_string =
+            std::fs::File::open(&path).map_err(|e| format!("Failed to read {path:?}: {e}"))?;
+        parse_types_json(path, BufReader::new(json_string))
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }

@@ -66,11 +66,11 @@ impl AppData {
 
         let project_root = init_project_root(&cake);
         let outputs_dir = data_dir.join(OUTPUTS_DIRECTORY);
-        let types_json = init_types_json(&outputs_dir, &project_root);
-        let trace_json = init_trace_json(&outputs_dir, &project_root);
-        let analyze_trace = init_analyze_trace(&outputs_dir);
-        let type_graph = init_type_graph(&outputs_dir);
-        let cpu_profile = init_cpu_profile(&outputs_dir);
+        let types_json = init_types_json(&outputs_dir, &project_root).await;
+        let trace_json = init_trace_json(&outputs_dir, &project_root).await;
+        let analyze_trace = init_analyze_trace(&outputs_dir).await;
+        let type_graph = init_type_graph(&outputs_dir).await;
+        let cpu_profile = init_cpu_profile(&outputs_dir).await;
         let settings = init_settings(&cake);
         let verbose = init_verbose(&cake);
         let auth_code = init_auth_code(&cake);

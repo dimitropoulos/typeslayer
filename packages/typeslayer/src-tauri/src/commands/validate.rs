@@ -3,8 +3,8 @@ use crate::app_data::AppData;
 use crate::type_graph::{TYPE_GRAPH_FILENAME, TypeGraph};
 use crate::validate::utils::CPU_PROFILE_FILENAME;
 use crate::validate::{
-    trace_json::{TRACE_JSON_FILENAME, parse_trace_json},
-    types_json::{TYPES_JSON_FILENAME, parse_types_json},
+    trace_json::{TRACE_JSON_FILENAME, load_trace_json},
+    types_json::{TYPES_JSON_FILENAME, load_types_json},
 };
 use tauri::State;
 use tokio::sync::Mutex;
@@ -42,12 +42,7 @@ pub async fn validate_trace_json(state: State<'_, &Mutex<AppData>>) -> Result<()
         data.outputs_dir().join(TRACE_JSON_FILENAME)
     };
 
-    let contents = tokio::fs::read_to_string(&path)
-        .await
-        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-
-    let path_str = path.to_string_lossy();
-    let parsed = parse_trace_json(&path_str, &contents)?;
+    let parsed = load_trace_json(path).await?;
 
     debug!(
         "[validate_trace_json] Validated and loaded {} trace events",
@@ -66,12 +61,7 @@ pub async fn validate_types_json(state: State<'_, &Mutex<AppData>>) -> Result<()
         data.outputs_dir().join(TYPES_JSON_FILENAME)
     };
 
-    let contents = tokio::fs::read_to_string(&path)
-        .await
-        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-
-    let path_str = path.to_string_lossy();
-    let parsed = parse_types_json(&path_str, &contents)?;
+    let parsed = load_types_json(path).await?;
 
     debug!(
         "[validate_types_json] Validated and loaded {} types",

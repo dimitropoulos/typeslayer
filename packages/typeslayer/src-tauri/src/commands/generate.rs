@@ -8,7 +8,7 @@ use crate::{
     type_graph::{TYPE_GRAPH_FILENAME, TypeGraph},
     utils::make_cli_arg,
     validate::{
-        trace_json::{TRACE_JSON_FILENAME, TraceEvent, read_trace_json},
+        trace_json::{TRACE_JSON_FILENAME, TraceEvent, load_trace_json},
         types_json::{TYPES_JSON_FILENAME, TypesJsonSchema, load_types_json},
         utils::CPU_PROFILE_FILENAME,
     },
@@ -23,29 +23,25 @@ pub async fn validate_types_and_trace_async(
     outputs_dir: &str,
 ) -> Result<(TypesJsonSchema, Vec<TraceEvent>), String> {
     let types_path = Path::new(outputs_dir)
-        .join(TYPES_JSON_FILENAME.trim_start_matches('/'))
-        .to_string_lossy()
-        .to_string();
+        .join(TYPES_JSON_FILENAME.trim_start_matches('/'));
     let trace_path = Path::new(outputs_dir)
-        .join(TRACE_JSON_FILENAME.trim_start_matches('/'))
-        .to_string_lossy()
-        .to_string();
+        .join(TRACE_JSON_FILENAME.trim_start_matches('/'));
 
     // Read/parse concurrently
     let (types_res, trace_res) = tokio::join!(
         load_types_json(types_path.clone()),
-        read_trace_json(&trace_path)
+        load_trace_json(trace_path.clone())
     );
 
     let types = types_res.map_err(|e| {
         format!(
-            "[init_types_json] types.json validation failed: {}\nExpected file at: {}",
+            "[init_types_json] types.json validation failed: {}\nExpected file at: {:?}",
             e, types_path
         )
     })?;
     let trace = trace_res.map_err(|e| {
         format!(
-            "[init_trace_json] trace.json validation failed: {}\nExpected file at: {}",
+            "[init_trace_json] trace.json validation failed: {}\nExpected file at: {:?}",
             e, trace_path
         )
     })?;
