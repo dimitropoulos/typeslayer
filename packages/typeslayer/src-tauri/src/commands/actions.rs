@@ -132,18 +132,18 @@ pub async fn open_file(state: State<'_, &Mutex<AppData>>, path: String) -> Resul
         );
 
         // Build list of editors to try
-        let editors_to_try: Vec<String> = if let Some(ref editor) = editor_to_use {
+        let editors_to_try: Vec<String> = if let Some(editor) = editor_to_use {
             let mut eds = vec![editor.clone()];
-            for (cmd, _label) in &available_editors {
+            for (cmd, _label) in available_editors {
                 if cmd != editor {
-                    eds.push(cmd.clone());
+                    eds.push(cmd);
                 }
             }
             eds
         } else {
             available_editors
-                .iter()
-                .map(|(cmd, _)| cmd.clone())
+                .into_iter()
+                .map(|(cmd, _)| cmd)
                 .collect()
         };
 

@@ -19,9 +19,8 @@ async fn upload_file_with_validation<T, F, U>(
     parser: F,
     state_updater: U,
     state: &State<'_, &Mutex<AppData>>,
-) -> Result<T, String>
+) -> Result<(), String>
 where
-    T: Clone,
     F: Fn(&str, &str) -> Result<T, String>,
     U: Fn(&mut AppData, T) -> (),
 {
@@ -51,10 +50,10 @@ where
         .map_err(|e| format!("Failed to copy file: {}", e))?;
 
     // Update state
-    state_updater(&mut data, parsed_data.clone());
+    state_updater(&mut data, parsed_data);
     data.update_typeslayer_config_toml().await;
 
-    Ok(parsed_data)
+    Ok(())
 }
 
 // Helper to find paired trace/types files
@@ -123,7 +122,7 @@ pub async fn upload_trace_json(
 ) -> Result<(), String> {
     use Path;
 
-    let _trace_events = upload_file_with_validation(
+    upload_file_with_validation(
         &file_path,
         TRACE_JSON_FILENAME,
         |path, contents| {
@@ -173,7 +172,7 @@ pub async fn upload_types_json(
 ) -> Result<(), String> {
     use Path;
 
-    let _types_json = upload_file_with_validation(
+    upload_file_with_validation(
         &file_path,
         TYPES_JSON_FILENAME,
         |path, contents| {

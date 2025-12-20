@@ -59,11 +59,11 @@ pub fn analyze_trace(
 
     let node_module_paths = get_node_module_paths(&trace_file);
     let parse_result = create_spans(&trace_file)?;
-    let hot_paths_tree = create_span_tree(parse_result.clone(), &options);
+    let unterminated_events = parse_result.unclosed_stack.iter().rev().cloned().collect();
+    let hot_paths_tree = create_span_tree(parse_result, &options);
     let hot_spots = get_hotspots(&hot_paths_tree, &options)?;
     let duplicate_packages = get_duplicate_node_modules(&node_module_paths)?;
     let depth_limits = create_depth_limits(&trace_file);
-    let unterminated_events = parse_result.unclosed_stack.into_iter().rev().collect();
 
     let result = AnalyzeTraceResult {
         depth_limits,

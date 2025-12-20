@@ -98,7 +98,7 @@ pub async fn generate_trace(
     }
 
     let (types, trace) = validate_types_and_trace_async(&outputs_dir).await?;
-    data.types_json = types.clone();
+    data.types_json = types;
     data.trace_json = trace;
     data.update_typeslayer_config_toml().await;
     debug!(
@@ -180,8 +180,8 @@ pub async fn generate_analyze_trace(
 
     match handle.await {
         Ok(r) => {
-            if let Ok(res) = &r {
-                data.analyze_trace = Some(res.clone());
+            if let Ok(res) = r {
+                data.analyze_trace = Some(res);
                 data.update_typeslayer_config_toml().await;
                 debug!(
                     "[generate_analyze_trace] wrote {} in {}",
@@ -244,7 +244,7 @@ pub async fn generate_all(
     generate_trace(app.clone(), state.clone(), process_controller.clone()).await?;
     generate_cpu_profile(app.clone(), state.clone(), process_controller.clone()).await?;
     generate_analyze_trace(app.clone(), state.clone(), None).await?;
-    generate_type_graph(app.clone(), state.clone()).await?;
+    generate_type_graph(app, state).await?;
     Ok(())
 }
 

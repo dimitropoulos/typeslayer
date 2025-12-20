@@ -451,7 +451,7 @@ pub fn get_relationships_for_type(t: &ResolvedType) -> Vec<GraphLink> {
             relations.push(GraphLink {
                 source: t.id,
                 target,
-                kind: kind.clone(),
+                kind,
             });
         }
     }

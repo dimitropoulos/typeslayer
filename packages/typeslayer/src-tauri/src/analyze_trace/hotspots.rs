@@ -9,15 +9,15 @@ pub fn get_hotspots(
     options: &AnalyzeTraceOptions,
 ) -> Result<Vec<HotSpot>, String> {
     // `hot_paths_tree` is cloned ahead of time so that it can easily be sorted in-place without double-cloning.
-    get_hotspots_worker(&mut hot_paths_tree.clone(), None, options)
+    get_hotspots_worker(&mut hot_paths_tree.clone(), &mut None, options)
 }
 
 fn get_hotspots_worker(
     span: &mut EventSpan,
-    current_file: Option<String>,
+    current_file: &mut Option<String>,
     options: &AnalyzeTraceOptions,
 ) -> Result<Vec<HotSpot>, String> {
-    let mut current_file = current_file;
+    let current_file_owned;
 
     // Update current file if this is a check event
     if let EventSpanEvent::TraceEvent(event) = &span.event {
@@ -32,7 +32,8 @@ fn get_hotspots_worker(
                 _ => None,
             };
             if let Some(path) = path_opt {
-                current_file = Some(path.to_string());
+                current_file_owned = Some(path.to_string());
+                *current_file = current_file_owned;
             }
         }
     }
@@ -41,10 +42,10 @@ fn get_hotspots_worker(
     if !span.children.is_empty() {
         // Sort slow to fast
         let sorted_children = &mut span.children;
-        sorted_children.sort_by(|a, b| b.duration.partial_cmp(&a.duration).unwrap());
+        sorted_children.sort_by(|a, b| b.duration.total_cmp(&a.duration));
 
         for child in sorted_children.iter_mut() {
-            children.extend(get_hotspots_worker(child, current_file.clone(), options)?);
+            children.extend(get_hotspots_worker(child, current_file, options)?);
         }
     }
 

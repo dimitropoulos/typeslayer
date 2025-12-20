@@ -107,7 +107,7 @@ pub async fn create_bug_report(
     stderr: Option<String>,
 ) -> Result<String, String> {
     let data = state.lock().await;
-    let outputs_dir = data.outputs_dir().clone();
+    let outputs_dir = data.outputs_dir();
     let data_dir = data.data_dir.clone();
 
     // Create bug report zip file
