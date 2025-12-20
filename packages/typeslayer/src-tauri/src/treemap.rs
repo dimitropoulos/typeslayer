@@ -48,7 +48,7 @@ pub fn build_treemap_from_trace(events: &[TraceEvent]) -> Result<Vec<TreemapNode
         };
 
         if let TraceEvent::CheckSourceFile { args, .. } = event {
-            *file_durations.entry(args.path.clone()).or_insert(0.0) += span.duration;
+            *file_durations.entry(args.path).or_insert(0.0) += span.duration;
         }
     }
 
@@ -70,11 +70,7 @@ pub fn build_treemap_from_trace(events: &[TraceEvent]) -> Result<Vec<TreemapNode
         })
         .collect();
 
-    nodes.sort_by(|a, b| {
-        b.value
-            .partial_cmp(&a.value)
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
+    nodes.sort_by(|a, b| b.value.total_cmp(&a.value));
 
     Ok(nodes)
 }

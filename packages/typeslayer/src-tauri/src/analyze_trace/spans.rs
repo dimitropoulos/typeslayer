@@ -19,7 +19,7 @@ pub fn create_spans(trace_file: &[TraceEvent]) -> Result<ParseResult, String> {
                 let begin_ts = begin_event.common().ts;
                 let end_ts = event.common().ts;
                 spans.push(EventSpan {
-                    event: EventSpanEvent::TraceEvent(begin_event.clone()),
+                    event: EventSpanEvent::TraceEvent(begin_event),
                     start: begin_ts,
                     end: end_ts,
                     duration: end_ts - begin_ts,

@@ -47,19 +47,19 @@ pub fn get_typeslayer_base_data_dir() -> PathBuf {
         #[cfg(target_os = "linux")]
         {
             if let Ok(home) = std::env::var("HOME") {
-                return PathBuf::from(format!("{}/.local/share/typeslayer", home));
+                return PathBuf::from(format!("{home}/.local/share/typeslayer"));
             }
         }
         #[cfg(target_os = "macos")]
         {
             if let Ok(home) = std::env::var("HOME") {
-                return PathBuf::from(format!("{}/Library/Application Support/typeslayer", home));
+                return PathBuf::from(format!("{home}/Library/Application Support/typeslayer"));
             }
         }
         #[cfg(target_os = "windows")]
         {
             if let Ok(appdata) = std::env::var("APPDATA") {
-                return PathBuf::from(format!("{}\\typeslayer", appdata));
+                return PathBuf::from(format!("{appdata}\\typeslayer"));
             }
         }
         std::env::current_dir()
@@ -113,7 +113,7 @@ pub fn validate_project_root_path(s: &str) -> Result<PathBuf, String> {
         .unwrap_or(false)
     {
         if !p.exists() {
-            return Err(format!("package.json not found at: {}", s));
+            return Err(format!("package.json not found at: {s}"));
         }
         return Ok(p
             .parent()
@@ -127,14 +127,13 @@ pub fn validate_project_root_path(s: &str) -> Result<PathBuf, String> {
     }
 
     Err(format!(
-        "Path must be a directory or package.json file: {}",
-        s
+        "Path must be a directory or package.json file: {s}"
     ))
 }
 
 pub fn default_extra_tsc_flags() -> String {
     debug!("[default_extra_tsc_flags] requested default extra tsc flags");
-    return "--noEmit --incremental false --noErrorTruncation".to_string();
+    "--noEmit --incremental false --noErrorTruncation".to_string()
 }
 
 pub async fn file_mtime_iso(path: &Path) -> Option<String> {
@@ -159,7 +158,7 @@ pub async fn compute_window_title(project_root: PathBuf) -> String {
                 .and_then(|n| n.as_str())
                 .map(|s| s.to_string())
         }) {
-        Some(name) if !name.is_empty() => format!("{} | {}", default_title, name),
+        Some(name) if !name.is_empty() => format!("{default_title} | {name}"),
         _ => default_title,
     }
 }
@@ -169,7 +168,7 @@ pub async fn set_window_title(app: &AppHandle, title: String) -> Result<(), Stri
         .get_webview_window("main")
         .ok_or_else(|| "main window not found".to_string())?;
     win.set_title(&title)
-        .map_err(|e| format!("failed to set title: {}", e))
+        .map_err(|e| format!("failed to set title: {e}"))
 }
 
 // get the user's platform at runtime as a string

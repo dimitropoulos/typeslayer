@@ -56,5 +56,6 @@
   "[typescriptreact]": {
     "editor.defaultFormatter": "biomejs.biome"
   },
-  "rust-analyzer.linkedProjects": ["packages/typeslayer/src-tauri/Cargo.toml"]
+  "rust-analyzer.linkedProjects": ["packages/typeslayer/src-tauri/Cargo.toml"],
+  "rust-analyzer.check.command": "clippy"
 }

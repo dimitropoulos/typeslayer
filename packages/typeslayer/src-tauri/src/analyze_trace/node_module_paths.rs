@@ -24,7 +24,7 @@ pub fn get_node_module_paths(trace_json: &[TraceEvent]) -> NodeModulePaths {
 
                     node_module_paths
                         .entry(package_name)
-                        .or_insert_with(Vec::new)
+                        .or_default()
                         .push(package_path.to_string());
                 }
             }

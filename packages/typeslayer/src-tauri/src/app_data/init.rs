@@ -8,12 +8,15 @@ use crate::{
         detect_project_root_from_cwd, validate_project_root_path,
     },
     validate::{
-        trace_json::{TRACE_JSON_FILENAME, TraceEvent, parse_trace_json},
-        types_json::{TYPES_JSON_FILENAME, TypesJsonSchema, parse_types_json},
+        trace_json::{TRACE_JSON_FILENAME, TraceEvent, load_trace_json},
+        types_json::{TYPES_JSON_FILENAME, TypesJsonSchema, load_types_json},
         utils::CPU_PROFILE_FILENAME,
     },
 };
-use std::path::{Path, PathBuf};
+use std::{
+    io::BufReader,
+    path::{Path, PathBuf},
+};
 use tracing::{debug, info};
 
 pub fn init_project_root(cake: &LayerCake) -> PathBuf {
@@ -50,20 +53,16 @@ pub fn init_project_root(cake: &LayerCake) -> PathBuf {
     path
 }
 
-pub fn init_types_json(outputs_dir: &Path, project_root: &Path) -> TypesJsonSchema {
+pub async fn init_types_json(outputs_dir: &Path, project_root: &Path) -> TypesJsonSchema {
     let type_paths = [
         outputs_dir.join(TYPES_JSON_FILENAME.trim_start_matches('/')),
         project_root.join(TYPES_JSON_FILENAME.trim_start_matches('/')),
     ];
-    for p in type_paths.iter() {
+    for p in type_paths {
         if p.exists() {
-            let path_str = p.to_string_lossy();
-            match std::fs::read_to_string(p)
-                .map_err(|e| e.to_string())
-                .and_then(|s| parse_types_json(&path_str, &s))
-            {
+            match load_types_json(p.clone()).await {
                 Ok(parsed) => {
-                    debug!("[init_types_json] Loaded types.json from {}", p.display());
+                    debug!("[init_types_json] Loaded types.json from {:?}", p);
                     return parsed;
                 }
                 Err(e) => info!(
@@ -77,20 +76,16 @@ pub fn init_types_json(outputs_dir: &Path, project_root: &Path) -> TypesJsonSche
     Vec::new()
 }
 
-pub fn init_trace_json(outputs_dir: &Path, project_root: &Path) -> Vec<TraceEvent> {
+pub async fn init_trace_json(outputs_dir: &Path, project_root: &Path) -> Vec<TraceEvent> {
     let trace_paths = [
         outputs_dir.join(TRACE_JSON_FILENAME.trim_start_matches('/')),
         project_root.join(TRACE_JSON_FILENAME.trim_start_matches('/')),
     ];
-    for p in trace_paths.iter() {
+    for p in trace_paths {
         if p.exists() {
-            let path_str = p.to_string_lossy();
-            match std::fs::read_to_string(p)
-                .map_err(|e| e.to_string())
-                .and_then(|s| parse_trace_json(&path_str, &s))
-            {
+            match load_trace_json(p.clone()).await {
                 Ok(parsed) => {
-                    debug!("[init_trace_json] Loaded trace.json from {}", p.display());
+                    debug!("[init_trace_json] Loaded trace.json from {:?}", p);
                     return parsed;
                 }
                 Err(e) => info!(
@@ -104,76 +99,60 @@ pub fn init_trace_json(outputs_dir: &Path, project_root: &Path) -> Vec<TraceEven
     Vec::new()
 }
 
-pub fn init_analyze_trace(outputs_dir: &Path) -> Option<AnalyzeTraceResult> {
+pub async fn init_analyze_trace(outputs_dir: &Path) -> Option<AnalyzeTraceResult> {
     let analyze_path = outputs_dir.join(ANALYZE_TRACE_FILENAME);
-    if analyze_path.exists() {
-        match std::fs::read_to_string(&analyze_path)
-            .map_err(|e| e.to_string())
-            .and_then(|s| serde_json::from_str::<AnalyzeTraceResult>(&s).map_err(|e| e.to_string()))
-        {
-            Ok(parsed) => {
-                debug!(
-                    "[init_analyze_trace] Loaded from {}",
-                    analyze_path.display()
-                );
-                return Some(parsed);
-            }
-            Err(e) => info!(
-                "[init_analyze_trace] Startup ingestion failed at {}: {}",
-                analyze_path.display(),
-                e
-            ),
-        }
-    }
-    debug!("[init_analyze_trace] No valid analyze-trace.json found at startup");
-    None
+    read_file("init_analyze_trace", analyze_path).await
 }
 
-pub fn init_type_graph(outputs_dir: &Path) -> Option<TypeGraph> {
+pub async fn init_type_graph(outputs_dir: &Path) -> Option<TypeGraph> {
     let path = outputs_dir.join(TYPE_GRAPH_FILENAME.trim_start_matches('/'));
-    if path.exists() {
-        match std::fs::read_to_string(&path)
-            .map_err(|e| e.to_string())
-            .and_then(|s| serde_json::from_str::<TypeGraph>(&s).map_err(|e| e.to_string()))
-        {
-            Ok(parsed) => {
-                debug!(
-                    "[init_type_graph] Loaded type-graph.json from {}",
-                    path.display()
-                );
-                return Some(parsed);
-            }
-            Err(e) => info!(
-                "[init_type_graph] Startup type-graph ingestion failed at {}: {}",
-                path.display(),
-                e
-            ),
-        }
-    }
-    debug!("[init_type_graph] No valid type-graph.json found at startup");
-    None
+    read_file("init_type_graph", path).await
 }
 
-pub fn init_cpu_profile(outputs_dir: &Path) -> Option<String> {
+pub async fn init_cpu_profile(outputs_dir: &Path) -> Option<String> {
     let cpu_profile_path = outputs_dir.join(CPU_PROFILE_FILENAME);
-    if cpu_profile_path.exists() {
-        match std::fs::read_to_string(&cpu_profile_path) {
-            Ok(contents) => {
-                debug!(
-                    "[init_cpu_profile] Loaded CPU profile from {}",
-                    cpu_profile_path.display()
-                );
-                return Some(contents);
+    read_file("init_cpu_profile", cpu_profile_path).await
+}
+
+async fn read_file<T: Send + serde::de::DeserializeOwned + 'static>(
+    name: &'static str,
+    path: PathBuf,
+) -> Option<T> {
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        let result = {
+            match std::fs::File::open(&path) {
+                Ok(file) => {
+                    serde_json::from_reader(BufReader::new(file)).map_err(|e| e.to_string())
+                }
+                Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                    debug!("[{name}] No valid analyze-trace.json found at startup");
+                    return None;
+                }
+                Err(err) => Err(err.to_string()),
             }
-            Err(e) => info!(
-                "[init_cpu_profile] Startup CPU profile ingestion failed at {}: {}",
-                cpu_profile_path.display(),
-                e
-            ),
+        };
+
+        match result {
+            Ok(result) => Some(result),
+            Err(e) => {
+                info!(
+                    "[{name}] Startup ingestion failed at {}: {}",
+                    path.display(),
+                    e
+                );
+                None
+            }
+        }
+    })
+    .await;
+
+    match result {
+        Ok(result) => result,
+        Err(err) => {
+            info!("[init_analyze_trace] Failed to run task: {err}");
+            None
         }
     }
-    debug!("[init_cpu_profile] No valid CPU profile found at startup");
-    None
 }
 
 pub fn init_settings(cake: &LayerCake) -> Settings {
@@ -198,7 +177,7 @@ pub fn init_settings(cake: &LayerCake) -> Settings {
             if AVAILABLE_EDITORS.iter().any(|(cmd, _)| *cmd == s) {
                 Ok(s.to_string())
             } else {
-                Err(format!("Editor '{}' not in available editors list", s))
+                Err(format!("Editor {s:?} not in available editors list"))
             }
         },
     }));
@@ -233,7 +212,7 @@ pub fn init_settings(cake: &LayerCake) -> Settings {
                 } else {
                     s.parse::<i32>()
                         .map(|_| s.to_string())
-                        .map_err(|e| format!("Invalid maxOldSpaceSize value '{}': {}", s, e))
+                        .map_err(|e| format!("Invalid maxOldSpaceSize value {s:?}: {e}"))
                 }
             },
         });
@@ -256,7 +235,7 @@ pub fn init_settings(cake: &LayerCake) -> Settings {
                 } else {
                     s.parse::<i32>()
                         .map(|_| s.to_string())
-                        .map_err(|e| format!("Invalid maxStackSize value '{}': {}", s, e))
+                        .map_err(|e| format!("Invalid maxStackSize value {s:?}: {e}"))
                 }
             },
         });
@@ -314,16 +293,7 @@ pub fn init_verbose(cake: &LayerCake) -> bool {
         env: "VERBOSE",
         flag: "--verbose",
         file: "verbose",
-        default: || {
-            #[cfg(debug_assertions)]
-            {
-                true
-            }
-            #[cfg(not(debug_assertions))]
-            {
-                false
-            }
-        },
+        default: || cfg!(debug_assertions),
     })
 }
 
@@ -347,7 +317,7 @@ pub fn init_selected_tsconfig_with(
         for path in tsconfig_paths.iter() {
             if path
                 .file_name()
-                .map_or(false, |name| name == TSCONFIG_FILENAME)
+                .is_some_and(|name| name == TSCONFIG_FILENAME)
             {
                 return path.to_string_lossy().to_string();
             }
@@ -367,7 +337,7 @@ pub fn init_selected_tsconfig_with(
             if s.is_empty() || tsconfig_paths.iter().any(|p| p.to_string_lossy() == s) {
                 Ok(s.to_string())
             } else {
-                Err(format!("tsconfig '{}' not found in discovered paths", s))
+                Err(format!("tsconfig {s:?} not found in discovered paths"))
             }
         },
     });

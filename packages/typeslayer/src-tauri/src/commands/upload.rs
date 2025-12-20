@@ -3,39 +3,36 @@ use crate::{
     app_data::AppData,
     type_graph::{TYPE_GRAPH_FILENAME, TypeGraph},
     validate::{
-        trace_json::{TRACE_JSON_FILENAME, parse_trace_json},
-        types_json::{TYPES_JSON_FILENAME, parse_types_json},
+        trace_json::{TRACE_JSON_FILENAME, load_trace_json},
+        types_json::{TYPES_JSON_FILENAME, load_types_json},
         utils::CPU_PROFILE_FILENAME,
     },
 };
-use std::path::{Path, PathBuf};
+use std::{
+    io::BufReader,
+    path::{Path, PathBuf},
+};
 use tauri::State;
 use tokio::sync::Mutex;
 
 // Helper function for common upload validation and file operations
-async fn upload_file_with_validation<T, F, U>(
-    file_path: &str,
+async fn upload_file_with_validation<T, F, Fut, U>(
+    file_path: PathBuf,
     dest_filename: &str,
     parser: F,
     state_updater: U,
     state: &State<'_, &Mutex<AppData>>,
-) -> Result<T, String>
+) -> Result<(), String>
 where
-    T: Clone,
-    F: Fn(&str, &str) -> Result<T, String>,
-    U: Fn(&mut AppData, T) -> (),
+    F: Fn(PathBuf) -> Fut,
+    Fut: Future<Output = Result<T, String>>,
+    U: Fn(&mut AppData, T),
 {
-    let path = Path::new(file_path);
-    if !path.exists() {
-        return Err(format!("File does not exist: {}", file_path));
+    if !file_path.exists() {
+        return Err(format!("File does not exist: {file_path:?}"));
     }
 
-    // Read and validate the file
-    let contents = tokio::fs::read_to_string(&path)
-        .await
-        .map_err(|e| format!("Failed to read file: {}", e))?;
-
-    let parsed_data = parser(file_path, &contents)?;
+    let parsed_data = parser(file_path.clone()).await?;
 
     // Copy file to outputs directory
     let mut data = state.lock().await;
@@ -43,23 +40,23 @@ where
 
     tokio::fs::create_dir_all(&outputs_dir)
         .await
-        .map_err(|e| format!("Failed to create outputs directory: {}", e))?;
+        .map_err(|e| format!("Failed to create outputs directory: {e}"))?;
 
     let dest = outputs_dir.join(dest_filename);
-    tokio::fs::copy(&path, &dest)
+    tokio::fs::copy(&file_path, &dest)
         .await
-        .map_err(|e| format!("Failed to copy file: {}", e))?;
+        .map_err(|e| format!("Failed to copy file: {e}"))?;
 
     // Update state
-    state_updater(&mut data, parsed_data.clone());
+    state_updater(&mut data, parsed_data);
     data.update_typeslayer_config_toml().await;
 
-    Ok(parsed_data)
+    Ok(())
 }
 
 // Helper to find paired trace/types files
 fn find_paired_file(path: &Path, from: &str, to: &str) -> PathBuf {
-    let default_name = format!("{}.json", from);
+    let default_name = format!("{from}.json");
     let filename = path
         .file_name()
         .and_then(|n| n.to_str())
@@ -103,12 +100,12 @@ async fn regenerate_analysis_after_upload(
         let outputs_dir = data.outputs_dir();
         let path = outputs_dir.join(TYPE_GRAPH_FILENAME);
         let json = serde_json::to_string_pretty(&data.type_graph)
-            .map_err(|e| format!("Failed to serialize type_graph: {}", e))?;
+            .map_err(|e| format!("Failed to serialize type_graph: {e}"))?;
 
         std::fs::create_dir_all(&outputs_dir)
-            .map_err(|e| format!("Failed to create outputs directory: {}", e))?;
+            .map_err(|e| format!("Failed to create outputs directory: {e}"))?;
         std::fs::write(&path, json)
-            .map_err(|e| format!("Failed to write type-graph.json: {}", e))?;
+            .map_err(|e| format!("Failed to write type-graph.json: {e}"))?;
     }
 
     // Update outputs after regeneration
@@ -119,16 +116,15 @@ async fn regenerate_analysis_after_upload(
 #[tauri::command]
 pub async fn upload_trace_json(
     state: State<'_, &Mutex<AppData>>,
-    file_path: String,
+    file_path: PathBuf,
 ) -> Result<(), String> {
-    use Path;
-
-    let _trace_events = upload_file_with_validation(
-        &file_path,
+    upload_file_with_validation(
+        file_path.clone(),
         TRACE_JSON_FILENAME,
-        |path, contents| {
-            parse_trace_json(path, contents)
-                .map_err(|e| format!("Invalid trace.json format: {}", e))
+        async |path: PathBuf| {
+            load_trace_json(path)
+                .await
+                .map_err(|e| format!("Invalid trace.json format: {e}"))
         },
         |data, parsed| {
             data.trace_json = parsed;
@@ -144,11 +140,12 @@ pub async fn upload_trace_json(
     let types_path = find_paired_file(path, "trace", "types");
     if types_path.exists() {
         upload_file_with_validation(
-            &types_path.to_string_lossy(),
+            types_path,
             TYPES_JSON_FILENAME,
-            |path, contents| {
-                parse_types_json(path, contents)
-                    .map_err(|e| format!("Invalid types.json format: {}", e))
+            async |path| {
+                load_types_json(path)
+                    .await
+                    .map_err(|e| format!("Invalid types.json format: {e}"))
             },
             |data, parsed| {
                 data.types_json = parsed;
@@ -160,7 +157,7 @@ pub async fn upload_trace_json(
 
     // Regenerate analyze trace and type graph after upload
     if let Err(e) = regenerate_analysis_after_upload(&state).await {
-        tracing::warn!("Failed to regenerate analysis after trace upload: {}", e);
+        tracing::warn!("Failed to regenerate analysis after trace upload: {e}");
     }
 
     Ok(())
@@ -169,16 +166,17 @@ pub async fn upload_trace_json(
 #[tauri::command]
 pub async fn upload_types_json(
     state: State<'_, &Mutex<AppData>>,
-    file_path: String,
+    file_path: PathBuf,
 ) -> Result<(), String> {
     use Path;
 
-    let _types_json = upload_file_with_validation(
-        &file_path,
+    upload_file_with_validation(
+        file_path.clone(),
         TYPES_JSON_FILENAME,
-        |path, contents| {
-            parse_types_json(path, contents)
-                .map_err(|e| format!("Invalid types.json format: {}", e))
+        async |path| {
+            load_types_json(path)
+                .await
+                .map_err(|e| format!("Invalid types.json format: {e}"))
         },
         |data, parsed| {
             data.types_json = parsed;
@@ -194,11 +192,12 @@ pub async fn upload_types_json(
     let trace_path = find_paired_file(path, "types", "trace");
     if trace_path.exists() {
         upload_file_with_validation(
-            &trace_path.to_string_lossy(),
+            trace_path,
             TRACE_JSON_FILENAME,
-            |path, contents| {
-                parse_trace_json(path, contents)
-                    .map_err(|e| format!("Invalid trace.json format: {}", e))
+            async |path| {
+                load_trace_json(path)
+                    .await
+                    .map_err(|e| format!("Invalid trace.json format: {e}"))
             },
             |data, parsed| {
                 data.trace_json = parsed;
@@ -210,7 +209,7 @@ pub async fn upload_types_json(
 
     // Regenerate analyze trace and type graph after upload
     if let Err(e) = regenerate_analysis_after_upload(&state).await {
-        tracing::warn!("Failed to regenerate analysis after types upload: {}", e);
+        tracing::warn!("Failed to regenerate analysis after types upload: {e}");
     }
 
     Ok(())
@@ -219,15 +218,21 @@ pub async fn upload_types_json(
 #[tauri::command]
 pub async fn upload_cpu_profile(
     state: State<'_, &Mutex<AppData>>,
-    file_path: String,
+    file_path: PathBuf,
 ) -> Result<(), String> {
     upload_file_with_validation(
-        &file_path,
+        file_path,
         CPU_PROFILE_FILENAME,
-        |_path, contents| {
-            serde_json::from_str::<serde_json::Value>(contents)
-                .map_err(|e| format!("Invalid CPU profile format (not valid JSON): {}", e))?;
-            Ok(contents.to_string())
+        async |path| {
+            tauri::async_runtime::spawn_blocking(move || {
+                let file = std::fs::File::open(&path)
+                    .map_err(|e| format!("could not open cpu profile at {path:?}: {e}"))?;
+                serde_json::from_reader(BufReader::new(file))
+                    .map(|contents: serde_json::Value| contents.to_string())
+                    .map_err(|e| format!("Invalid CPU profile format (not valid JSON): {e}"))
+            })
+            .await
+            .map_err(|e| e.to_string())?
         },
         |data, contents| {
             data.cpu_profile = Some(contents);
@@ -242,14 +247,20 @@ pub async fn upload_cpu_profile(
 #[tauri::command]
 pub async fn upload_analyze_trace(
     state: State<'_, &Mutex<AppData>>,
-    file_path: String,
+    file_path: PathBuf,
 ) -> Result<(), String> {
     upload_file_with_validation(
-        &file_path,
+        file_path,
         ANALYZE_TRACE_FILENAME,
-        |_path, contents| {
-            serde_json::from_str::<AnalyzeTraceResult>(contents)
-                .map_err(|e| format!("Invalid analyze trace format: {}", e))
+        async |path| -> Result<AnalyzeTraceResult, String> {
+            tauri::async_runtime::spawn_blocking(move || {
+                let file = std::fs::File::open(&path)
+                    .map_err(|e| format!("could not open cpu profile at {path:?}: {e}"))?;
+                serde_json::from_reader(BufReader::new(file))
+                    .map_err(|e| format!("Invalid CPU profile format (not valid JSON): {e}"))
+            })
+            .await
+            .map_err(|e| e.to_string())?
         },
         |data, result| {
             data.analyze_trace = Some(result);
@@ -264,14 +275,20 @@ pub async fn upload_analyze_trace(
 #[tauri::command]
 pub async fn upload_type_graph(
     state: State<'_, &Mutex<AppData>>,
-    file_path: String,
+    file_path: PathBuf,
 ) -> Result<(), String> {
     upload_file_with_validation(
-        &file_path,
+        file_path,
         TYPE_GRAPH_FILENAME.trim_start_matches('/'),
-        |_path, contents| {
-            serde_json::from_str::<TypeGraph>(contents)
-                .map_err(|e| format!("Invalid type graph format: {}", e))
+        async |path| -> Result<TypeGraph, String> {
+            tauri::async_runtime::spawn_blocking(move || {
+                let file = std::fs::File::open(&path)
+                    .map_err(|e| format!("could not open cpu profile at {path:?}: {e}"))?;
+                serde_json::from_reader(BufReader::new(file))
+                    .map_err(|e| format!("Invalid CPU profile format (not valid JSON): {e}"))
+            })
+            .await
+            .map_err(|e| e.to_string())?
         },
         |data, graph| {
             data.type_graph = Some(graph);

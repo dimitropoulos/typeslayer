@@ -97,7 +97,7 @@ pub async fn execute(app_data: &Mutex<AppData>) -> String {
                 .collect();
 
             DepthLimitCategory {
-                category: category.clone(),
+                category: *category,
                 count: events.len(),
                 events: limited_events,
             }
@@ -114,6 +114,6 @@ pub async fn execute(app_data: &Mutex<AppData>) -> String {
 
     match serde_json::to_string_pretty(&response) {
         Ok(json) => json,
-        Err(e) => format!("{{\"error\": \"Failed to serialize response: {}\"}}", e),
+        Err(e) => format!("{{\"error\": \"Failed to serialize response: {e}\"}}"),
     }
 }
