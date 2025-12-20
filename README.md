@@ -25,7 +25,7 @@ in the root package you want to inspect (i.e. colocated to your package.json). T
 
 see: [FAQ](./FAQ.md)
 
-# Who needs this stupid thing, anyway?
+## Who needs this stupid thing, anyway?
 
 TypeSlayer is one of those things that most developers don't need.  others might just find it lulzy to play around with.
 
@@ -43,7 +43,7 @@ I wanted to make it easy for others to put up PRs at their companies all like "I
 
 TypeSlayer supports Linux x64 (glibc 2.39+), macOS ARM64 (Apple Silicon), and Windows x64.  Please note that next year is the year of the Linux desktop 📯.
 
-# Security
+## Security
 
 TypeSlayer currently does not collect any analytics - although it probably will try to collect "someone somewhere ran it at XYZ timestamp" data in the future (or possibly crashlytics).  If that day comes, of course you'll be able to opt out (including before app boot via config).
 

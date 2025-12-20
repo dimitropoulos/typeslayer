@@ -25,7 +25,7 @@ in the root package you want to inspect (i.e. colocated to your package.json). T
 
 see: [FAQ](https://github.com/dimitropoulos/typeslayer/blob/main/FAQ.md)
 
-# Who needs this stupid thing, anyway?
+## Who needs this stupid thing, anyway?
 
 TypeSlayer is one of those things that most developers don't need.  others might just find it lulzy to play around with.
 
@@ -39,17 +39,15 @@ I made TypeSlayer because I learned delulu-levels-of-detail about TypeScript per
 
 I wanted to make it easy for others to put up PRs at their companies all like "I increased type-checking perf on this file by 380,000x and shaved 23 seconds off every CI run" (real story btw lol). I took what I learned about how to debug type performance and wrapped it all up into this tool.
 
-## Data / Security
+## Support
 
-TypeSlayer supports Linux x64 (glibc 2.39+), macOS ARM64 (Apple Silicon), and Windows x64.  Please note that next year is the year of the Linux desktop.
+TypeSlayer supports Linux x64 (glibc 2.39+), macOS ARM64 (Apple Silicon), and Windows x64.  Please note that next year is the year of the Linux desktop 📯.
 
-TypeSlayer currently does not collect any analytics - although it probably will try to collect "someone somewhere ran it at XYZ timestamp" data in the future.  all data is stored:
+## Security
 
-- Linux: `~/.local/share/typeslayer/`
-- macOS: `~/Library/Application Support/typeslayer/`
-- Windows: `%APPDATA%\typeslayer\`
+TypeSlayer currently does not collect any analytics - although it probably will try to collect "someone somewhere ran it at XYZ timestamp" data in the future (or possibly crashlytics).  If that day comes, of course you'll be able to opt out (including before app boot via config).
 
-TypeSlayer can read any file the running user can read and it can run package.json scripts (so treat it as you would your terminal).
+Actually TypeSlayer is a fully offline app - it does not make any network requests.
 
 ## Contributing
 
