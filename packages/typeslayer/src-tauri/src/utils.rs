@@ -59,7 +59,7 @@ pub fn get_typeslayer_base_data_dir() -> PathBuf {
         #[cfg(target_os = "windows")]
         {
             if let Ok(appdata) = std::env::var("APPDATA") {
-                return PathBuf::from(format!("{home}\\typeslayer"));
+                return PathBuf::from(format!("{appdata}\\typeslayer"));
             }
         }
         std::env::current_dir()
