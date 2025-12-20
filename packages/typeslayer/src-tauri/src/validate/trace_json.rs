@@ -1,3 +1,5 @@
+use std::{io::BufReader, path::PathBuf};
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -1235,40 +1237,12 @@ impl TraceEvent {
     }
 }
 
-fn get_context_lines(contents: &str, error_line: usize) -> String {
-    let lines: Vec<&str> = contents.lines().collect();
-    let mut context = String::new();
-
-    if error_line > 1 {
-        if let Some(prev) = lines.get(error_line - 2) {
-            context.push_str(&format!("Line {}: {}\n", error_line - 1, prev));
-        }
-    }
-
-    if let Some(err_line) = lines.get(error_line - 1) {
-        context.push_str(&format!("Line {} (ERROR): {}\n", error_line, err_line));
-    }
-
-    if let Some(next) = lines.get(error_line) {
-        context.push_str(&format!("Line {}: {}\n", error_line + 1, next));
-    }
-
-    context
-}
-
-pub fn parse_trace_json(path_label: &str, contents: &str) -> Result<Vec<TraceEvent>, String> {
-    let raw: Value = serde_json::from_str(contents).map_err(|e| {
-        let error_msg = format!("{e}");
-        if let Some(line_str) = error_msg.split("line ").nth(1) {
-            if let Some(line_num_str) = line_str.split_whitespace().next() {
-                if let Ok(line_num) = line_num_str.parse::<usize>() {
-                    let context = get_context_lines(contents, line_num);
-                    return format!("Failed to parse {path_label}: {e}\n\nContext:\n{context}");
-                }
-            }
-        }
-        format!("Failed to parse {path_label}: {e}")
-    })?;
+pub fn parse_trace_json(
+    path_label: PathBuf,
+    reader: impl std::io::Read,
+) -> Result<Vec<TraceEvent>, String> {
+    let raw: Value = serde_json::from_reader(reader)
+        .map_err(|e| format!("Failed to parse {path_label:?}: {e}"))?;
     let arr = match raw {
         Value::Array(a) => a,
         _ => return Err("trace.json root is not an array".to_string()),
@@ -1282,9 +1256,12 @@ pub fn parse_trace_json(path_label: &str, contents: &str) -> Result<Vec<TraceEve
     Ok(events)
 }
 
-pub async fn read_trace_json(path: &str) -> Result<Vec<TraceEvent>, String> {
-    let contents = tokio::fs::read_to_string(path)
-        .await
-        .map_err(|e| format!("Failed to read trace.json at {path}: {e}"))?;
-    parse_trace_json(path, &contents)
+pub async fn load_trace_json(path: PathBuf) -> Result<Vec<TraceEvent>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let file = std::fs::File::open(&path)
+            .map_err(|e| format!("Failed to open trace.json at {path:?}: {e}"))?;
+        parse_trace_json(path, BufReader::new(file))
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }

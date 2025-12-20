@@ -7,36 +7,34 @@ use std::collections::HashMap;
 use tauri::State;
 use tokio::sync::Mutex;
 
+type Links = Vec<(LinkKind, Vec<(TypeId, String)>)>;
+
 #[tauri::command]
 pub async fn get_links_to_type_id(
     state: State<'_, &Mutex<AppData>>,
     type_id: usize,
-) -> Result<Vec<(LinkKind, Vec<(TypeId, String)>)>, String> {
+) -> Result<Links, String> {
     let data = state.lock().await;
 
     let mut links_by_kind = HashMap::<LinkKind, Vec<(TypeId, String)>>::new();
     if let Some(graph) = &data.type_graph {
         for link in graph.links.iter() {
             if link.target == type_id {
-                links_by_kind
-                    .entry(link.kind.clone())
-                    .or_insert_with(Vec::<(TypeId, String)>::new)
-                    .push((
-                        link.source,
-                        human_readable_name(
-                            data.types_json
-                                .get(link.source)
-                                .ok_or_else(|| format!("Type with id {} not found", link.source))?,
-                        ),
-                    ));
+                links_by_kind.entry(link.kind.clone()).or_default().push((
+                    link.source,
+                    human_readable_name(
+                        data.types_json
+                            .get(link.source)
+                            .ok_or_else(|| format!("Type with id {} not found", link.source))?,
+                    ),
+                ));
             }
         }
     } else {
         return Err("No type graph available".to_string());
     }
 
-    let mut sorted_links: Vec<(LinkKind, Vec<(TypeId, String)>)> =
-        links_by_kind.into_iter().collect();
+    let mut sorted_links: Links = links_by_kind.into_iter().collect();
     sorted_links.sort_by(|(_, a), (_, b)| b.len().cmp(&a.len()));
     Ok(sorted_links)
 }
@@ -51,7 +49,7 @@ pub async fn get_resolved_type_by_id(
         if let Some(t) = data.types_json.get(id) {
             Ok(Some(t.clone()))
         } else {
-            Err(format!("Type with id {} not found", id))
+            Err(format!("Type with id {id} not found"))
         }
     } else {
         Ok(None)

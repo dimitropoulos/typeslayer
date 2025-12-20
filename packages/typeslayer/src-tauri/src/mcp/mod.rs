@@ -123,12 +123,10 @@ pub async fn run_mcp_server(app_data: &'static Mutex<AppData>) -> io::Result<()>
     let server = TypeSlayerMcpServer::new(app_data);
 
     // Run the MCP server using STDIO transport
-    let running = server.serve(stdio()).await.map_err(|e| {
-        io::Error::new(
-            io::ErrorKind::Other,
-            format!("MCP server initialization error: {}", e),
-        )
-    })?;
+    let running = server
+        .serve(stdio())
+        .await
+        .map_err(|e| io::Error::other(format!("MCP server initialization error: {e}")))?;
 
     info!("MCP server started successfully");
 
@@ -136,7 +134,7 @@ pub async fn run_mcp_server(app_data: &'static Mutex<AppData>) -> io::Result<()>
     let quit_reason = running
         .waiting()
         .await
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("MCP server error: {}", e)))?;
+        .map_err(|e| io::Error::other(format!("MCP server error: {e}")))?;
 
     info!("MCP server shutting down: {:?}", quit_reason);
     Ok(())

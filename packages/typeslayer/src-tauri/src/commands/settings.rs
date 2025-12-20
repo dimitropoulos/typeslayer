@@ -80,8 +80,7 @@ pub async fn set_preferred_editor(
 
     if !is_valid {
         return Err(format!(
-            "Editor '{}' is not in available editors list",
-            editor
+            "Editor '{editor}' is not in available editors list",
         ));
     }
 
