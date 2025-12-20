@@ -120,11 +120,11 @@ impl LayerCake {
                 if let Some(eq) = stripped.find('=') {
                     let (name, value) = stripped.split_at(eq);
                     map.insert(
-                        format!("--{}", name),
+                        format!("--{name}"),
                         value.trim_start_matches('=').to_string(),
                     );
                 } else {
-                    prev_flag = Some(format!("--{}", stripped));
+                    prev_flag = Some(format!("--{stripped}"));
                 }
             }
         }

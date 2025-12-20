@@ -8,7 +8,7 @@ use crate::{
         utils::CPU_PROFILE_FILENAME,
     },
 };
-use std::io::{Read, Write};
+use std::io::Write;
 use std::path::Path;
 use tauri::State;
 use tokio::sync::Mutex;
@@ -107,7 +107,7 @@ pub async fn create_bug_report(
     stderr: Option<String>,
 ) -> Result<String, String> {
     let data = state.lock().await;
-    let outputs_dir = data.outputs_dir().clone();
+    let outputs_dir = data.outputs_dir();
     let data_dir = data.data_dir.clone();
 
     // Create bug report zip file
@@ -115,14 +115,14 @@ pub async fn create_bug_report(
         dirs::download_dir().ok_or_else(|| "Could not find downloads directory".to_string())?;
 
     let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
-    let zip_filename = format!("typeslayer_bug_report_{}.zip", timestamp);
+    let zip_filename = format!("typeslayer_bug_report_{timestamp}.zip");
     let zip_path = downloads_dir.join(&zip_filename);
 
     let zip_path_inner = zip_path.clone();
     tauri::async_runtime::spawn_blocking(move || {
         // Create the zip file
         let file = std::fs::File::create(zip_path_inner)
-            .map_err(|e| format!("Failed to create zip file: {}", e))?;
+            .map_err(|e| format!("Failed to create zip file: {e}"))?;
 
         let mut zip = zip::ZipWriter::new(file);
         let options = zip::write::SimpleFileOptions::default()
@@ -130,24 +130,24 @@ pub async fn create_bug_report(
 
         // Add description as a text file
         zip.start_file("description", options)
-            .map_err(|e| format!("Failed to add description file: {}", e))?;
+            .map_err(|e| format!("Failed to add description file: {e}"))?;
         zip.write_all(description.as_bytes())
-            .map_err(|e| format!("Failed to write description: {}", e))?;
+            .map_err(|e| format!("Failed to write description: {e}"))?;
 
         // Add stdout if provided
         if let Some(stdout_content) = stdout {
             zip.start_file("stdout", options)
-                .map_err(|e| format!("Failed to add stdout file: {}", e))?;
+                .map_err(|e| format!("Failed to add stdout file: {e}"))?;
             zip.write_all(stdout_content.as_bytes())
-                .map_err(|e| format!("Failed to write stdout: {}", e))?;
+                .map_err(|e| format!("Failed to write stdout: {e}"))?;
         }
 
         // Add stderr if provided
         if let Some(stderr_content) = stderr {
             zip.start_file("stderr", options)
-                .map_err(|e| format!("Failed to add stderr file: {}", e))?;
+                .map_err(|e| format!("Failed to add stderr file: {e}"))?;
             zip.write_all(stderr_content.as_bytes())
-                .map_err(|e| format!("Failed to write stderr: {}", e))?;
+                .map_err(|e| format!("Failed to write stderr: {e}"))?;
         }
         // Define the files to include
         let files_to_include = [
@@ -170,18 +170,18 @@ pub async fn create_bug_report(
             };
 
             if file_path.exists() {
-                let contents = std::fs::read(&file_path)
-                    .map_err(|e| format!("Failed to read {}: {}", filename, e))?;
+                let mut file = std::fs::File::open(&file_path)
+                    .map_err(|e| format!("Failed to open {filename}: {e}"))?;
 
                 zip.start_file(filename, options)
-                    .map_err(|e| format!("Failed to add {} to zip: {}", filename, e))?;
-                zip.write_all(&contents)
-                    .map_err(|e| format!("Failed to write {} to zip: {}", filename, e))?;
+                    .map_err(|e| format!("Failed to add {filename} to zip: {e}"))?;
+                std::io::copy(&mut file, &mut zip)
+                    .map_err(|e| format!("Failed to write {filename} to zip: {e}"))?;
             }
         }
 
         zip.finish()
-            .map_err(|e| format!("Failed to finalize zip file: {}", e))?;
+            .map_err(|e| format!("Failed to finalize zip file: {e}"))?;
 
         Ok::<(), String>(())
     })
@@ -221,16 +221,16 @@ pub async fn upload_bug_report(
     let zip_path = zip_path.to_path_buf();
     tauri::async_runtime::spawn_blocking(move || {
         let file = std::fs::File::open(&zip_path)
-            .map_err(|e| format!("Failed to open zip file: {}", e))?;
+            .map_err(|e| format!("Failed to open zip file: {e}"))?;
 
         let mut archive =
-            zip::ZipArchive::new(file).map_err(|e| format!("Failed to read zip archive: {}", e))?;
+            zip::ZipArchive::new(file).map_err(|e| format!("Failed to read zip archive: {e}"))?;
 
         // Extract each file
         for i in 0..archive.len() {
             let mut file = archive
                 .by_index(i)
-                .map_err(|e| format!("Failed to read zip entry: {}", e))?;
+                .map_err(|e| format!("Failed to read zip entry: {e}"))?;
 
             let filename = file.name().to_string();
 
@@ -243,14 +243,10 @@ pub async fn upload_bug_report(
                 outputs_dir_for_unzip.join(&filename)
             };
 
-            // Read file contents
-            let mut contents = Vec::new();
-            file.read_to_end(&mut contents)
-                .map_err(|e| format!("Failed to read {}: {}", &filename, &e))?;
-
-            debug!("Extracting {} to {}", filename, dest_path.display());
-            std::fs::write(&dest_path, contents)
-                .map_err(|e| format!("Failed to write {}: {}", &filename, &e))?;
+            let mut dest = std::fs::File::create(dest_path)
+                .map_err(|e| format!("could not create file: {e}"))?;
+            std::io::copy(&mut file, &mut dest)
+                .map_err(|e| format!("Failed to extract {}: {}", &filename, &e))?;
         }
 
         Ok::<(), String>(())
@@ -260,7 +256,7 @@ pub async fn upload_bug_report(
 
     let new_app_data = AppData::new(data_dir.clone())
         .await
-        .map_err(|e| format!("Failed to reinitialize app data: {}", e))?;
+        .map_err(|e| format!("Failed to reinitialize app data: {e}"))?;
 
     {
         let mut data = state.lock().await;

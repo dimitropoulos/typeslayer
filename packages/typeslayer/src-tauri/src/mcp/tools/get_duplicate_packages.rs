@@ -120,7 +120,7 @@ pub async fn execute(app_data: &Mutex<AppData>) -> String {
     };
 
     let json_response = serde_json::to_string_pretty(&response)
-        .unwrap_or_else(|e| format!("{{\"error\": \"Failed to serialize response: {}\"}}", e));
+        .unwrap_or_else(|e| format!("{{\"error\": \"Failed to serialize response: {e}\"}}"));
 
     info!(
         "[get_duplicate_packages] returning {} duplicates (total: {})",

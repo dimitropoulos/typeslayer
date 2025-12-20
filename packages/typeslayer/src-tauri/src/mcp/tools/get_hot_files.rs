@@ -64,7 +64,7 @@ pub async fn execute(app_data: &Mutex<AppData>) -> String {
     // Build treemap data (already sorted desc by duration)
     let treemap_nodes = match crate::treemap::build_treemap_from_trace(&data.trace_json) {
         Ok(nodes) => nodes,
-        Err(e) => return format!("{{\"error\": \"Failed to build treemap data: {}\"}}", e),
+        Err(e) => return format!("{{\"error\": \"Failed to build treemap data: {e}\"}}"),
     };
 
     let limit = 10usize; // keep stubbed for now; matches tool definition default
@@ -92,6 +92,6 @@ pub async fn execute(app_data: &Mutex<AppData>) -> String {
 
     match serde_json::to_string_pretty(&response) {
         Ok(json) => json,
-        Err(e) => format!("{{\"error\": \"Failed to serialize response: {}\"}}", e),
+        Err(e) => format!("{{\"error\": \"Failed to serialize response: {e}\"}}"),
     }
 }

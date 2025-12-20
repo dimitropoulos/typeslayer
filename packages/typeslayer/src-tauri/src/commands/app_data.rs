@@ -131,8 +131,7 @@ pub async fn set_selected_tsconfig(
     let path_buf = PathBuf::from(&tsconfig_path);
     if !data.tsconfig_paths.contains(&path_buf) {
         return Err(format!(
-            "tsconfig '{}' not found in discovered paths",
-            tsconfig_path
+            "tsconfig {tsconfig_path:?} not found in discovered paths"
         ));
     }
 

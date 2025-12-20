@@ -26,7 +26,7 @@ pub enum DepthLimitKind {
 }
 
 pub fn create_depth_limits(
-    trace_file: &Vec<TraceEvent>,
+    trace_file: &[TraceEvent],
 ) -> HashMap<DepthLimitKind, Vec<TraceEvent>> {
     let mut depth_limits: HashMap<DepthLimitKind, Vec<TraceEvent>> = HashMap::new();
 
