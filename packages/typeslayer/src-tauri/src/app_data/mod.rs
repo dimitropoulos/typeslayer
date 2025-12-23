@@ -226,7 +226,7 @@ impl AppData {
         // Only here to satisfy lifetimes. Super let when?
         let compiler_variant = self.settings.typescript_compiler_variant;
         let compiler_require = format!(
-            r#"'require("{}/bin/{}")'"#,
+            r#""require('{}/bin/{}')""#,
             compiler_variant.npm_package(),
             compiler_variant.as_str()
         );
