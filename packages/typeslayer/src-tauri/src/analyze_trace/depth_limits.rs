@@ -25,17 +25,15 @@ pub enum DepthLimitKind {
     TypeRelatedToDiscriminatedType,
 }
 
-pub fn create_depth_limits(
-    trace_file: &[TraceEvent],
-) -> HashMap<DepthLimitKind, Vec<TraceEvent>> {
+pub fn create_depth_limits(trace_file: &[TraceEvent]) -> HashMap<DepthLimitKind, Vec<TraceEvent>> {
     let mut depth_limits: HashMap<DepthLimitKind, Vec<TraceEvent>> = HashMap::new();
 
     fn kind_from_event_name(name: &str) -> Option<DepthLimitKind> {
         for kind in DepthLimitKind::iter() {
-            if let Ok(serialized) = serde_plain::to_string(&kind) {
-                if serialized == name {
-                    return Some(kind);
-                }
+            if let Ok(serialized) = serde_plain::to_string(&kind)
+                && serialized == name
+            {
+                return Some(kind);
             }
         }
         None
@@ -46,10 +44,10 @@ pub fn create_depth_limits(
     }
 
     for ev in trace_file.iter() {
-        if let Some(kind) = kind_from_event_name(ev.name()) {
-            if let Some(vec) = depth_limits.get_mut(&kind) {
-                vec.push(ev.clone());
-            }
+        if let Some(kind) = kind_from_event_name(ev.name())
+            && let Some(vec) = depth_limits.get_mut(&kind)
+        {
+            vec.push(ev.clone());
         }
     }
 

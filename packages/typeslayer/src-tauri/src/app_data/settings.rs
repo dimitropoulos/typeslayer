@@ -1,9 +1,10 @@
 use strum_macros::EnumString;
 
-#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize, EnumString)]
+#[derive(Clone, Copy, Default, Debug, serde::Serialize, serde::Deserialize, EnumString)]
 pub enum TypeScriptCompilerVariant {
     #[serde(rename = "tsc")]
     #[strum(serialize = "tsc")]
+    #[default]
     Strata,
     #[serde(rename = "vue-tsc")]
     #[strum(serialize = "vue-tsc")]
@@ -11,12 +12,6 @@ pub enum TypeScriptCompilerVariant {
     #[serde(rename = "tsgo")]
     #[strum(serialize = "tsgo")]
     Corsa,
-}
-
-impl Default for TypeScriptCompilerVariant {
-    fn default() -> Self {
-        Self::Strata
-    }
 }
 
 impl TypeScriptCompilerVariant {

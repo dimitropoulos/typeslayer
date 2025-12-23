@@ -128,11 +128,11 @@ impl AppData {
         self.discover_tsconfigs().await?;
 
         // Try to keep previous selection if it still exists
-        if let Some(prev) = previous_selection {
-            if self.tsconfig_paths.contains(&prev) {
-                self.selected_tsconfig = Some(prev);
-                return Ok(());
-            }
+        if let Some(prev) = previous_selection
+            && self.tsconfig_paths.contains(&prev)
+        {
+            self.selected_tsconfig = Some(prev);
+            return Ok(());
         }
 
         // Otherwise, auto-detect
@@ -157,21 +157,18 @@ impl AppData {
                 break;
             };
 
-            if let Ok(file_name) = entry.file_name().into_string() {
-                if file_name.starts_with("tsconfig") && file_name.ends_with(".json") {
-                    self.tsconfig_paths.push(entry.path());
-                }
+            if let Ok(file_name) = entry.file_name().into_string()
+                && file_name.starts_with("tsconfig")
+                && file_name.ends_with(".json")
+            {
+                self.tsconfig_paths.push(entry.path());
             }
         }
 
         // Sort with tsconfig.json first
         self.tsconfig_paths.sort_by(|a, b| {
-            let a_is_main = a
-                .file_name()
-                .is_some_and(|name| name == TSCONFIG_FILENAME);
-            let b_is_main = b
-                .file_name()
-                .is_some_and(|name| name == TSCONFIG_FILENAME);
+            let a_is_main = a.file_name().is_some_and(|name| name == TSCONFIG_FILENAME);
+            let b_is_main = b.file_name().is_some_and(|name| name == TSCONFIG_FILENAME);
             match (a_is_main, b_is_main) {
                 (true, false) => Ordering::Less,
                 (false, true) => Ordering::Greater,
@@ -227,9 +224,8 @@ impl AppData {
         args.push("--eval");
 
         // Only here to satisfy lifetimes. Super let when?
-        let compiler_require: String;
         let compiler_variant = self.settings.typescript_compiler_variant;
-        compiler_require = format!(
+        let compiler_require = format!(
             r#"'require("{}/bin/{}")'"#,
             compiler_variant.npm_package(),
             compiler_variant.as_str()
@@ -253,13 +249,13 @@ impl AppData {
 
         // Only here to satisfy lifetimes. Super let when?
         let tsconfig_string: String;
-        if self.settings.apply_tsc_project_flag {
-            if let Some(ref tsconfig) = self.selected_tsconfig {
-                args.push("--project");
+        if self.settings.apply_tsc_project_flag
+            && let Some(ref tsconfig) = self.selected_tsconfig
+        {
+            args.push("--project");
 
-                tsconfig_string = quote_if_needed(&tsconfig.to_string_lossy());
-                args.push(&tsconfig_string);
-            }
+            tsconfig_string = quote_if_needed(&tsconfig.to_string_lossy());
+            args.push(&tsconfig_string);
         }
 
         Ok(TSCCommand {

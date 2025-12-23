@@ -83,17 +83,17 @@ pub async fn get_bug_report_files(
     }
 
     // Check if selected tsconfig exists
-    if let Some(tsconfig_path) = &data.selected_tsconfig {
-        if tsconfig_path.exists() {
-            let filename = tsconfig_path
-                .file_name()
-                .and_then(|f| f.to_str())
-                .unwrap_or(TSCONFIG_FILENAME);
-            files.push(BugReportFile {
-                name: filename.to_string(),
-                description: "TypeScript compiler configuration".to_string(),
-            });
-        }
+    if let Some(tsconfig_path) = &data.selected_tsconfig
+        && tsconfig_path.exists()
+    {
+        let filename = tsconfig_path
+            .file_name()
+            .and_then(|f| f.to_str())
+            .unwrap_or(TSCONFIG_FILENAME);
+        files.push(BugReportFile {
+            name: filename.to_string(),
+            description: "TypeScript compiler configuration".to_string(),
+        });
     }
 
     Ok(files)
@@ -220,8 +220,8 @@ pub async fn upload_bug_report(
     // Unzip and process files in a blocking task
     let zip_path = zip_path.to_path_buf();
     tauri::async_runtime::spawn_blocking(move || {
-        let file = std::fs::File::open(&zip_path)
-            .map_err(|e| format!("Failed to open zip file: {e}"))?;
+        let file =
+            std::fs::File::open(&zip_path).map_err(|e| format!("Failed to open zip file: {e}"))?;
 
         let mut archive =
             zip::ZipArchive::new(file).map_err(|e| format!("Failed to read zip archive: {e}"))?;

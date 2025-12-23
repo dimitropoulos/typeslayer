@@ -149,19 +149,19 @@ impl LayerCake {
         for src in &self.precedence {
             match src {
                 Source::Env => {
-                    if let Ok(v) = std::env::var(&env_key) {
-                        if !v.is_empty() {
-                            match (args.validate)(&v) {
-                                Ok(transformed) => {
-                                    debug!(
-                                        "[layercake] resolved {}='{}' from env {}",
-                                        args.env, transformed, env_key
-                                    );
-                                    return transformed;
-                                }
-                                Err(e) => {
-                                    panic!("Invalid {} from env {}: {}", args.env, env_key, e)
-                                }
+                    if let Ok(v) = std::env::var(&env_key)
+                        && !v.is_empty()
+                    {
+                        match (args.validate)(&v) {
+                            Ok(transformed) => {
+                                debug!(
+                                    "[layercake] resolved {}='{}' from env {}",
+                                    args.env, transformed, env_key
+                                );
+                                return transformed;
+                            }
+                            Err(e) => {
+                                panic!("Invalid {} from env {}: {}", args.env, env_key, e)
                             }
                         }
                     }
@@ -222,27 +222,24 @@ impl LayerCake {
         for src in &self.precedence {
             match src {
                 Source::Env => {
-                    if let Ok(v) = std::env::var(&env_key) {
-                        if !v.is_empty() {
-                            match v.parse::<i32>() {
-                                Ok(parsed) => match (args.validate)(&parsed) {
-                                    Ok(transformed) => {
-                                        debug!(
-                                            "[layercake] resolved {}={} from env {}",
-                                            args.env, transformed, env_key
-                                        );
-                                        return transformed;
-                                    }
-                                    Err(e) => {
-                                        panic!("Invalid {} from env {}: {}", args.env, env_key, e)
-                                    }
-                                },
-                                Err(e) => {
-                                    panic!(
-                                        "Failed to parse {} from env {}: {}",
-                                        args.env, env_key, e
-                                    )
+                    if let Ok(v) = std::env::var(&env_key)
+                        && !v.is_empty()
+                    {
+                        match v.parse::<i32>() {
+                            Ok(parsed) => match (args.validate)(&parsed) {
+                                Ok(transformed) => {
+                                    debug!(
+                                        "[layercake] resolved {}={} from env {}",
+                                        args.env, transformed, env_key
+                                    );
+                                    return transformed;
                                 }
+                                Err(e) => {
+                                    panic!("Invalid {} from env {}: {}", args.env, env_key, e)
+                                }
+                            },
+                            Err(e) => {
+                                panic!("Failed to parse {} from env {}: {}", args.env, env_key, e)
                             }
                         }
                     }
@@ -311,25 +308,25 @@ impl LayerCake {
         for src in &self.precedence {
             match src {
                 Source::Env => {
-                    if let Ok(v) = std::env::var(&env_key) {
-                        if let Some(b) = Self::parse_bool(&v) {
-                            debug!(
-                                "[layercake] resolved bool {}={} from env {}",
-                                args.env, b, env_key
-                            );
-                            return b;
-                        }
+                    if let Ok(v) = std::env::var(&env_key)
+                        && let Some(b) = Self::parse_bool(&v)
+                    {
+                        debug!(
+                            "[layercake] resolved bool {}={} from env {}",
+                            args.env, b, env_key
+                        );
+                        return b;
                     }
                 }
                 Source::Flag => {
-                    if let Some(v) = self.flags.get(args.flag) {
-                        if let Some(b) = Self::parse_bool(v) {
-                            debug!(
-                                "[layercake] resolved bool {}={} from flag {}",
-                                args.env, b, args.flag
-                            );
-                            return b;
-                        }
+                    if let Some(v) = self.flags.get(args.flag)
+                        && let Some(b) = Self::parse_bool(v)
+                    {
+                        debug!(
+                            "[layercake] resolved bool {}={} from flag {}",
+                            args.env, b, args.flag
+                        );
+                        return b;
                     }
                 }
                 Source::File => {

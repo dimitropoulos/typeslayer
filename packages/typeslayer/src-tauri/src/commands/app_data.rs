@@ -177,7 +177,7 @@ pub async fn get_type_graph_nodes_and_links(
     let filtered_links: Vec<CompactGraphLink> = tg
         .links
         .iter()
-        .filter(|l| (l.source as usize) < max_nodes && (l.target as usize) < max_nodes)
+        .filter(|l| l.source < max_nodes && l.target < max_nodes)
         .map(|l| l.clone().into())
         .collect();
 

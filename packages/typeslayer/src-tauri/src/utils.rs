@@ -137,11 +137,12 @@ pub fn default_extra_tsc_flags() -> String {
 }
 
 pub async fn file_mtime_iso(path: &Path) -> Option<String> {
-    if let Ok(meta) = fs::metadata(path).await {
-        if let Ok(modified) = meta.modified() {
-            return Some(chrono::DateTime::<chrono::Utc>::from(modified).to_rfc3339());
-        }
+    if let Ok(meta) = fs::metadata(path).await
+        && let Ok(modified) = meta.modified()
+    {
+        return Some(chrono::DateTime::<chrono::Utc>::from(modified).to_rfc3339());
     }
+
     None
 }
 
