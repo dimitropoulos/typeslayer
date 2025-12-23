@@ -219,12 +219,11 @@ pub fn human_readable_name(t: &ResolvedType) -> String {
             Flag::StringLiteral | Flag::NumberLiteral | Flag::BooleanLiteral | Flag::BigIntLiteral
         )
     });
-    if is_literal {
-        if let Some(d) = &t.display {
-            if !d.is_empty() {
-                return d.clone();
-            }
-        }
+    if is_literal
+        && let Some(d) = &t.display
+        && !d.is_empty()
+    {
+        return d.clone();
     }
 
     if let Some(s) = &t.symbol_name {

@@ -24,14 +24,12 @@ pub fn init_project_root(cake: &LayerCake) -> PathBuf {
     // when it already contains a package.json. This prevents stale typeslayer.toml entries
     // from overriding local runs.
     let no_env_or_flag = !cake.has_env("PROJECT_ROOT") && !cake.has_flag("--project-root");
-    if no_env_or_flag {
-        if let Some(cwd_dir) = detect_project_root_from_cwd() {
-            info!(
-                "[init_project_root] using project_root from current directory: {}",
-                cwd_dir.display()
-            );
-            return cwd_dir;
-        }
+    if no_env_or_flag && let Some(cwd_dir) = detect_project_root_from_cwd() {
+        info!(
+            "[init_project_root] using project_root from current directory: {}",
+            cwd_dir.display()
+        );
+        return cwd_dir;
     }
 
     let resolved = cake.resolve_string(ResolveStringArgs {

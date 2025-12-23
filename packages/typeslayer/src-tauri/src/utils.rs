@@ -1,14 +1,11 @@
-use std::path::{Path, PathBuf};
+use std::{borrow::Cow, path::{Path, PathBuf}};
 
-use shlex::Quoter;
 use tauri::{AppHandle, Manager};
 use tokio::fs;
 use tracing::debug;
 
 pub fn quote_if_needed(s: &str) -> String {
-    // Equivalent to the now deprecated try_quote.
-    // Should never panic since the only error is only possible with `allow_nul(false)`
-    Quoter::new().allow_nul(true).quote(s).unwrap().into_owned()
+    shell_escape::escape(Cow::Borrowed(s)).into_owned()
 }
 
 /// takes in a string flag and a string path and makes it a cli arg, handing quoting if the arg contains spaces
@@ -137,11 +134,12 @@ pub fn default_extra_tsc_flags() -> String {
 }
 
 pub async fn file_mtime_iso(path: &Path) -> Option<String> {
-    if let Ok(meta) = fs::metadata(path).await {
-        if let Ok(modified) = meta.modified() {
-            return Some(chrono::DateTime::<chrono::Utc>::from(modified).to_rfc3339());
-        }
+    if let Ok(meta) = fs::metadata(path).await
+        && let Ok(modified) = meta.modified()
+    {
+        return Some(chrono::DateTime::<chrono::Utc>::from(modified).to_rfc3339());
     }
+
     None
 }
 

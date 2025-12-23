@@ -16,21 +16,21 @@ fn get_hotspots_worker(
     let current_file_owned;
 
     // Update current file if this is a check event
-    if let EventSpanEvent::TraceEvent(event) = &span.event {
-        if event.cat() == "check" {
-            // Try to extract path from various check events
-            let path_opt = match event {
-                TraceEvent::CheckExpression { args, .. } => args.path.as_deref(),
-                TraceEvent::CheckVariableDeclaration { args, .. }
-                | TraceEvent::CheckDeferredNode { args, .. } => Some(args.path.as_str()),
-                TraceEvent::CheckSourceFile { args, .. }
-                | TraceEvent::CheckSourceFileNodes { args, .. } => Some(args.path.as_str()),
-                _ => None,
-            };
-            if let Some(path) = path_opt {
-                current_file_owned = Some(path.to_string());
-                *current_file = current_file_owned;
-            }
+    if let EventSpanEvent::TraceEvent(event) = &span.event
+        && event.cat() == "check"
+    {
+        // Try to extract path from various check events
+        let path_opt = match event {
+            TraceEvent::CheckExpression { args, .. } => args.path.as_deref(),
+            TraceEvent::CheckVariableDeclaration { args, .. }
+            | TraceEvent::CheckDeferredNode { args, .. } => Some(args.path.as_str()),
+            TraceEvent::CheckSourceFile { args, .. }
+            | TraceEvent::CheckSourceFileNodes { args, .. } => Some(args.path.as_str()),
+            _ => None,
+        };
+        if let Some(path) = path_opt {
+            current_file_owned = Some(path.to_string());
+            *current_file = current_file_owned;
         }
     }
 
