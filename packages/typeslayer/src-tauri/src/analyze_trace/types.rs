@@ -102,3 +102,29 @@ pub struct AnalyzeTraceResult {
     pub unterminated_events: Vec<TraceEvent>,
     pub node_module_paths: NodeModulePaths,
 }
+
+impl AnalyzeTraceResult {
+    pub fn total_duplicate_packages(&self) -> usize {
+        self.duplicate_packages.len()
+    }
+
+    pub fn most_duplicated_package(&self) -> usize {
+        self.duplicate_packages
+            .iter()
+            .map(|pkg| pkg.instances.len())
+            .max()
+            .unwrap_or(0)
+    }
+
+    pub fn total_hotspots(&self) -> usize {
+        self.hot_spots.len()
+    }
+
+    pub fn depth_limit_counts(&self) -> HashMap<DepthLimitKind, usize> {
+        let mut counts = HashMap::new();
+        for (kind, events) in &self.depth_limits {
+            counts.insert(*kind, events.len());
+        }
+        counts
+    }
+}

@@ -1072,7 +1072,7 @@ const TypeGraphPopover = ({
       >
         <Stack sx={{ px: 2, py: 1, overflowY: "auto", gap: 0 }}>
           {EDGE_CONFIGS.map(
-            config => [config, stats?.count[config.id] ?? 0] as const,
+            config => [config, stats?.linkCounts[config.id] ?? 0] as const,
           )
             .sort((a, b) => b[1] - a[1])
             .map(([config, count], index, arr) => {

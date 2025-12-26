@@ -584,7 +584,7 @@ export const DocsPage = () => {
             <InlineCode>npx @typeslayer/linux-x64</InlineCode> on Linux,{" "}
             <InlineCode>npx @typeslayer/darwin-x64</InlineCode> on Apple
             Silicon, or <InlineCode>npx @typeslayer/win32-x64</InlineCode> on
-            Windows on Intel.
+            Windows.
           </Typography>
         </Stack>
       ),
@@ -627,11 +627,52 @@ export const DocsPage = () => {
             analyze at a time.
           </Typography>
           <Typography>
-            when you do, though, don't forget that you can just as easily run
+            when you do, though, don't forget that you can just as easily run{" "}
             <InlineCode>tsc --generateTrace</InlineCode> manually on every
             package in your monorepo, and then gather all the traces and sort
             them by file size. it's almost a guarantee that the ones at the top
             of that list are the ones you most care about anyway.
+          </Typography>
+        </Stack>
+      ),
+    },
+    {
+      id: "manual-mode",
+      title: <span>what if I already have trace files?</span>,
+      description: (
+        <Stack gap={1}>
+          <Typography>
+            if you already have the <InlineCode>trace.json</InlineCode> and{" "}
+            <InlineCode>types.json</InlineCode> files generated from previous
+            runs of <InlineCode>tsc --generateTrace</InlineCode>, you can still
+            use TypeSlayer. I'm reluctant to give you these instructions because
+            if <em>the reason</em> you didn't use TypeSlayer to generate the
+            trace is that something is wrong with TypeSlayer, I'd really like to
+            know about it. Consider these instructions a last resort.
+          </Typography>
+          <Typography>
+            so whatch'yer gonna do is take your trace files and navigate to{" "}
+            <Link href="/raw-data/trace-json">Raw Data | trace.json</Link> .
+            there, you'll find an <InlineCode>Upload</InlineCode> button. the{" "}
+            <InlineCode>trace.json</InlineCode> and{" "}
+            <InlineCode>types.json</InlineCode> files are always a pair, so you
+            if you upload one of them, TypeSlayer will find the other that
+            matches it.
+          </Typography>
+          <Typography>
+            once that completes, go to{" "}
+            <Link href="/raw-data/analyze-trace">
+              Raw Data | analyze-trace.json
+            </Link>{" "}
+            and{" "}
+            <Link href="/raw-data/type-graph">Raw Data | type-graph.json</Link>{" "}
+            and hit the <InlineCode>Regenerate</InlineCode> button on both of
+            those pages.
+          </Typography>
+          <Typography>
+            (and if you have a cpu profile, then upload that - but the only
+            module that uses that is SpeedScope, so it's not strictly necessary
+            the way the other files are).
           </Typography>
         </Stack>
       ),
@@ -685,9 +726,6 @@ export const DocsPage = () => {
             onMouseEnter={() => setHoveredPage(index)}
             onMouseLeave={() => setHoveredPage(null)}
             selected={routeDerivedIndex === index}
-            sx={{
-              ...(activeIndex ? {} : {}),
-            }}
           >
             <ListItemText>
               <Typography

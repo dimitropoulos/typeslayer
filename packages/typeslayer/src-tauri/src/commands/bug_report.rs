@@ -1,6 +1,6 @@
 use crate::{
     analyze_trace::constants::ANALYZE_TRACE_FILENAME,
-    app_data::AppData,
+    app_data::{AppData, AppMode},
     type_graph::TYPE_GRAPH_FILENAME,
     utils::{CONFIG_FILENAME, PACKAGE_JSON_FILENAME, TSCONFIG_FILENAME},
     validate::{
@@ -8,13 +8,14 @@ use crate::{
         utils::CPU_PROFILE_FILENAME,
     },
 };
+use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::path::Path;
 use tauri::State;
 use tokio::sync::Mutex;
 use tracing::debug;
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct BugReportFile {
     pub name: String,
     pub description: String,
@@ -254,7 +255,7 @@ pub async fn upload_bug_report(
     .await
     .map_err(|e| e.to_string())??;
 
-    let new_app_data = AppData::new(data_dir.clone())
+    let new_app_data = AppData::new(data_dir.clone(), AppMode::GUI)
         .await
         .map_err(|e| format!("Failed to reinitialize app data: {e}"))?;
 

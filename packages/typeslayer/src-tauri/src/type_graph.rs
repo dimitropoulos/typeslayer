@@ -2,13 +2,15 @@ use serde::ser::Error as _;
 use serde::{Deserialize, Serialize, Serializer};
 use serde_json::value::RawValue;
 use std::collections::HashMap;
+use strum::VariantArray;
+use strum_macros::VariantArray;
 
 use crate::validate::types_json::{Flag, ResolvedType, TypesJsonSchema};
 use crate::validate::utils::TypeId;
 
 pub const TYPE_GRAPH_FILENAME: &str = "type-graph.json";
 
-#[derive(Eq, PartialEq, Hash, Debug, Clone, Serialize, Deserialize)]
+#[derive(Eq, PartialEq, Hash, Debug, Clone, Serialize, Deserialize, VariantArray)]
 #[serde(rename_all = "camelCase")]
 pub enum LinkKind {
     // one to many
@@ -37,30 +39,11 @@ pub enum LinkKind {
 }
 
 impl LinkKind {
-    pub fn values() -> &'static [LinkKind] {
-        use LinkKind::*;
-        &[
-            AliasTypeArgument,
-            Intersection,
-            TypeArgument,
-            Union,
-            Instantiated,
-            SubstitutionBase,
-            Constraint,
-            IndexedAccessObject,
-            IndexedAccessIndex,
-            ConditionalCheck,
-            ConditionalExtends,
-            ConditionalTrue,
-            ConditionalFalse,
-            Keyof,
-            EvolvingArrayElement,
-            EvolvingArrayFinal,
-            ReverseMappedSource,
-            ReverseMappedMapped,
-            ReverseMappedConstraint,
-            Alias,
-        ]
+    pub fn new_counts_map() -> HashMap<LinkKind, usize> {
+        LinkKind::VARIANTS
+            .iter()
+            .map(|kind| (kind.clone(), 0))
+            .collect()
     }
 }
 
@@ -86,10 +69,12 @@ impl From<GraphLink> for CompactGraphLink {
     }
 }
 
+type LinkCounts = HashMap<LinkKind, usize>;
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct GraphStats {
-    pub count: HashMap<LinkKind, usize>,
+    pub link_counts: LinkCounts,
 }
 
 fn serialize_compact_typeids<S>(vec: &Vec<usize>, serializer: S) -> Result<S::Ok, S::Error>
@@ -173,13 +158,22 @@ impl From<LinkStats> for CompactLinkStats {
 pub type GraphLinkStats = HashMap<LinkKind, LinkStats>;
 pub type CompactGraphLinkStats = HashMap<LinkKind, CompactLinkStats>;
 
-#[derive(Eq, PartialEq, Hash, Debug, Clone, Serialize, Deserialize)]
+#[derive(Eq, PartialEq, Hash, Debug, Clone, Serialize, Deserialize, VariantArray)]
 #[serde(rename_all = "camelCase")]
 pub enum NodeStatKind {
     TypeArguments,
     UnionTypes,
     IntersectionTypes,
     AliasTypeArguments,
+}
+
+impl NodeStatKind {
+    pub fn new_counts_map() -> HashMap<NodeStatKind, usize> {
+        NodeStatKind::VARIANTS
+            .iter()
+            .map(|kind| (kind.clone(), 0))
+            .collect()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -204,11 +198,11 @@ pub type GraphNodeStats = HashMap<NodeStatKind, NodeStatCategory>;
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TypeGraph {
-    pub nodes: usize,
     pub stats: GraphStats,
-    pub link_stats: GraphLinkStats,
+    pub nodes: usize,
     pub node_stats: GraphNodeStats,
     pub links: Vec<GraphLink>,
+    pub link_stats: GraphLinkStats,
 }
 
 /// Return a human-readable type name similar to frontend's getHumanReadableName
@@ -242,7 +236,7 @@ impl TypeGraph {
         graph.calculate_links(types);
         graph.calculate_link_stats(types);
         graph.calculate_node_stats(types);
-        graph.calculate_counts();
+        graph.calculate_link_counts();
         graph
     }
 
@@ -408,13 +402,24 @@ impl TypeGraph {
         ]);
     }
 
-    pub fn calculate_counts(&mut self) {
-        let mut count: HashMap<LinkKind, usize> = HashMap::new();
+    pub fn calculate_node_stat_counts(&self) -> HashMap<NodeStatKind, usize> {
+        let mut counts = NodeStatKind::new_counts_map();
+        for (kind, category) in &self.node_stats {
+            let entry = counts.entry(kind.clone()).or_insert(0);
+            *entry = category.nodes.len();
+        }
+        counts
+    }
+
+    pub fn calculate_link_counts(&mut self) {
+        let mut counts = LinkKind::new_counts_map();
         for link in &self.links {
-            let entry = count.entry(link.kind.clone()).or_insert(0);
+            let entry = counts.entry(link.kind.clone()).or_insert(0);
             *entry += 1;
         }
-        self.stats = GraphStats { count };
+        self.stats = GraphStats {
+            link_counts: counts,
+        };
     }
 }
 

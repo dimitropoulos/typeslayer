@@ -4,6 +4,7 @@ use std::{
 };
 
 use tokio::{
+    io::AsyncReadExt,
     process::{ChildStderr, ChildStdout, Command},
     select,
     sync::Notify,
@@ -64,4 +65,25 @@ impl ProcessController {
 
         Ok(())
     }
+}
+
+pub async fn process_output(mut output: CommandOutput) -> Result<(String, String), String> {
+    let mut stdout = Vec::new();
+    output
+        .stdout
+        .read_to_end(&mut stdout)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let mut stderr = Vec::new();
+    output
+        .stderr
+        .read_to_end(&mut stderr)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let stdout = String::from_utf8_lossy(&stdout).to_string();
+    let stderr = String::from_utf8_lossy(&stderr).to_string();
+
+    Ok((stdout, stderr))
 }

@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 pub struct TSCCommand {
     pub shell: String,     // The shell, e.g. `sh` or `cmd`
@@ -14,7 +14,8 @@ impl Display for TSCCommand {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum PackageManager {
     Bun,
     NPM,

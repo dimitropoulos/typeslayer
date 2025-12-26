@@ -7,6 +7,7 @@ import {
   Dvr,
   EmojiEvents,
   Hub,
+  MilitaryTech,
   PlayCircle,
   Search,
   Settings,
@@ -129,6 +130,12 @@ export const NAVIGATION = [
     segment: "cicd-integration",
     title: "CI/CD Integration",
     icon: <Dvr />,
+  },
+  {
+    kind: "segment",
+    segment: "leaderboard",
+    title: "Leaderboard",
+    icon: <MilitaryTech />,
   },
   {
     kind: "segment",
@@ -258,6 +265,7 @@ export const RenderNavItem = ({
       sx={{
         justifyContent: collapsed ? "center" : "flex-start",
         px: 1,
+        py: 0.5,
         flex: "0 0 auto",
         transition: theme =>
           theme.transitions.create(["background-color", "padding"], {

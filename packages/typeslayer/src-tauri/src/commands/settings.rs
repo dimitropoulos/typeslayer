@@ -1,7 +1,17 @@
 use crate::{
+    analytics::{
+        TypeSlayerEvent, event_analyze_trace_fail::EventAnalyzeTraceFail,
+        event_analyze_trace_success::EventAnalyzeTraceSuccess,
+        event_app_started_fail::EventAppStartedFail,
+        event_app_started_success::EventAppStartedSuccess,
+        event_generate_trace_fail::EventGenerateTraceFail,
+        event_generate_trace_success::EventGenerateTraceSuccess,
+        event_type_graph_fail::EventTypeGraphFail, event_type_graph_success::EventTypeGraphSuccess,
+    },
     app_data::{AppData, settings::TypeScriptCompilerVariant},
     utils::{AVAILABLE_EDITORS, default_extra_tsc_flags},
 };
+use serde::Serialize;
 use std::str::FromStr;
 use tauri::State;
 use tokio::sync::Mutex;
@@ -42,20 +52,6 @@ pub async fn set_prefer_editor_open(
 ) -> Result<(), String> {
     let mut data = state.lock().await;
     data.settings.prefer_editor_open = value;
-    data.update_typeslayer_config_toml().await;
-    Ok(())
-}
-
-#[tauri::command]
-pub async fn get_auto_start(state: State<'_, &Mutex<AppData>>) -> Result<bool, String> {
-    let data = state.lock().await;
-    Ok(data.settings.auto_start)
-}
-
-#[tauri::command]
-pub async fn set_auto_start(state: State<'_, &Mutex<AppData>>, value: bool) -> Result<(), String> {
-    let mut data = state.lock().await;
-    data.settings.auto_start = value;
     data.update_typeslayer_config_toml().await;
     Ok(())
 }
@@ -206,6 +202,83 @@ pub async fn set_max_nodes(
     }
     let mut data = state.lock().await;
     data.settings.max_nodes = max_nodes;
+    data.update_typeslayer_config_toml().await;
+    Ok(())
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnalyticsInfo {
+    pub id: String,
+    pub description: String,
+    pub json_example: String,
+    pub enabled: bool,
+}
+
+fn get_event_info<T: TypeSlayerEvent + serde::Serialize>(
+    enabled_events: &[String],
+) -> AnalyticsInfo {
+    let event = T::example();
+    let id = T::event_id().to_string();
+    let description = T::description().to_string();
+    let enabled = enabled_events.contains(&id);
+    // if for whatever reason this fails I want it to blow up - it should never fail (it's static)
+    let json_example = serde_json::to_string(&event).unwrap();
+    AnalyticsInfo {
+        id,
+        description,
+        json_example,
+        enabled,
+    }
+}
+
+#[tauri::command]
+pub async fn get_analytics_consent(
+    state: State<'_, &Mutex<AppData>>,
+) -> Result<Vec<(String, AnalyticsInfo, AnalyticsInfo)>, String> {
+    let data = state.lock().await;
+    let enabled_events = &data.settings.analytics_consent;
+
+    let things: Vec<(String, AnalyticsInfo, AnalyticsInfo)> = vec![
+        (
+            "App Started".to_string(),
+            get_event_info::<EventAppStartedSuccess>(enabled_events),
+            get_event_info::<EventAppStartedFail>(enabled_events),
+        ),
+        (
+            "Generate Trace".to_string(),
+            get_event_info::<EventGenerateTraceSuccess>(enabled_events),
+            get_event_info::<EventGenerateTraceFail>(enabled_events),
+        ),
+        (
+            "Analyze Trace".to_string(),
+            get_event_info::<EventAnalyzeTraceSuccess>(enabled_events),
+            get_event_info::<EventAnalyzeTraceFail>(enabled_events),
+        ),
+        (
+            "Type Graph".to_string(),
+            get_event_info::<EventTypeGraphSuccess>(enabled_events),
+            get_event_info::<EventTypeGraphFail>(enabled_events),
+        ),
+    ];
+
+    Ok(things)
+}
+
+#[tauri::command]
+pub async fn set_analytics_consent(
+    state: State<'_, &Mutex<AppData>>,
+    event: String,
+    consent: bool,
+) -> Result<(), String> {
+    let mut data = state.lock().await;
+    if consent {
+        if !data.settings.analytics_consent.contains(&event) {
+            data.settings.analytics_consent.push(event);
+        }
+    } else {
+        data.settings.analytics_consent.retain(|e| e != &event);
+    }
     data.update_typeslayer_config_toml().await;
     Ok(())
 }

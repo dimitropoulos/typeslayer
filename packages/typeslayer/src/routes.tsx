@@ -9,6 +9,7 @@ import { AboutPage } from "./pages/about";
 import { AwardWinners } from "./pages/award-winners/award-winners";
 import { CiCdIntegration } from "./pages/cicd-integration";
 import { DocsPage } from "./pages/docs";
+import { LeaderboardPage } from "./pages/leaderboard";
 import { Mcp } from "./pages/mcp";
 import { Perfetto } from "./pages/perfetto";
 // analyze-trace page remains but is no longer directly routed
@@ -141,6 +142,12 @@ const aboutRoute = createRoute({
   component: AboutPage,
 });
 
+const leaderboardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/leaderboard",
+  component: LeaderboardPage,
+});
+
 // Index redirect to Award Winners (Largest Union)
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -176,6 +183,7 @@ const routeTree = rootRoute.addChildren([
   docsRoute,
   docsChildRoute,
   aboutRoute,
+  leaderboardRoute,
 ]);
 
 // Create router instance

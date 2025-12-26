@@ -165,6 +165,25 @@ export const theme: Theme = createTheme({
         },
       },
     },
+    MuiSwitch: {
+      styleOverrides: {
+        thumb: {
+          borderRadius: 0,
+          height: 17,
+          width: 17,
+        },
+        track: {
+          borderRadius: 0,
+        },
+        switchBase: {
+          padding: 10,
+        },
+        root: {
+          height: 36,
+          padding: `12px 11px`,
+        },
+      },
+    },
     MuiSvgIcon: {
       styleOverrides: {
         root: {

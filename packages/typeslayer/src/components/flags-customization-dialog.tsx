@@ -1,4 +1,4 @@
-import { Restore } from "@mui/icons-material";
+import { InfoOutline, Restore } from "@mui/icons-material";
 import {
   Button,
   Checkbox,
@@ -16,6 +16,7 @@ import {
   type SelectChangeEvent,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { useCallback } from "react";
@@ -339,22 +340,27 @@ export function FlagsCustomizationDialog({
           />
 
           {maxStackSizeEnabled ? (
-            <Select<number>
-              size="small"
-              value={maxStackSize ?? undefined}
-              onChange={handleSelectMaxStackSize}
-              sx={{ "& .MuiSelect-select": { py: "3px !important" } }}
-            >
-              {maxStackSizeOptions.map(({ value, label }) => (
-                <MenuItem
-                  key={value}
-                  value={value}
-                  selected={maxStackSize === value}
-                >
-                  {`${formatBytesSize(value * kibibyte)} ${label}`}
-                </MenuItem>
-              ))}
-            </Select>
+            <Stack sx={{ flexDirection: "row", alignItems: "center", gap: 1 }}>
+              <Tooltip title="TypeSlayer doesn't mess with your system settings, so to actually take advantage of this flag you may first need to use ulimit (or whatever) to increase your system stack size limit.">
+                <InfoOutline />
+              </Tooltip>
+              <Select<number>
+                size="small"
+                value={maxStackSize ?? undefined}
+                onChange={handleSelectMaxStackSize}
+                sx={{ "& .MuiSelect-select": { py: "3px !important" } }}
+              >
+                {maxStackSizeOptions.map(({ value, label }) => (
+                  <MenuItem
+                    key={value}
+                    value={value}
+                    selected={maxStackSize === value}
+                  >
+                    {`${formatBytesSize(value * kibibyte)} ${label}`}
+                  </MenuItem>
+                ))}
+              </Select>
+            </Stack>
           ) : null}
         </FormGroup>
 
