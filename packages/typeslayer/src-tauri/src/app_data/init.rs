@@ -1,7 +1,9 @@
 use crate::{
     analyze_trace::{AnalyzeTraceResult, constants::ANALYZE_TRACE_FILENAME},
     app_data::{Settings, settings::TypeScriptCompilerVariant},
-    layercake::{LayerCake, ResolveBoolArgs, ResolveNumberArgs, ResolveStringArgs},
+    layercake::{
+        LayerCake, ResolveArrayOfStringsArgs, ResolveBoolArgs, ResolveNumberArgs, ResolveStringArgs,
+    },
     type_graph::{TYPE_GRAPH_FILENAME, TypeGraph},
     utils::{
         AVAILABLE_EDITORS, TSCONFIG_FILENAME, default_extra_tsc_flags,
@@ -13,6 +15,7 @@ use crate::{
         utils::CPU_PROFILE_FILENAME,
     },
 };
+use nanoid::nanoid;
 use std::{
     io::BufReader,
     path::{Path, PathBuf},
@@ -179,12 +182,6 @@ pub fn init_settings(cake: &LayerCake) -> Settings {
             }
         },
     }));
-    let auto_start = cake.resolve_bool(ResolveBoolArgs {
-        env: "AUTO_START",
-        flag: "--autoStart",
-        file: "settings.autoStart",
-        default: || true,
-    });
     let extra_tsc_flags = cake.resolve_string(ResolveStringArgs {
         env: "EXTRA_TSC_FLAGS",
         flag: "--extra-tsc-flags",
@@ -272,10 +269,29 @@ pub fn init_settings(cake: &LayerCake) -> Settings {
             }
         },
     });
+
+    let disable_analytics = cake.resolve_bool(ResolveBoolArgs {
+        env: "DISABLE_ANALYTICS",
+        flag: "--disable-analytics",
+        file: "settings.disableAnalytics",
+        default: || false,
+    });
+
+    let analytics_consent = if disable_analytics {
+        Vec::new()
+    } else {
+        cake.resolve_array_of_strings(ResolveArrayOfStringsArgs {
+            env: "ANALYTICS_CONSENT",
+            flag: "--analytics-consent",
+            file: "settings.analyticsConsent",
+            default: || Settings::default().analytics_consent,
+            validate: |items| Ok(items.to_vec()),
+        })
+    };
+
     Settings {
         relative_paths,
         prefer_editor_open,
-        auto_start,
         preferred_editor,
         extra_tsc_flags,
         apply_tsc_project_flag,
@@ -283,6 +299,7 @@ pub fn init_settings(cake: &LayerCake) -> Settings {
         max_stack_size,
         typescript_compiler_variant,
         max_nodes,
+        analytics_consent,
     }
 }
 
@@ -345,4 +362,27 @@ pub fn init_selected_tsconfig_with(
     } else {
         Some(PathBuf::from(result))
     }
+}
+
+const ALPHABET: [char; 62] = [
+    '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
+    'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B',
+    'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U',
+    'V', 'W', 'X', 'Y', 'Z',
+];
+
+pub fn generate_session_id() -> String {
+    nanoid!(8, &ALPHABET)
+}
+
+pub fn init_session_id(cake: &LayerCake) -> String {
+    let id = cake.resolve_string(ResolveStringArgs {
+        env: "SESSION_ID",
+        flag: "--session-id",
+        file: "session_id",
+        default: || generate_session_id(),
+        validate: |s| Ok(s.to_string()),
+    });
+    tracing::info!("[init_session_id] resolved session_id = '{}'", id);
+    id
 }

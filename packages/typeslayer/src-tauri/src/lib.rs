@@ -1,3 +1,4 @@
+mod analytics;
 mod analyze_trace;
 pub mod app_data;
 mod commands;
@@ -97,8 +98,8 @@ pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
             commands::query::get_resolved_type_by_id,
             commands::query::get_resolved_types_by_ids,
             commands::query::get_traces_related_to_typeid,
+            commands::settings::get_analytics_consent,
             commands::settings::get_apply_tsc_project_flag,
-            commands::settings::get_auto_start,
             commands::settings::get_default_extra_tsc_flags,
             commands::settings::get_extra_tsc_flags,
             commands::settings::get_max_nodes,
@@ -108,8 +109,8 @@ pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
             commands::settings::get_preferred_editor,
             commands::settings::get_relative_paths,
             commands::settings::get_typescript_compiler_variant,
+            commands::settings::set_analytics_consent,
             commands::settings::set_apply_tsc_project_flag,
-            commands::settings::set_auto_start,
             commands::settings::set_extra_tsc_flags,
             commands::settings::set_max_nodes,
             commands::settings::set_max_old_space_size,

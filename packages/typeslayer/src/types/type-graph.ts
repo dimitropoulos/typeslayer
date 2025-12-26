@@ -34,7 +34,7 @@ export const compactGraphLinkIndex = {
 } as const;
 
 export type GraphStats = {
-  count: Record<LinkKind, number>;
+  linkCounts: Record<LinkKind, number>;
 };
 
 /**

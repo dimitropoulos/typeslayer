@@ -25,6 +25,8 @@ export const Code = ({
   maxSize = 1024 * 10,
   disableSyntaxHighlighting,
   copyThisInstead,
+  hideCopyButton = false,
+  hideFileNameIcon = false,
   ...boxProps
 }: {
   /** Data to render. Strings are parsed if they look like JSON, otherwise rendered as-is. */
@@ -39,6 +41,8 @@ export const Code = ({
   maxSize?: number;
   disableSyntaxHighlighting?: boolean | undefined;
   copyThisInstead?: string | undefined;
+  hideCopyButton?: boolean | undefined;
+  hideFileNameIcon?: boolean | undefined;
 } & BoxProps) => {
   const code = useMemo(() => toDisplayString(value, maxSize), [value, maxSize]);
   const [html, setHtml] = useState<string | null>(null);
@@ -101,7 +105,7 @@ export const Code = ({
             gap: 1,
           }}
         >
-          <Description fontSize="small" color="disabled" />
+          {hideFileNameIcon ? null : <Description fontSize="small" color="disabled" />}
           {openableFilename ? (
             <OpenablePath
               absolutePath={fileName}
@@ -131,29 +135,33 @@ export const Code = ({
           position: "relative",
         }}
       >
-        <Box sx={{ position: "absolute", top: 8, right: 8 }}>
-          <Tooltip title={copied ? "Copied" : "Copy"} placement="left">
-            <IconButton
-              size="small"
-              aria-label="copy code"
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(copyThisInstead ?? code);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 1200);
-                } catch (_error) {
-                  setCopied(false);
-                }
-              }}
-            >
-              {copied ? (
-                <Done fontSize="small" />
-              ) : (
-                <ContentCopy fontSize="small" />
-              )}
-            </IconButton>
-          </Tooltip>
-        </Box>
+        {hideCopyButton ? null : (
+          <Box sx={{ position: "absolute", top: 8, right: 8 }}>
+            <Tooltip title={copied ? "Copied" : "Copy"} placement="left">
+              <IconButton
+                size="small"
+                aria-label="copy code"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(
+                      copyThisInstead ?? code,
+                    );
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1200);
+                  } catch (_error) {
+                    setCopied(false);
+                  }
+                }}
+              >
+                {copied ? (
+                  <Done fontSize="small" />
+                ) : (
+                  <ContentCopy fontSize="small" />
+                )}
+              </IconButton>
+            </Tooltip>
+          </Box>
+        )}
 
         {html ? (
           <Box

@@ -1,6 +1,16 @@
+use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 
-#[derive(Clone, Copy, Default, Debug, serde::Serialize, serde::Deserialize, EnumString)]
+use crate::analytics::{
+    TypeSlayerEvent, event_analyze_trace_fail::EventAnalyzeTraceFail,
+    event_analyze_trace_success::EventAnalyzeTraceSuccess,
+    event_app_started_fail::EventAppStartedFail, event_app_started_success::EventAppStartedSuccess,
+    event_generate_trace_fail::EventGenerateTraceFail,
+    event_generate_trace_success::EventGenerateTraceSuccess,
+    event_type_graph_fail::EventTypeGraphFail, event_type_graph_success::EventTypeGraphSuccess,
+};
+
+#[derive(Clone, Copy, Default, Debug, Serialize, Deserialize, EnumString)]
 pub enum TypeScriptCompilerVariant {
     #[serde(rename = "tsc")]
     #[strum(serialize = "tsc")]
@@ -32,12 +42,11 @@ impl TypeScriptCompilerVariant {
     }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
     pub relative_paths: bool,
     pub prefer_editor_open: bool,
-    pub auto_start: bool,
     pub preferred_editor: Option<String>,
     pub extra_tsc_flags: String,
     pub apply_tsc_project_flag: bool,
@@ -45,6 +54,7 @@ pub struct Settings {
     pub max_stack_size: Option<i32>,
     pub typescript_compiler_variant: TypeScriptCompilerVariant,
     pub max_nodes: i32,
+    pub analytics_consent: Vec<String>,
 }
 
 impl Default for Settings {
@@ -52,7 +62,6 @@ impl Default for Settings {
         Self {
             relative_paths: true,
             prefer_editor_open: true,
-            auto_start: true,
             preferred_editor: Some("code".to_string()),
             extra_tsc_flags: "--noEmit --incremental false --noErrorTruncation".to_string(),
             apply_tsc_project_flag: true,
@@ -60,6 +69,16 @@ impl Default for Settings {
             max_stack_size: None,
             typescript_compiler_variant: TypeScriptCompilerVariant::default(),
             max_nodes: 3_000_000,
+            analytics_consent: vec![
+                EventAppStartedFail::event_id().to_string(),
+                EventAppStartedSuccess::event_id().to_string(),
+                EventGenerateTraceFail::event_id().to_string(),
+                EventGenerateTraceSuccess::event_id().to_string(),
+                EventAnalyzeTraceFail::event_id().to_string(),
+                EventAnalyzeTraceSuccess::event_id().to_string(),
+                EventTypeGraphFail::event_id().to_string(),
+                EventTypeGraphSuccess::event_id().to_string(),
+            ],
         }
     }
 }
