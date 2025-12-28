@@ -1,6 +1,6 @@
 use crate::{
     app_data::AppData,
-    type_graph::{LinkKind, get_relationships_for_type, human_readable_name},
+    type_graph::LinkKind,
     validate::{trace_json::TraceEvent, types_json::ResolvedType, utils::TypeId},
 };
 use std::collections::HashMap;
@@ -16,27 +16,35 @@ pub async fn get_links_to_type_id(
 ) -> Result<Links, String> {
     let data = state.lock().await;
 
-    let mut links_by_kind = HashMap::<LinkKind, Vec<(TypeId, String)>>::new();
     if let Some(graph) = &data.type_graph {
-        for link in graph.links.iter() {
-            if link.target == type_id {
-                links_by_kind.entry(link.kind.clone()).or_default().push((
-                    link.source,
-                    human_readable_name(
-                        data.types_json
-                            .get(link.source)
-                            .ok_or_else(|| format!("Type with id {} not found", link.source))?,
-                    ),
-                ));
-            }
-        }
+        let mut results: Links = graph
+            .link_kind_data_by_kind
+            .iter()
+            .map(|(kind, link_kind_data)| {
+                let mut entries = Vec::new();
+                let sources = link_kind_data
+                    .parent_link_data
+                    .target_to_sources
+                    .get(&type_id);
+                if let Some(sources) = sources {
+                    for source_id in sources {
+                        let name = data
+                            .types_json
+                            .get(*source_id)
+                            .map(|t| t.human_readable_name())
+                            .unwrap_or_else(|| "Unknown".to_string());
+                        entries.push((*source_id, name));
+                    }
+                }
+                (kind.clone(), entries)
+            })
+            .filter(|(_, entries)| !entries.is_empty())
+            .collect();
+        results.sort_by_key(|(_, entries)| std::cmp::Reverse(entries.len()));
+        Ok(results)
     } else {
-        return Err("No type graph available".to_string());
+        Err("No type graph available".to_string())
     }
-
-    let mut sorted_links: Links = links_by_kind.into_iter().collect();
-    sorted_links.sort_by(|(_, a), (_, b)| b.len().cmp(&a.len()));
-    Ok(sorted_links)
 }
 
 #[tauri::command]
@@ -95,7 +103,7 @@ pub async fn get_recursive_resolved_types(
         }
         if let Some(resolved_type) = types.get(current_id) {
             accumulator.insert(current_id, resolved_type.clone());
-            for link in get_relationships_for_type(resolved_type) {
+            for link in resolved_type.get_relationships() {
                 collect_types(link.target, accumulator, types);
             }
         }

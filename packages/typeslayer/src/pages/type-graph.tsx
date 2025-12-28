@@ -33,8 +33,8 @@ import {
   useTypeGraphStats,
 } from "../hooks/tauri-hooks";
 import {
-  type CompactGraphLink,
-  compactGraphLinkIndex,
+  type GraphLink,
+  graphLinkIndex,
   type LinkKind,
 } from "../types/type-graph";
 
@@ -142,8 +142,8 @@ export const TypeGraph = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<Graph | null>(null);
   const [filteredStats, setFilteredStats] = useState<{
-    nodes: number;
-    links: number;
+    filteredNodeCount: number;
+    filteredLinkCount: number;
   } | null>(null);
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -155,7 +155,9 @@ export const TypeGraph = () => {
 
   const kindsBufferRef = useRef<LinkKind[]>([]);
   const linkPairsRef = useRef<Float32Array | null>(null);
-  const allLinksRef = useRef<CompactGraphLink[]>([]);
+  const allLinksRef = useRef<Record<LinkKind, GraphLink[]>>(
+    {} as Record<LinkKind, GraphLink[]>,
+  );
   const hiddenIndicesRef = useRef<Set<number>>(new Set());
   const [showFreeTypes, setShowFreeTypes] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(35); // percentage
@@ -179,7 +181,7 @@ export const TypeGraph = () => {
 
   const isLoading = isTypeGraphLoading;
 
-  const hasTypes = typeof typeGraph?.nodes === "number" && typeGraph.nodes > 0;
+  const hasTypes = typeGraph && typeGraph.nodeCount > 0;
 
   const hasData = typeGraph !== undefined && hasTypes;
 
@@ -231,13 +233,13 @@ export const TypeGraph = () => {
         return;
       }
 
-      const { nodes } = typeGraph;
-      const pointColors = new Float32Array(nodes * 4);
-      const pointSizes = new Float32Array(nodes);
+      const { nodeCount } = typeGraph;
+      const pointColors = new Float32Array(nodeCount * 4);
+      const pointSizes = new Float32Array(nodeCount);
       const hidden = hiddenIndicesRef.current;
 
       // Base visuals: neutral grey for all nodes
-      for (let i = 0; i < nodes; i++) {
+      for (let i = 0; i < nodeCount; i++) {
         pointColors[i * 4] = 0.6;
         pointColors[i * 4 + 1] = 0.6;
         pointColors[i * 4 + 2] = 0.6;
@@ -353,7 +355,7 @@ export const TypeGraph = () => {
         }
 
         // Significantly mute non-connected nodes
-        for (let i = 0; i < nodes; i++) {
+        for (let i = 0; i < nodeCount; i++) {
           if (!connectedIndices.has(i)) {
             pointColors[i * 4 + 3] = 0.15; // Reduce opacity to 15%
           }
@@ -435,6 +437,7 @@ export const TypeGraph = () => {
     };
   }, [setSimulationPaused]);
 
+  // initialize graph when typeGraph data is ready
   useEffect(() => {
     let graph: Graph | null = null;
 
@@ -446,13 +449,13 @@ export const TypeGraph = () => {
       setGraphReady(false);
 
       try {
-        const { nodes, links } = typeGraph;
+        const { nodeCount, linksByType } = typeGraph;
 
         if (!containerRef.current) {
           return;
         }
 
-        allLinksRef.current = links;
+        allLinksRef.current = linksByType;
 
         graph = new Graph(containerRef.current, {
           renderLinks: true,
@@ -478,15 +481,15 @@ export const TypeGraph = () => {
         graphRef.current = graph;
 
         // Seed positions near observed settled center to reduce early drift
-        const positions = new Float32Array(nodes * 2);
+        const positions = new Float32Array(nodeCount * 2);
         const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
         const BASE_CENTER_X = 4150.6;
         const BASE_CENTER_Y = 4150.3;
         const R = 1300; // approx half of observed extent
-        for (let i = 0; i < nodes; i++) {
+        for (let i = 0; i < nodeCount; i++) {
           const t = i + 1;
           const angle = t * GOLDEN_ANGLE;
-          const r = Math.sqrt(t / nodes) * R;
+          const r = Math.sqrt(t / nodeCount) * R;
           positions[i * 2] = BASE_CENTER_X + Math.cos(angle) * r;
           positions[i * 2 + 1] = BASE_CENTER_Y + Math.sin(angle) * r;
         }
@@ -494,16 +497,16 @@ export const TypeGraph = () => {
 
         const pairBuffer: number[] = [];
         const kindsBuffer: LinkKind[] = [];
-        for (const link of links) {
-          if (
-            link[compactGraphLinkIndex.sourceId] !== undefined &&
-            link[compactGraphLinkIndex.targetId] !== undefined
-          ) {
+        for (const [kind, links] of Object.entries(linksByType) as [
+          LinkKind,
+          GraphLink[],
+        ][]) {
+          for (const link of links) {
             pairBuffer.push(
-              link[compactGraphLinkIndex.sourceId],
-              link[compactGraphLinkIndex.targetId],
+              link[graphLinkIndex.sourceId],
+              link[graphLinkIndex.targetId],
             );
-            kindsBuffer.push(link[compactGraphLinkIndex.kind]);
+            kindsBuffer.push(kind);
           }
         }
         const linkPairs = new Float32Array(pairBuffer);
@@ -542,18 +545,17 @@ export const TypeGraph = () => {
             // Apply colors after render is complete
             if (colorArray) {
               graph.setLinkColors(colorArray);
-              console.log(
-                "[TypeGraph] setLinkColors called AFTER render with array of length",
-                colorArray.length,
-              );
               graph.render(); // render again with colors
             }
           }
         });
 
         setFilteredStats({
-          nodes,
-          links: links.length,
+          filteredNodeCount: nodeCount,
+          filteredLinkCount:
+            Object.values(allLinksRef.current)
+              .map(graphLinks => graphLinks.length)
+              .reduce((a, b) => a + b, 0),
         });
         setGraphReady(true);
       } catch (e) {
@@ -607,7 +609,7 @@ export const TypeGraph = () => {
         allLinksRef={allLinksRef}
         hiddenIndicesRef={hiddenIndicesRef}
         applySelectionVisuals={applySelectionVisuals}
-        setVisibleStats={setFilteredStats}
+        setFilteredStats={setFilteredStats}
         selectedTypeId={selectedTypeId}
         setSimulationPaused={setSimulationPaused}
         paused={paused}
@@ -693,7 +695,7 @@ const TypeGraphUtilityPanel = ({
   allLinksRef,
   hiddenIndicesRef,
   applySelectionVisuals,
-  setVisibleStats,
+  setFilteredStats,
   selectedTypeId,
   setSimulationPaused,
   paused,
@@ -709,15 +711,20 @@ const TypeGraphUtilityPanel = ({
   containerRef: React.RefObject<HTMLDivElement | null>;
   linkPairsRef: React.RefObject<Float32Array | null>;
   kindsBufferRef: React.RefObject<LinkKind[]>;
-  allLinksRef: React.RefObject<CompactGraphLink[]>;
+  allLinksRef: React.RefObject<Record<LinkKind, GraphLink[]>>;
   hiddenIndicesRef: React.RefObject<Set<number>>;
   applySelectionVisuals: (index: number | null) => void;
-  setVisibleStats: (stats: { nodes: number; links: number } | null) => void;
+  setFilteredStats: (
+    stats: { filteredNodeCount: number; filteredLinkCount: number } | null,
+  ) => void;
   selectedTypeId: string | undefined;
   setSimulationPaused: (nextPaused: boolean) => void;
   paused: boolean;
   pausedRef: React.RefObject<boolean>;
-  filteredStats: { nodes: number; links: number } | null;
+  filteredStats: {
+    filteredNodeCount: number;
+    filteredLinkCount: number;
+  } | null;
 }) => {
   const { data: typeGraph } = useTypeGraphNodesAndLinks();
   const navigate = useNavigate();
@@ -744,28 +751,27 @@ const TypeGraphUtilityPanel = ({
     (filters: Set<LinkKind>, showFreeTypesOverride?: boolean) => {
       const graph = graphRef.current;
       const allLinks = allLinksRef.current;
-      if (!graph || !typeGraph || allLinks.length === 0) {
+      if (!graph || !typeGraph) {
         return;
       }
 
       // Filter links by activeFilters
-      const filteredLinks = allLinks.filter(link =>
-        filters.has(link[compactGraphLinkIndex.kind]),
-      );
+      const filteredLinks = Object.entries(allLinks).filter(([kind]) =>
+        filters.has(kind as LinkKind),
+      ) as [LinkKind, GraphLink[]][];
+
       const pairBuffer: number[] = [];
       const kindsBuffer: LinkKind[] = [];
-      for (const link of filteredLinks) {
-        if (
-          link[compactGraphLinkIndex.sourceId] !== undefined &&
-          link[compactGraphLinkIndex.targetId] !== undefined
-        ) {
+      for (const [kind, links] of filteredLinks) {
+        for (const link of links) {
           pairBuffer.push(
-            link[compactGraphLinkIndex.sourceId],
-            link[compactGraphLinkIndex.targetId],
+            link[graphLinkIndex.sourceId],
+            link[graphLinkIndex.targetId],
           );
-          kindsBuffer.push(link[compactGraphLinkIndex.kind]);
+          kindsBuffer.push(kind);
         }
       }
+
       const linkPairs = new Float32Array(pairBuffer);
       graph.setLinks(linkPairs);
       linkPairsRef.current = linkPairs;
@@ -776,9 +782,11 @@ const TypeGraphUtilityPanel = ({
       const showFree = showFreeTypesOverride ?? showFreeTypes;
       if (!showFree) {
         const tmp = new Set<number>();
-        for (const link of filteredLinks) {
-          tmp.add(link[compactGraphLinkIndex.sourceId]);
-          tmp.add(link[compactGraphLinkIndex.targetId]);
+        for (const [_kind, links] of filteredLinks) {
+          for (const link of links) {
+            tmp.add(link[graphLinkIndex.sourceId]);
+            tmp.add(link[graphLinkIndex.targetId]);
+          }
         }
         visibleTypeIds = tmp;
       }
@@ -798,7 +806,7 @@ const TypeGraphUtilityPanel = ({
 
       // Set positions: hide types with no visible links if needed
       const currentPositions = graph.getPointPositions();
-      const currentCount = typeGraph.nodes;
+      const currentCount = typeGraph.nodeCount;
 
       if (!showFree) {
         // Hide nodes without links in current filter
@@ -863,11 +871,13 @@ const TypeGraphUtilityPanel = ({
       }
 
       const visibleNodeCount = showFree
-        ? typeGraph.nodes
+        ? typeGraph.nodeCount
         : (visibleTypeIds?.size ?? 0);
-      setVisibleStats({
-        nodes: visibleNodeCount,
-        links: filteredLinks.length,
+      setFilteredStats({
+        filteredNodeCount: visibleNodeCount,
+        filteredLinkCount: filteredLinks
+          .map(([_kind, graphLinks]) => graphLinks.length)
+          .reduce((a, b) => a + b, 0),
       });
 
       // Re-apply selection visuals if a node is selected (this handles both point and link colors)
@@ -888,7 +898,7 @@ const TypeGraphUtilityPanel = ({
       graphRef.current,
       kindsBufferRef,
       showFreeTypes,
-      setVisibleStats,
+      setFilteredStats,
       selectedId,
       hiddenIndicesRef,
       linkPairsRef,
@@ -997,7 +1007,7 @@ const TypeGraphUtilityPanel = ({
             <Stack sx={{ gap: 1, flexDirection: "row" }}>
               <StatPill
                 label="types"
-                value={filteredStats.nodes}
+                value={filteredStats.filteredNodeCount}
                 sx={{ mt: "-1px" }}
                 warning={
                   typeGraph?.isLimited
@@ -1007,7 +1017,7 @@ const TypeGraphUtilityPanel = ({
               />
               <StatPill
                 label="relations"
-                value={filteredStats.links}
+                value={filteredStats.filteredLinkCount}
                 sx={{ mt: "-1px" }}
               />
             </Stack>
@@ -1072,7 +1082,8 @@ const TypeGraphPopover = ({
       >
         <Stack sx={{ px: 2, py: 1, overflowY: "auto", gap: 0 }}>
           {EDGE_CONFIGS.map(
-            config => [config, graphStats?.link[config.id]?.count ?? 0] as const,
+            config =>
+              [config, graphStats?.link[config.id]?.count ?? 0] as const,
           )
             .sort((a, b) => b[1] - a[1])
             .map(([config, count], index, arr) => {
@@ -1125,6 +1136,7 @@ const TypeGraphPopover = ({
             bottom: 0,
             left: 0,
             right: 0,
+            backgroundColor: "black",
             borderTop: 1,
             borderColor: "divider",
             p: 2,

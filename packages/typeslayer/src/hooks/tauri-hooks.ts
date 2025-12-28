@@ -21,7 +21,7 @@ import {
   type TypeScriptCompilerVariant,
 } from "../components/utils";
 import type {
-  CompactGraphLink,
+  GraphLink,
   GraphLinkStats,
   GraphNodeStats,
   GraphStats,
@@ -386,11 +386,17 @@ export function useTraceJson() {
   });
 }
 
+export type NodesAndLinks = {
+  nodeCount: number;
+  isLimited: boolean;
+  linksByType: Record<LinkKind, GraphLink[]>;
+}
+
 export function useTypeGraphNodesAndLinks() {
   return useQuery({
     queryKey: ["type_graph_nodes_and_links"],
     queryFn: () =>
-      invoke<{ nodes: number; links: CompactGraphLink[]; isLimited: boolean }>(
+      invoke<NodesAndLinks>(
         "get_type_graph_nodes_and_links",
       ),
     staleTime: Number.POSITIVE_INFINITY,
@@ -405,14 +411,15 @@ export function useTypeGraphStats() {
   });
 }
 
-export function useTypeGraphNodeAndLinkStats() {
+export function useTypeGraphLimitedNodeAndLinkStats() {
   return useQuery({
-    queryKey: ["type_graph_node_and_link_stats"],
+    queryKey: ["type_graph_limited_node_and_link_stats"],
     queryFn: () =>
       invoke<{
-        linkStats: GraphLinkStats;
         nodeStats: GraphNodeStats;
-      }>("get_type_graph_node_and_link_stats"),
+        linkStats: GraphLinkStats;
+        pathMap: Record<TypeId, string>;
+      }>("get_type_graph_limited_node_and_link_stats"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 }

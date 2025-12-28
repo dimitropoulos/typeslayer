@@ -25,9 +25,9 @@ import {
 import {
   useGetResolvedTypeById,
   useGetResolvedTypesByIds,
-  useTypeGraphNodeAndLinkStats,
+  useTypeGraphLimitedNodeAndLinkStats,
 } from "../../hooks/tauri-hooks";
-import { compactLinksStatsLinkIndex } from "../../types/type-graph";
+import { targetToSourcesIndex } from "../../types/type-graph";
 import { AwardNavItem } from "./award-nav-item";
 import {
   AWARD_SELECTOR_COLUMN_WIDTH,
@@ -46,7 +46,7 @@ export function RelationAward({
   const { title, description, icon: Icon, unit } = awards[awardId];
   const [selectedIndex, setSelectedIndex] = useState(0);
   const { data: typeGraph, isLoading: isLoadingTypeGraph } =
-    useTypeGraphNodeAndLinkStats();
+    useTypeGraphLimitedNodeAndLinkStats();
 
   const handleListItemClick = (
     _event: React.MouseEvent<HTMLDivElement, MouseEvent>,
@@ -61,12 +61,13 @@ export function RelationAward({
 
   const targets = useMemo(() => {
     return (
-      linkStats?.links.map(link => link[compactLinksStatsLinkIndex.targetId]) ??
-      []
+      linkStats?.parentLinkData.targetToSources.map(
+        link => link[targetToSourcesIndex.targetId],
+      ) ?? []
     );
   }, [linkStats]);
 
-  const selectedItem = linkStats?.links[selectedIndex];
+  const selectedItem = linkStats?.parentLinkData.targetToSources[selectedIndex];
   const {
     data: partialIndexedTypeRegistry,
     isLoading: isLoadingPartialIndexedTypeRegistry,
@@ -74,7 +75,7 @@ export function RelationAward({
 
   const isLoading = isLoadingTypeGraph || isLoadingPartialIndexedTypeRegistry;
 
-  const hasItems = linkStats && linkStats.links.length > 0;
+  const hasItems = linkStats && linkStats.parentLinkData.targetToSources.length > 0;
 
   const noneFound = (
     <Box
@@ -99,7 +100,7 @@ export function RelationAward({
 
   const items = (
     <List>
-      {linkStats?.links.map(([targetId, path, sourceIds], index) => {
+      {linkStats?.parentLinkData.targetToSources.map(([targetId, sourceIds], index) => {
         const maybeResolvedType = partialIndexedTypeRegistry?.[targetId];
         return (
           <ListItemButton
@@ -118,10 +119,10 @@ export function RelationAward({
                   suppressActions
                 />
                 <Stack gap={0.5}>
-                  <MaybePathCaption maybePath={path} />
+                  <MaybePathCaption maybePath={typeGraph?.pathMap[targetId]} />
                   <InlineBarGraph
                     label={`${sourceIds.length.toLocaleString()} ${unit}`}
-                    width={`${(sourceIds.length / linkStats.max) * 100}%`}
+                    width={`${(sourceIds.length / linkStats.parentLinkData.max) * 100}%`}
                   />
                 </Stack>
               </Stack>
@@ -180,7 +181,7 @@ export function RelationAward({
         {hasItems && selectedItem ? (
           <Stack gap={3}>
             <DisplayRecursiveType
-              id={selectedItem[compactLinksStatsLinkIndex.targetId]}
+              id={selectedItem[targetToSourcesIndex.targetId]}
             />
 
             {selectedItem && hasItems && (
@@ -189,13 +190,13 @@ export function RelationAward({
                 <Stack gap={1}>
                   <Typography variant="h6">
                     {selectedItem[
-                      compactLinksStatsLinkIndex.sourceIds
+                      targetToSourcesIndex.sourceIds
                     ].length.toLocaleString()}{" "}
                     {unit}
                   </Typography>
                   <List dense sx={{ backgroundColor: "transparent" }}>
                     <ShowMoreChildren incrementsOf={50}>
-                      {selectedItem[compactLinksStatsLinkIndex.sourceIds].map(
+                      {selectedItem[targetToSourcesIndex.sourceIds].map(
                         (sourceId, index) => (
                           <TypeMetricsListItem
                             key={`${index}-${sourceId}`}
@@ -294,7 +295,7 @@ const getLinkStatProperty = <T extends AwardId>(property: T) =>
     : never;
 
 const useTypeRelationMetricsValue = () => {
-  const { data: typeGraph } = useTypeGraphNodeAndLinkStats();
+  const { data: typeGraph } = useTypeGraphLimitedNodeAndLinkStats();
   if (!typeGraph) {
     return () => 0;
   }
@@ -323,7 +324,7 @@ const useTypeRelationMetricsValue = () => {
       case "relation_evolvingArrayFinal":
       case "relation_alias": {
         const linkStatProperty = getLinkStatProperty(awardId);
-        return linkStats[linkStatProperty]?.max ?? 0;
+        return linkStats[linkStatProperty]?.parentLinkData.max ?? 0;
       }
 
       default:
