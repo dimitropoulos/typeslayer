@@ -1044,7 +1044,7 @@ const TypeGraphPopover = ({
   showFreeTypes: boolean;
   setActiveFilters: (filters: Set<LinkKind>) => void;
 }) => {
-  const { data: stats } = useTypeGraphStats();
+  const { data: graphStats } = useTypeGraphStats();
 
   return (
     <Popover
@@ -1072,7 +1072,7 @@ const TypeGraphPopover = ({
       >
         <Stack sx={{ px: 2, py: 1, overflowY: "auto", gap: 0 }}>
           {EDGE_CONFIGS.map(
-            config => [config, stats?.linkCounts[config.id] ?? 0] as const,
+            config => [config, graphStats?.link[config.id]?.count ?? 0] as const,
           )
             .sort((a, b) => b[1] - a[1])
             .map(([config, count], index, arr) => {

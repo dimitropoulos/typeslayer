@@ -9,17 +9,19 @@ use crate::{
         metadata::{EventMetadata, create_event_metadata},
     },
     app_data::AppData,
-    type_graph::{LinkKind, NodeStatKind},
+    type_graph::{CountAndMax, LinkKind, NodeStatKind},
 };
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EventTypeGraphSuccessData {
     pub duration: u64,
-    pub link_counts: HashMap<LinkKind, usize>,
-    pub total_links: usize,
-    pub node_stat_counts: HashMap<NodeStatKind, usize>,
-    pub total_nodes: usize,
+
+    pub node_count: usize,
+    pub node_stats_by_type: HashMap<NodeStatKind, CountAndMax>,
+
+    pub link_count: usize,
+    pub link_stats_by_type: HashMap<LinkKind, CountAndMax>,
 }
 
 #[derive(Debug, Serialize)]
@@ -52,10 +54,12 @@ impl TypeSlayerEvent for EventTypeGraphSuccess {
             metadata: EventMetadata::example(),
             data: EventTypeGraphSuccessData {
                 duration: 3000,
-                link_counts: LinkKind::new_counts_map(),
-                total_links: 42,
-                node_stat_counts: NodeStatKind::new_counts_map(),
-                total_nodes: 100,
+
+                node_count: 100,
+                node_stats_by_type: NodeStatKind::new_count_and_max_map(),
+
+                link_count: 42,
+                link_stats_by_type: LinkKind::new_count_and_max_map(),
             },
         }
     }
@@ -72,10 +76,12 @@ impl TypeSlayerEvent for EventTypeGraphSuccess {
             metadata: create_event_metadata(app_data).await,
             data: EventTypeGraphSuccessData {
                 duration: args.duration,
-                link_counts: type_graph.stats.link_counts.clone(),
-                total_links: type_graph.links.len(),
-                node_stat_counts: type_graph.calculate_node_stat_counts(),
-                total_nodes: type_graph.nodes,
+
+                node_count: type_graph.nodes,
+                node_stats_by_type: type_graph.calculate_node_stat_count_and_max(),
+
+                link_count: type_graph.links.len(),
+                link_stats_by_type: type_graph.calculate_link_count_and_max(),
             },
         };
         debug!("[event] [type_graph_success] created event: {:?}", event);

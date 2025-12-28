@@ -1,9 +1,14 @@
 import type { Env } from "./types";
 
+// type_graph_success.linkCounts is total counts of links in the project
+// need
+
 export const groupIds = [
   "compilation",
-  "type-metrics",
-  "type-relation-metrics",
+  "type-metrics|count",
+  "type-metrics|max",
+  "type-relation-metrics|count",
+  "type-relation-metrics|max",
   "performance-metrics",
   "type-level-limits",
   "bundle-implications",
@@ -13,99 +18,136 @@ export const groupIds = [
 export type GroupId = (typeof groupIds)[number];
 
 export const groupInfo = {
-  "compilation": {
+  compilation: {
     label: "Compilation",
+    queries: [
+      {
+        id: "total-duration",
+        label: "Total Duration",
+        subtitle: "total time to typecheck",
+        groupId: "compilation",
+        format: "milliseconds",
+        eventName: "analyze_trace_success",
+        dataPath: "$.fileStatistics.totalDuration",
+      },
+      {
+        id: "max-single-file-duration",
+        label: "Max Single File Duration",
+        subtitle: "max time for a single file",
+        groupId: "compilation",
+        format: "milliseconds",
+        eventName: "analyze_trace_success",
+        dataPath: "$.fileStatistics.maxDuration",
+      },
+    ],
   },
-  "type-level-limits": {
-    label: "Type Level Limits",
+
+  "type-metrics|count": {
+    label: "Type Metrics",
+    queries: [
+      {
+        id: "total-types",
+        label: "Total Types",
+        subtitle: "number of types in a project",
+        groupId: "type-metrics|count",
+        format: "count",
+        eventName: "generate_trace_success",
+        dataPath: "$.typesCount",
+      },
+      {
+        id: "largest-union",
+        label: "Largest Union",
+        subtitle: "largest union in a project",
+        groupId: "type-metrics|count",
+        format: "count",
+        eventName: "generate_trace_success",
+        dataPath: "$.typesCount",
+      },
+    ],
   },
-  "raw-data": {
-    label: "Raw Data",
+
+  "type-metrics|max": {
+    label: "Type Metrics",
+    queries: [],
   },
-  "bundle-implications": {
-    label: "Bundle Implications",
+
+  "type-relation-metrics|count": {
+    label: "Type Relation Metrics",
+    queries: [
+      {
+        id: "total-relations",
+        label: "Total Relations",
+        subtitle: "number of relations between types",
+        groupId: "type-relation-metrics|count",
+        format: "count",
+        eventName: "type_graph_success",
+        dataPath: "$.totalLinks",
+      },
+    ],
   },
+
+  "type-relation-metrics|max": {
+    label: "Type Relation Metrics",
+    queries: [],
+  },
+
   "performance-metrics": {
     label: "Performance Metrics",
+    queries: [],
   },
-  "type-metrics": {
-    label: "Type Metrics",
+
+  "type-level-limits": {
+    label: "Type Level Limits",
+    queries: [],
   },
-  "type-relation-metrics": {
-    label: "Type Relation Metrics",
+
+  "bundle-implications": {
+    label: "Bundle Implications",
+    queries: [
+      {
+        id: "num-files",
+        label: "Number of Files",
+        subtitle: "number of files in the project",
+        groupId: "bundle-implications",
+        format: "count",
+        eventName: "analyze_trace_success",
+        dataPath: "$.fileStatistics.totalFiles",
+      },
+    ],
+  },
+
+  "raw-data": {
+    label: "Raw Data",
+    queries: [
+      {
+        id: "types-json-size",
+        label: "Types JSON Size",
+        subtitle: "size of types.json file",
+        groupId: "raw-data",
+        format: "bytes",
+        eventName: "generate_trace_success",
+        dataPath: "$.typesJsonFileSize",
+      },
+      {
+        id: "trace-json-size",
+        label: "Trace JSON Size",
+        subtitle: "size of trace.json file",
+        groupId: "raw-data",
+        format: "bytes",
+        eventName: "generate_trace_success",
+        dataPath: "$.traceJsonFileSize",
+      },
+    ],
   },
 } satisfies Record<
   GroupId,
   {
     label: string;
+    queries: Query[];
   }
 >;
 
-export const queries = [
-  {
-    id: "total-types",
-    label: "Total Types",
-    subtitle: "number of types in a project",
-    groupId: "type-metrics",
-    format: "count",
-    eventName: "generate_trace_success",
-    dataPath: "$.typesCount",
-  },
-  {
-    id: "total-relations",
-    label: "Total Relations",
-    subtitle: "number of relations between types",
-    groupId: "type-relation-metrics",
-    format: "count",
-    eventName: "type_graph_success",
-    dataPath: "$.totalLinks",
-  },
-  {
-    id: "types-json-size",
-    label: "Types JSON Size",
-    subtitle: "size of types.json file",
-    groupId: "raw-data",
-    format: "bytes",
-    eventName: "generate_trace_success",
-    dataPath: "$.typesJsonFileSize",
-  },
-  {
-    id: "trace-json-size",
-    label: "Trace JSON Size",
-    subtitle: "size of trace.json file",
-    groupId: "raw-data",
-    format: "bytes",
-    eventName: "generate_trace_success",
-    dataPath: "$.traceJsonFileSize",
-  },
-  {
-    id: "total-duration",
-    label: "Total Duration",
-    subtitle: "total time to typecheck",
-    groupId: "compilation",
-    format: "milliseconds",
-    eventName: "analyze_trace_success",
-    dataPath: "$.fileStatistics.totalDuration",
-  },
-  {
-    id: "max-single-file-duration",
-    label: "Max Single File Duration",
-    subtitle: "max time for a single file",
-    groupId: "compilation",
-    format: "milliseconds",
-    eventName: "analyze_trace_success",
-    dataPath: "$.fileStatistics.maxDuration",
-  },
-  {
-    id: "num-files",
-    label: "Number of Files",
-    subtitle: "number of files in the project",
-    groupId: "bundle-implications",
-    format: "count",
-    eventName: "analyze_trace_success",
-    dataPath: "$.fileStatistics.totalFiles",
-  },
-] satisfies {
+type Query = {
   id: string;
   label: string;
   subtitle: string;
@@ -113,7 +155,17 @@ export const queries = [
   format: LeaderboardNumberFormat;
   eventName: string;
   dataPath: `$.${string}`;
-}[];
+};
+
+export const queries = [
+  ...groupInfo.compilation.queries,
+  ...groupInfo["type-metrics"].queries,
+  ...groupInfo["type-relation-metrics"].queries,
+  ...groupInfo["performance-metrics"].queries,
+  ...groupInfo["type-level-limits"].queries,
+  ...groupInfo["bundle-implications"].queries,
+  ...groupInfo["raw-data"].queries,
+] satisfies Query[];
 
 export type LeaderboardNumberFormat = "count" | "bytes" | "milliseconds";
 

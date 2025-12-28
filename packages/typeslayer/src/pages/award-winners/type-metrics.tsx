@@ -97,12 +97,13 @@ export function TypeMetricsAward({ awardId }: { awardId: TypeMetricsAwardId }) {
     | "intersectionTypes"
     | "typeArguments"
     | "aliasTypeArguments";
-  const { max, nodes } = typeGraph?.nodeStats[nodeStat] ?? {
+  const { count, max, nodes } = typeGraph?.nodeStats[nodeStat] ?? {
+    count: 0,
     max: 0,
     nodes: [],
   };
 
-  const hasItems = nodes.length > 0;
+  const hasItems = count > 0;
 
   const items = (
     <List>

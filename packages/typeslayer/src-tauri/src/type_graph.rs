@@ -2,6 +2,7 @@ use serde::ser::Error as _;
 use serde::{Deserialize, Serialize, Serializer};
 use serde_json::value::RawValue;
 use std::collections::HashMap;
+use std::hash::Hash;
 use strum::VariantArray;
 use strum_macros::VariantArray;
 
@@ -9,6 +10,13 @@ use crate::validate::types_json::{Flag, ResolvedType, TypesJsonSchema};
 use crate::validate::utils::TypeId;
 
 pub const TYPE_GRAPH_FILENAME: &str = "type-graph.json";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CountAndMax {
+    pub count: usize,
+    pub max: usize,
+}
 
 #[derive(Eq, PartialEq, Hash, Debug, Clone, Serialize, Deserialize, VariantArray)]
 #[serde(rename_all = "camelCase")]
@@ -45,6 +53,12 @@ impl LinkKind {
             .map(|kind| (kind.clone(), 0))
             .collect()
     }
+    pub fn new_count_and_max_map() -> HashMap<LinkKind, CountAndMax> {
+        LinkKind::VARIANTS
+            .iter()
+            .map(|kind| (kind.clone(), CountAndMax { count: 0, max: 0 }))
+            .collect()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -67,14 +81,6 @@ impl From<GraphLink> for CompactGraphLink {
     fn from(v: GraphLink) -> Self {
         CompactGraphLink(v.source, v.target, v.kind)
     }
-}
-
-type LinkCounts = HashMap<LinkKind, usize>;
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct GraphStats {
-    pub link_counts: LinkCounts,
 }
 
 fn serialize_compact_typeids<S>(vec: &Vec<usize>, serializer: S) -> Result<S::Ok, S::Error>
@@ -133,6 +139,8 @@ impl From<CompactLinkStatLink> for LinkStatLink {
 pub struct LinkStats {
     /// Largest source count across entries
     pub max: usize,
+    /// count, for convenience (not the same as links.len() because of truncation)
+    pub count: usize,
     /// sorted by source_ids count descending
     pub links: Vec<LinkStatLink>,
 }
@@ -140,6 +148,8 @@ pub struct LinkStats {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct CompactLinkStats {
+    /// count, for convenience (not the same as links.len() because of truncation)
+    pub count: usize,
     /// Largest source count across entries
     pub max: usize,
     /// sorted by source_ids count descending
@@ -149,6 +159,7 @@ pub struct CompactLinkStats {
 impl From<LinkStats> for CompactLinkStats {
     fn from(v: LinkStats) -> Self {
         CompactLinkStats {
+            count: v.count,
             max: v.max,
             links: v.links.into_iter().map(|link| link.into()).collect(),
         }
@@ -174,6 +185,12 @@ impl NodeStatKind {
             .map(|kind| (kind.clone(), 0))
             .collect()
     }
+    pub fn new_count_and_max_map() -> HashMap<NodeStatKind, CountAndMax> {
+        NodeStatKind::VARIANTS
+            .iter()
+            .map(|kind| (kind.clone(), CountAndMax { count: 0, max: 0 }))
+            .collect()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -189,6 +206,7 @@ pub struct NodeStatNode {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct NodeStatCategory {
+    pub count: usize,
     pub max: usize,
     pub nodes: Vec<NodeStatNode>,
 }
@@ -198,7 +216,6 @@ pub type GraphNodeStats = HashMap<NodeStatKind, NodeStatCategory>;
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TypeGraph {
-    pub stats: GraphStats,
     pub nodes: usize,
     pub node_stats: GraphNodeStats,
     pub links: Vec<GraphLink>,
@@ -236,7 +253,6 @@ impl TypeGraph {
         graph.calculate_links(types);
         graph.calculate_link_stats(types);
         graph.calculate_node_stats(types);
-        graph.calculate_link_counts();
         graph
     }
 
@@ -321,11 +337,12 @@ impl TypeGraph {
                 .collect();
             // 3.
             links.sort_by(|a, b| b.source_ids.len().cmp(&a.source_ids.len()));
+            let count = links.len();
             // 4.
             links.truncate(100);
             // 5.
             let max = links.first().map(|e| e.source_ids.len()).unwrap_or(0);
-            let mut stat = LinkStats { max, links };
+            let mut stat = LinkStats { count, max, links };
             // Add path info from path_map
             for link in &mut stat.links {
                 if let Some(p) = path_map.get(&link.target_id) {
@@ -368,7 +385,8 @@ impl TypeGraph {
         let limit = 100;
         let build_category = |mut v: Vec<(TypeId, String, usize)>| -> NodeStatCategory {
             let max = v.first().map(|e| e.2).unwrap_or(0);
-            if v.len() > limit {
+            let count = v.len();
+            if count > limit {
                 v.truncate(limit);
             }
             // Attach path info from path_map
@@ -383,6 +401,7 @@ impl TypeGraph {
                 .collect();
 
             NodeStatCategory {
+                count,
                 max,
                 nodes: nodes_with_path,
             }
@@ -402,24 +421,34 @@ impl TypeGraph {
         ]);
     }
 
-    pub fn calculate_node_stat_counts(&self) -> HashMap<NodeStatKind, usize> {
-        let mut counts = NodeStatKind::new_counts_map();
-        for (kind, category) in &self.node_stats {
-            let entry = counts.entry(kind.clone()).or_insert(0);
-            *entry = category.nodes.len();
-        }
-        counts
+    pub fn calculate_node_stat_count_and_max(&self) -> HashMap<NodeStatKind, CountAndMax> {
+        self.node_stats
+            .iter()
+            .map(|(kind, node_stat_category)| {
+                (
+                    kind.clone(),
+                    CountAndMax {
+                        count: node_stat_category.count,
+                        max: node_stat_category.max,
+                    },
+                )
+            })
+            .collect()
     }
 
-    pub fn calculate_link_counts(&mut self) {
-        let mut counts = LinkKind::new_counts_map();
-        for link in &self.links {
-            let entry = counts.entry(link.kind.clone()).or_insert(0);
-            *entry += 1;
-        }
-        self.stats = GraphStats {
-            link_counts: counts,
-        };
+    pub fn calculate_link_count_and_max(&self) -> HashMap<LinkKind, CountAndMax> {
+        self.link_stats
+            .iter()
+            .map(|(kind, link_stat)| {
+                (
+                    kind.clone(),
+                    CountAndMax {
+                        count: link_stat.count,
+                        max: link_stat.max,
+                    },
+                )
+            })
+            .collect()
     }
 }
 
