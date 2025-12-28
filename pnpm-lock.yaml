@@ -23,6 +23,9 @@ importers:
       '@types/node':
         specifier: ^25.0.3
         version: 25.0.3
+      tsdown:
+        specifier: ^0.17.2
+        version: 0.17.2(@arethetypeswrong/core@0.18.2)(typescript@5.9.3)
       wrangler:
         specifier: ^4.54.0
         version: 4.54.0(@cloudflare/workers-types@4.20251225.0)
@@ -127,6 +130,9 @@ importers:
       '@types/react-dom':
         specifier: 19.2.3
         version: 19.2.3(@types/react@19.2.7)
+      '@typeslayer/analytics':
+        specifier: workspace:*
+        version: link:../analytics
       '@typeslayer/analyze-trace':
         specifier: workspace:*
         version: link:../analyze-trace
