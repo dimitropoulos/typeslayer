@@ -2,12 +2,18 @@ use crate::{
     analyze_trace::{AnalyzeTraceResult, constants::ANALYZE_TRACE_FILENAME},
     app_data::AppData,
     process_controller::ProcessController,
-    type_graph::{CompactGraphLink, CompactGraphLinkStats, GraphNodeStats, GraphStats},
+    type_graph::{
+        CompactGraphLink, CompactGraphLinkStats, CountAndMax, GraphNodeStats, LinkKind,
+        NodeStatKind,
+    },
     utils::{compute_window_title, set_window_title},
     validate::trace_json::TraceEvent,
 };
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 use tauri::{AppHandle, State};
 use tokio::sync::Mutex;
 use tracing::debug;
@@ -188,6 +194,13 @@ pub async fn get_type_graph_nodes_and_links(
     })
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct GraphStats {
+    pub link: HashMap<LinkKind, CountAndMax>,
+    pub node: HashMap<NodeStatKind, CountAndMax>,
+}
+
 #[tauri::command]
 pub async fn get_type_graph_stats(state: State<'_, &Mutex<AppData>>) -> Result<GraphStats, String> {
     let data = state.lock().await;
@@ -196,7 +209,10 @@ pub async fn get_type_graph_stats(state: State<'_, &Mutex<AppData>>) -> Result<G
         .type_graph
         .as_ref()
         .ok_or_else(|| "type graph unavailable".to_string())?;
-    Ok(tg.stats.clone())
+    Ok(GraphStats {
+        link: tg.calculate_link_count_and_max(),
+        node: tg.calculate_node_stat_count_and_max(),
+    })
 }
 
 #[derive(Serialize, Deserialize)]

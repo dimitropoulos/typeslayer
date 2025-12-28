@@ -33,8 +33,14 @@ export const compactGraphLinkIndex = {
   kind: 2,
 } as const;
 
+export type CountAndMax = {
+  count: number;
+  max: number;
+}
+
 export type GraphStats = {
-  linkCounts: Record<LinkKind, number>;
+  link: Record<LinkKind, CountAndMax>;
+  node: Record<NodeStatKind, CountAndMax>;
 };
 
 /**
@@ -55,6 +61,7 @@ export const compactLinksStatsLinkIndex = {
 
 export type CompactLinkStats = {
   max: number;
+  count: number;
   links: CompactLinkStatLink[];
 };
 
@@ -75,6 +82,7 @@ export type NodeStatNode = {
 
 type NodeStatCategory = {
   max: number;
+  count: number;
   nodes: NodeStatNode[];
 };
 
