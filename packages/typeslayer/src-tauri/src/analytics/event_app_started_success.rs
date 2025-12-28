@@ -4,14 +4,23 @@ use tracing::debug;
 use crate::{
     analytics::{EventMetadata, TypeSlayerEvent, metadata::create_event_metadata},
     app_data::{AppData, settings::Settings},
+    layercake::SourceHistory,
 };
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EventAppStartedSuccessData {
+    pub settings: Settings,
+    pub source_history: SourceHistory,
+}
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EventAppStartedSuccess {
     pub name: &'static str,
+    #[serde(flatten)]
     pub metadata: EventMetadata,
-    pub settings: Settings,
+    pub data: EventAppStartedSuccessData,
 }
 
 impl TypeSlayerEvent for EventAppStartedSuccess {
@@ -29,7 +38,10 @@ impl TypeSlayerEvent for EventAppStartedSuccess {
         Self {
             name: EventAppStartedSuccess::event_id(),
             metadata: EventMetadata::example(),
-            settings: Settings::default(),
+            data: EventAppStartedSuccessData {
+                settings: Settings::default(),
+                source_history: SourceHistory::default(),
+            },
         }
     }
 
@@ -37,7 +49,10 @@ impl TypeSlayerEvent for EventAppStartedSuccess {
         let event = EventAppStartedSuccess {
             name: EventAppStartedSuccess::event_id(),
             metadata: create_event_metadata(app_data).await,
-            settings: app_data.settings.clone(),
+            data: EventAppStartedSuccessData {
+                settings: app_data.settings.clone(),
+                source_history: app_data.cake.source_history.clone(),
+            },
         };
         debug!("[event] [app_started_success] create: {:?}", event);
         event

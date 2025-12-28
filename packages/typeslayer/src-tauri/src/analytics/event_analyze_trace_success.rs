@@ -3,7 +3,7 @@ use crate::{
         TypeSlayerEvent,
         metadata::{EventMetadata, create_event_metadata},
     },
-    analyze_trace::DepthLimitKind,
+    analyze_trace::{DepthLimitKind, FileStatistics},
     app_data::AppData,
 };
 use serde::Serialize;
@@ -13,17 +13,22 @@ use tracing::debug;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct EventAnalyzeTraceSuccess {
-    pub name: &'static str,
-    pub metadata: EventMetadata,
+pub struct EventAnalyzeTraceSuccessData {
     pub duration: u64,
-
     pub total_duplicate_packages: usize,
     pub most_duplicated_package_instances: usize,
-
     pub total_hotspots: usize,
-
     pub depth_limit_counts: HashMap<DepthLimitKind, usize>,
+    pub file_statistics: FileStatistics,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EventAnalyzeTraceSuccess {
+    pub name: &'static str,
+    #[serde(flatten)]
+    pub metadata: EventMetadata,
+    pub data: EventAnalyzeTraceSuccessData,
 }
 
 pub struct EventAnalyzeTraceSuccessArgs {
@@ -45,14 +50,18 @@ impl TypeSlayerEvent for EventAnalyzeTraceSuccess {
         Self {
             name: EventAnalyzeTraceSuccess::event_id(),
             metadata: EventMetadata::example(),
-            duration: 3000,
+            data: EventAnalyzeTraceSuccessData {
+                duration: 3000,
 
-            total_duplicate_packages: 15,
-            most_duplicated_package_instances: 8,
+                total_duplicate_packages: 15,
+                most_duplicated_package_instances: 8,
 
-            total_hotspots: 20,
+                total_hotspots: 20,
 
-            depth_limit_counts: DepthLimitKind::iter().map(|kind| (kind, 0)).collect(),
+                depth_limit_counts: DepthLimitKind::iter().map(|kind| (kind, 0)).collect(),
+
+                file_statistics: FileStatistics::default(),
+            },
         }
     }
 
@@ -66,14 +75,18 @@ impl TypeSlayerEvent for EventAnalyzeTraceSuccess {
         let event = EventAnalyzeTraceSuccess {
             name: EventAnalyzeTraceSuccess::event_id(),
             metadata: create_event_metadata(app_data).await,
-            duration: args.duration,
+            data: EventAnalyzeTraceSuccessData {
+                duration: args.duration,
 
-            total_duplicate_packages: analyze_trace.total_duplicate_packages(),
-            most_duplicated_package_instances: analyze_trace.most_duplicated_package(),
+                total_duplicate_packages: analyze_trace.total_duplicate_packages(),
+                most_duplicated_package_instances: analyze_trace.most_duplicated_package(),
 
-            total_hotspots: analyze_trace.total_hotspots(),
+                total_hotspots: analyze_trace.total_hotspots(),
 
-            depth_limit_counts: analyze_trace.depth_limit_counts(),
+                depth_limit_counts: analyze_trace.depth_limit_counts(),
+
+                file_statistics: analyze_trace.file_statistics.clone(),
+            },
         };
         debug!("[event] [analyze_trace_success] created event: {:?}", event);
         event

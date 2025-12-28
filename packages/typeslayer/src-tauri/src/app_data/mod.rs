@@ -75,17 +75,17 @@ impl AppData {
         cake.load_config_in_dir(data_dir.to_string_lossy().to_string())
             .await?;
 
-        let project_root = init_project_root(&cake);
+        let project_root = init_project_root(&mut cake);
         let outputs_dir = data_dir.join(OUTPUTS_DIRECTORY);
         let types_json = init_types_json(&outputs_dir, &project_root).await;
         let trace_json = init_trace_json(&outputs_dir, &project_root).await;
         let analyze_trace = init_analyze_trace(&outputs_dir).await;
         let type_graph = init_type_graph(&outputs_dir).await;
         let cpu_profile = init_cpu_profile(&outputs_dir).await;
-        let settings = init_settings(&cake);
-        let verbose = init_verbose(&cake);
-        let auth_code = init_auth_code(&cake);
-        let session_id = init_session_id(&cake);
+        let settings = init_settings(&mut cake);
+        let verbose = init_verbose(&mut cake);
+        let auth_code = init_auth_code(&mut cake);
+        let session_id = init_session_id(&mut cake);
 
         let package_manager = Self::find_package_manager(project_root.clone()).await?;
 
@@ -107,12 +107,12 @@ impl AppData {
             type_graph,
             data_dir,
             platform,
-            version: "unknown".to_string(), // updated in lib.rs (don't remember why not here lol)
+            version: env!("CARGO_PKG_VERSION").to_string(),
             session_id,
             mode,
         };
         app.discover_tsconfigs().await?;
-        app.selected_tsconfig = init_selected_tsconfig_with(&app.cake, &app.tsconfig_paths);
+        app.selected_tsconfig = init_selected_tsconfig_with(&mut app.cake, &app.tsconfig_paths);
         app.update_typeslayer_config_toml().await;
         EventAppStartedSuccess::send(&app, ()).await;
         Ok(app)
@@ -151,7 +151,7 @@ impl AppData {
         }
 
         // Otherwise, auto-detect
-        self.selected_tsconfig = init_selected_tsconfig_with(&self.cake, &self.tsconfig_paths);
+        self.selected_tsconfig = init_selected_tsconfig_with(&mut self.cake, &self.tsconfig_paths);
 
         Ok(())
     }

@@ -1,11 +1,36 @@
-import { Box, Divider, Paper, Stack, Typography } from "@mui/material";
+import { Divider, Paper, Stack, Table, TableBody, TableCell, TableRow, Typography } from "@mui/material";
 import { useState } from "react";
 import { InlineCode } from "../components/inline-code";
+import { formatBytesSize } from "../components/utils";
+
+const groupIds = [
+  "type-metrics",
+  "type-relation-metrics",
+  "performance-metrics",
+  "type-level-limits",
+  "bundle-implications",
+  "raw-data",
+] as const;
+
+type GroupId = (typeof groupIds)[number];
+
+const groupInfo = {
+  "type-level-limits": "Type Level Limits",
+  "raw-data": "Raw Data Sizes",
+  "bundle-implications": "Bundle Implications",
+  "performance-metrics": "Performance Metrics",
+  "type-metrics": "Type Metrics",
+  "type-relation-metrics": "Type Relation Metrics",
+} satisfies Record<GroupId, string>;
+
+type LeaderboardNumberFormat = "number" | "bytes" | "milliseconds";
 
 type LeaderboardNumber = {
   id: string;
   label: string;
   subtitle: string;
+  groupId: GroupId;
+  format: LeaderboardNumberFormat;
 
   winner: number;
   median: number;
@@ -16,6 +41,24 @@ type LeaderboardNumber = {
   bottom10: number[];
 };
 
+/*
+
+total types
+total relations
+
+size of types.json
+size of relations.json
+
+
+- number of files
+- total duration
+- max duration for a single file
+
+add analyze-trace file statistics to analyze trace success event
+
+
+*/
+
 const useLeaderboardStats = (): { data: LeaderboardNumber[] | null } => {
   return {
     data: [
@@ -23,6 +66,8 @@ const useLeaderboardStats = (): { data: LeaderboardNumber[] | null } => {
         id: "total-types",
         label: "Total Types",
         subtitle: "number of types in a project",
+        groupId: "type-metrics",
+        format: "number",
         winner: 13_345_430,
         median: 198_932,
         mean: 1_234_567,
@@ -40,6 +85,8 @@ const useLeaderboardStats = (): { data: LeaderboardNumber[] | null } => {
         id: "total-relations",
         label: "Total Relations",
         subtitle: "number of relations between types",
+        groupId: "type-relation-metrics",
+        format: "number",
         winner: 0,
         median: 0,
         mean: 0,
@@ -49,9 +96,11 @@ const useLeaderboardStats = (): { data: LeaderboardNumber[] | null } => {
         bottom10: [],
       },
       {
-        id: "total-relations1",
-        label: "Total Relations",
-        subtitle: "number of relations between types",
+        id: "types-json-size",
+        label: "Types JSON Size",
+        subtitle: "size of types.json file",
+        groupId: "raw-data",
+        format: "bytes",
         winner: 0,
         median: 0,
         mean: 0,
@@ -61,9 +110,11 @@ const useLeaderboardStats = (): { data: LeaderboardNumber[] | null } => {
         bottom10: [],
       },
       {
-        id: "total-relations2",
-        label: "Total Relations",
-        subtitle: "number of relations between types",
+        id: "trace-json-size",
+        label: "Trace JSON Size",
+        subtitle: "size of trace.json file",
+        groupId: "raw-data",
+        format: "bytes",
         winner: 0,
         median: 0,
         mean: 0,
@@ -73,9 +124,11 @@ const useLeaderboardStats = (): { data: LeaderboardNumber[] | null } => {
         bottom10: [],
       },
       {
-        id: "total-relations3",
-        label: "Total Relations",
-        subtitle: "number of relations between types",
+        id: "num-files",
+        label: "Number of Files",
+        subtitle: "number of files in the project",
+        groupId: "bundle-implications",
+        format: "number",
         winner: 0,
         median: 0,
         mean: 0,
@@ -90,12 +143,24 @@ const useLeaderboardStats = (): { data: LeaderboardNumber[] | null } => {
 
 export const LeaderboardPage = () => {
   const { data: stats } = useLeaderboardStats();
-  const [selectedIndex, setSelectedIndex] = useState<number>(0);
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [selectedId, setSelectedId] =
+    useState<LeaderboardNumber["id"]>("total-types");
+  const [hoveredId, setHoveredId] = useState<LeaderboardNumber["id"] | null>(
+    null,
+  );
 
   const selected = stats
-    ? stats[hoveredIndex !== null ? hoveredIndex : selectedIndex]
+    ? stats.find(
+        stat => stat.id === (hoveredId !== null ? hoveredId : selectedId),
+      ) || null
     : null;
+
+  const sortedStats: [GroupId, LeaderboardNumber[]][] = stats
+    ? groupIds.map(groupId => [
+        groupId,
+        stats.filter(stat => stat.groupId === groupId),
+      ])
+    : [];
 
   return (
     <Stack
@@ -158,46 +223,59 @@ export const LeaderboardPage = () => {
               maxHeight: "100%",
               minHeight: 0,
             }}
-            divider={<Divider orientation="horizontal" flexItem />}
           >
-            {[
-              ...stats,
-              ...stats,
-              ...stats,
-              ...stats,
-              ...stats,
-              ...stats,
-              ...stats,
-              ...stats,
-              ...stats,
-              ...stats,
-            ].map(leaderboardNumber => (
-              <LeaderboardNumberCard
-                key={leaderboardNumber.id}
-                leaderboardNumber={leaderboardNumber}
-                isSelected={selectedIndex === stats.indexOf(leaderboardNumber)}
-                isHovered={hoveredIndex === stats.indexOf(leaderboardNumber)}
-                onMouseEnter={() =>
-                  setHoveredIndex(stats.indexOf(leaderboardNumber))
-                }
-                onMouseLeave={() => setHoveredIndex(null)}
-                onClick={() =>
-                  setSelectedIndex(stats.indexOf(leaderboardNumber))
-                }
-              />
+            {sortedStats.map(([groupId, stats]) => (
+              <Stack key={groupId} sx={{}}>
+                <Typography
+                  sx={{
+                    fontWeight: "bold",
+                    fontSize: 14,
+                    mt: 2,
+                    mb: 0.5,
+                    textTransform: "uppercase",
+                    color: "secondary.main",
+                  }}
+                >
+                  {groupInfo[groupId]}
+                </Typography>
+                {stats.map(leaderboardNumber => (
+                  <LeaderboardNumberCard
+                    key={leaderboardNumber.id}
+                    leaderboardNumber={leaderboardNumber}
+                    isSelected={selectedId === leaderboardNumber.id}
+                    isHovered={hoveredId === leaderboardNumber.id}
+                    onMouseEnter={() => setHoveredId(leaderboardNumber.id)}
+                    onMouseLeave={() => setHoveredId(null)}
+                    onClick={() => setSelectedId(leaderboardNumber.id)}
+                  />
+                ))}
+              </Stack>
             ))}
           </Stack>
         ) : null}
 
         {selected ? (
-          <Paper
+          <SelectedLeaderboardNumberDetails selected={selected} />
+        ) : null}
+      </Stack>
+    </Stack>
+  );
+};
+
+const SelectedLeaderboardNumberDetails = ({
+  selected,
+}: {
+  selected: LeaderboardNumber;
+}) => {
+  const format = leaderboardNumberFormatter(selected.format);
+  return (
+    <Paper
             sx={{
               mx: 2,
               mb: 2,
               p: 2,
               width: "40%",
-              minWidth: "40%",
-              maxWidth: "40%",
+              maxWidth: 400,
               display: "flex",
               flexDirection: "column",
               gap: 1,
@@ -211,25 +289,38 @@ export const LeaderboardPage = () => {
               <Typography variant="subtitle1">{selected.subtitle}</Typography>
             </Stack>
 
-            <Stack>
-              <Typography>
-                Samples:{" "}
-                <InlineCode>{selected.samples.toLocaleString()}</InlineCode>
-              </Typography>
-              <Typography>
-                Median:{" "}
-                <InlineCode>{selected.median.toLocaleString()}</InlineCode>
-              </Typography>
-              <Typography>
-                Mean: <InlineCode>{selected.mean.toLocaleString()}</InlineCode>
-              </Typography>
-              <Typography>
-                Standard Deviation:{" "}
-                <InlineCode>
-                  {selected.standardDeviation.toLocaleString()}
-                </InlineCode>
-              </Typography>
-            </Stack>
+            <Table size="small">
+              <TableBody>
+                <TableRow>
+                  <TableCell>Samples</TableCell>
+                  <TableCell align="right">
+                    <InlineCode>
+                      {selected.samples.toLocaleString()}
+                    </InlineCode>
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Median</TableCell>
+                  <TableCell align="right">
+                    <InlineCode>{format(selected.median)}</InlineCode>
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Mean</TableCell>
+                  <TableCell align="right">
+                    <InlineCode>{format(selected.mean)}</InlineCode>
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Standard Deviation</TableCell>
+                  <TableCell align="right">
+                    <InlineCode>
+                      {selected.standardDeviation.toLocaleString()}
+                    </InlineCode>
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
 
             <Stack
               sx={{
@@ -244,11 +335,7 @@ export const LeaderboardPage = () => {
               <GroupOfTen label="Bottom 10" values={selected.bottom10} />
             </Stack>
           </Paper>
-        ) : null}
-      </Stack>
-    </Stack>
-  );
-};
+  )}
 
 const GroupOfTen = ({ label, values }: { label: string; values: number[] }) => {
   return (
@@ -257,24 +344,47 @@ const GroupOfTen = ({ label, values }: { label: string; values: number[] }) => {
         {label}
       </Typography>
       <Stack>
-        {values.map((value, index) => (
-          <Stack
-            sx={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 1,
-              justifyContent: "flex-end",
-            }}
-            // biome-ignore lint/suspicious/noArrayIndexKey: don't care, bro
-            key={index}
-          >
-            <InlineCode>{value.toLocaleString()}</InlineCode>
-          </Stack>
-        ))}
+        {values.length === 0 ? (
+          <Typography>no data</Typography>
+        ) : (
+          values.map((value, index) => (
+            <Stack
+              sx={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 1,
+                justifyContent: "flex-end",
+              }}
+              // biome-ignore lint/suspicious/noArrayIndexKey: don't care, bro
+              key={index}
+            >
+              <InlineCode>{value.toLocaleString()}</InlineCode>
+            </Stack>
+          ))
+        )}
       </Stack>
     </Stack>
   );
 };
+
+const leaderboardNumberFormatter =
+  (format: LeaderboardNumberFormat) =>
+  (value: number): string => {
+    switch (format) {
+      case "number":
+        return value.toLocaleString();
+      case "bytes":
+        return formatBytesSize(value);
+      case "milliseconds":
+        if (value < 1000) {
+          return `${value} ms`;
+        } else {
+          return `${(value / 1000).toFixed(2)} s`;
+        }
+      default:
+        return value.toString();
+    }
+  };
 
 const LeaderboardNumberCard = ({
   leaderboardNumber,
@@ -295,6 +405,8 @@ const LeaderboardNumberCard = ({
     return <div>No data</div>;
   }
 
+  const format = leaderboardNumberFormatter(leaderboardNumber.format);
+
   return (
     <Stack
       onMouseEnter={onMouseEnter}
@@ -314,20 +426,20 @@ const LeaderboardNumberCard = ({
     >
       <Stack>
         <Typography variant="h5">{leaderboardNumber.label}</Typography>
-        <Typography variant="subtitle1">
+        <Typography variant="body2" color="textSecondary">
           {leaderboardNumber.subtitle}
         </Typography>
       </Stack>
 
       <Stack sx={{ flexDirection: "column", alignItems: "flex-end" }}>
         <Typography variant="h4">
-          <InlineCode>{leaderboardNumber.winner.toLocaleString()}</InlineCode>
+          <InlineCode>{format(leaderboardNumber.winner)}</InlineCode>
         </Typography>
 
         <Typography variant="body2" color="textSecondary">
           median{" "}
           <span style={{ fontFamily: "monospace" }}>
-            {leaderboardNumber.median.toLocaleString()}
+            {format(leaderboardNumber.median)}
           </span>
         </Typography>
       </Stack>

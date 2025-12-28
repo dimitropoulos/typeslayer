@@ -1,18 +1,21 @@
 pub mod constants;
 mod depth_limits;
 mod duplicate_node_modules;
+mod file_statistics;
 mod hotspots;
 mod node_module_paths;
 mod spans;
 mod types;
 
 pub use depth_limits::DepthLimitKind;
+pub use file_statistics::FileStatistics;
 pub use spans::create_spans;
 pub use types::*;
 
 use crate::analyze_trace::constants::ANALYZE_TRACE_FILENAME;
 use crate::analyze_trace::depth_limits::create_depth_limits;
 use crate::analyze_trace::duplicate_node_modules::get_duplicate_node_modules;
+use crate::analyze_trace::file_statistics::create_file_statistics;
 use crate::analyze_trace::hotspots::get_hotspots;
 use crate::analyze_trace::node_module_paths::get_node_module_paths;
 use crate::analyze_trace::spans::create_span_tree;
@@ -62,6 +65,7 @@ pub fn analyze_trace(
     let hot_spots = get_hotspots(&hot_paths_tree)?;
     let duplicate_packages = get_duplicate_node_modules(&node_module_paths)?;
     let depth_limits = create_depth_limits(&trace_file);
+    let file_statistics = create_file_statistics(&trace_file)?;
 
     let result = AnalyzeTraceResult {
         depth_limits,
@@ -69,6 +73,7 @@ pub fn analyze_trace(
         hot_spots,
         unterminated_events,
         node_module_paths,
+        file_statistics,
     };
 
     // Write result to analyze-trace.json

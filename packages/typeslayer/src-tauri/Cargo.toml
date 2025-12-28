@@ -1,6 +1,6 @@
 [package]
 name = "typeslayer"
-version = "0.1.0"
+version = "0.1.26"
 description = "Slaying TypeScript types since 2026"
 authors = ["Dimitri Mitropoulos"]
 edition = "2024"

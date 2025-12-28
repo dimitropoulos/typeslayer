@@ -219,9 +219,9 @@ pub async fn generate_analyze_trace(
 
     match handle.await {
         Ok(Ok(analyze_trace_result)) => {
+            app_data.analyze_trace = Some(analyze_trace_result);
             EventAnalyzeTraceSuccess::send(&app_data, EventAnalyzeTraceSuccessArgs { duration })
                 .await;
-            app_data.analyze_trace = Some(analyze_trace_result);
             app_data.update_typeslayer_config_toml().await;
             debug!(
                 "[generate_analyze_trace] wrote {} in {}",
