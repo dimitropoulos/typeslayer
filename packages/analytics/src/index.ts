@@ -1,10 +1,10 @@
 /// <reference types="@cloudflare/workers-types" />
 
-export interface Env {
-  DB: D1Database;
-  INGESTION_SECRET?: string;
-  REQUIRE_INGESTION_SECRET?: string;
-}
+import { handleLeaderboard } from "./leaderboard";
+import type { Env } from "./types";
+
+export * from "./leaderboard";
+
 
 type AnalyticsEvent = {
   name: string;
@@ -29,15 +29,15 @@ const isValidEvent = (e: unknown): e is AnalyticsEvent => {
     "data" in e &&
     e.data !== undefined
   );
-}
+};
 
 const corsHeaders = () => {
   return {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, X-Typeslayer-Analytics-Key",
   } as Record<string, string>;
-}
+};
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -46,6 +46,11 @@ export default {
     // Health endpoint
     if (request.method === "GET" && url.pathname === "/health") {
       return new Response("ok", { status: 200 });
+    }
+
+    // Leaderboard endpoint
+    if (request.method === "GET" && url.pathname === "/leaderboard") {
+      return handleLeaderboard(env);
     }
 
     // CORS preflight
@@ -149,10 +154,13 @@ export default {
       return new Response("OK", { status: 200, headers: corsHeaders() });
     } catch (err: unknown) {
       console.error("DB error:", err);
-      return new Response(`DB error: ${err instanceof Error ? err.message : String(err)}`, {
-        status: 500,
-        headers: corsHeaders(),
-      });
+      return new Response(
+        `DB error: ${err instanceof Error ? err.message : String(err)}`,
+        {
+          status: 500,
+          headers: corsHeaders(),
+        },
+      );
     }
   },
 } satisfies ExportedHandler<Env>;

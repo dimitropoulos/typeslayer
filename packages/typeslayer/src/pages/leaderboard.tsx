@@ -1,45 +1,24 @@
-import { Divider, Paper, Stack, Table, TableBody, TableCell, TableRow, Typography } from "@mui/material";
+import {
+  Divider,
+  Paper,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
+  Typography,
+} from "@mui/material";
+import { useQuery } from "@tanstack/react-query";
+import {
+  type GroupId,
+  groupIds,
+  groupInfo,
+  type LeaderboardNumber,
+  type LeaderboardNumberFormat,
+} from "@typeslayer/analytics";
 import { useState } from "react";
 import { InlineCode } from "../components/inline-code";
 import { formatBytesSize } from "../components/utils";
-
-const groupIds = [
-  "type-metrics",
-  "type-relation-metrics",
-  "performance-metrics",
-  "type-level-limits",
-  "bundle-implications",
-  "raw-data",
-] as const;
-
-type GroupId = (typeof groupIds)[number];
-
-const groupInfo = {
-  "type-level-limits": "Type Level Limits",
-  "raw-data": "Raw Data Sizes",
-  "bundle-implications": "Bundle Implications",
-  "performance-metrics": "Performance Metrics",
-  "type-metrics": "Type Metrics",
-  "type-relation-metrics": "Type Relation Metrics",
-} satisfies Record<GroupId, string>;
-
-type LeaderboardNumberFormat = "number" | "bytes" | "milliseconds";
-
-type LeaderboardNumber = {
-  id: string;
-  label: string;
-  subtitle: string;
-  groupId: GroupId;
-  format: LeaderboardNumberFormat;
-
-  winner: number;
-  median: number;
-  mean: number;
-  standardDeviation: number;
-  samples: number;
-  top10: number[];
-  bottom10: number[];
-};
 
 /*
 
@@ -59,86 +38,23 @@ add analyze-trace file statistics to analyze trace success event
 
 */
 
-const useLeaderboardStats = (): { data: LeaderboardNumber[] | null } => {
-  return {
-    data: [
-      {
-        id: "total-types",
-        label: "Total Types",
-        subtitle: "number of types in a project",
-        groupId: "type-metrics",
-        format: "number",
-        winner: 13_345_430,
-        median: 198_932,
-        mean: 1_234_567,
-        standardDeviation: 2_345_678,
-        samples: 75,
-        top10: [
-          13_345_430, 9_876_543, 7_654_321, 6_543_210, 5_432_109, 4_321_098,
-          3_210_987, 2_109_876, 1_098_765, 987_654,
-        ],
-        bottom10: [
-          10_123, 9_012, 8_901, 7_890, 6_789, 5_678, 4_567, 3_456, 2_345, 1_234,
-        ],
-      },
-      {
-        id: "total-relations",
-        label: "Total Relations",
-        subtitle: "number of relations between types",
-        groupId: "type-relation-metrics",
-        format: "number",
-        winner: 0,
-        median: 0,
-        mean: 0,
-        standardDeviation: 0,
-        samples: 0,
-        top10: [],
-        bottom10: [],
-      },
-      {
-        id: "types-json-size",
-        label: "Types JSON Size",
-        subtitle: "size of types.json file",
-        groupId: "raw-data",
-        format: "bytes",
-        winner: 0,
-        median: 0,
-        mean: 0,
-        standardDeviation: 0,
-        samples: 0,
-        top10: [],
-        bottom10: [],
-      },
-      {
-        id: "trace-json-size",
-        label: "Trace JSON Size",
-        subtitle: "size of trace.json file",
-        groupId: "raw-data",
-        format: "bytes",
-        winner: 0,
-        median: 0,
-        mean: 0,
-        standardDeviation: 0,
-        samples: 0,
-        top10: [],
-        bottom10: [],
-      },
-      {
-        id: "num-files",
-        label: "Number of Files",
-        subtitle: "number of files in the project",
-        groupId: "bundle-implications",
-        format: "number",
-        winner: 0,
-        median: 0,
-        mean: 0,
-        standardDeviation: 0,
-        samples: 0,
-        top10: [],
-        bottom10: [],
-      },
-    ],
-  };
+const useLeaderboardStats = () => {
+  return useQuery<LeaderboardNumber[]>({
+    queryKey: ["leaderboard-stats"],
+    queryFn: async () => {
+      const response = await fetch(
+        "https://typeslayer-analytics.typeslayer.workers.dev/leaderboard",
+      );
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch leaderboard stats: ${response.status}`,
+        );
+      }
+      const data: LeaderboardNumber[] = await response.json();
+      return data;
+    },
+    staleTime: 1000 * 60 * 5,
+  });
 };
 
 export const LeaderboardPage = () => {
@@ -236,7 +152,7 @@ export const LeaderboardPage = () => {
                     color: "secondary.main",
                   }}
                 >
-                  {groupInfo[groupId]}
+                  {groupInfo[groupId].label}
                 </Typography>
                 {stats.map(leaderboardNumber => (
                   <LeaderboardNumberCard
@@ -270,77 +186,89 @@ const SelectedLeaderboardNumberDetails = ({
   const format = leaderboardNumberFormatter(selected.format);
   return (
     <Paper
+      sx={{
+        mx: 2,
+        mb: 2,
+        p: 2,
+        width: "40%",
+        maxWidth: 400,
+        display: "flex",
+        flexDirection: "column",
+        gap: 3,
+        alignSelf: "flex-start",
+        maxHeight: "calc(100% - 16px)",
+        overflowY: "auto",
+      }}
+    >
+      <Stack sx={{ gap: 0.5 }}>
+        <Typography variant="h3">
+          {selected.label}
+          <Typography
+            variant="subtitle2"
             sx={{
-              mx: 2,
-              mb: 2,
-              p: 2,
-              width: "40%",
-              maxWidth: 400,
-              display: "flex",
-              flexDirection: "column",
-              gap: 1,
-              alignSelf: "flex-start",
-              maxHeight: "calc(100% - 16px)",
-              overflowY: "auto",
+              alignSelf: "flex-end",
+              display: "inline",
+              ml: 1,
             }}
           >
-            <Stack>
-              <Typography variant="h3">{selected.label}</Typography>
-              <Typography variant="subtitle1">{selected.subtitle}</Typography>
-            </Stack>
+            ({selected.format})
+          </Typography>
+        </Typography>
+        <Typography variant="subtitle1">{selected.subtitle}</Typography>
+      </Stack>
 
-            <Table size="small">
-              <TableBody>
-                <TableRow>
-                  <TableCell>Samples</TableCell>
-                  <TableCell align="right">
-                    <InlineCode>
-                      {selected.samples.toLocaleString()}
-                    </InlineCode>
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>Median</TableCell>
-                  <TableCell align="right">
-                    <InlineCode>{format(selected.median)}</InlineCode>
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>Mean</TableCell>
-                  <TableCell align="right">
-                    <InlineCode>{format(selected.mean)}</InlineCode>
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>Standard Deviation</TableCell>
-                  <TableCell align="right">
-                    <InlineCode>
-                      {selected.standardDeviation.toLocaleString()}
-                    </InlineCode>
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+      <Table size="small">
+        <TableBody>
+          <TableRow>
+            <TableCell>Median</TableCell>
+            <TableCell align="right">
+              <InlineCode>{format(selected.median)}</InlineCode>
+            </TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell>Mean</TableCell>
+            <TableCell align="right">
+              <InlineCode>{format(selected.mean)}</InlineCode>
+            </TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell>Standard Deviation</TableCell>
+            <TableCell align="right">
+              <InlineCode>
+                {selected.standardDeviation.toLocaleString()}
+              </InlineCode>
+            </TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell>Samples</TableCell>
+            <TableCell align="right">
+              <InlineCode>{selected.samples.toLocaleString()}</InlineCode>
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
 
-            <Stack
-              sx={{
-                flexDirection: "row",
-                gap: 3,
-                width: "100%",
-                flexGrow: 1,
-              }}
-              divider={<Divider orientation="vertical" flexItem />}
-            >
-              <GroupOfTen label="Top 10" values={selected.top10} />
-              <GroupOfTen label="Bottom 10" values={selected.bottom10} />
-            </Stack>
-          </Paper>
-  )}
+      <Stack
+        sx={{
+          flexDirection: "row",
+          gap: 3,
+          width: "100%",
+          flexGrow: 1,
+          justifyContent: "space-between",
+        }}
+        divider={<Divider orientation="vertical" flexItem />}
+      >
+        <GroupOfTen label="Top 10" values={selected.top10.map(format)} />
+        <GroupOfTen label="Bottom 10" values={selected.bottom10.map(format)} />
+      </Stack>
+    </Paper>
+  );
+};
 
-const GroupOfTen = ({ label, values }: { label: string; values: number[] }) => {
+const GroupOfTen = ({ label, values }: { label: string; values: string[] }) => {
   return (
-    <Stack>
-      <Typography variant="h6" gutterBottom>
+    <Stack sx={{ alignSelf: "stretch", width: "100%" }}>
+      <Typography variant="h6" gutterBottom align="right">
         {label}
       </Typography>
       <Stack>
@@ -358,7 +286,7 @@ const GroupOfTen = ({ label, values }: { label: string; values: number[] }) => {
               // biome-ignore lint/suspicious/noArrayIndexKey: don't care, bro
               key={index}
             >
-              <InlineCode>{value.toLocaleString()}</InlineCode>
+              <InlineCode>{value}</InlineCode>
             </Stack>
           ))
         )}
@@ -371,16 +299,18 @@ const leaderboardNumberFormatter =
   (format: LeaderboardNumberFormat) =>
   (value: number): string => {
     switch (format) {
-      case "number":
+      case "count":
         return value.toLocaleString();
       case "bytes":
         return formatBytesSize(value);
-      case "milliseconds":
-        if (value < 1000) {
-          return `${value} ms`;
+      case "milliseconds": {
+        const v = value / 1000;
+        if (v < 1000) {
+          return `${v.toFixed(1)}ms`;
         } else {
-          return `${(value / 1000).toFixed(2)} s`;
+          return `${(v / 1000).toFixed(1)}s`;
         }
+      }
       default:
         return value.toString();
     }
@@ -437,10 +367,10 @@ const LeaderboardNumberCard = ({
         </Typography>
 
         <Typography variant="body2" color="textSecondary">
-          median{" "}
           <span style={{ fontFamily: "monospace" }}>
             {format(leaderboardNumber.median)}
-          </span>
+          </span>{" "}
+          median
         </Typography>
       </Stack>
     </Stack>

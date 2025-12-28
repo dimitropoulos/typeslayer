@@ -70,10 +70,10 @@ jobs:
         run: pnpm install --frozen-lockfile --frozen-lockfile
 
       - name: Build internal libraries (@typeslayer/*)
-        run: pnpm -F @typeslayer/validate build && pnpm -F @typeslayer/analyze-trace build
+        run: pnpm --filter @typeslayer/validate build && pnpm --filter @typeslayer/analyze-trace build && pnpm --filter @typeslayer/analytics build
 
       - name: Build Tauri app (target=${{ matrix.target }})
-        run: pnpm -F @typeslayer/internal tauri build --target ${{ matrix.target }}
+        run: pnpm --filter @typeslayer/internal tauri build --target ${{ matrix.target }}
 
       - name: Collect binary
         shell: bash
