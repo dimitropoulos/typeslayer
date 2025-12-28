@@ -8,9 +8,17 @@ use crate::{
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct EventAppStartedFailData {
+    pub reason: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct EventAppStartedFail {
     pub name: &'static str,
+    #[serde(flatten)]
     pub metadata: EventMetadata,
+    pub data: EventAppStartedFailData,
 }
 
 #[derive(Debug, Serialize)]
@@ -34,13 +42,19 @@ impl TypeSlayerEvent for EventAppStartedFail {
         Self {
             name: EventAppStartedFail::event_id(),
             metadata: EventMetadata::example(),
+            data: EventAppStartedFailData {
+                reason: "unknown".to_string(),
+            },
         }
     }
 
-    async fn create(app_data: &AppData, _args: Self::Args) -> Self {
+    async fn create(app_data: &AppData, args: Self::Args) -> Self {
         let event = EventAppStartedFail {
             name: EventAppStartedFail::event_id(),
             metadata: create_event_metadata(app_data).await,
+            data: EventAppStartedFailData {
+                reason: args.reason,
+            },
         };
         debug!("[event] [app_started_fail] create: {:?}", event);
         event

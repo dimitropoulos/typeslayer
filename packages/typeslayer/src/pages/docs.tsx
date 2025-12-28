@@ -293,17 +293,25 @@ export const DocsPage = () => {
       description: (
         <Stack gap={1}>
           <Typography>
-            no. TypeSlayer has no network activity whatsoever.
+            yep! but only super anonymous data (in fact, the same data used to
+            power the leaderboard). if that bothers you then you can turn it off
+            with <InlineCode>--disable-analytics</InlineCode> or{" "}
+            <InlineCode>TYPESLAYER_DISABLE_ANALYTICS=true</InlineCode> or
+            setting <InlineCode>settings.disableAnalytics=true</InlineCode> in
+            your <InlineCode>typeslayer.toml</InlineCode>.
           </Typography>
           <Typography>
-            if you're submitting a bug report, we might ask for some of your
-            trace files to help us debug the issue. but that's it.
+            there's no evil empire here: it's very useful to have very basic
+            "someone somewhere ran it at this time" diagnostics along with some
+            some very very basic crash reporting.
           </Typography>
           <Typography>
-            consider the door always open for the future, though. there's no
-            evil empire here, but it might be useful in the future to implement
-            some very basic "someone somewhere ran it at this time" diagnostics
-            in the future or perhaps even some very very basic crash reporting.
+            it couldn't be more transparent: the settings page shows an example
+            of exactly what's sent for each event individually. so, if you
+            consider things like "the number of types in your project" to be
+            secret (completely independent of any way to link it back to you or
+            your project) (??????) then in this case you really can "shut that
+            whole thing down" (as the politicians say).
           </Typography>
         </Stack>
       ),

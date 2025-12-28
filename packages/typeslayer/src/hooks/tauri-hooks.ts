@@ -417,10 +417,20 @@ export function useTypeGraphNodeAndLinkStats() {
   });
 }
 
+export type AnalyzeTraceRs = {
+  fileStatistics: {
+    totalFiles: number;
+    totalDuration: number;
+    meanDuration: number;
+    maxDuration: number;
+    minDuration: number;
+  }
+} & AnalyzeTraceResult;
+
 export function useAnalyzeTrace() {
   return useQuery({
     queryKey: ["analyze_trace"],
-    queryFn: () => invoke<AnalyzeTraceResult>("get_analyze_trace"),
+    queryFn: () => invoke<AnalyzeTraceRs>("get_analyze_trace"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 }

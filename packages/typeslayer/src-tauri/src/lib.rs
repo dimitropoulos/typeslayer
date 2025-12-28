@@ -45,15 +45,6 @@ pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
             if let Some(win) = app.get_webview_window("main") {
                 let _ = win.set_title(&title);
             }
-
-            let handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                let version = handle.package_info().version.to_string();
-                let mut data = app_data.lock().await;
-                data.version = version;
-                data.update_typeslayer_config_toml().await;
-            });
-
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())

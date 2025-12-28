@@ -418,6 +418,9 @@ const AnalyticsSetting = ({
           hideCopyButton
           value={JSON.stringify(JSON.parse(jsonExample), null, 2)}
           lang="json"
+          sx={{
+            fontSize: '0.7em',
+          }}
         />
       </Popover>
     </Stack>

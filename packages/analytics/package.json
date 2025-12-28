@@ -1,0 +1,22 @@
+{
+  "name": "analytics",
+  "version": "0.1.26",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.6.5",
+  "scripts": {
+    "dev": "pnpm wrangler dev --local",
+    "deploy": "pnpm wrangler deploy",
+    "migrate:apply": "pnpm wrangler d1 migrations apply typeslayer --remote",
+    "migrate:local": "pnpm wrangler d1 migrations apply typeslayer --local",
+    "migrate:gen": "pnpm wrangler d1 migrations create typeslayer",
+    "db:exec": "pnpm wrangler d1 execute typeslayer",
+    "push:local": "node scripts/push-events.ts --local",
+    "push:remote": "node scripts/push-events.ts --remote"
+  },
+  "devDependencies": {
+    "wrangler": "^4.54.0",
+    "@types/node": "^25.0.3",
+    "@cloudflare/workers-types": "^4.20251225.0"
+  }
+}

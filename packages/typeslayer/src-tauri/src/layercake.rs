@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use serde::{Deserialize, Serialize};
 use tracing::debug;
 
 /// Source precedence options for resolution.
@@ -10,17 +11,27 @@ pub enum Source {
     File,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct SourceHistory {
+    from_env: Vec<String>,
+    from_flag: Vec<String>,
+    from_file: Vec<String>,
+    from_default: Vec<String>,
+}
+
 /// A small helper to resolve settings by precedence across env vars, CLI flags, and a TOML config file.
 #[derive(Clone, Debug)]
 pub struct LayerCake {
-    precedence: Vec<Source>,
-    cfg: Option<toml::Value>,
+    pub precedence: Vec<Source>,
+    pub cfg: Option<toml::Value>,
     /// Cached CLI flags parsed as `--flag=value` or `--flag value`.
-    flags: HashMap<String, String>,
+    pub flags: HashMap<String, String>,
     /// Environment variable prefix (empty string means no prefix)
-    env_prefix: String,
+    pub env_prefix: String,
     /// Stored config filename (e.g. "typeslayer.toml")
-    config_filename: String,
+    pub config_filename: String,
+    /// History of which source a particular thing was resolved from
+    pub source_history: SourceHistory,
 }
 
 /// Named-argument container for resolving strings.
@@ -101,6 +112,7 @@ impl LayerCake {
             flags,
             env_prefix: args.env_prefix.to_string(),
             config_filename: args.config_filename.to_string(),
+            source_history: SourceHistory::default(),
         }
     }
 
@@ -167,7 +179,7 @@ impl LayerCake {
 
     /// Resolve a string using named arguments only.
     /// Validate returns Result<String, String>: Ok(validated_value) or Err(message) which panics.
-    pub fn resolve_string<F, V>(&self, args: ResolveStringArgs<F, V>) -> String
+    pub fn resolve_string<F, V>(&mut self, args: ResolveStringArgs<F, V>) -> String
     where
         F: FnOnce() -> String,
         V: Fn(&str) -> Result<String, String>,
@@ -192,6 +204,7 @@ impl LayerCake {
                                     "[layercake] {} string resolved from env: {}='{}'",
                                     args.env, env_key, validated
                                 );
+                                self.source_history.from_env.push(args.env.to_string());
                                 return validated;
                             }
                             Err(e) => {
@@ -211,6 +224,7 @@ impl LayerCake {
                                     "[layercake] {} string resolved from flag {}={}",
                                     args.env, args.flag, validated
                                 );
+                                self.source_history.from_flag.push(args.env.to_string());
                                 return validated;
                             }
                             Err(e) => panic!(
@@ -228,6 +242,7 @@ impl LayerCake {
                                     "[layercake] {} string resolved from {} key {}: {}",
                                     args.env, self.config_filename, args.file, validated
                                 );
+                                self.source_history.from_file.push(args.env.to_string());
                                 return validated;
                             }
                             Err(e) => {
@@ -246,12 +261,14 @@ impl LayerCake {
             "[layercake] {} using default string '{}'",
             args.env, default
         );
+
+        self.source_history.from_default.push(args.env.to_string());
         default
     }
 
     /// Resolve a number (i32) using named arguments only.
     /// Validate returns Result<i32, String>: Ok(validated_value) or Err(message) which panics.
-    pub fn resolve_number<F, V>(&self, args: ResolveNumberArgs<F, V>) -> i32
+    pub fn resolve_number<F, V>(&mut self, args: ResolveNumberArgs<F, V>) -> i32
     where
         F: FnOnce() -> i32,
         V: Fn(&i32) -> Result<i32, String>,
@@ -277,6 +294,7 @@ impl LayerCake {
                                         "[layercake] {} number resolved from env: {}={}",
                                         args.env, env_key, validated
                                     );
+                                    self.source_history.from_env.push(args.env.to_string());
                                     return validated;
                                 }
                                 Err(e) => {
@@ -304,6 +322,7 @@ impl LayerCake {
                                         "[layercake] {} number resolved from flag: {}={}",
                                         args.env, args.flag, validated
                                     );
+                                    self.source_history.from_flag.push(args.env.to_string());
                                     return validated;
                                 }
                                 Err(e) => {
@@ -330,6 +349,7 @@ impl LayerCake {
                                     "[layercake] {} number resolved from {} key {}: {}",
                                     args.env, self.config_filename, args.file, validated
                                 );
+                                self.source_history.from_file.push(args.env.to_string());
                                 return validated;
                             }
                             Err(e) => {
@@ -345,11 +365,12 @@ impl LayerCake {
         }
         let default = (args.default)();
         debug!("[layercake] {} using default number {}", args.env, default);
+        self.source_history.from_default.push(args.env.to_string());
         default
     }
 
     /// Resolve a boolean using named arguments only.
-    pub fn resolve_bool<F>(&self, args: ResolveBoolArgs<F>) -> bool
+    pub fn resolve_bool<F>(&mut self, args: ResolveBoolArgs<F>) -> bool
     where
         F: FnOnce() -> bool,
     {
@@ -371,6 +392,7 @@ impl LayerCake {
                             "[layercake] {} boolean resolved from env: {}={}",
                             args.env, env_key, b
                         );
+                        self.source_history.from_env.push(args.env.to_string());
                         return b;
                     }
                 }
@@ -382,6 +404,7 @@ impl LayerCake {
                             "[layercake] {} boolean resolved from flag: {}={}",
                             args.env, args.flag, b
                         );
+                        self.source_history.from_flag.push(args.env.to_string());
                         return b;
                     }
                 }
@@ -391,6 +414,7 @@ impl LayerCake {
                             "[layercake] {} boolean resolved from {} key {}: {}",
                             args.env, self.config_filename, args.file, validated
                         );
+                        self.source_history.from_file.push(args.env.to_string());
                         return validated;
                     }
                 }
@@ -399,12 +423,13 @@ impl LayerCake {
         let default = (args.default)();
 
         debug!("[layercake] {} using default bool {}", args.env, default);
+        self.source_history.from_default.push(args.env.to_string());
         default
     }
 
     /// Resolve a string array using named arguments only.
     pub fn resolve_array_of_strings<F, V>(
-        &self,
+        &mut self,
         args: ResolveArrayOfStringsArgs<F, V>,
     ) -> Vec<String>
     where
@@ -435,6 +460,7 @@ impl LayerCake {
                                     env_key,
                                     validated.join(",")
                                 );
+                                self.source_history.from_env.push(args.env.to_string());
                                 return validated;
                             }
                             Err(e) => {
@@ -459,6 +485,7 @@ impl LayerCake {
                                     args.flag,
                                     validated.join(",")
                                 );
+                                self.source_history.from_flag.push(args.env.to_string());
                                 return validated;
                             }
                             Err(e) => {
@@ -481,6 +508,7 @@ impl LayerCake {
                                     args.file,
                                     validated.join(",")
                                 );
+                                self.source_history.from_file.push(args.env.to_string());
                                 return validated;
                             }
                             Err(e) => {
@@ -500,6 +528,7 @@ impl LayerCake {
             "[layercake] {} using default array of strings {:?}",
             args.env, default
         );
+        self.source_history.from_default.push(args.env.to_string());
         default
     }
 

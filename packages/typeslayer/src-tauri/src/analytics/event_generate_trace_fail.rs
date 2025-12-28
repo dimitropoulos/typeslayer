@@ -11,9 +11,7 @@ use crate::{
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct EventGenerateTraceFail {
-    pub name: &'static str,
-    pub metadata: EventMetadata,
+pub struct EventGenerateTraceFailData {
     pub duration: u64,
     pub package_manager: PackageManager,
     pub stdout: Option<String>,
@@ -23,6 +21,15 @@ pub struct EventGenerateTraceFail {
     pub tsc_extra_flags: String,
     pub typescript_compiler_variant: TypeScriptCompilerVariant,
     pub apply_tsc_project_flag: bool,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EventGenerateTraceFail {
+    pub name: &'static str,
+    #[serde(flatten)]
+    pub metadata: EventMetadata,
+    pub data: EventGenerateTraceFailData,
 }
 
 pub struct EventGenerateTraceFailArgs {
@@ -44,15 +51,17 @@ impl TypeSlayerEvent for EventGenerateTraceFail {
         Self {
             name: EventGenerateTraceFail::event_id(),
             metadata: EventMetadata::example(),
-            duration: 5000,
-            package_manager: PackageManager::NPM,
-            stdout: None,
-            stderr: None,
-            max_old_space_size: None,
-            max_stack_size: None,
-            tsc_extra_flags: String::new(),
-            typescript_compiler_variant: TypeScriptCompilerVariant::Corsa,
-            apply_tsc_project_flag: true,
+            data: EventGenerateTraceFailData {
+                duration: 5000,
+                package_manager: PackageManager::NPM,
+                stdout: None,
+                stderr: None,
+                max_old_space_size: None,
+                max_stack_size: None,
+                tsc_extra_flags: String::new(),
+                typescript_compiler_variant: TypeScriptCompilerVariant::Corsa,
+                apply_tsc_project_flag: true,
+            },
         }
     }
 
@@ -61,15 +70,17 @@ impl TypeSlayerEvent for EventGenerateTraceFail {
         let event = EventGenerateTraceFail {
             name: EventGenerateTraceFail::event_id(),
             metadata: create_event_metadata(app_data).await,
-            duration: args.duration,
-            package_manager: app_data.package_manager.clone(),
-            stdout: args.stdout,
-            stderr: args.stderr,
-            max_old_space_size: app_data.settings.max_old_space_size,
-            max_stack_size: app_data.settings.max_stack_size,
-            tsc_extra_flags: app_data.settings.extra_tsc_flags.clone(),
-            typescript_compiler_variant: app_data.settings.typescript_compiler_variant,
-            apply_tsc_project_flag: app_data.settings.apply_tsc_project_flag,
+            data: EventGenerateTraceFailData {
+                duration: args.duration,
+                package_manager: app_data.package_manager.clone(),
+                stdout: args.stdout,
+                stderr: args.stderr,
+                max_old_space_size: app_data.settings.max_old_space_size,
+                max_stack_size: app_data.settings.max_stack_size,
+                tsc_extra_flags: app_data.settings.extra_tsc_flags.clone(),
+                typescript_compiler_variant: app_data.settings.typescript_compiler_variant,
+                apply_tsc_project_flag: app_data.settings.apply_tsc_project_flag,
+            },
         };
         debug!("[generate_trace_event_fail] create: {:?}", event);
         event

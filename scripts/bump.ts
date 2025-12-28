@@ -55,7 +55,7 @@ writeFileSync(
 console.log(`📦 Bumped main package: ${oldMainVersion} → ${newMainVersion}`);
 
 // Bump workspace packages
-const workspacePackages = ["validate", "analyze-trace"];
+const workspacePackages = ["validate", "analyze-trace", "analytics"];
 
 for (const pkgName of workspacePackages) {
   const pkgPath = join(rootDir, "packages", pkgName, "package.json");
@@ -100,5 +100,23 @@ const oldTauriVersion = tauriConfig.version;
 tauriConfig.version = newMainVersion;
 writeFileSync(tauriConfigPath, `${JSON.stringify(tauriConfig, null, 2)}\n`);
 console.log(`  ✅ tauri.conf.json: ${oldTauriVersion} → ${newMainVersion}`);
+
+// Update Cargo.toml
+const cargoTomlPath = join(
+  rootDir,
+  "packages",
+  "typeslayer",
+  "src-tauri",
+  "Cargo.toml",
+);
+const cargoToml = readFileSync(cargoTomlPath, "utf-8");
+const versionRegex = /^version\s*=\s*"[^"]*"/m;
+const oldCargoVersion = cargoToml.match(versionRegex)?.[0];
+const updatedCargoToml = cargoToml.replace(
+  versionRegex,
+  `version = "${newMainVersion}"`,
+);
+writeFileSync(cargoTomlPath, updatedCargoToml);
+console.log(`  ✅ Cargo.toml: ${oldCargoVersion} → version = "${newMainVersion}"`);
 
 console.log("\n✨ All packages bumped and synced!");

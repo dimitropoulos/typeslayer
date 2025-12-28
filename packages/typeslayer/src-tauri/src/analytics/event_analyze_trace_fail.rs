@@ -11,11 +11,18 @@ use crate::{
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct EventAnalyzeTraceFail {
-    pub name: &'static str,
-    pub metadata: EventMetadata,
+pub struct EventAnalyzeTraceFailData {
     pub duration: u64,
     pub reason: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EventAnalyzeTraceFail {
+    pub name: &'static str,
+    #[serde(flatten)]
+    pub metadata: EventMetadata,
+    pub data: EventAnalyzeTraceFailData,
 }
 
 pub struct EventAnalyzeTraceFailArgs {
@@ -38,8 +45,10 @@ impl TypeSlayerEvent for EventAnalyzeTraceFail {
         Self {
             name: EventAnalyzeTraceFail::event_id(),
             metadata: EventMetadata::example(),
-            duration: 3000,
-            reason: "An unexpected error occurred during analysis.".to_string(),
+            data: EventAnalyzeTraceFailData {
+                duration: 3000,
+                reason: "An unexpected error occurred during analysis.".to_string(),
+            },
         }
     }
 
@@ -47,8 +56,10 @@ impl TypeSlayerEvent for EventAnalyzeTraceFail {
         let event = EventAnalyzeTraceFail {
             name: EventAnalyzeTraceFail::event_id(),
             metadata: create_event_metadata(app_data).await,
-            duration: args.duration,
-            reason: args.reason,
+            data: EventAnalyzeTraceFailData {
+                duration: args.duration,
+                reason: args.reason,
+            },
         };
         debug!("[event] [analyze_trace_fail] created event: {:?}", event);
         event

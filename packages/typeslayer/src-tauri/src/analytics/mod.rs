@@ -76,12 +76,3 @@ pub fn send_event<T: TypeSlayerEvent + serde::Serialize + std::fmt::Debug + Send
         }
     });
 }
-
-/*
-
-todo:
-- events for uploading
-- update docs
-- app start should note whether it loaded things from disk
-
-*/

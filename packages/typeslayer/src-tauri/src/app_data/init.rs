@@ -22,7 +22,7 @@ use std::{
 };
 use tracing::{debug, info};
 
-pub fn init_project_root(cake: &LayerCake) -> PathBuf {
+pub fn init_project_root(cake: &mut LayerCake) -> PathBuf {
     // If neither env nor CLI flag have been provided, favor the current working directory
     // when it already contains a package.json. This prevents stale typeslayer.toml entries
     // from overriding local runs.
@@ -156,7 +156,7 @@ async fn read_file<T: Send + serde::de::DeserializeOwned + 'static>(
     }
 }
 
-pub fn init_settings(cake: &LayerCake) -> Settings {
+pub fn init_settings(cake: &mut LayerCake) -> Settings {
     let relative_paths = cake.resolve_bool(ResolveBoolArgs {
         env: "RELATIVE_PATHS",
         flag: "--relative-paths",
@@ -303,7 +303,7 @@ pub fn init_settings(cake: &LayerCake) -> Settings {
     }
 }
 
-pub fn init_verbose(cake: &LayerCake) -> bool {
+pub fn init_verbose(cake: &mut LayerCake) -> bool {
     cake.resolve_bool(ResolveBoolArgs {
         env: "VERBOSE",
         flag: "--verbose",
@@ -312,7 +312,7 @@ pub fn init_verbose(cake: &LayerCake) -> bool {
     })
 }
 
-pub fn init_auth_code(cake: &LayerCake) -> Option<String> {
+pub fn init_auth_code(cake: &mut LayerCake) -> Option<String> {
     let code = cake.resolve_string(ResolveStringArgs {
         env: "AUTH_CODE",
         flag: "--auth-code",
@@ -324,7 +324,7 @@ pub fn init_auth_code(cake: &LayerCake) -> Option<String> {
     if code.is_empty() { None } else { Some(code) }
 }
 pub fn init_selected_tsconfig_with(
-    cake: &LayerCake,
+    cake: &mut LayerCake,
     tsconfig_paths: &[PathBuf],
 ) -> Option<PathBuf> {
     let auto_detect = || {
@@ -375,7 +375,7 @@ pub fn generate_session_id() -> String {
     nanoid!(8, &ALPHABET)
 }
 
-pub fn init_session_id(cake: &LayerCake) -> String {
+pub fn init_session_id(cake: &mut LayerCake) -> String {
     let id = cake.resolve_string(ResolveStringArgs {
         env: "SESSION_ID",
         flag: "--session-id",
