@@ -5877,6 +5877,7 @@ dependencies = [
  "chrono",
  "dirs 5.0.1",
  "image",
+ "indexmap 2.12.1",
  "libc",
  "nanoid",
  "once_cell",

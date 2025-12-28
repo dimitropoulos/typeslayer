@@ -40,8 +40,6 @@ export const LogoFade = ({ router }: { router: Register["router"] }) => {
     (typeof phase)[keyof typeof phase]
   >(phase.clear);
 
-  console.log({ shouldShowLogoFade, fadePhase });
-
   useEffect(() => {
     if (!shouldShowLogoFade) {
       return;

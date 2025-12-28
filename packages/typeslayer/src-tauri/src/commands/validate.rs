@@ -114,7 +114,7 @@ pub async fn validate_type_graph(state: State<'_, &Mutex<AppData>>) -> Result<()
 
     debug!(
         "[validate_type_graph] Validated and loaded type graph ({} nodes)",
-        parsed.nodes
+        parsed.node_count
     );
 
     let mut data = state.lock().await;

@@ -77,10 +77,10 @@ impl TypeSlayerEvent for EventTypeGraphSuccess {
             data: EventTypeGraphSuccessData {
                 duration: args.duration,
 
-                node_count: type_graph.nodes,
+                node_count: type_graph.node_count,
                 node_stats_by_type: type_graph.calculate_node_stat_count_and_max(),
 
-                link_count: type_graph.links.len(),
+                link_count: type_graph.calculate_links_total(),
                 link_stats_by_type: type_graph.calculate_link_count_and_max(),
             },
         };

@@ -25,12 +25,11 @@ export type LinkKind =
   | "aliasTypeArgument"
   | "intersection";
 
-export type CompactGraphLink = [source: TypeId, target: TypeId, kind: LinkKind];
+export type GraphLink = [sourceId: TypeId, targetId: TypeId];
 
-export const compactGraphLinkIndex = {
+export const graphLinkIndex = {
   sourceId: 0,
   targetId: 1,
-  kind: 2,
 } as const;
 
 export type CountAndMax = {
@@ -43,6 +42,28 @@ export type GraphStats = {
   node: Record<NodeStatKind, CountAndMax>;
 };
 
+export type NodeStatKind =
+  | "typeArguments"
+  | "unionTypes"
+  | "intersectionTypes"
+  | "aliasTypeArguments";
+
+export type GraphStatNode = {
+  id: TypeId;
+  name: string;
+  value: number;
+  path?: AbsolutePath;
+};
+
+export type NodeStatKindData = {
+  max: number;
+  count: number;
+  nodes: GraphStatNode[];
+};
+
+export type GraphNodeStats = Record<NodeStatKind, NodeStatKindData>;
+
+
 /**
  * to save lots of time/energy/space over the wire (and also memory and disk space)
  * we store this as a tuple to avoid needing to repeat the property names over and over
@@ -53,37 +74,38 @@ export type CompactLinkStatLink = [
   sourceIds: TypeId[],
 ];
 
-export const compactLinksStatsLinkIndex = {
+
+export type LinkKindData = {
+  parentLinkData: ParentLinkData;
+  childLinkData: ChildLinkData;
+}
+
+export const targetToSourcesIndex = {
   targetId: 0,
-  humanReadableName: 1,
-  sourceIds: 2,
+  sourceIds: 1,
 } as const;
 
-export type CompactLinkStats = {
+export type ParentLinkData = {
   max: number;
   count: number;
-  links: CompactLinkStatLink[];
+  targetToSources: [
+    targetId: TypeId,
+    sourceIds: TypeId[]
+  ][];
 };
 
-export type GraphLinkStats = Record<LinkKind, CompactLinkStats>;
+export const sourceToTargetsIndex = {
+  sourceId: 0,
+  targetIds: 1,
+} as const;
 
-export type NodeStatKind =
-  | "typeArguments"
-  | "unionTypes"
-  | "intersectionTypes"
-  | "aliasTypeArguments";
-
-export type NodeStatNode = {
-  id: TypeId;
-  name: string;
-  value: number;
-  path: AbsolutePath | null;
-};
-
-type NodeStatCategory = {
+export type ChildLinkData = {
   max: number;
   count: number;
-  nodes: NodeStatNode[];
+  sourceToTargets: [
+    sourceId: TypeId,
+    targetIds: TypeId[]
+  ][];
 };
 
-export type GraphNodeStats = Record<NodeStatKind, NodeStatCategory>;
+export type GraphLinkStats = Record<LinkKind, LinkKindData>;

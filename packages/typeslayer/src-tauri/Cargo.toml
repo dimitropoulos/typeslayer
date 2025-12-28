@@ -50,6 +50,7 @@ os_info = "3"
 shell-escape = "0.1.5"
 nanoid = "0.4.0"
 reqwest = { version = "0.12", features = ["json"] }
+indexmap = { version = "2.12.1", features = ["std", "serde"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = "2"
