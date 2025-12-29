@@ -106,6 +106,19 @@ where
     raw.serialize(serializer)
 }
 
+fn deserialize_indexmap_typeid_to_typeids<'de, D>(
+    deserializer: D,
+) -> Result<IndexMap<TypeId, Vec<TypeId>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    // Deserialize into a vector of tuples first
+    let vec: Vec<(TypeId, Vec<TypeId>)> = serde::Deserialize::deserialize(deserializer)?;
+    // Convert the vector into an IndexMap
+    let map: IndexMap<TypeId, Vec<TypeId>> = IndexMap::from_iter(vec);
+    Ok(map)
+}
+
 /// this is sortof a reverse link representation because it's organized by the target
 /// consider that for a resolved type, you easily have access to what it's children relationships are via resolved_type.get_relationships()
 /// but if you want to go the other direction, that's what this is for
@@ -118,7 +131,10 @@ pub struct ParentLinkData {
     pub target_count: usize,
     /// Record<TargetId, SourceId[]>
     /// sorted by source_ids count descending
-    #[serde(serialize_with = "serialize_compact_typeid_to_typeids")]
+    #[serde(
+        serialize_with = "serialize_compact_typeid_to_typeids",
+        deserialize_with = "deserialize_indexmap_typeid_to_typeids"
+    )]
     pub target_to_sources: IndexMap<TypeId, Vec<TypeId>>,
 }
 
@@ -131,7 +147,10 @@ pub struct ChildLinkData {
     pub source_count: usize,
     /// Record<SourceId, TargetId[]>
     /// sorted by target_ids count descending
-    #[serde(serialize_with = "serialize_compact_typeid_to_typeids")]
+    #[serde(
+        serialize_with = "serialize_compact_typeid_to_typeids",
+        deserialize_with = "deserialize_indexmap_typeid_to_typeids"
+    )]
     pub source_to_targets: IndexMap<TypeId, Vec<TypeId>>,
 }
 

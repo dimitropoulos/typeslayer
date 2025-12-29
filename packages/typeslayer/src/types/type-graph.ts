@@ -63,18 +63,6 @@ export type NodeStatKindData = {
 
 export type GraphNodeStats = Record<NodeStatKind, NodeStatKindData>;
 
-
-/**
- * to save lots of time/energy/space over the wire (and also memory and disk space)
- * we store this as a tuple to avoid needing to repeat the property names over and over
- */
-export type CompactLinkStatLink = [
-  target: TypeId,
-  humanReadableName: string | null,
-  sourceIds: TypeId[],
-];
-
-
 export type LinkKindData = {
   parentLinkData: ParentLinkData;
   childLinkData: ChildLinkData;

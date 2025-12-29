@@ -60,7 +60,7 @@ pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
             commands::app_data::get_selected_tsconfig,
             commands::app_data::get_trace_json,
             commands::app_data::get_tsconfig_paths,
-            commands::app_data::get_type_graph_node_and_link_stats,
+            commands::app_data::get_type_graph_limited_node_and_link_stats,
             commands::app_data::get_type_graph_nodes_and_links,
             commands::app_data::get_type_graph_stats,
             commands::app_data::set_project_root,

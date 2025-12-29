@@ -252,8 +252,9 @@ pub struct NodeAndLinkStats {
     pub path_map: HashMap<TypeId, String>,
 }
 
+/// this command is for building the award winners page more efficiently (don't want to send the full stats)
 #[tauri::command]
-pub async fn get_type_graph_node_and_link_stats(
+pub async fn get_type_graph_limited_node_and_link_stats(
     state: State<'_, &Mutex<AppData>>,
 ) -> Result<NodeAndLinkStats, String> {
     let data = state.lock().await;
