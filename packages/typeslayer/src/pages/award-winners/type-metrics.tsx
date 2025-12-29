@@ -82,6 +82,7 @@ export function TypeMetricsAward({ awardId }: { awardId: TypeMetricsAwardId }) {
 
   const [selectedIndex, setSelectedIndex] = useState(0);
   const { data: typeGraph, isLoading } = useTypeGraphLimitedNodeAndLinkStats();
+  console.log(typeGraph);
 
   const hasData = typeGraph !== undefined;
 

@@ -10,7 +10,7 @@ use crate::{
         init::{
             init_analyze_trace, init_auth_code, init_cpu_profile, init_project_root,
             init_selected_tsconfig_with, init_session_id, init_settings, init_trace_json,
-            init_type_graph, init_types_json, init_verbose,
+            init_type_graph, init_types_json, init_verbose, init_version_and_maybe_clear_outputs,
         },
         settings::Settings,
     },
@@ -66,6 +66,8 @@ pub struct AppData {
 impl AppData {
     pub async fn new(data_dir: PathBuf, mode: AppMode) -> Result<Self, String> {
         info!("[AppData::new] using base data_dir: {}", data_dir.display());
+        let version = init_version_and_maybe_clear_outputs(&data_dir).await?;
+
         // Build a single LayerCake and reuse it across init functions
         let mut cake = LayerCake::new(LayerCakeInitArgs {
             config_filename: CONFIG_FILENAME,
@@ -107,7 +109,7 @@ impl AppData {
             type_graph,
             data_dir,
             platform,
-            version: env!("CARGO_PKG_VERSION").to_string(),
+            version,
             session_id,
             mode,
         };

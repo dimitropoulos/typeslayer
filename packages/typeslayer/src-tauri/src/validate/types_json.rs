@@ -351,7 +351,6 @@ pub fn parse_types_json(
 
     parsed.insert(
         0,
-        // TODO: do a better job of splitting this up
         ResolvedType {
             id: 0,
             flags: vec![],
