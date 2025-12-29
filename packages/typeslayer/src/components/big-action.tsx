@@ -1,4 +1,4 @@
-import { LockReset } from "@mui/icons-material";
+import LockReset from "@mui/icons-material/LockReset";
 import { Box, Chip, Stack, useTheme } from "@mui/material";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";

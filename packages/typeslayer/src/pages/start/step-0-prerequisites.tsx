@@ -1,4 +1,5 @@
-import { Flag, InfoOutline } from "@mui/icons-material";
+import Flag from "@mui/icons-material/Flag";
+import InfoOutline from "@mui/icons-material/InfoOutline";
 import { Alert, Button, Stack, Typography } from "@mui/material";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";

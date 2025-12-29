@@ -1,4 +1,7 @@
-import { ArrowDownward, ArrowUpward, QueryStats } from "@mui/icons-material";
+import type { SvgIconComponent } from "@mui/icons-material";
+import ArrowDownward from "@mui/icons-material/ArrowDownward";
+import ArrowUpward from "@mui/icons-material/ArrowUpward";
+import QueryStats from "@mui/icons-material/QueryStats";
 import {
   Box,
   List,
@@ -6,14 +9,12 @@ import {
   ListSubheader,
   Paper,
   Stack,
-  type SvgIconTypeMap,
   Table,
   TableBody,
   TableCell,
   TableRow,
   Typography,
 } from "@mui/material";
-import type { OverridableComponent } from "@mui/material/OverridableComponent";
 import { useQuery } from "@tanstack/react-query";
 import {
   type GroupId,
@@ -157,9 +158,7 @@ const PaperHeading = ({
   icon: Icon,
 }: {
   title: string;
-  icon: OverridableComponent<SvgIconTypeMap> & {
-    muiName: string;
-  };
+  icon: SvgIconComponent;
 }) => {
   return (
     <Stack

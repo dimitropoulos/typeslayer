@@ -1,13 +1,11 @@
 import { Graph } from "@cosmos.gl/graph";
-import {
-  FilterCenterFocus,
-  FilterList,
-  Pause,
-  PlayArrow,
-  Search,
-  Share,
-  ZoomOutMap,
-} from "@mui/icons-material";
+import FilterCenterFocus from "@mui/icons-material/FilterCenterFocus";
+import FilterList from "@mui/icons-material/FilterList";
+import Pause from "@mui/icons-material/Pause";
+import PlayArrow from "@mui/icons-material/PlayArrow";
+import Search from "@mui/icons-material/Search";
+import Share from "@mui/icons-material/Share";
+import ZoomOutMap from "@mui/icons-material/ZoomOutMap";
 import {
   Box,
   Button,

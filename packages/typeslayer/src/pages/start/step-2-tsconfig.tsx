@@ -1,4 +1,4 @@
-import { Flag } from "@mui/icons-material";
+import Flag from "@mui/icons-material/Flag";
 import {
   Button,
   MenuItem,

@@ -1,4 +1,4 @@
-import { Pause } from "@mui/icons-material";
+import Pause from "@mui/icons-material/Pause";
 import {
   Box,
   Divider,

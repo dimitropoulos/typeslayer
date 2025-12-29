@@ -1,4 +1,5 @@
-import { InfoOutline, Restore } from "@mui/icons-material";
+import InfoOutline from "@mui/icons-material/InfoOutline";
+import Restore from "@mui/icons-material/Restore";
 import {
   Button,
   Checkbox,

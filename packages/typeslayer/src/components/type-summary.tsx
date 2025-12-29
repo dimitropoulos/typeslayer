@@ -1,4 +1,6 @@
-import { Hub, Search, Share } from "@mui/icons-material";
+import Hub from "@mui/icons-material/Hub";
+import Search from "@mui/icons-material/Search";
+import Share from "@mui/icons-material/Share";
 import {
   Chip,
   IconButton,
