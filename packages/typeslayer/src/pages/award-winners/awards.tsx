@@ -1,32 +1,5 @@
-import {
-  Air,
-  AltRoute,
-  Calculate,
-  Check,
-  Close,
-  CopyAll,
-  Diversity1,
-  Expand,
-  Extension,
-  FilterListAlt,
-  FindReplace,
-  Input,
-  JoinFull,
-  JoinInner,
-  Key,
-  Lightbulb,
-  Polyline,
-  QuestionMark,
-  RotateRight,
-  SafetyDivider,
-  Search,
-  SettingsBackupRestore,
-  SportsKabaddi,
-  SubdirectoryArrowRight,
-  TrackChanges,
-  Whatshot,
-} from "@mui/icons-material";
 import { Box, Typography } from "@mui/material";
+import { analyzeTraceInfo } from "@typeslayer/analyze-trace/browser";
 import { depthLimitInfo, typeRelationInfo } from "@typeslayer/validate";
 import { InlineCode } from "../../components/inline-code";
 import { useFriendlyPackageName } from "../../hooks/tauri-hooks";
@@ -47,27 +20,27 @@ const doesNotError = (
 
 export const awards = {
   //
-  // TYPE METRICS
+  // TYPE METRICS (source)
   //
 
   source_unionTypes: {
     ...typeRelationInfo.unionTypes.source,
-    icon: JoinFull,
+    icon: typeRelationInfo.unionTypes.icon,
     route: `source-${typeRelationInfo.unionTypes.route}`,
   },
   source_intersectionTypes: {
     ...typeRelationInfo.intersectionTypes.source,
-    icon: JoinInner,
+    icon: typeRelationInfo.intersectionTypes.icon,
     route: `source-${typeRelationInfo.intersectionTypes.route}`,
   },
   source_typeArguments: {
     ...typeRelationInfo.typeArguments.source,
-    icon: SportsKabaddi,
+    icon: typeRelationInfo.typeArguments.icon,
     route: `source-${typeRelationInfo.typeArguments.route}`,
   },
   source_aliasTypeArguments: {
     ...typeRelationInfo.aliasTypeArguments.source,
-    icon: Input,
+    icon: typeRelationInfo.aliasTypeArguments.icon,
     route: `source-${typeRelationInfo.aliasTypeArguments.route}`,
   },
 
@@ -78,102 +51,102 @@ export const awards = {
   target_unionTypes: {
     ...typeRelationInfo.unionTypes.target,
     route: `target-${typeRelationInfo.unionTypes.route}`,
-    icon: JoinFull,
+    icon: typeRelationInfo.unionTypes.icon,
   },
   target_intersectionTypes: {
     ...typeRelationInfo.intersectionTypes.target,
     route: `target-${typeRelationInfo.intersectionTypes.route}`,
-    icon: JoinInner,
+    icon: typeRelationInfo.intersectionTypes.icon,
   },
   target_typeArguments: {
     ...typeRelationInfo.typeArguments.target,
     route: `target-${typeRelationInfo.typeArguments.route}`,
-    icon: SportsKabaddi,
+    icon: typeRelationInfo.typeArguments.icon,
   },
   target_instantiatedType: {
     ...typeRelationInfo.instantiatedType.target,
     route: `target-${typeRelationInfo.instantiatedType.route}`,
-    icon: Polyline,
+    icon: typeRelationInfo.instantiatedType.icon,
   },
   target_aliasTypeArguments: {
     ...typeRelationInfo.aliasTypeArguments.target,
     route: `target-${typeRelationInfo.aliasTypeArguments.route}`,
-    icon: Input,
+    icon: typeRelationInfo.aliasTypeArguments.icon,
   },
   target_conditionalCheckType: {
     ...typeRelationInfo.conditionalCheckType.target,
     route: `target-${typeRelationInfo.conditionalCheckType.route}`,
-    icon: QuestionMark,
+    icon: typeRelationInfo.conditionalCheckType.icon,
   },
   target_conditionalExtendsType: {
     ...typeRelationInfo.conditionalExtendsType.target,
     route: `target-${typeRelationInfo.conditionalExtendsType.route}`,
-    icon: Extension,
+    icon: typeRelationInfo.conditionalExtendsType.icon,
   },
   target_conditionalFalseType: {
     ...typeRelationInfo.conditionalFalseType.target,
     route: `target-${typeRelationInfo.conditionalFalseType.route}`,
-    icon: Close,
+    icon: typeRelationInfo.conditionalFalseType.icon,
   },
   target_conditionalTrueType: {
     ...typeRelationInfo.conditionalTrueType.target,
     route: `target-${typeRelationInfo.conditionalTrueType.route}`,
-    icon: Check,
+    icon: typeRelationInfo.conditionalTrueType.icon,
   },
   target_indexedAccessObjectType: {
     ...typeRelationInfo.indexedAccessObjectType.target,
     route: `target-${typeRelationInfo.indexedAccessObjectType.route}`,
-    icon: Search,
+    icon: typeRelationInfo.indexedAccessObjectType.icon,
   },
   target_indexedAccessIndexType: {
     ...typeRelationInfo.indexedAccessIndexType.target,
     route: `target-${typeRelationInfo.indexedAccessIndexType.route}`,
-    icon: Search,
+    icon: typeRelationInfo.indexedAccessIndexType.icon,
   },
   target_keyofType: {
     ...typeRelationInfo.keyofType.target,
     route: `target-${typeRelationInfo.keyofType.route}`,
-    icon: Key,
+    icon: typeRelationInfo.keyofType.icon,
   },
   target_reverseMappedSourceType: {
     ...typeRelationInfo.reverseMappedSourceType.target,
     route: `target-${typeRelationInfo.reverseMappedSourceType.route}`,
-    icon: SettingsBackupRestore,
+    icon: typeRelationInfo.reverseMappedSourceType.icon,
   },
   target_reverseMappedMappedType: {
     ...typeRelationInfo.reverseMappedMappedType.target,
     route: `target-${typeRelationInfo.reverseMappedMappedType.route}`,
-    icon: SettingsBackupRestore,
+    icon: typeRelationInfo.reverseMappedMappedType.icon,
   },
   target_reverseMappedConstraintType: {
     ...typeRelationInfo.reverseMappedConstraintType.target,
     route: `target-${typeRelationInfo.reverseMappedConstraintType.route}`,
-    icon: SettingsBackupRestore,
+    icon: typeRelationInfo.reverseMappedConstraintType.icon,
   },
   target_substitutionBaseType: {
     ...typeRelationInfo.substitutionBaseType.target,
     route: `target-${typeRelationInfo.substitutionBaseType.route}`,
-    icon: FindReplace,
+    icon: typeRelationInfo.substitutionBaseType.icon,
   },
   target_constraintType: {
     ...typeRelationInfo.constraintType.target,
     route: `target-${typeRelationInfo.constraintType.route}`,
-    icon: FilterListAlt,
+    icon: typeRelationInfo.constraintType.icon,
   },
   target_evolvingArrayElementType: {
     ...typeRelationInfo.evolvingArrayElementType.target,
     route: `target-${typeRelationInfo.evolvingArrayElementType.route}`,
-    icon: TrackChanges,
+    icon: typeRelationInfo.evolvingArrayElementType.icon,
   },
   target_evolvingArrayFinalType: {
     ...typeRelationInfo.evolvingArrayFinalType.target,
     route: `target-${typeRelationInfo.evolvingArrayFinalType.route}`,
-    icon: TrackChanges,
+    icon: typeRelationInfo.evolvingArrayFinalType.icon,
   },
   target_aliasType: {
     ...typeRelationInfo.aliasType.target,
     route: `target-${typeRelationInfo.aliasType.route}`,
-    icon: AltRoute,
+    icon: typeRelationInfo.aliasType.icon,
   },
 
   //
@@ -181,11 +154,7 @@ export const awards = {
   //
 
   perf_hotSpots: {
-    title: "Hot Spots",
-    description:
-      "Files or paths where the TypeScript compiler spent the most cumulative time. Use these to target expensive type-checking work for refactors.",
-    icon: Whatshot,
-    route: "hot-spots",
+    ...analyzeTraceInfo.hotSpots,
   },
 
   //
@@ -218,7 +187,7 @@ export const awards = {
         </Typography>
       </Box>
     ),
-    icon: Lightbulb,
+    icon: depthLimitInfo.instantiateType_DepthLimit.icon,
   },
   recursiveTypeRelatedTo_DepthLimit: {
     ...depthLimitInfo.recursiveTypeRelatedTo_DepthLimit,
@@ -233,7 +202,7 @@ export const awards = {
         {doesNotError}
       </Box>
     ),
-    icon: Diversity1,
+    icon: depthLimitInfo.recursiveTypeRelatedTo_DepthLimit.icon,
   },
   typeRelatedToDiscriminatedType_DepthLimit: {
     ...depthLimitInfo.typeRelatedToDiscriminatedType_DepthLimit,
@@ -258,7 +227,7 @@ export const awards = {
         {doesNotError}
       </Box>
     ),
-    icon: SafetyDivider,
+    icon: depthLimitInfo.typeRelatedToDiscriminatedType_DepthLimit.icon,
   },
   checkCrossProductUnion_DepthLimit: {
     ...depthLimitInfo.checkCrossProductUnion_DepthLimit,
@@ -281,7 +250,7 @@ export const awards = {
         </Typography>
       </Box>
     ),
-    icon: Calculate,
+    icon: depthLimitInfo.checkCrossProductUnion_DepthLimit.icon,
   },
   checkTypeRelatedTo_DepthLimit: {
     ...depthLimitInfo.checkTypeRelatedTo_DepthLimit,
@@ -316,7 +285,7 @@ export const awards = {
         </Typography>
       </Box>
     ),
-    icon: RotateRight,
+    icon: depthLimitInfo.checkTypeRelatedTo_DepthLimit.icon,
   },
   getTypeAtFlowNode_DepthLimit: {
     ...depthLimitInfo.getTypeAtFlowNode_DepthLimit,
@@ -341,7 +310,7 @@ export const awards = {
         </Typography>
       </Box>
     ),
-    icon: Air,
+    icon: depthLimitInfo.getTypeAtFlowNode_DepthLimit.icon,
   },
   removeSubtypes_DepthLimit: {
     ...depthLimitInfo.removeSubtypes_DepthLimit,
@@ -365,7 +334,7 @@ export const awards = {
         </Typography>
       </Box>
     ),
-    icon: SubdirectoryArrowRight,
+    icon: depthLimitInfo.removeSubtypes_DepthLimit.icon,
   },
   traceUnionsOrIntersectionsTooLarge_DepthLimit: {
     ...depthLimitInfo.traceUnionsOrIntersectionsTooLarge_DepthLimit,
@@ -380,7 +349,7 @@ export const awards = {
         {doesNotError}
       </Box>
     ),
-    icon: Expand,
+    icon: depthLimitInfo.traceUnionsOrIntersectionsTooLarge_DepthLimit.icon,
   },
 
   //
@@ -388,11 +357,7 @@ export const awards = {
   //
 
   bundle_duplicatePackages: {
-    title: "Duplicate Packages",
-    description:
-      "Packages that appear multiple times in the bundle (different install paths / versions). Consolidate to reduce size & divergence.",
-    icon: CopyAll,
-    route: "duplicate-packages",
+    ...analyzeTraceInfo.duplicatePackages,
   },
 } as const;
 

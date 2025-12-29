@@ -1,4 +1,7 @@
-import { ExpandMore, Help, Pause, TaskAlt } from "@mui/icons-material";
+import ExpandMore from "@mui/icons-material/ExpandMore";
+import Help from "@mui/icons-material/Help";
+import Pause from "@mui/icons-material/Pause";
+import TaskAlt from "@mui/icons-material/TaskAlt";
 import {
   Accordion,
   AccordionDetails,

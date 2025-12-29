@@ -1,3 +1,22 @@
+import type { SvgIconComponent } from "@mui/icons-material";
+
+import AltRoute from "@mui/icons-material/AltRoute";
+import Check from "@mui/icons-material/Check";
+import Close from "@mui/icons-material/Close";
+import Extension from "@mui/icons-material/Extension";
+import FilterListAlt from "@mui/icons-material/FilterListAlt";
+import FindReplace from "@mui/icons-material/FindReplace";
+import Input from "@mui/icons-material/Input";
+import JoinFull from "@mui/icons-material/JoinFull";
+import JoinInner from "@mui/icons-material/JoinInner";
+import Key from "@mui/icons-material/Key";
+import Polyline from "@mui/icons-material/Polyline";
+import QuestionMark from "@mui/icons-material/QuestionMark";
+import Search from "@mui/icons-material/Search";
+import SettingsBackupRestore from "@mui/icons-material/SettingsBackupRestore";
+import SportsKabaddi from "@mui/icons-material/SportsKabaddi";
+import TrackChanges from "@mui/icons-material/TrackChanges";
+
 import { z } from "zod/v4";
 import { location, typeId } from "./utils";
 
@@ -112,6 +131,7 @@ export interface TypeRelationInfo {
     unit: string;
   };
   route: string;
+  icon: SvgIconComponent;
 }
 
 export const typeRelationOrder = [
@@ -151,6 +171,7 @@ export const typeRelationInfo = {
       description: "The type most frequently included in unions.",
     },
     route: "union-types",
+    icon: JoinFull,
   },
   intersectionTypes: {
     source: {
@@ -165,6 +186,7 @@ export const typeRelationInfo = {
       description: "The type most frequently included in intersections.",
     },
     route: "intersection-types",
+    icon: JoinInner,
   },
   typeArguments: {
     source: {
@@ -179,6 +201,7 @@ export const typeRelationInfo = {
       description:
         "The type most frequently used as a type argument (indicating complex generic interactions).",
     },
+    icon: SportsKabaddi,
     route: "type-arguments",
   },
   instantiatedType: {
@@ -193,6 +216,7 @@ export const typeRelationInfo = {
       description:
         "Type that was instantiated the most, indicating high reuse.",
     },
+    icon: Polyline,
     route: "instantiated-type",
   },
   aliasTypeArguments: {
@@ -208,6 +232,7 @@ export const typeRelationInfo = {
       description:
         'The types most often used as generic arguments.  The TypeScript compiler calls this "alias type-arguments."  There are technically other kinds of types that can show up here, but it\'s mostly generic type arguments.',
     },
+    icon: Input,
     route: "alias-type-arguments",
   },
   conditionalCheckType: {
@@ -222,6 +247,7 @@ export const typeRelationInfo = {
       description:
         "Type most often used as the checked type in conditional types (the `T` in `T extends U ? A : B`).",
     },
+    icon: QuestionMark,
     route: "conditional-check-type",
   },
   conditionalExtendsType: {
@@ -236,6 +262,7 @@ export const typeRelationInfo = {
       description:
         "Type most frequently appearing on the `extends` side of conditional types (the `U` in `T extends U ? A : B`)), indicating common constraint relationships.",
     },
+    icon: Extension,
     route: "conditional-extends-type",
   },
   conditionalFalseType: {
@@ -250,6 +277,7 @@ export const typeRelationInfo = {
       description:
         "Type that most often appears as the `false` branch result of conditional types. Indicates fallback/resolution patterns.",
     },
+    icon: Close,
     route: "conditional-false-type",
   },
   conditionalTrueType: {
@@ -264,6 +292,7 @@ export const typeRelationInfo = {
       description:
         "Type that most often appears as the `true` branch result of conditional types. Indicates favored resolution outcomes.",
     },
+    icon: Check,
     route: "conditional-true-type",
   },
   indexedAccessObjectType: {
@@ -278,6 +307,7 @@ export const typeRelationInfo = {
       description:
         "Type most frequently used as the object operand in indexed access (e.g. `T[K]`), indicating dynamic property shape usage.",
     },
+    icon: Search,
     route: "indexed-access-object-type",
   },
   indexedAccessIndexType: {
@@ -292,6 +322,7 @@ export const typeRelationInfo = {
       description:
         "Type most frequently used as the index operand in indexed access of a tuple (e.g. `SomeTuple[K]`).",
     },
+    icon: Search,
     route: "indexed-access-index-type",
   },
   keyofType: {
@@ -306,6 +337,7 @@ export const typeRelationInfo = {
       description:
         "Type most frequently used within 'keyof' operations, often indicating dynamic property access patterns.",
     },
+    icon: Key,
     route: "keyof-type",
   },
   reverseMappedSourceType: {
@@ -320,6 +352,7 @@ export const typeRelationInfo = {
       description:
         "Type most commonly appearing as the source in reverse-mapped type transforms (utility mapped types in reverse).",
     },
+    icon: SettingsBackupRestore,
     route: "reverse-mapped-source-type",
   },
   reverseMappedMappedType: {
@@ -334,6 +367,7 @@ export const typeRelationInfo = {
       description:
         "Type most commonly produced by reverse-mapped transformations.",
     },
+    icon: SettingsBackupRestore,
     route: "reverse-mapped-mapped-type",
   },
   reverseMappedConstraintType: {
@@ -348,6 +382,7 @@ export const typeRelationInfo = {
       description:
         "Type that often serves as a constraint in reverse-mapped transformations, indicating mapped type bounds.",
     },
+    icon: SettingsBackupRestore,
     route: "reverse-mapped-constraint-type",
   },
   substitutionBaseType: {
@@ -362,6 +397,7 @@ export const typeRelationInfo = {
       description:
         "Type used as a substitution base during type substitution operations, signaling types that commonly serve as generic inference placeholders.",
     },
+    icon: FindReplace,
     route: "substitution-base-type",
   },
   constraintType: {
@@ -376,6 +412,7 @@ export const typeRelationInfo = {
       description:
         "Type most often appearing as a generic constraint (e.g. in `extends` clauses) when resolving generics and conditionals.",
     },
+    icon: FilterListAlt,
     route: "constraint-type",
   },
   evolvingArrayElementType: {
@@ -390,6 +427,7 @@ export const typeRelationInfo = {
       description:
         "Type most commonly used as the evolving array element during array widening/folding operations in inference.",
     },
+    icon: TrackChanges,
     route: "evolving-array-element-type",
   },
   evolvingArrayFinalType: {
@@ -404,6 +442,7 @@ export const typeRelationInfo = {
       description:
         "Type that frequently becomes the final element type after array evolution/widening, useful to spot common widened shapes.",
     },
+    icon: TrackChanges,
     route: "evolving-array-final-type",
   },
   aliasType: {
@@ -418,6 +457,7 @@ export const typeRelationInfo = {
       description:
         "Type most frequently used as an alias target, shows which aliases are heavily reused across the codebase.",
     },
+    icon: AltRoute,
     route: "alias-type",
   },
 } as const satisfies Record<keyof typeof typeRelations, TypeRelationInfo>;

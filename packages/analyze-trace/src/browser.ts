@@ -5,6 +5,7 @@ export type {
 } from "@typeslayer/validate";
 export { ANALYZE_TRACE_FILENAME } from "./constants";
 export type { DepthLimitsRecord } from "./depth-limits";
+export * from "./info";
 export type {
   AbsolutePath,
   AnalyzeTraceOptions,

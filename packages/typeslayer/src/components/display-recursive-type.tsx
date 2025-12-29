@@ -1,9 +1,7 @@
-import {
-  DoubleArrow,
-  FiberManualRecord,
-  KeyboardArrowDown,
-  KeyboardArrowRight,
-} from "@mui/icons-material";
+import DoubleArrow from "@mui/icons-material/DoubleArrow";
+import FiberManualRecord from "@mui/icons-material/FiberManualRecord";
+import KeyboardArrowDown from "@mui/icons-material/KeyboardArrowDown";
+import KeyboardArrowRight from "@mui/icons-material/KeyboardArrowRight";
 import { Alert, AlertTitle, Box, Stack, Typography } from "@mui/material";
 import type { ResolvedType, TypeId } from "@typeslayer/validate";
 import { type FC, type ReactNode, useState } from "react";

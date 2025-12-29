@@ -1,4 +1,6 @@
-import { ContentCopy, Description, Done } from "@mui/icons-material";
+import ContentCopy from "@mui/icons-material/ContentCopy";
+import Description from "@mui/icons-material/Description";
+import Done from "@mui/icons-material/Done";
 import { Box, type BoxProps, IconButton, Tooltip } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { type BundledLanguage, codeToHtml } from "shiki";

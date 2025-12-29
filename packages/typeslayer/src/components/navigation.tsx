@@ -1,18 +1,16 @@
-import {
-  AutoAwesome,
-  AutoStories,
-  Biotech,
-  Dashboard,
-  Description,
-  Dvr,
-  EmojiEvents,
-  Hub,
-  MilitaryTech,
-  PlayCircle,
-  Search,
-  Settings,
-  Speed,
-} from "@mui/icons-material";
+import AutoAwesome from "@mui/icons-material/AutoAwesome";
+import AutoStories from "@mui/icons-material/AutoStories";
+import Biotech from "@mui/icons-material/Biotech";
+import Dashboard from "@mui/icons-material/Dashboard";
+import Description from "@mui/icons-material/Description";
+import Dvr from "@mui/icons-material/Dvr";
+import EmojiEvents from "@mui/icons-material/EmojiEvents";
+import Hub from "@mui/icons-material/Hub";
+import MilitaryTech from "@mui/icons-material/MilitaryTech";
+import PlayCircle from "@mui/icons-material/PlayCircle";
+import Search from "@mui/icons-material/Search";
+import Settings from "@mui/icons-material/Settings";
+import Speed from "@mui/icons-material/Speed";
 import {
   Box,
   Divider,

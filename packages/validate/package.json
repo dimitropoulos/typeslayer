@@ -39,6 +39,8 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@mui/icons-material": "7.3.6",
+    "@mui/material": "7.3.6",
     "zod": "^4.1.13"
   },
   "devDependencies": {

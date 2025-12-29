@@ -1,4 +1,4 @@
-import { ErrorOutline } from "@mui/icons-material";
+import ErrorOutline from "@mui/icons-material/ErrorOutline";
 import { Box, type SxProps, Tooltip, Typography } from "@mui/material";
 
 export const StatPill = ({

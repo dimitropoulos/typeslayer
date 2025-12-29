@@ -41,6 +41,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@mui/icons-material": "7.3.6",
+    "@mui/material": "7.3.6",
     "@typeslayer/validate": "workspace:*",
     "zod": "4.1.13"
   },

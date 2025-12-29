@@ -1,4 +1,5 @@
-import { CameraAlt, Help } from "@mui/icons-material";
+import CameraAlt from "@mui/icons-material/CameraAlt";
+import Help from "@mui/icons-material/Help";
 import {
   Button,
   Dialog,
