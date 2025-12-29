@@ -1,11 +1,13 @@
 use serde::Serialize;
+use ts_rs::TS;
 
 use crate::{
     app_data::{AppData, AppMode},
     utils::get_platform,
 };
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct EventMetadata {
     pub session_id: String,

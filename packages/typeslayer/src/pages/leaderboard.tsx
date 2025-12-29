@@ -1,13 +1,26 @@
+/** biome-ignore-all lint/suspicious/noArrayIndexKey: slim shady just don't give a fuck */
 import type { SvgIconComponent } from "@mui/icons-material";
 import ArrowDownward from "@mui/icons-material/ArrowDownward";
 import ArrowUpward from "@mui/icons-material/ArrowUpward";
+import AttachFile from "@mui/icons-material/AttachFile";
+import DataArray from "@mui/icons-material/DataArray";
+import DataObject from "@mui/icons-material/DataObject";
+import Description from "@mui/icons-material/Description";
+import DriveFileRenameOutline from "@mui/icons-material/DriveFileRenameOutline";
+import FileCopy from "@mui/icons-material/FileCopy";
+import HourglassBottom from "@mui/icons-material/HourglassBottom";
 import QueryStats from "@mui/icons-material/QueryStats";
+import SupervisorAccount from "@mui/icons-material/SupervisorAccount";
+import Timelapse from "@mui/icons-material/Timelapse";
 import {
   Box,
   List,
   ListItemButton,
+  ListItemIcon,
+  ListItemText,
   ListSubheader,
   Paper,
+  Skeleton,
   Stack,
   Table,
   TableBody,
@@ -23,10 +36,13 @@ import {
   type LeaderboardNumber,
   type LeaderboardNumberFormat,
 } from "@typeslayer/analytics";
+import { analyzeTraceInfo } from "@typeslayer/analyze-trace/browser";
+import { depthLimitInfo, typeRelationInfo } from "@typeslayer/validate";
 import { useState } from "react";
 import { InlineCode } from "../components/inline-code";
-import { formatBytesSize } from "../components/utils";
+import { formatBytesSize, randBetween } from "../components/utils";
 import { panelBackground } from "../theme";
+import type { LinkKind } from "../types/type-graph";
 
 const useLeaderboardStats = () => {
   return useQuery<LeaderboardNumber[]>({
@@ -113,7 +129,9 @@ export const LeaderboardPage = () => {
             context on "how big is way too big" is actually tangibly useful.
           </Typography>
         </Stack>
-        {stats ? (
+        {isLoading ? (
+          <LeaderboardNavSkeleton />
+        ) : stats ? (
           <Stack
             sx={{
               overflowY: "auto",
@@ -123,10 +141,10 @@ export const LeaderboardPage = () => {
             }}
           >
             {sortedStats.map(([groupId, stats]) => (
-              <List key={groupId} sx={{}}>
+              <List key={groupId}>
                 <ListSubheader>{groupInfo[groupId].label}</ListSubheader>
                 {stats.map(leaderboardNumber => (
-                  <LeaderboardNumberCard
+                  <LeaderboardNumberListItem
                     key={leaderboardNumber.id}
                     leaderboardNumber={leaderboardNumber}
                     isSelected={selectedId === leaderboardNumber.id}
@@ -139,17 +157,146 @@ export const LeaderboardPage = () => {
               </List>
             ))}
           </Stack>
-        ) : isLoading ? (
-          <span>loading...</span>
         ) : (
           <span>error</span>
         )}
       </Stack>
 
-      {selected ? (
+      {isLoading ? (
+        <SelectedSkeleton />
+      ) : selected ? (
         <SelectedLeaderboardNumberDetails selected={selected} />
       ) : null}
     </Stack>
+  );
+};
+
+const SelectedSkeleton = () => {
+  return (
+    <Stack
+      sx={{
+        margin: "32px",
+        overflow: "hidden",
+        flexShrink: 0,
+        flexDirection: "column",
+        flex: 1,
+        minHeight: 0,
+      }}
+    >
+      <Stack
+        sx={{
+          flexDirection: "row",
+          alignItems: "flex-end",
+          marginBottom: "10px",
+          marginTop: "2px",
+        }}
+      >
+        <Skeleton variant="rectangular" height={24} width={112} />
+        <Skeleton
+          variant="rectangular"
+          height={18}
+          width={40}
+          sx={{ marginLeft: "16px" }}
+        />
+      </Stack>
+
+      <Skeleton
+        variant="rectangular"
+        height={20}
+        width={200}
+        sx={{ marginTop: "2px", marginBottom: 2 }}
+      />
+
+      <Skeleton variant="rectangular" height={162} width={368} sx={{ mb: 2 }} />
+      <Stack sx={{ flexDirection: "row", gap: 2 }}>
+        <Skeleton variant="rectangular" height={300} width={176} />
+        <Skeleton variant="rectangular" height={300} width={176} />
+      </Stack>
+    </Stack>
+  );
+};
+
+const ListSubheaderSkeleton = ({ width }: { width?: number }) => {
+  return (
+    <ListSubheader>
+      <Skeleton
+        sx={{
+          height: 20,
+          my: "6px",
+          width: width ?? randBetween(10, 150),
+          backgroundColor: t => `${t.palette.secondary.dark}40`,
+        }}
+      />
+    </ListSubheader>
+  );
+};
+
+const listItemButtonSx = ({
+  isHovered,
+  isSelected,
+}: {
+  isHovered: boolean;
+  isSelected: boolean;
+}) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  borderColor: isSelected ? "primary.main" : "transparent",
+  backgroundColor: isHovered || isSelected ? "action.hover" : "inherit",
+  cursor: "pointer",
+  overflow: "hidden",
+});
+
+const ListItemSkeleton = ({ isSelected = false }: { isSelected?: boolean }) => {
+  return (
+    <ListItemButton
+      sx={{
+        ...listItemButtonSx({ isSelected, isHovered: false }),
+        mr: 2.5,
+      }}
+      dense
+    >
+      <ListItemIcon sx={{ minWidth: 24, pr: 1 }}>
+        <Skeleton variant="circular" width={20} height={20} />
+      </ListItemIcon>
+
+      <Typography>
+        <Skeleton
+          sx={{
+            height: 24,
+            my: "2px",
+            width: randBetween(70, 150),
+          }}
+        />
+      </Typography>
+      <span style={{ flexGrow: 1 }} />
+
+      <Skeleton
+        sx={{
+          width: randBetween(30, 100),
+          backgroundColor: t => `${t.palette.secondary.dark}40`,
+        }}
+      />
+    </ListItemButton>
+  );
+};
+
+const LeaderboardNavSkeleton = () => {
+  return (
+    <List>
+      <ListSubheaderSkeleton width={90} />
+      {Array.from({ length: 5 }).map((_, i) => (
+        <ListItemSkeleton key={i} isSelected={i === 0} />
+      ))}
+      <ListSubheaderSkeleton width={65} />
+      {Array.from({ length: 3 }).map((_, i) => (
+        <ListItemSkeleton key={i} />
+      ))}
+      <ListSubheaderSkeleton width={155} />
+      {Array.from({ length: 100 }).map((_, i) => (
+        <ListItemSkeleton key={i} />
+      ))}
+    </List>
   );
 };
 
@@ -306,7 +453,6 @@ const GroupOfTen = ({
                 gap: 1,
                 justifyContent: "flex-end",
               }}
-              // biome-ignore lint/suspicious/noArrayIndexKey: don't care, bro
               key={index}
             >
               <InlineCode>{value}</InlineCode>
@@ -341,7 +487,49 @@ const leaderboardNumberFormatter =
     }
   };
 
-const LeaderboardNumberCard = ({
+const getItemIcon = (id: LeaderboardNumber["id"]) => {
+  if (id.startsWith("source_relations") || id.startsWith("target_relations")) {
+    // get the data after the last |
+    const lookup = id.split("|")[2] as LinkKind;
+    const entry = typeRelationInfo[lookup as keyof typeof typeRelationInfo];
+    if (entry) {
+      return entry.icon;
+    }
+  }
+
+  if (Object.keys(depthLimitInfo).includes(id)) {
+    return depthLimitInfo[id as keyof typeof depthLimitInfo].icon;
+  }
+
+  if (Object.keys(analyzeTraceInfo).includes(id)) {
+    return analyzeTraceInfo[id as keyof typeof analyzeTraceInfo].icon;
+  }
+
+  switch (id) {
+    case "total-types":
+      return DataObject;
+    case "total-relations":
+      return SupervisorAccount;
+    case "time-to-typecheck":
+      return HourglassBottom;
+    case "max-single-file-duration":
+      return Timelapse;
+    case "total-files":
+      return AttachFile;
+    case "types-json-size":
+      return Description;
+    case "trace-json-size":
+      return Description;
+    case "trace-count":
+      return DriveFileRenameOutline;
+    case "duplicatePackageInstances":
+      return FileCopy;
+    default:
+      return DataArray;
+  }
+};
+
+const LeaderboardNumberListItem = ({
   leaderboardNumber,
   isSelected,
   isHovered,
@@ -362,23 +550,22 @@ const LeaderboardNumberCard = ({
 
   const format = leaderboardNumberFormatter(leaderboardNumber.format);
 
+  const ItemIcon = getItemIcon(leaderboardNumber.id);
+
   return (
     <ListItemButton
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       onClick={onClick}
-      sx={{
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        borderColor: isSelected ? "primary.main" : "transparent",
-        backgroundColor: isHovered || isSelected ? "action.hover" : "inherit",
-        cursor: "pointer",
-        overflow: "hidden",
-      }}
+      sx={listItemButtonSx({ isSelected, isHovered })}
       dense
     >
-      <Typography>{leaderboardNumber.label}</Typography>
+      <ListItemIcon sx={{ minWidth: 24, pr: 1 }}>
+        <ItemIcon />
+      </ListItemIcon>
+
+      <ListItemText primary={leaderboardNumber.label} />
+
       <InlineCode
         style={{
           fontSize: 13,

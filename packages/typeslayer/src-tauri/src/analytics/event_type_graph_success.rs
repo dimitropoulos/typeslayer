@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use strum::VariantArray;
 use tracing::debug;
+use ts_rs::TS;
 
 use crate::{
     analytics::{
@@ -13,7 +14,8 @@ use crate::{
     type_graph::{LinkKind, LinkKindData},
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct StrippedDirectionData {
     pub max: usize,
@@ -22,7 +24,8 @@ pub struct StrippedDirectionData {
 
 /// Stats for a specific link kind: ordered list of (target_id, [source_ids])
 /// Ordered by number of sources (most connected first)
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct StrippedLinkKindData {
     pub by_target: StrippedDirectionData,
@@ -47,7 +50,8 @@ impl From<&LinkKindData> for StrippedLinkKindData {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct EventTypeGraphSuccessData {
     pub duration: u64,
@@ -56,9 +60,11 @@ pub struct EventTypeGraphSuccessData {
     pub link_kind_data_by_kind: HashMap<LinkKind, StrippedLinkKindData>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct EventTypeGraphSuccess {
+    #[ts(type = "\"type_graph_success\"")]
     pub name: &'static str,
     #[serde(flatten)]
     pub metadata: EventMetadata,

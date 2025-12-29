@@ -173,3 +173,10 @@ export const typeScriptCompilerVariants = ["tsc", "vue-tsc", "tsgo"] as const;
 
 export type TypeScriptCompilerVariant =
   (typeof typeScriptCompilerVariants)[number];
+
+/**
+ * Generates a random integer between min (inclusive) and max (inclusive)
+ */
+export const randBetween = (min: number, max: number) => {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+};

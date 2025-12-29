@@ -1,9 +1,28 @@
+import type {
+  EventAnalyzeTraceSuccess,
+  EventGenerateTraceSuccess,
+  EventTypeGraphSuccess,
+} from "@typeslayer/rust-types";
 import {
   depthLimitInfo,
   typeRelationInfo,
   typeRelationOrder,
 } from "@typeslayer/validate";
 import type { Env } from "./types";
+
+/** some moron on YouTube showed me how to do this.  fuck that guy. */
+type Path<T> =
+  T extends object
+    ? {
+        [K in keyof T & string]:
+          | [K]
+          | (Path<T[K]> extends infer P
+              ? P extends string[]
+                ? [K, ...P]
+                : never
+              : never)
+      }[keyof T & string]
+    : never
 
 export const groupIds = [
   "compilation",
@@ -17,6 +36,11 @@ export const groupIds = [
   "bundle-implications",
 ] as const;
 
+type Events =
+  | EventGenerateTraceSuccess
+  | EventAnalyzeTraceSuccess
+  | EventTypeGraphSuccess;
+
 export type GroupId = (typeof groupIds)[number];
 
 const typeRelationMetrics = (
@@ -25,18 +49,17 @@ const typeRelationMetrics = (
 ) => {
   const direction = group === "source_relations" ? "byTarget" : "bySource";
   const infoPath = group === "source_relations" ? "source" : "target";
-  return typeRelationOrder.map(
-    linkKind =>
-      ({
-        id: `${group}|${sub}|${linkKind}`,
-        label: typeRelationInfo[linkKind][infoPath].title,
-        subtitle: typeRelationInfo[linkKind][infoPath].description,
-        groupId: `${group}|${sub}`,
-        format: "count",
-        eventName: "type_graph_success",
-        dataPath: `$.linkKindDataByKind.${linkKind}.${direction}.${sub}`,
-      }) as Query,
-  );
+  return typeRelationOrder.map(linkKind => {
+    return {
+      id: `${group}|${sub}|${linkKind}`,
+      label: typeRelationInfo[linkKind][infoPath].title,
+      subtitle: typeRelationInfo[linkKind][infoPath].description,
+      groupId: `${group}|${sub}`,
+      format: "count",
+      eventName: "type_graph_success",
+      dataPath: ["linkKindDataByKind", linkKind, direction, sub] as Path<EventTypeGraphSuccess['data']>,
+    } satisfies Query<EventTypeGraphSuccess>
+  });
 };
 
 export const groupInfo = {
@@ -50,8 +73,8 @@ export const groupInfo = {
         groupId: "compilation",
         format: "count",
         eventName: "type_graph_success",
-        dataPath: "$.nodeCount",
-      },
+        dataPath: ["nodeCount"],
+      } satisfies Query<EventTypeGraphSuccess>,
       {
         id: "total-relations",
         label: "Total Relations",
@@ -59,8 +82,8 @@ export const groupInfo = {
         groupId: "compilation",
         format: "count",
         eventName: "type_graph_success",
-        dataPath: "$.linkCount",
-      },
+        dataPath: ["linkCount"],
+      } satisfies Query<EventTypeGraphSuccess>,
       {
         id: "time-to-typecheck",
         label: "Time To Typecheck",
@@ -68,8 +91,8 @@ export const groupInfo = {
         groupId: "compilation",
         format: "milliseconds",
         eventName: "analyze_trace_success",
-        dataPath: "$.fileStatistics.totalDuration",
-      },
+        dataPath: ["fileStatistics", "totalDuration"],
+      } satisfies Query<EventAnalyzeTraceSuccess>,
       {
         id: "max-single-file-duration",
         label: "Max Single File Duration",
@@ -77,8 +100,8 @@ export const groupInfo = {
         groupId: "compilation",
         format: "milliseconds",
         eventName: "analyze_trace_success",
-        dataPath: "$.fileStatistics.maxDuration",
-      },
+        dataPath: ["fileStatistics", "maxDuration"],
+      } satisfies Query<EventAnalyzeTraceSuccess>,
       {
         id: "total-files",
         label: "Total Files",
@@ -86,8 +109,8 @@ export const groupInfo = {
         groupId: "compilation",
         format: "count",
         eventName: "analyze_trace_success",
-        dataPath: "$.fileStatistics.totalFiles",
-      },
+        dataPath: ["fileStatistics", "totalFiles"],
+      } satisfies Query<EventAnalyzeTraceSuccess>,
     ],
   },
 
@@ -101,8 +124,8 @@ export const groupInfo = {
         groupId: "raw-data",
         format: "bytes",
         eventName: "generate_trace_success",
-        dataPath: "$.typesJsonFileSize",
-      },
+        dataPath: ["typesJsonFileSize"],
+      } satisfies Query<EventGenerateTraceSuccess>,
       {
         id: "trace-json-size",
         label: "Trace JSON Size",
@@ -110,8 +133,8 @@ export const groupInfo = {
         groupId: "raw-data",
         format: "bytes",
         eventName: "generate_trace_success",
-        dataPath: "$.traceJsonFileSize",
-      },
+        dataPath: ["traceJsonFileSize"],
+      } satisfies Query<EventGenerateTraceSuccess>,
       {
         id: "trace-count",
         label: "Trace Count",
@@ -119,8 +142,8 @@ export const groupInfo = {
         groupId: "raw-data",
         format: "count",
         eventName: "generate_trace_success",
-        dataPath: "$.traceCount",
-      },
+        dataPath: ["traceCount"],
+      } satisfies Query<EventGenerateTraceSuccess>,
     ],
   },
 
@@ -148,14 +171,14 @@ export const groupInfo = {
     label: "Performance Metrics",
     queries: [
       {
-        id: "total-hotsponts",
+        id: "hotSpots",
         label: "Total Hotspots",
         subtitle: "hotspot files in a project",
         groupId: "performance-metrics",
         format: "count",
         eventName: "analyze_trace_success",
-        dataPath: "$.totalHotspots",
-      },
+        dataPath: ["totalHotspots"],
+      } satisfies Query<EventAnalyzeTraceSuccess>,
     ],
   },
 
@@ -170,9 +193,11 @@ export const groupInfo = {
         groupId: "type-level-limits",
         format: "count",
         eventName: "analyze_trace_success",
-        dataPath:
-          "$.depthLimitCounts.traceUnionsOrIntersectionsTooLarge_DepthLimit",
-      },
+        dataPath: [
+          "depthLimitCounts",
+          "traceUnionsOrIntersectionsTooLarge_DepthLimit",
+        ],
+      } satisfies Query<EventAnalyzeTraceSuccess>,
       {
         id: "getTypeAtFlowNode_DepthLimit",
         label: depthLimitInfo.getTypeAtFlowNode_DepthLimit.title,
@@ -180,8 +205,8 @@ export const groupInfo = {
         groupId: "type-level-limits",
         format: "count",
         eventName: "analyze_trace_success",
-        dataPath: "$.depthLimitCounts.getTypeAtFlowNode_DepthLimit",
-      },
+        dataPath: ["depthLimitCounts", "getTypeAtFlowNode_DepthLimit"],
+      } satisfies Query<EventAnalyzeTraceSuccess>,
       {
         id: "instantiateType_DepthLimit",
         label: depthLimitInfo.instantiateType_DepthLimit.title,
@@ -189,8 +214,8 @@ export const groupInfo = {
         groupId: "type-level-limits",
         format: "count",
         eventName: "analyze_trace_success",
-        dataPath: "$.depthLimitCounts.instantiateType_DepthLimit",
-      },
+        dataPath: ["depthLimitCounts", "instantiateType_DepthLimit"],
+      } satisfies Query<EventAnalyzeTraceSuccess>,
       {
         id: "checkTypeRelatedTo_DepthLimit",
         label: depthLimitInfo.checkTypeRelatedTo_DepthLimit.title,
@@ -198,8 +223,8 @@ export const groupInfo = {
         groupId: "type-level-limits",
         format: "count",
         eventName: "analyze_trace_success",
-        dataPath: "$.depthLimitCounts.checkTypeRelatedTo_DepthLimit",
-      },
+        dataPath: ["depthLimitCounts", "checkTypeRelatedTo_DepthLimit"],
+      } satisfies Query<EventAnalyzeTraceSuccess>,
       {
         id: "checkCrossProductUnion_DepthLimit",
         label: depthLimitInfo.checkCrossProductUnion_DepthLimit.title,
@@ -207,8 +232,8 @@ export const groupInfo = {
         groupId: "type-level-limits",
         format: "count",
         eventName: "analyze_trace_success",
-        dataPath: "$.depthLimitCounts.checkCrossProductUnion_DepthLimit",
-      },
+        dataPath: ["depthLimitCounts", "checkCrossProductUnion_DepthLimit"],
+      } satisfies Query<EventAnalyzeTraceSuccess>,
       {
         id: "removeSubtypes_DepthLimit",
         label: depthLimitInfo.removeSubtypes_DepthLimit.title,
@@ -216,8 +241,8 @@ export const groupInfo = {
         groupId: "type-level-limits",
         format: "count",
         eventName: "analyze_trace_success",
-        dataPath: "$.depthLimitCounts.removeSubtypes_DepthLimit",
-      },
+        dataPath: ["depthLimitCounts", "removeSubtypes_DepthLimit"],
+      } satisfies Query<EventAnalyzeTraceSuccess>,
       {
         id: "typeRelatedToDiscriminatedType_DepthLimit",
         label: depthLimitInfo.typeRelatedToDiscriminatedType_DepthLimit.title,
@@ -225,9 +250,11 @@ export const groupInfo = {
         groupId: "type-level-limits",
         format: "count",
         eventName: "analyze_trace_success",
-        dataPath:
-          "$.depthLimitCounts.typeRelatedToDiscriminatedType_DepthLimit",
-      },
+        dataPath: [
+          "depthLimitCounts",
+          "typeRelatedToDiscriminatedType_DepthLimit",
+        ],
+      } satisfies Query<EventAnalyzeTraceSuccess>,
       {
         id: "recursiveTypeRelatedTo_DepthLimit",
         label: depthLimitInfo.recursiveTypeRelatedTo_DepthLimit.title,
@@ -235,8 +262,8 @@ export const groupInfo = {
         groupId: "type-level-limits",
         format: "count",
         eventName: "analyze_trace_success",
-        dataPath: "$.depthLimitCounts.recursiveTypeRelatedTo_DepthLimit",
-      },
+        dataPath: ["depthLimitCounts", "recursiveTypeRelatedTo_DepthLimit"],
+      } satisfies Query<EventAnalyzeTraceSuccess>,
     ],
   },
 
@@ -244,41 +271,35 @@ export const groupInfo = {
     label: "Bundle Implications",
     queries: [
       {
-        id: "total-duplicate-packages",
+        id: "duplicatePackages",
         label: "Total Duplicate Packages",
         subtitle: "total number of duplicate packages",
         groupId: "bundle-implications",
         format: "count",
         eventName: "analyze_trace_success",
-        dataPath: "$.totalDuplicatePackages",
-      },
+        dataPath: ["totalDuplicatePackages"],
+      } satisfies Query<EventAnalyzeTraceSuccess>,
       {
-        id: "Max Duplicated Package Instances",
+        id: "duplicatePackageInstances",
         label: "Max Duplicated Package Instances",
         subtitle: "the max times a package is duplicated",
         groupId: "bundle-implications",
         format: "count",
         eventName: "analyze_trace_success",
-        dataPath: "$.mostDuplicatedPackageInstances",
-      },
+        dataPath: ["mostDuplicatedPackageInstances"],
+      } satisfies Query<EventAnalyzeTraceSuccess>,
     ],
   },
-} satisfies Record<
-  GroupId,
-  {
-    label: string;
-    queries: Query[];
-  }
->;
+}
 
-type Query = {
+type Query<Event extends Events> = {
   id: string;
   label: string;
   subtitle: string;
   groupId: GroupId;
   format: LeaderboardNumberFormat;
-  eventName: string;
-  dataPath: `$.${string}`;
+  eventName: Event["name"];
+  dataPath: Path<Event["data"]>;
 };
 
 export const queries = [
@@ -291,7 +312,7 @@ export const queries = [
   ...groupInfo["performance-metrics"].queries,
   ...groupInfo["type-level-limits"].queries,
   ...groupInfo["bundle-implications"].queries,
-] satisfies Query[];
+] as const;
 
 export type LeaderboardNumberFormat = "count" | "bytes" | "milliseconds";
 
@@ -311,12 +332,16 @@ export type LeaderboardNumber = {
   bottom10: number[];
 };
 
-const getRows = async (env: Env, eventName: string, dataPath: string) => {
+const getRows = async <EventName extends Events["name"]>(
+  env: Env,
+  eventName: EventName,
+  dataPath: string[],
+) => {
   const { results: rows } = await env.DB.prepare(
     `SELECT json_extract(data, '${dataPath}') as value
        FROM events
        WHERE name = '${eventName}'
-         AND json_extract(data, '${dataPath}') IS NOT NULL
+         AND json_extract(data, '${["$", ...dataPath].join(".")}') IS NOT NULL
        ORDER BY value DESC`,
   ).all<{ value: number }>();
 
