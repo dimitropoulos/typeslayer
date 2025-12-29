@@ -685,6 +685,33 @@ export type DepthLimitNames =
   | EventChecktypes__TraceUnionsOrIntersectionsTooLarge_DepthLimit["name"]
   | EventChecktypes__TypeRelatedToDiscriminatedType_DepthLimit["name"];
 
+export const depthLimitInfo = {
+  instantiateType_DepthLimit: {
+    description: "Type Instantiation",
+  },
+  recursiveTypeRelatedTo_DepthLimit: {
+    description: "Recursive Relations",
+  },
+  typeRelatedToDiscriminatedType_DepthLimit: {
+    description: "Discrimination",
+  },
+  checkCrossProductUnion_DepthLimit: {
+    description: "Cross-Product Union",
+  },
+  checkTypeRelatedTo_DepthLimit: {
+    description: "Type Relation Depth",
+  },
+  getTypeAtFlowNode_DepthLimit: {
+    description: "Flow Node Type",
+  },
+  removeSubtypes_DepthLimit: {
+    description: "Remove Subtypes",
+  },
+  traceUnionsOrIntersectionsTooLarge_DepthLimit: {
+    description: "Union/Intersection Size",
+  },
+} satisfies Record<DepthLimitNames, { description: string }>;
+
 /*
  * EMIT PHASE EVENTS
  */

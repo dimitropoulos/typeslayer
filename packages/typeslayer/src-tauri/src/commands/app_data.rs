@@ -185,7 +185,7 @@ pub async fn get_type_graph_nodes_and_links(
             // and filter the links that have typeids (source and/or target) > max_nodes
             // then flatten the results into a single Vec<(TypeId, TypeId)> where the parent is the source
             let filtered_graph_links: Vec<(TypeId, TypeId)> = link_kind_data
-                .child_link_data
+                .by_source
                 .source_to_targets
                 .iter()
                 .filter_map(|child_link| {
@@ -282,8 +282,8 @@ pub async fn get_type_graph_limited_node_and_link_stats(
         .into_iter()
         .map(|(kind, mut kind_data)| {
             // limit parent_link_data.target_to_sources to first 100 entries
-            kind_data.parent_link_data.target_to_sources = kind_data
-                .parent_link_data
+            kind_data.by_target.target_to_sources = kind_data
+                .by_target
                 .target_to_sources
                 .into_iter()
                 .take(100)

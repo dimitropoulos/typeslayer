@@ -78,7 +78,11 @@ export function OpenablePath({
       key={exactLocation}
       onClick={findInPage}
     >
-      {title ? <Typography sx={{...propertyTextStyle, wordBreak: 'keep-all'}}>{title}</Typography> : null}
+      {title ? (
+        <Typography sx={{ ...propertyTextStyle, wordBreak: "keep-all" }}>
+          {title}
+        </Typography>
+      ) : null}
       <Typography
         variant={pathVariant}
         sx={{

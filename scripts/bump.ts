@@ -117,6 +117,8 @@ const updatedCargoToml = cargoToml.replace(
   `version = "${newMainVersion}"`,
 );
 writeFileSync(cargoTomlPath, updatedCargoToml);
-console.log(`  ✅ Cargo.toml: ${oldCargoVersion} → version = "${newMainVersion}"`);
+console.log(
+  `  ✅ Cargo.toml: ${oldCargoVersion} → version = "${newMainVersion}"`,
+);
 
 console.log("\n✨ All packages bumped and synced!");

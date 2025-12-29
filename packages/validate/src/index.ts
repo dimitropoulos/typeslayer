@@ -5,6 +5,7 @@ export {
 } from "./package-name";
 export {
   type DepthLimitNames,
+  depthLimitInfo,
   depthLimits,
   type EventChecktypes__CheckCrossProductUnion_DepthLimit,
   type EventChecktypes__CheckTypeRelatedTo_DepthLimit,

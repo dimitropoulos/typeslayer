@@ -61,13 +61,13 @@ export function RelationAward({
 
   const targets = useMemo(() => {
     return (
-      linkStats?.parentLinkData.targetToSources.map(
+      linkStats?.byTarget.targetToSources.map(
         link => link[targetToSourcesIndex.targetId],
       ) ?? []
     );
   }, [linkStats]);
 
-  const selectedItem = linkStats?.parentLinkData.targetToSources[selectedIndex];
+  const selectedItem = linkStats?.byTarget.targetToSources[selectedIndex];
   const {
     data: partialIndexedTypeRegistry,
     isLoading: isLoadingPartialIndexedTypeRegistry,
@@ -75,7 +75,7 @@ export function RelationAward({
 
   const isLoading = isLoadingTypeGraph || isLoadingPartialIndexedTypeRegistry;
 
-  const hasItems = linkStats && linkStats.parentLinkData.targetToSources.length > 0;
+  const hasItems = linkStats && linkStats.byTarget.targetToSources.length > 0;
 
   const noneFound = (
     <Box
@@ -100,36 +100,40 @@ export function RelationAward({
 
   const items = (
     <List>
-      {linkStats?.parentLinkData.targetToSources.map(([targetId, sourceIds], index) => {
-        const maybeResolvedType = partialIndexedTypeRegistry?.[targetId];
-        return (
-          <ListItemButton
-            selected={index === selectedIndex}
-            onClick={event => handleListItemClick(event, index)}
-            key={targetId}
-          >
-            <ListItemText>
-              <Stack sx={{ flexGrow: 1 }} gap={0}>
-                <TypeSummary
-                  typeId={targetId}
-                  flags={[]}
-                  showFlags={false}
-                  loading={isLoadingPartialIndexedTypeRegistry}
-                  name={getHumanReadableName(maybeResolvedType)}
-                  suppressActions
-                />
-                <Stack gap={0.5}>
-                  <MaybePathCaption maybePath={typeGraph?.pathMap[targetId]} />
-                  <InlineBarGraph
-                    label={`${sourceIds.length.toLocaleString()} ${unit}`}
-                    width={`${(sourceIds.length / linkStats.parentLinkData.max) * 100}%`}
+      {linkStats?.byTarget.targetToSources.map(
+        ([targetId, sourceIds], index) => {
+          const maybeResolvedType = partialIndexedTypeRegistry?.[targetId];
+          return (
+            <ListItemButton
+              selected={index === selectedIndex}
+              onClick={event => handleListItemClick(event, index)}
+              key={targetId}
+            >
+              <ListItemText>
+                <Stack sx={{ flexGrow: 1 }} gap={0}>
+                  <TypeSummary
+                    typeId={targetId}
+                    flags={[]}
+                    showFlags={false}
+                    loading={isLoadingPartialIndexedTypeRegistry}
+                    name={getHumanReadableName(maybeResolvedType)}
+                    suppressActions
                   />
+                  <Stack gap={0.5}>
+                    <MaybePathCaption
+                      maybePath={typeGraph?.pathMap[targetId]}
+                    />
+                    <InlineBarGraph
+                      label={`${sourceIds.length.toLocaleString()} ${unit}`}
+                      width={`${(sourceIds.length / linkStats.byTarget.max) * 100}%`}
+                    />
+                  </Stack>
                 </Stack>
-              </Stack>
-            </ListItemText>
-          </ListItemButton>
-        );
-      })}
+              </ListItemText>
+            </ListItemButton>
+          );
+        },
+      )}
     </List>
   );
 
@@ -324,7 +328,7 @@ const useTypeRelationMetricsValue = () => {
       case "relation_evolvingArrayFinal":
       case "relation_alias": {
         const linkStatProperty = getLinkStatProperty(awardId);
-        return linkStats[linkStatProperty]?.parentLinkData.max ?? 0;
+        return linkStats[linkStatProperty]?.byTarget.max ?? 0;
       }
 
       default:

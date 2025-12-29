@@ -13,19 +13,21 @@ type Environment = keyof typeof ENDPOINTS;
 async function pushEvents(
   ndjsonPath: string,
   environment: Environment = "local",
-  batchSize = 50
+  batchSize = 50,
 ) {
   console.log(`📥 Reading events from: ${ndjsonPath}`);
-  
+
   let content: string;
   try {
     content = readFileSync(ndjsonPath, "utf-8");
   } catch (err: unknown) {
-    console.error(`❌ Failed to read file: ${err instanceof Error ? err.message : String(err)}`);
+    console.error(
+      `❌ Failed to read file: ${err instanceof Error ? err.message : String(err)}`,
+    );
     process.exit(1);
   }
 
-  const lines = content.split("\n").filter((line) => line.trim());
+  const lines = content.split("\n").filter(line => line.trim());
   console.log(`📊 Found ${lines.length} events`);
 
   const events: unknown[] = [];
@@ -34,7 +36,9 @@ async function pushEvents(
       const event = JSON.parse(lines[i]);
       events.push(event);
     } catch (err: unknown) {
-      console.warn(`⚠️  Skipped invalid JSON at line ${i + 1}: ${err instanceof Error ? err.message : String(err)}`);
+      console.warn(
+        `⚠️  Skipped invalid JSON at line ${i + 1}: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
   }
 
@@ -43,7 +47,9 @@ async function pushEvents(
     return;
   }
 
-  console.log(`🚀 Pushing ${events.length} events to ${environment} endpoint...`);
+  console.log(
+    `🚀 Pushing ${events.length} events to ${environment} endpoint...`,
+  );
   const endpoint = ENDPOINTS[environment];
 
   // Health check first
@@ -59,7 +65,9 @@ async function pushEvents(
       process.exit(1);
     }
   } catch (err: unknown) {
-    console.error(`❌ Cannot reach ${environment} endpoint: ${err instanceof Error ? err.message : String(err)}`);
+    console.error(
+      `❌ Cannot reach ${environment} endpoint: ${err instanceof Error ? err.message : String(err)}`,
+    );
     if (environment === "local") {
       console.error(`   Make sure dev server is running: pnpm dev`);
       console.error(`   Or try: pnpm push:remote`);
@@ -75,7 +83,7 @@ async function pushEvents(
     const batch = events.slice(i, i + batchSize);
     const batchNum = Math.floor(i / batchSize) + 1;
     const totalBatches = Math.ceil(events.length / batchSize);
-    
+
     process.stdout.write(`\r📦 Batch ${batchNum}/${totalBatches}... `);
 
     try {
@@ -89,11 +97,15 @@ async function pushEvents(
         success += batch.length;
       } else {
         const text = await response.text();
-        console.error(`\n❌ Batch ${batchNum} failed (${response.status}): ${text}`);
+        console.error(
+          `\n❌ Batch ${batchNum} failed (${response.status}): ${text}`,
+        );
         failed += batch.length;
       }
     } catch (err: unknown) {
-      console.error(`\n❌ Batch ${batchNum} error: ${err instanceof Error ? err.message : String(err)}`);
+      console.error(
+        `\n❌ Batch ${batchNum} error: ${err instanceof Error ? err.message : String(err)}`,
+      );
       failed += batch.length;
     }
   }
@@ -106,18 +118,18 @@ async function pushEvents(
 
 // CLI
 const args = process.argv.slice(2);
-const envArg = args.find((a) => a === "--local" || a === "--remote");
+const envArg = args.find(a => a === "--local" || a === "--remote");
 const environment: Environment = envArg === "--remote" ? "remote" : "local";
 
-const pathArg = args.find((a) => !a.startsWith("--"));
+const pathArg = args.find(a => !a.startsWith("--"));
 const defaultPath = resolve(
   process.env.HOME || "~",
-  ".local/share/typeslayer/events.ndjson"
+  ".local/share/typeslayer/events.ndjson",
 );
 
 const ndjsonPath = pathArg ? resolve(pathArg) : defaultPath;
 
-pushEvents(ndjsonPath, environment).catch((err) => {
+pushEvents(ndjsonPath, environment).catch(err => {
   console.error("❌ Fatal error:", err);
   process.exit(1);
 });

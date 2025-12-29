@@ -16,6 +16,10 @@ importers:
         version: 24.10.1
 
   packages/analytics:
+    dependencies:
+      '@typeslayer/validate':
+        specifier: workspace:*
+        version: link:../validate
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20251225.0

@@ -124,11 +124,11 @@ where
 /// but if you want to go the other direction, that's what this is for
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct ParentLinkData {
+pub struct ByTarget {
     /// Largest source count across entries
     pub max: usize,
     /// number of total types are related to by any other type in this way
-    pub target_count: usize,
+    pub count: usize,
     /// Record<TargetId, SourceId[]>
     /// sorted by source_ids count descending
     #[serde(
@@ -140,11 +140,11 @@ pub struct ParentLinkData {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct ChildLinkData {
+pub struct BySource {
     /// Largest target count across entries
     pub max: usize,
     /// number of total types that are targeted by links of this kind
-    pub source_count: usize,
+    pub count: usize,
     /// Record<SourceId, TargetId[]>
     /// sorted by target_ids count descending
     #[serde(
@@ -154,27 +154,16 @@ pub struct ChildLinkData {
     pub source_to_targets: IndexMap<TypeId, Vec<TypeId>>,
 }
 
-// /// source is the type that contains the data for the link (originally, in the ResolvedType)
-// /// so for example, if you have a union type:
-// /// - the source is the id of the union type itself
-// /// - each target id is one of the types that are members of the union
-// #[derive(Debug, Clone, Serialize, Deserialize)]
-// #[serde(rename_all = "camelCase")]
-// pub struct GraphLink {
-//     pub source_id: TypeId,
-//     pub target_id: TypeId,
-// }
-
 /// Stats for a specific link kind: ordered list of (target_id, [source_ids])
 /// Ordered by number of sources (most connected first)
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct LinkKindData {
     /// sorted by source_ids count descending
-    pub parent_link_data: ParentLinkData,
+    pub by_target: ByTarget,
 
     /// sorted by target_ids count descending
-    pub child_link_data: ChildLinkData,
+    pub by_source: BySource,
 
     // the total number of links of this kind in the graph
     pub link_count: usize,
@@ -222,6 +211,7 @@ pub struct NodeStatKindData {
 pub struct TypeGraph {
     pub node_count: usize,
     pub node_data_by_kind: HashMap<NodeStatKind, NodeStatKindData>,
+    pub link_count: usize,
     pub link_kind_data_by_kind: HashMap<LinkKind, LinkKindData>,
     pub path_map: HashMap<TypeId, String>,
 }
@@ -232,6 +222,7 @@ impl TypeGraph {
         graph.path_map = TypeGraph::build_path_map(types);
         graph.node_count = graph.calculate_node_count(types);
         graph.link_kind_data_by_kind = graph.calculate_link_kind_data_by_kind(types);
+        graph.link_count = graph.calculate_link_count();
         graph.node_data_by_kind = graph.calculate_node_data_by_kind(types);
         graph
     }
@@ -252,6 +243,13 @@ impl TypeGraph {
     fn calculate_node_count(&mut self, types: &TypesJsonSchema) -> usize {
         // TypeIds start at 1, but we add an index at 0 so it always lines up
         if types.is_empty() { 0 } else { types.len() - 1 }
+    }
+
+    fn calculate_link_count(&self) -> usize {
+        self.link_kind_data_by_kind
+            .values()
+            .map(|link_stat| link_stat.link_count)
+            .sum()
     }
 
     /// total number of links in the graph
@@ -276,7 +274,7 @@ impl TypeGraph {
                     .expect("LinkKind should exist in map");
 
                 // Update ParentLinkData (target -> sources)
-                let parent_data = &mut link_kind_data.parent_link_data;
+                let parent_data = &mut link_kind_data.by_target;
                 let sources = parent_data
                     .target_to_sources
                     .entry(relation.target)
@@ -284,7 +282,7 @@ impl TypeGraph {
                 sources.push(relation.source);
 
                 // Update ChildLinkData (source -> targets)
-                let child_data = &mut link_kind_data.child_link_data;
+                let child_data = &mut link_kind_data.by_source;
                 let targets = child_data
                     .source_to_targets
                     .entry(relation.source)
@@ -296,7 +294,7 @@ impl TypeGraph {
         // sort each LinkKindData's links by number of sources descending and set max/count
         for link_kind_data in link_kind_data_by_kind.values_mut() {
             // ParentLinkData
-            let parent_data = &mut link_kind_data.parent_link_data;
+            let parent_data = &mut link_kind_data.by_target;
             let mut parent_entries: Vec<(TypeId, Vec<TypeId>)> = parent_data
                 .target_to_sources
                 .iter()
@@ -304,7 +302,7 @@ impl TypeGraph {
                 .collect();
             parent_entries.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
             parent_data.target_to_sources = IndexMap::from_iter(parent_entries.into_iter());
-            parent_data.target_count = parent_data.target_to_sources.len();
+            parent_data.count = parent_data.target_to_sources.len();
             parent_data.max = parent_data
                 .target_to_sources
                 .values()
@@ -313,7 +311,7 @@ impl TypeGraph {
                 .unwrap_or(0);
 
             // ChildLinkData
-            let child_data = &mut link_kind_data.child_link_data;
+            let child_data = &mut link_kind_data.by_source;
             let mut child_entries: Vec<(TypeId, Vec<TypeId>)> = child_data
                 .source_to_targets
                 .iter()
@@ -321,7 +319,7 @@ impl TypeGraph {
                 .collect();
             child_entries.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
             child_data.source_to_targets = IndexMap::from_iter(child_entries.into_iter());
-            child_data.source_count = child_data.source_to_targets.len();
+            child_data.count = child_data.source_to_targets.len();
             child_data.max = child_data
                 .source_to_targets
                 .values()
@@ -330,14 +328,14 @@ impl TypeGraph {
                 .unwrap_or(0);
 
             let total_according_to_parents: usize = link_kind_data
-                .parent_link_data
+                .by_target
                 .target_to_sources
                 .values()
                 .map(|v| v.len())
                 .sum();
 
             let total_according_to_children: usize = link_kind_data
-                .child_link_data
+                .by_source
                 .source_to_targets
                 .values()
                 .map(|v| v.len())
@@ -442,7 +440,7 @@ impl TypeGraph {
                     kind.clone(),
                     CountAndMax {
                         count: link_kind_data.link_count,
-                        max: link_kind_data.child_link_data.max,
+                        max: link_kind_data.by_source.max,
                     },
                 )
             })

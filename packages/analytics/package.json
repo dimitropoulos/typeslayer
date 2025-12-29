@@ -15,6 +15,7 @@
   "scripts": {
     "dev": "pnpm wrangler dev --local",
     "build": "tsdown",
+    "predeploy": "pnpm build",
     "deploy": "pnpm wrangler deploy",
     "migrate:apply": "pnpm wrangler d1 migrations apply typeslayer --remote",
     "migrate:local": "pnpm wrangler d1 migrations apply typeslayer --local",
@@ -22,6 +23,9 @@
     "db:exec": "pnpm wrangler d1 execute typeslayer",
     "push:local": "node scripts/push-events.ts --local",
     "push:remote": "node scripts/push-events.ts --remote"
+  },
+  "dependencies": {
+    "@typeslayer/validate": "workspace:*"
   },
   "devDependencies": {
     "wrangler": "^4.54.0",

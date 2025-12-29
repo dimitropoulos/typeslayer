@@ -22,10 +22,7 @@ pub async fn get_links_to_type_id(
             .iter()
             .map(|(kind, link_kind_data)| {
                 let mut entries = Vec::new();
-                let sources = link_kind_data
-                    .parent_link_data
-                    .target_to_sources
-                    .get(&type_id);
+                let sources = link_kind_data.by_target.target_to_sources.get(&type_id);
                 if let Some(sources) = sources {
                     for source_id in sources {
                         let name = data

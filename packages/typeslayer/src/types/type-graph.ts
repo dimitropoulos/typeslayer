@@ -35,7 +35,7 @@ export const graphLinkIndex = {
 export type CountAndMax = {
   count: number;
   max: number;
-}
+};
 
 export type GraphStats = {
   link: Record<LinkKind, CountAndMax>;
@@ -64,22 +64,19 @@ export type NodeStatKindData = {
 export type GraphNodeStats = Record<NodeStatKind, NodeStatKindData>;
 
 export type LinkKindData = {
-  parentLinkData: ParentLinkData;
-  childLinkData: ChildLinkData;
-}
+  byTarget: ByTarget;
+  bySource: BySource;
+};
 
 export const targetToSourcesIndex = {
   targetId: 0,
   sourceIds: 1,
 } as const;
 
-export type ParentLinkData = {
+export type ByTarget = {
   max: number;
   count: number;
-  targetToSources: [
-    targetId: TypeId,
-    sourceIds: TypeId[]
-  ][];
+  targetToSources: [targetId: TypeId, sourceIds: TypeId[]][];
 };
 
 export const sourceToTargetsIndex = {
@@ -87,13 +84,10 @@ export const sourceToTargetsIndex = {
   targetIds: 1,
 } as const;
 
-export type ChildLinkData = {
+export type BySource = {
   max: number;
   count: number;
-  sourceToTargets: [
-    sourceId: TypeId,
-    targetIds: TypeId[]
-  ][];
+  sourceToTargets: [sourceId: TypeId, targetIds: TypeId[]][];
 };
 
 export type GraphLinkStats = Record<LinkKind, LinkKindData>;
