@@ -687,30 +687,53 @@ export type DepthLimitNames =
 
 export const depthLimitInfo = {
   instantiateType_DepthLimit: {
-    description: "Type Instantiation",
+    title: "Type Instantiation",
+    notFound: "No Type Instantiation Limits Found",
+    route: "instantiate-type-depth-limit",
   },
   recursiveTypeRelatedTo_DepthLimit: {
-    description: "Recursive Relations",
+    title: "Recursive Relations",
+    notFound: "No Recursive Relations Limits Found",
+    route: "recursive-type-related-to-depth-limit",
   },
   typeRelatedToDiscriminatedType_DepthLimit: {
-    description: "Discrimination",
+    title: "Discrimination",
+    notFound: "No Discriminated Type Limits Found",
+    route: "type-related-to-discriminated-type-depth-limit",
   },
   checkCrossProductUnion_DepthLimit: {
-    description: "Cross-Product Union",
+    title: "Cross-Product Union",
+    notFound: "No Cross-Product Union Limits Found",
+    route: "check-cross-product-union-depth-limit",
   },
   checkTypeRelatedTo_DepthLimit: {
-    description: "Type Relation Depth",
+    title: "Type Relation Depth",
+    notFound: "No Type Relation Depth Limits Found",
+    route: "check-type-related-to-depth-limit",
   },
   getTypeAtFlowNode_DepthLimit: {
-    description: "Flow Node Type",
+    title: "Flow Node Type",
+    notFound: "No Flow Node Type Limits Found",
+    route: "get-type-at-flow-node-depth-limit",
   },
   removeSubtypes_DepthLimit: {
-    description: "Remove Subtypes",
+    title: "Remove Subtypes",
+    notFound: "No Remove Subtypes Limits Found",
+    route: "remove-subtypes-depth-limit",
   },
   traceUnionsOrIntersectionsTooLarge_DepthLimit: {
-    description: "Union/Intersection Size",
+    title: "Union/Intersection Size",
+    notFound: "No Union/Intersection Size Limits Found",
+    route: "trace-unions-or-intersections-too-large-depth-limit",
   },
-} satisfies Record<DepthLimitNames, { description: string }>;
+} satisfies Record<
+  DepthLimitNames,
+  {
+    title: string;
+    notFound: string;
+    route: string;
+  }
+>;
 
 /*
  * EMIT PHASE EVENTS

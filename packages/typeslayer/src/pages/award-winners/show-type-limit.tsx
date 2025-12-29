@@ -11,16 +11,17 @@ import {
   Tabs,
   Typography,
 } from "@mui/material";
-import type {
-  EventChecktypes__CheckCrossProductUnion_DepthLimit,
-  EventChecktypes__CheckTypeRelatedTo_DepthLimit,
-  EventChecktypes__GetTypeAtFlowNode_DepthLimit,
-  EventChecktypes__InstantiateType_DepthLimit,
-  EventChecktypes__RecursiveTypeRelatedTo_DepthLimit,
-  EventChecktypes__RemoveSubtypes_DepthLimit,
-  EventChecktypes__TraceUnionsOrIntersectionsTooLarge_DepthLimit,
-  EventChecktypes__TypeRelatedToDiscriminatedType_DepthLimit,
-  TypeId,
+import {
+  depthLimitInfo,
+  type EventChecktypes__CheckCrossProductUnion_DepthLimit,
+  type EventChecktypes__CheckTypeRelatedTo_DepthLimit,
+  type EventChecktypes__GetTypeAtFlowNode_DepthLimit,
+  type EventChecktypes__InstantiateType_DepthLimit,
+  type EventChecktypes__RecursiveTypeRelatedTo_DepthLimit,
+  type EventChecktypes__RemoveSubtypes_DepthLimit,
+  type EventChecktypes__TraceUnionsOrIntersectionsTooLarge_DepthLimit,
+  type EventChecktypes__TypeRelatedToDiscriminatedType_DepthLimit,
+  type TypeId,
 } from "@typeslayer/validate";
 import { type ReactNode, useCallback, useRef, useState } from "react";
 import { CenterLoader } from "../../components/center-loader";
@@ -45,10 +46,7 @@ import {
   MaybePathCaption,
 } from "./awards";
 import { TitleSubtitle } from "./title-subtitle";
-import {
-  getDepthLimitsProperty,
-  type TypeLevelLimitAwardId,
-} from "./type-level-limits";
+import type { TypeLevelLimitAwardId } from "./type-level-limits";
 
 type LimitType =
   | EventChecktypes__InstantiateType_DepthLimit
@@ -63,19 +61,13 @@ type LimitType =
 export const ShowTypeLimit = <L extends LimitType>({
   getKey,
   getListItemTypeId,
-  icon: Icon,
   inlineBarGraph,
-  notFound,
-  title,
   awardId,
   tabs,
 }: {
   getKey: (current: L) => string;
   getListItemTypeId: (current: L) => number;
-  icon: (typeof awards)[keyof typeof awards]["icon"];
   inlineBarGraph: (current: L, first: L) => ReactNode;
-  notFound: string;
-  title: string;
   awardId: TypeLevelLimitAwardId;
   tabs: (current: L) => { tabName: string; content: TypeId | TypeId[] }[];
 }) => {
@@ -83,10 +75,13 @@ export const ShowTypeLimit = <L extends LimitType>({
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const relativePaths = useRelativePaths();
   const projectRoot = useProjectRoot();
-  const depthLimitKey = getDepthLimitsProperty(awardId);
   const [selectedTab, setSelectedTab] = useState<
     keyof ReturnType<typeof tabs> | "json"
   >("json");
+
+  const { icon: Icon } = awards[awardId];
+
+  const { title, notFound } = depthLimitInfo[awardId];
 
   const { data: analyzeTrace } = useAnalyzeTrace();
 
@@ -99,7 +94,7 @@ export const ShowTypeLimit = <L extends LimitType>({
 
   const isLoading = relativePaths.isLoading || projectRoot.isLoading;
 
-  const data = (analyzeTrace?.depthLimits[depthLimitKey] || []) as L[];
+  const data = (analyzeTrace?.depthLimits[awardId] || []) as L[];
   const first: L | undefined = data[0];
 
   const hasItems = data.length > 0;

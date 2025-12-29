@@ -88,6 +88,7 @@ export function OpenablePath({
         sx={{
           fontSize: "0.8rem",
           color: "text.secondary",
+          marginTop: "3px",
           letterSpacing: -0.25,
           ...propertyTextStyle,
         }}

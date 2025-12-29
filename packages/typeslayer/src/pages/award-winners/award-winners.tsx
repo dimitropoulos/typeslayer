@@ -22,32 +22,32 @@ export const RenderPlayground = () => {
   const { activeAward } = useAwardId();
 
   switch (activeAward) {
-    case "type_typeArguments":
-    case "type_unionTypes":
-    case "type_intersectionTypes":
-    case "type_aliasTypeArguments":
+    case "source_typeArguments":
+    case "source_unionTypes":
+    case "source_intersectionTypes":
+    case "source_aliasTypeArguments":
       return <TypeMetricsAward key={activeAward} awardId={activeAward} />;
 
-    case "relation_union":
-    case "relation_intersection":
-    case "relation_typeArgument":
-    case "relation_instantiated":
-    case "relation_aliasTypeArgument":
-    case "relation_conditionalCheck":
-    case "relation_conditionalExtends":
-    case "relation_conditionalFalse":
-    case "relation_conditionalTrue":
-    case "relation_indexedAccessObject":
-    case "relation_indexedAccessIndex":
-    case "relation_keyof":
-    case "relation_reverseMappedSource":
-    case "relation_reverseMappedMapped":
-    case "relation_reverseMappedConstraint":
-    case "relation_substitutionBase":
-    case "relation_constraint":
-    case "relation_evolvingArrayElement":
-    case "relation_evolvingArrayFinal":
-    case "relation_alias":
+    case "target_unionTypes":
+    case "target_intersectionTypes":
+    case "target_typeArguments":
+    case "target_instantiatedType":
+    case "target_aliasTypeArguments":
+    case "target_conditionalCheckType":
+    case "target_conditionalExtendsType":
+    case "target_conditionalFalseType":
+    case "target_conditionalTrueType":
+    case "target_indexedAccessObjectType":
+    case "target_indexedAccessIndexType":
+    case "target_keyofType":
+    case "target_reverseMappedSourceType":
+    case "target_reverseMappedMappedType":
+    case "target_reverseMappedConstraintType":
+    case "target_substitutionBaseType":
+    case "target_constraintType":
+    case "target_evolvingArrayElementType":
+    case "target_evolvingArrayFinalType":
+    case "target_aliasType":
       return (
         <TypeRelationMetricsAward key={activeAward} awardId={activeAward} />
       );
@@ -57,14 +57,14 @@ export const RenderPlayground = () => {
         <PerformanceMetricsAward key={activeAward} awardId={activeAward} />
       );
 
-    case "limit_instantiateType":
-    case "limit_recursiveTypeRelatedTo":
-    case "limit_typeRelatedToDiscriminatedType":
-    case "limit_checkCrossProductUnion":
-    case "limit_getTypeAtFlowNode":
-    case "limit_checkTypeRelatedTo":
-    case "limit_removeSubtypes":
-    case "limit_traceUnionsOrIntersectionsTooLarge":
+    case "instantiateType_DepthLimit":
+    case "recursiveTypeRelatedTo_DepthLimit":
+    case "typeRelatedToDiscriminatedType_DepthLimit":
+    case "checkCrossProductUnion_DepthLimit":
+    case "getTypeAtFlowNode_DepthLimit":
+    case "checkTypeRelatedTo_DepthLimit":
+    case "removeSubtypes_DepthLimit":
+    case "traceUnionsOrIntersectionsTooLarge_DepthLimit":
       return <TypeLevelLimitAward key={activeAward} awardId={activeAward} />;
 
     case "bundle_duplicatePackages":

@@ -4,26 +4,26 @@ import type { TypeId } from "@typeslayer/validate";
 export const TYPE_GRAPH_FILENAME = "type-graph.json";
 
 export type LinkKind =
-  | "union"
-  | "typeArgument"
-  | "instantiated"
-  | "substitutionBase"
-  | "constraint"
-  | "indexedAccessObject"
-  | "indexedAccessIndex"
-  | "conditionalCheck"
-  | "conditionalExtends"
-  | "conditionalTrue"
-  | "conditionalFalse"
-  | "keyof"
-  | "evolvingArrayElement"
-  | "evolvingArrayFinal"
-  | "reverseMappedSource"
-  | "reverseMappedMapped"
-  | "reverseMappedConstraint"
-  | "alias"
-  | "aliasTypeArgument"
-  | "intersection";
+  | "unionTypes"
+  | "intersectionTypes"
+  | "typeArguments"
+  | "instantiatedType"
+  | "aliasTypeArguments"
+  | "conditionalCheckType"
+  | "conditionalExtendsType"
+  | "conditionalFalseType"
+  | "conditionalTrueType"
+  | "indexedAccessObjectType"
+  | "indexedAccessIndexType"
+  | "keyofType"
+  | "reverseMappedSourceType"
+  | "reverseMappedMappedType"
+  | "reverseMappedConstraintType"
+  | "substitutionBaseType"
+  | "constraintType"
+  | "evolvingArrayElementType"
+  | "evolvingArrayFinalType"
+  | "aliasType";
 
 export type GraphLink = [sourceId: TypeId, targetId: TypeId];
 

@@ -56,7 +56,7 @@ export function RelationAward({
   };
   const hasData = typeGraph !== undefined;
 
-  const edgeStatProperty = getLinkStatProperty(awardId);
+  const edgeStatProperty = extractTargetAwardId(awardId);
   const linkStats = typeGraph?.linkStats[edgeStatProperty];
 
   const targets = useMemo(() => {
@@ -228,6 +228,7 @@ const TypeMetricsListItem = ({ typeId }: { typeId: TypeId }) => {
     alignItems: "center",
     gap: 1,
     flexWrap: "nowrap",
+    pl: 0,
   };
 
   if (isLoading) {
@@ -254,49 +255,36 @@ const TypeMetricsListItem = ({ typeId }: { typeId: TypeId }) => {
         name={getHumanReadableName(resolvedType)}
         showFlags
       />
-
-      <Stack
-        className="action-buttons"
-        sx={{
-          opacity: 0,
-          pointerEvents: "none",
-          flexDirection: "row",
-          gap: 0.5,
-          flexShrink: 0,
-        }}
-      ></Stack>
     </ListItem>
   );
 };
 
 const typeRelationMetrics = [
-  "relation_union",
-  "relation_intersection",
-  "relation_typeArgument",
-  "relation_instantiated",
-  "relation_aliasTypeArgument",
-  "relation_conditionalCheck",
-  "relation_conditionalExtends",
-  "relation_conditionalFalse",
-  "relation_conditionalTrue",
-  "relation_indexedAccessObject",
-  "relation_indexedAccessIndex",
-  "relation_keyof",
-  "relation_reverseMappedSource",
-  "relation_reverseMappedMapped",
-  "relation_reverseMappedConstraint",
-  "relation_substitutionBase",
-  "relation_constraint",
-  "relation_evolvingArrayElement",
-  "relation_evolvingArrayFinal",
-  "relation_alias",
+  "target_unionTypes",
+  "target_intersectionTypes",
+  "target_typeArguments",
+  "target_instantiatedType",
+  "target_aliasTypeArguments",
+  "target_conditionalCheckType",
+  "target_conditionalExtendsType",
+  "target_conditionalFalseType",
+  "target_conditionalTrueType",
+  "target_indexedAccessObjectType",
+  "target_indexedAccessIndexType",
+  "target_keyofType",
+  "target_reverseMappedSourceType",
+  "target_reverseMappedMappedType",
+  "target_reverseMappedConstraintType",
+  "target_substitutionBaseType",
+  "target_constraintType",
+  "target_evolvingArrayElementType",
+  "target_evolvingArrayFinalType",
+  "target_aliasType",
 ] satisfies AwardId[];
 type TypeRelationMetricsAwardId = (typeof typeRelationMetrics)[number];
 
-const getLinkStatProperty = <T extends AwardId>(property: T) =>
-  property.replace("relation_", "") as T extends `relation_${infer U}`
-    ? U
-    : never;
+const extractTargetAwardId = <T extends AwardId>(property: T) =>
+  property.replace("target_", "") as T extends `target_${infer U}` ? U : never;
 
 const useTypeRelationMetricsValue = () => {
   const { data: typeGraph } = useTypeGraphLimitedNodeAndLinkStats();
@@ -307,27 +295,27 @@ const useTypeRelationMetricsValue = () => {
 
   return (awardId: TypeRelationMetricsAwardId): number => {
     switch (awardId) {
-      case "relation_union":
-      case "relation_intersection":
-      case "relation_typeArgument":
-      case "relation_instantiated":
-      case "relation_aliasTypeArgument":
-      case "relation_conditionalCheck":
-      case "relation_conditionalExtends":
-      case "relation_conditionalFalse":
-      case "relation_conditionalTrue":
-      case "relation_indexedAccessObject":
-      case "relation_indexedAccessIndex":
-      case "relation_keyof":
-      case "relation_reverseMappedSource":
-      case "relation_reverseMappedMapped":
-      case "relation_reverseMappedConstraint":
-      case "relation_substitutionBase":
-      case "relation_constraint":
-      case "relation_evolvingArrayElement":
-      case "relation_evolvingArrayFinal":
-      case "relation_alias": {
-        const linkStatProperty = getLinkStatProperty(awardId);
+      case "target_unionTypes":
+      case "target_intersectionTypes":
+      case "target_typeArguments":
+      case "target_instantiatedType":
+      case "target_aliasTypeArguments":
+      case "target_conditionalCheckType":
+      case "target_conditionalExtendsType":
+      case "target_conditionalFalseType":
+      case "target_conditionalTrueType":
+      case "target_indexedAccessObjectType":
+      case "target_indexedAccessIndexType":
+      case "target_keyofType":
+      case "target_reverseMappedSourceType":
+      case "target_reverseMappedMappedType":
+      case "target_reverseMappedConstraintType":
+      case "target_substitutionBaseType":
+      case "target_constraintType":
+      case "target_evolvingArrayElementType":
+      case "target_evolvingArrayFinalType":
+      case "target_aliasType": {
+        const linkStatProperty = extractTargetAwardId(awardId);
         return linkStats[linkStatProperty]?.byTarget.max ?? 0;
       }
 

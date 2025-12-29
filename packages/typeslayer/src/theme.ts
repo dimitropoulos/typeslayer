@@ -4,6 +4,8 @@ import { createTheme } from "@mui/material";
 const black = "#000000";
 const white = "#FFFFFF";
 
+export const panelBackground = "#11111190";
+
 const doomRed = {
   main: "#C02929",
   light: "#D33030",
