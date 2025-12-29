@@ -105,7 +105,9 @@ export const Code = ({
             gap: 1,
           }}
         >
-          {hideFileNameIcon ? null : <Description fontSize="small" color="disabled" />}
+          {hideFileNameIcon ? null : (
+            <Description fontSize="small" color="disabled" />
+          )}
           {openableFilename ? (
             <OpenablePath
               absolutePath={fileName}

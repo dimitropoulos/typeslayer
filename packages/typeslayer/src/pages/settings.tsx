@@ -269,14 +269,14 @@ export const SettingsPage = () => {
         <ul style={{ fontSize: "0.9rem", paddingLeft: 22, marginTop: 2 }}>
           <li>
             <Typography variant="body2" color="textSecondary">
-              <em>something went right</em>: it's hella cool of you to
-              leave these on
+              <em>something went right</em>: it's hella cool of you to leave
+              these on
             </Typography>
           </li>
           <li>
             <Typography variant="body2" color="textSecondary">
-              <em>something went wrong</em>: pwetty pwease keep
-              these on so I can fix things
+              <em>something went wrong</em>: pwetty pwease keep these on so I
+              can fix things
             </Typography>
           </li>
         </ul>
@@ -419,7 +419,7 @@ const AnalyticsSetting = ({
           value={JSON.stringify(JSON.parse(jsonExample), null, 2)}
           lang="json"
           sx={{
-            fontSize: '0.7em',
+            fontSize: "0.7em",
           }}
         />
       </Popover>

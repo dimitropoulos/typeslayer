@@ -27,7 +27,7 @@ import {
   Whatshot,
 } from "@mui/icons-material";
 import { Box, Typography } from "@mui/material";
-import { typeRelationInfo } from "@typeslayer/validate";
+import { depthLimitInfo, typeRelationInfo } from "@typeslayer/validate";
 import { InlineCode } from "../../components/inline-code";
 import { useFriendlyPackageName } from "../../hooks/tauri-hooks";
 
@@ -247,7 +247,7 @@ export const awards = {
   //
 
   limit_instantiateType: {
-    title: "Type Instantiation",
+    title: depthLimitInfo.instantiateType_DepthLimit.description,
     property: "limit_instantiateType",
     description: (
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
@@ -277,7 +277,7 @@ export const awards = {
     route: "type-instantiation-limit",
   },
   limit_recursiveTypeRelatedTo: {
-    title: "Recursive Relations",
+    title: depthLimitInfo.recursiveTypeRelatedTo_DepthLimit.description,
     property: "limit_recursiveTypeRelatedTo",
     description: (
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
@@ -294,7 +294,7 @@ export const awards = {
     route: "recursive-relations-limit",
   },
   limit_typeRelatedToDiscriminatedType: {
-    title: "Discrimination",
+    title: depthLimitInfo.typeRelatedToDiscriminatedType_DepthLimit.description,
     property: "limit_typeRelatedToDiscriminatedType",
     description: (
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
@@ -321,7 +321,7 @@ export const awards = {
     route: "discrimination-limit",
   },
   limit_checkCrossProductUnion: {
-    title: "Cross-Product Union",
+    title: depthLimitInfo.checkCrossProductUnion_DepthLimit.description,
     property: "limit_checkCrossProductUnion",
     description: (
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
@@ -346,7 +346,7 @@ export const awards = {
     route: "cross-product-union-limit",
   },
   limit_checkTypeRelatedTo: {
-    title: "Type Relation Depth",
+    title: depthLimitInfo.checkTypeRelatedTo_DepthLimit.description,
     property: "limit_checkTypeRelatedTo",
     description: (
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
@@ -383,7 +383,7 @@ export const awards = {
     route: "type-related-to-limit",
   },
   limit_getTypeAtFlowNode: {
-    title: "Flow Node Type",
+    title: depthLimitInfo.getTypeAtFlowNode_DepthLimit.description,
     property: "limit_getTypeAtFlowNode",
     description: (
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
@@ -410,7 +410,7 @@ export const awards = {
     route: "flow-node-type-limit",
   },
   limit_removeSubtypes: {
-    title: "Remove Subtypes",
+    title: depthLimitInfo.removeSubtypes_DepthLimit.description,
     property: "limit_removeSubtypes",
     description: (
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
@@ -436,7 +436,8 @@ export const awards = {
     route: "remove-subtypes-limit",
   },
   limit_traceUnionsOrIntersectionsTooLarge: {
-    title: "Union/Intersection Size",
+    title:
+      depthLimitInfo.traceUnionsOrIntersectionsTooLarge_DepthLimit.description,
     property: "limit_traceUnionsOrIntersectionsTooLarge",
     description: (
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>

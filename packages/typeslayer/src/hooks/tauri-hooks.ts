@@ -390,15 +390,12 @@ export type NodesAndLinks = {
   nodeCount: number;
   isLimited: boolean;
   linksByType: Record<LinkKind, GraphLink[]>;
-}
+};
 
 export function useTypeGraphNodesAndLinks() {
   return useQuery({
     queryKey: ["type_graph_nodes_and_links"],
-    queryFn: () =>
-      invoke<NodesAndLinks>(
-        "get_type_graph_nodes_and_links",
-      ),
+    queryFn: () => invoke<NodesAndLinks>("get_type_graph_nodes_and_links"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 }
@@ -431,7 +428,7 @@ export type AnalyzeTraceRs = {
     meanDuration: number;
     maxDuration: number;
     minDuration: number;
-  }
+  };
 } & AnalyzeTraceResult;
 
 export function useAnalyzeTrace() {

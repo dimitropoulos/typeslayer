@@ -552,10 +552,9 @@ export const TypeGraph = () => {
 
         setFilteredStats({
           filteredNodeCount: nodeCount,
-          filteredLinkCount:
-            Object.values(allLinksRef.current)
-              .map(graphLinks => graphLinks.length)
-              .reduce((a, b) => a + b, 0),
+          filteredLinkCount: Object.values(allLinksRef.current)
+            .map(graphLinks => graphLinks.length)
+            .reduce((a, b) => a + b, 0),
         });
         setGraphReady(true);
       } catch (e) {

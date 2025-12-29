@@ -239,9 +239,7 @@ export const Treemap = () => {
               value={Math.round(totalTime / 1000)}
             />
           ) : null}
-          {totalFiles ? (
-            <StatPill label="files" value={totalFiles} />
-          ) : null}
+          {totalFiles ? <StatPill label="files" value={totalFiles} /> : null}
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           File compilation times visualized by directory and duration

@@ -5,7 +5,6 @@ import type { Env } from "./types";
 
 export * from "./leaderboard";
 
-
 type AnalyticsEvent = {
   name: string;
   sessionId: string;

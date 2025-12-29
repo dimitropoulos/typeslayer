@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use strum::VariantArray;
 use tracing::debug;
 
 use crate::{
@@ -9,19 +10,50 @@ use crate::{
         metadata::{EventMetadata, create_event_metadata},
     },
     app_data::AppData,
-    type_graph::{CountAndMax, LinkKind, NodeStatKind},
+    type_graph::{LinkKind, LinkKindData},
 };
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct StrippedDirectionData {
+    pub max: usize,
+    pub count: usize,
+}
+
+/// Stats for a specific link kind: ordered list of (target_id, [source_ids])
+/// Ordered by number of sources (most connected first)
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct StrippedLinkKindData {
+    pub by_target: StrippedDirectionData,
+    pub by_source: StrippedDirectionData,
+    pub link_count: usize,
+}
+
+// convert LinkKindData to StrippedLinkKindData
+impl From<&LinkKindData> for StrippedLinkKindData {
+    fn from(link_kind_data: &LinkKindData) -> Self {
+        Self {
+            by_target: StrippedDirectionData {
+                max: link_kind_data.by_target.max,
+                count: link_kind_data.by_target.count,
+            },
+            by_source: StrippedDirectionData {
+                max: link_kind_data.by_source.max,
+                count: link_kind_data.by_source.count,
+            },
+            link_count: link_kind_data.link_count,
+        }
+    }
+}
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EventTypeGraphSuccessData {
     pub duration: u64,
-
     pub node_count: usize,
-    pub node_stats_by_type: HashMap<NodeStatKind, CountAndMax>,
-
     pub link_count: usize,
-    pub link_stats_by_type: HashMap<LinkKind, CountAndMax>,
+    pub link_kind_data_by_kind: HashMap<LinkKind, StrippedLinkKindData>,
 }
 
 #[derive(Debug, Serialize)]
@@ -54,12 +86,12 @@ impl TypeSlayerEvent for EventTypeGraphSuccess {
             metadata: EventMetadata::example(),
             data: EventTypeGraphSuccessData {
                 duration: 3000,
-
                 node_count: 100,
-                node_stats_by_type: NodeStatKind::new_count_and_max_map(),
-
-                link_count: 42,
-                link_stats_by_type: LinkKind::new_count_and_max_map(),
+                link_count: 250,
+                link_kind_data_by_kind: LinkKind::VARIANTS
+                    .iter()
+                    .map(|kind| (kind.clone(), StrippedLinkKindData::default()))
+                    .collect(),
             },
         }
     }
@@ -76,12 +108,15 @@ impl TypeSlayerEvent for EventTypeGraphSuccess {
             metadata: create_event_metadata(app_data).await,
             data: EventTypeGraphSuccessData {
                 duration: args.duration,
-
                 node_count: type_graph.node_count,
-                node_stats_by_type: type_graph.calculate_node_stat_count_and_max(),
-
-                link_count: type_graph.calculate_links_total(),
-                link_stats_by_type: type_graph.calculate_link_count_and_max(),
+                link_count: type_graph.link_count,
+                link_kind_data_by_kind: type_graph
+                    .link_kind_data_by_kind
+                    .iter()
+                    .map(|(kind, link_kind_data)| {
+                        (kind.clone(), StrippedLinkKindData::from(link_kind_data))
+                    })
+                    .collect(),
             },
         };
         debug!("[event] [type_graph_success] created event: {:?}", event);
