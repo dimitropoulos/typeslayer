@@ -55,7 +55,12 @@ writeFileSync(
 console.log(`📦 Bumped main package: ${oldMainVersion} → ${newMainVersion}`);
 
 // Bump workspace packages
-const workspacePackages = ["validate", "analyze-trace", "analytics"];
+const workspacePackages = [
+  "validate",
+  "analyze-trace",
+  "analytics",
+  "rust-types",
+];
 
 for (const pkgName of workspacePackages) {
   const pkgPath = join(rootDir, "packages", pkgName, "package.json");

@@ -1,5 +1,6 @@
 use serde::Serialize;
 use tracing::debug;
+use ts_rs::TS;
 
 use crate::{
     analytics::{
@@ -9,7 +10,8 @@ use crate::{
     app_data::{AppData, command::PackageManager, settings::TypeScriptCompilerVariant},
 };
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct EventGenerateTraceSuccessData {
     pub duration: u64,
@@ -27,9 +29,11 @@ pub struct EventGenerateTraceSuccessData {
     pub apply_tsc_project_flag: bool,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct EventGenerateTraceSuccess {
+    #[ts(type = "\"generate_trace_success\"")]
     pub name: &'static str,
     #[serde(flatten)]
     pub metadata: EventMetadata,

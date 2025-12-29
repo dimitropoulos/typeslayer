@@ -17,6 +17,9 @@ importers:
 
   packages/analytics:
     dependencies:
+      '@typeslayer/rust-types':
+        specifier: workspace:*
+        version: link:../rust-types
       '@typeslayer/validate':
         specifier: workspace:*
         version: link:../validate
@@ -61,6 +64,8 @@ importers:
       typescript:
         specifier: 5.9.3
         version: 5.9.3
+
+  packages/rust-types: {}
 
   packages/typeslayer:
     dependencies:

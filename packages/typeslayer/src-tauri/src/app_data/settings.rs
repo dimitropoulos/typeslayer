@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
+use ts_rs::TS;
 
 use crate::analytics::{
     TypeSlayerEvent, event_analyze_trace_fail::EventAnalyzeTraceFail,
@@ -10,7 +11,8 @@ use crate::analytics::{
     event_type_graph_fail::EventTypeGraphFail, event_type_graph_success::EventTypeGraphSuccess,
 };
 
-#[derive(Clone, Copy, Default, Debug, Serialize, Deserialize, EnumString)]
+#[derive(Clone, Copy, Default, Debug, Serialize, Deserialize, EnumString, TS)]
+#[ts(export)]
 pub enum TypeScriptCompilerVariant {
     #[serde(rename = "tsc")]
     #[strum(serialize = "tsc")]
@@ -42,7 +44,8 @@ impl TypeScriptCompilerVariant {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
     pub relative_paths: bool,

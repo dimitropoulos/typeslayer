@@ -33,8 +33,10 @@ use std::{fs::File, io::BufReader};
 use tokio::fs;
 use tokio::process::Command;
 use tracing::{debug, error, info};
+use ts_rs::TS;
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, TS)]
+#[ts(export)]
 pub enum AppMode {
     GUI,
     CLI,

@@ -10,8 +10,10 @@ use serde::Serialize;
 use std::collections::HashMap;
 use strum::IntoEnumIterator;
 use tracing::debug;
+use ts_rs::TS;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct EventAnalyzeTraceSuccessData {
     pub duration: u64,
@@ -22,9 +24,11 @@ pub struct EventAnalyzeTraceSuccessData {
     pub file_statistics: FileStatistics,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct EventAnalyzeTraceSuccess {
+    #[ts(type = "\"analyze_trace_success\"")]
     pub name: &'static str,
     #[serde(flatten)]
     pub metadata: EventMetadata,

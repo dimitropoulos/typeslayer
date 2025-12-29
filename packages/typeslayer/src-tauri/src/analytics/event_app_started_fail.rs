@@ -1,20 +1,24 @@
 use serde::Serialize;
 use tracing::debug;
+use ts_rs::TS;
 
 use crate::{
     analytics::{EventMetadata, TypeSlayerEvent, metadata::create_event_metadata},
     app_data::AppData,
 };
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct EventAppStartedFailData {
     pub reason: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct EventAppStartedFail {
+    #[ts(type = "\"app_started_fail\"")]
     pub name: &'static str,
     #[serde(flatten)]
     pub metadata: EventMetadata,

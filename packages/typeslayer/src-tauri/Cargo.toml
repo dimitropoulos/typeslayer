@@ -48,6 +48,7 @@ strum_macros = "0.27"
 serde_plain = "1.0"
 os_info = "3"
 shell-escape = "0.1.5"
+ts-rs = { version = "11.1", features = ["serde-compat", "chrono-impl"] }
 nanoid = "0.4.0"
 reqwest = { version = "0.12", features = ["json"] }
 indexmap = { version = "2.12.1", features = ["std", "serde"] }

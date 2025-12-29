@@ -6,20 +6,23 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use strum::VariantArray;
 use strum_macros::VariantArray;
+use ts_rs::TS;
 
 use crate::validate::types_json::TypesJsonSchema;
 use crate::validate::utils::TypeId;
 
 pub const TYPE_GRAPH_FILENAME: &str = "type-graph.json";
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct CountAndMax {
     pub count: usize,
     pub max: usize,
 }
 
-#[derive(Eq, PartialEq, Hash, Debug, Clone, Serialize, Deserialize, VariantArray)]
+#[derive(Eq, PartialEq, Hash, Debug, Clone, Serialize, Deserialize, VariantArray, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub enum LinkKind {
     UnionTypes,

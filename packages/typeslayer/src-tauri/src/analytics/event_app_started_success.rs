@@ -1,5 +1,6 @@
 use serde::Serialize;
 use tracing::debug;
+use ts_rs::TS;
 
 use crate::{
     analytics::{EventMetadata, TypeSlayerEvent, metadata::create_event_metadata},
@@ -7,16 +8,19 @@ use crate::{
     layercake::SourceHistory,
 };
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct EventAppStartedSuccessData {
     pub settings: Settings,
     pub source_history: SourceHistory,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct EventAppStartedSuccess {
+    #[ts(type = "\"app_started_success\"")]
     pub name: &'static str,
     #[serde(flatten)]
     pub metadata: EventMetadata,

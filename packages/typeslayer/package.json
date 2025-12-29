@@ -14,7 +14,8 @@
   "packageManager": "pnpm@10.6.5",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && pnpm gen:rust-types",
+    "gen:rust-types": "cargo test --manifest-path src-tauri/Cargo.toml export_types",
     "preview": "vite preview",
     "tauri": "tauri",
     "typecheck": "tsc --noEmit"

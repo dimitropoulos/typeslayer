@@ -25,7 +25,8 @@
     "push:remote": "node scripts/push-events.ts --remote"
   },
   "dependencies": {
-    "@typeslayer/validate": "workspace:*"
+    "@typeslayer/validate": "workspace:*",
+    "@typeslayer/rust-types": "workspace:*"
   },
   "devDependencies": {
     "wrangler": "^4.54.0",

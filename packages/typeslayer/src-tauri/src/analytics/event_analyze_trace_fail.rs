@@ -1,5 +1,6 @@
 use serde::Serialize;
 use tracing::debug;
+use ts_rs::TS;
 
 use crate::{
     analytics::{
@@ -9,16 +10,19 @@ use crate::{
     app_data::AppData,
 };
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct EventAnalyzeTraceFailData {
     pub duration: u64,
     pub reason: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct EventAnalyzeTraceFail {
+    #[ts(type = "\"analyze_trace_fail\"")]
     pub name: &'static str,
     #[serde(flatten)]
     pub metadata: EventMetadata,

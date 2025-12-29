@@ -8,6 +8,9 @@ pub mod event_type_graph_fail;
 pub mod event_type_graph_success;
 pub mod metadata;
 
+#[cfg(test)]
+mod export_types;
+
 use crate::{analytics::metadata::EventMetadata, app_data::AppData};
 use tracing::debug;
 

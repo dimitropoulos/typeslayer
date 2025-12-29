@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 use tracing::debug;
+use ts_rs::TS;
 
 /// Source precedence options for resolution.
 #[derive(Clone, Debug)]
@@ -11,7 +12,8 @@ pub enum Source {
     File,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default, TS)]
+#[ts(export)]
 pub struct SourceHistory {
     from_env: Vec<String>,
     from_flag: Vec<String>,
