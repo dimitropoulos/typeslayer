@@ -7,7 +7,7 @@ import {
   ListSubheader,
   Stack,
 } from "@mui/material";
-import type { TypeId } from "@typeslayer/validate";
+import { type TypeId, typeRelationInfo } from "@typeslayer/validate";
 import { useCallback, useState } from "react";
 import { CenterLoader } from "../../components/center-loader";
 import { DisplayRecursiveType } from "../../components/display-recursive-type";
@@ -25,15 +25,15 @@ import { InlineBarGraph } from "./inline-bar-graph";
 import { TitleSubtitle } from "./title-subtitle";
 
 const typeMetrics = [
-  "type_unionTypes",
-  "type_intersectionTypes",
-  "type_typeArguments",
-  "type_aliasTypeArguments",
+  "source_unionTypes",
+  "source_intersectionTypes",
+  "source_typeArguments",
+  "source_aliasTypeArguments",
 ] satisfies AwardId[];
 type TypeMetricsAwardId = (typeof typeMetrics)[number];
 
 const getTypeStatProperty = <T extends TypeMetricsAwardId>(awardId: T) => {
-  return awardId.replace("type_", "") as T extends `type_${infer Stat}`
+  return awardId.replace("source_", "") as T extends `source_${infer Stat}`
     ? Stat
     : never;
 };
@@ -48,10 +48,10 @@ const useTypeMetricsValue = () => {
 
   return (awardId: TypeMetricsAwardId): number => {
     switch (awardId) {
-      case "type_unionTypes":
-      case "type_intersectionTypes":
-      case "type_typeArguments":
-      case "type_aliasTypeArguments":
+      case "source_unionTypes":
+      case "source_intersectionTypes":
+      case "source_typeArguments":
+      case "source_aliasTypeArguments":
         return nodeStats[getTypeStatProperty(awardId)].max;
       default:
         awardId satisfies never;
@@ -78,7 +78,8 @@ export const TypeMetricsNavItems = () => {
 };
 
 export function TypeMetricsAward({ awardId }: { awardId: TypeMetricsAwardId }) {
-  const { title, description, icon: Icon, unit } = awards[awardId];
+  const { title, icon: Icon, unit } = awards[awardId];
+  const { description } = typeRelationInfo[getTypeStatProperty(awardId)].source;
 
   const [selectedIndex, setSelectedIndex] = useState(0);
   const { data: typeGraph, isLoading } = useTypeGraphLimitedNodeAndLinkStats();
@@ -93,7 +94,7 @@ export function TypeMetricsAward({ awardId }: { awardId: TypeMetricsAwardId }) {
     [],
   );
 
-  const nodeStat = awardId.replace("type_", "") as
+  const nodeStat = awardId.replace("source_", "") as
     | "unionTypes"
     | "intersectionTypes"
     | "typeArguments"
@@ -160,7 +161,6 @@ export function TypeMetricsAward({ awardId }: { awardId: TypeMetricsAwardId }) {
           width: AWARD_SELECTOR_COLUMN_WIDTH,
           background: hasItems ? "#000000" : "transparent",
           flexShrink: 0,
-          gap: 2,
           p: 1,
           pt: 2,
           overflowY: "auto",

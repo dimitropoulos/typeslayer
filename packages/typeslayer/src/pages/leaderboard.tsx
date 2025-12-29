@@ -1,16 +1,19 @@
+import { ArrowDownward, ArrowUpward, QueryStats } from "@mui/icons-material";
 import {
-  Divider,
+  Box,
   List,
   ListItemButton,
   ListSubheader,
   Paper,
   Stack,
+  type SvgIconTypeMap,
   Table,
   TableBody,
   TableCell,
   TableRow,
   Typography,
 } from "@mui/material";
+import type { OverridableComponent } from "@mui/material/OverridableComponent";
 import { useQuery } from "@tanstack/react-query";
 import {
   type GroupId,
@@ -22,24 +25,7 @@ import {
 import { useState } from "react";
 import { InlineCode } from "../components/inline-code";
 import { formatBytesSize } from "../components/utils";
-
-/*
-
-total types
-total relations
-
-size of types.json
-size of relations.json
-
-
-- number of files
-- total duration
-- max duration for a single file
-
-add analyze-trace file statistics to analyze trace success event
-
-
-*/
+import { panelBackground } from "../theme";
 
 const useLeaderboardStats = () => {
   return useQuery<LeaderboardNumber[]>({
@@ -100,6 +86,8 @@ export const LeaderboardPage = () => {
           width: "50%",
           maxWidth: "400px",
           background: "black",
+          borderRight: 1,
+          borderColor: "divider",
         }}
       >
         <Stack
@@ -164,6 +152,34 @@ export const LeaderboardPage = () => {
   );
 };
 
+const PaperHeading = ({
+  title,
+  icon: Icon,
+}: {
+  title: string;
+  icon: OverridableComponent<SvgIconTypeMap> & {
+    muiName: string;
+  };
+}) => {
+  return (
+    <Stack
+      sx={{
+        flexDirection: "row",
+        px: 1,
+        py: 0.5,
+        backgroundColor: "background.paper",
+        gap: 1,
+        alignItems: "center",
+      }}
+    >
+      <Icon fontSize="small" color="disabled" />
+      <Typography sx={{ fontSize: "14px", fontWeight: "bold" }}>
+        {title}
+      </Typography>
+    </Stack>
+  );
+};
+
 const SelectedLeaderboardNumberDetails = ({
   selected,
 }: {
@@ -171,7 +187,7 @@ const SelectedLeaderboardNumberDetails = ({
 }) => {
   const format = leaderboardNumberFormatter(selected.format);
   return (
-    <Paper
+    <Box
       sx={{
         mx: 2,
         my: 2,
@@ -180,8 +196,7 @@ const SelectedLeaderboardNumberDetails = ({
         maxWidth: 400,
         display: "flex",
         flexDirection: "column",
-        background: "#11111190",
-        gap: 3,
+        gap: 2,
         alignSelf: "flex-start",
         maxHeight: "calc(100% - 16px)",
         overflowY: "auto",
@@ -204,61 +219,83 @@ const SelectedLeaderboardNumberDetails = ({
         <Typography variant="subtitle1">{selected.subtitle}</Typography>
       </Stack>
 
-      <Table size="small">
-        <TableBody>
-          <TableRow>
-            <TableCell>Median</TableCell>
-            <TableCell align="right">
-              <InlineCode>{format(selected.median)}</InlineCode>
-            </TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell>Mean</TableCell>
-            <TableCell align="right">
-              <InlineCode>{format(selected.mean)}</InlineCode>
-            </TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell>Standard Deviation</TableCell>
-            <TableCell align="right">
-              <InlineCode>
-                {selected.standardDeviation.toLocaleString()}
-              </InlineCode>
-            </TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell>Samples</TableCell>
-            <TableCell align="right">
-              <InlineCode>{selected.samples.toLocaleString()}</InlineCode>
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
+      <Paper
+        sx={{
+          background: panelBackground,
+        }}
+      >
+        <PaperHeading title="Stats" icon={QueryStats} />
+        <Table size="small">
+          <TableBody>
+            <TableRow>
+              <TableCell>Median</TableCell>
+              <TableCell align="right">
+                <InlineCode>{format(selected.median)}</InlineCode>
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell>Mean</TableCell>
+              <TableCell align="right">
+                <InlineCode>{format(selected.mean)}</InlineCode>
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell>Standard Deviation</TableCell>
+              <TableCell align="right">
+                <InlineCode>
+                  {selected.standardDeviation.toLocaleString()}
+                </InlineCode>
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell>Samples</TableCell>
+              <TableCell align="right">
+                <InlineCode>{selected.samples.toLocaleString()}</InlineCode>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </Paper>
 
       <Stack
         sx={{
+          display: "flex",
           flexDirection: "row",
-          gap: 3,
+          gap: 2,
           width: "100%",
           flexGrow: 1,
           justifyContent: "space-between",
         }}
-        divider={<Divider orientation="vertical" flexItem />}
       >
-        <GroupOfTen label="Top 10" values={selected.top10.map(format)} />
-        <GroupOfTen label="Bottom 10" values={selected.bottom10.map(format)} />
+        <GroupOfTen label="Top" values={selected.top10.map(format)} />
+        <GroupOfTen label="Bottom" values={selected.bottom10.map(format)} />
       </Stack>
-    </Paper>
+    </Box>
   );
 };
 
-const GroupOfTen = ({ label, values }: { label: string; values: string[] }) => {
+const GroupOfTen = ({
+  label,
+  values,
+}: {
+  label: "Top" | "Bottom";
+  values: string[];
+}) => {
   return (
-    <Stack sx={{ alignSelf: "stretch", width: "100%" }}>
-      <Typography variant="h6" gutterBottom align="right">
-        {label}
-      </Typography>
-      <Stack>
+    <Paper
+      sx={{
+        alignSelf: "stretch",
+        width: "100%",
+        background: panelBackground,
+
+        fontSize: 14,
+      }}
+    >
+      <PaperHeading
+        title={`${label} 10`}
+        icon={label === "Top" ? ArrowUpward : ArrowDownward}
+      />
+      <Stack sx={{ py: 1, px: 2 }}>
         {values.length === 0 ? (
           <Typography>no data</Typography>
         ) : (
@@ -278,7 +315,7 @@ const GroupOfTen = ({ label, values }: { label: string; values: string[] }) => {
           ))
         )}
       </Stack>
-    </Stack>
+    </Paper>
   );
 };
 

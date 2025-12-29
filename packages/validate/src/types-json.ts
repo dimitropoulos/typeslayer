@@ -101,92 +101,326 @@ const typeRelations = {
 };
 
 export interface TypeRelationInfo {
-  title: string;
-  unit: string;
+  source: {
+    title: string;
+    description: string;
+    unit: string;
+  };
+  target: {
+    title: string;
+    description: string;
+    unit: string;
+  };
+  route: string;
 }
 
+export const typeRelationOrder = [
+  "unionTypes",
+  "intersectionTypes",
+  "typeArguments",
+  "instantiatedType",
+  "aliasTypeArguments",
+  "conditionalCheckType",
+  "conditionalExtendsType",
+  "conditionalFalseType",
+  "conditionalTrueType",
+  "indexedAccessObjectType",
+  "indexedAccessIndexType",
+  "keyofType",
+  "reverseMappedSourceType",
+  "reverseMappedMappedType",
+  "reverseMappedConstraintType",
+  "substitutionBaseType",
+  "constraintType",
+  "evolvingArrayElementType",
+  "evolvingArrayFinalType",
+  "aliasType",
+] as const;
+
 export const typeRelationInfo = {
-  typeArguments: {
-    title: "Type Argument",
-    unit: "type arguments",
-  },
   unionTypes: {
-    title: "Union Member",
-    unit: "unions",
+    source: {
+      title: "Union",
+      unit: "union members",
+      description:
+        "Type whose union has the greatest number of distinct members (breadth of possible shapes).",
+    },
+    target: {
+      title: "Union Member",
+      unit: "unions",
+      description: "The type most frequently included in unions.",
+    },
+    route: "union-types",
   },
   intersectionTypes: {
-    title: "Intersection Member",
-    unit: "intersections",
+    source: {
+      title: "Intersection",
+      unit: "intersections",
+      description:
+        "Type whose intersection combines the greatest number of constituent types (breadth of constraints).",
+    },
+    target: {
+      title: "Intersection Member",
+      unit: "intersections",
+      description: "The type most frequently included in intersections.",
+    },
+    route: "intersection-types",
   },
-  aliasTypeArguments: {
-    title: "Generic Arguments",
-    unit: "alias type-arguments",
+  typeArguments: {
+    source: {
+      title: "Type Arguments",
+      unit: "type arguments",
+      description:
+        "Generic type with the largest number of supplied type arguments at its most complex instantiation.",
+    },
+    target: {
+      title: "Type Argument",
+      unit: "type arguments",
+      description:
+        "The type most frequently used as a type argument (indicating complex generic interactions).",
+    },
+    route: "type-arguments",
   },
   instantiatedType: {
-    title: "Instantiated By",
-    unit: "instantiations",
+    source: {
+      title: "Instantiated",
+      unit: "",
+      description: "",
+    },
+    target: {
+      title: "Instantiated By",
+      unit: "instantiations",
+      description:
+        "Type that was instantiated the most, indicating high reuse.",
+    },
+    route: "instantiated-type",
   },
-  substitutionBaseType: {
-    title: "Substitution Bases",
-    unit: "substitution uses",
-  },
-  constraintType: {
-    title: "Generic Constraints",
-    unit: "constraint uses",
-  },
-  indexedAccessObjectType: {
-    title: "Object Indexed Access By",
-    unit: "indexed-accesses",
-  },
-  indexedAccessIndexType: {
-    title: "Tuple Indexed Access By",
-    unit: "indexed-accesses",
+  aliasTypeArguments: {
+    source: {
+      title: "Generic Argument",
+      unit: "generic arguments",
+      description:
+        "Type alias pulling in the greatest number of distinct generic arguments through its resolution layers.",
+    },
+    target: {
+      title: "Generic Arguments",
+      unit: "alias type-arguments",
+      description:
+        'The types most often used as generic arguments.  The TypeScript compiler calls this "alias type-arguments."  There are technically other kinds of types that can show up here, but it\'s mostly generic type arguments.',
+    },
+    route: "alias-type-arguments",
   },
   conditionalCheckType: {
-    title: "Conditional Check Condition",
-    unit: "conditional checks",
+    source: {
+      title: "Conditional Check",
+      unit: "",
+      description: "",
+    },
+    target: {
+      title: "Conditional Check Condition",
+      unit: "conditional checks",
+      description:
+        "Type most often used as the checked type in conditional types (the `T` in `T extends U ? A : B`).",
+    },
+    route: "conditional-check-type",
   },
   conditionalExtendsType: {
-    title: "Conditional Extends",
-    unit: "extends uses",
-  },
-  conditionalTrueType: {
-    title: "Conditional True Branch",
-    unit: "true-branch uses",
+    source: {
+      title: "Conditional Extends",
+      unit: "",
+      description: "",
+    },
+    target: {
+      title: "Conditional Extends",
+      unit: "extends uses",
+      description:
+        "Type most frequently appearing on the `extends` side of conditional types (the `U` in `T extends U ? A : B`)), indicating common constraint relationships.",
+    },
+    route: "conditional-extends-type",
   },
   conditionalFalseType: {
-    title: "Conditional False Branch",
-    unit: "false-branch uses",
+    source: {
+      title: "Conditional False",
+      unit: "",
+      description: "",
+    },
+    target: {
+      title: "Conditional False Branch",
+      unit: "false-branch uses",
+      description:
+        "Type that most often appears as the `false` branch result of conditional types. Indicates fallback/resolution patterns.",
+    },
+    route: "conditional-false-type",
+  },
+  conditionalTrueType: {
+    source: {
+      title: "Conditional True",
+      unit: "",
+      description: "",
+    },
+    target: {
+      title: "Conditional True Branch",
+      unit: "true-branch uses",
+      description:
+        "Type that most often appears as the `true` branch result of conditional types. Indicates favored resolution outcomes.",
+    },
+    route: "conditional-true-type",
+  },
+  indexedAccessObjectType: {
+    source: {
+      title: "Indexed Access Object",
+      unit: "",
+      description: "",
+    },
+    target: {
+      title: "Object Indexed Access By",
+      unit: "indexed-accesses",
+      description:
+        "Type most frequently used as the object operand in indexed access (e.g. `T[K]`), indicating dynamic property shape usage.",
+    },
+    route: "indexed-access-object-type",
+  },
+  indexedAccessIndexType: {
+    source: {
+      title: "Indexed Access Index",
+      unit: "",
+      description: "",
+    },
+    target: {
+      title: "Tuple Indexed Access By",
+      unit: "indexed-accesses",
+      description:
+        "Type most frequently used as the index operand in indexed access of a tuple (e.g. `SomeTuple[K]`).",
+    },
+    route: "indexed-access-index-type",
   },
   keyofType: {
-    title: "Keyof Uses",
-    unit: "keyof uses",
-  },
-  aliasType: {
-    title: "Aliased As",
-    unit: "alias uses",
-  },
-  evolvingArrayElementType: {
-    title: "Evolving Array Element",
-    unit: "array element uses",
-  },
-  evolvingArrayFinalType: {
-    title: "Evolving Array Final",
-    unit: "array final uses",
+    source: {
+      title: "Keyof",
+      unit: "",
+      description: "",
+    },
+    target: {
+      title: "Keyof Uses",
+      unit: "keyof uses",
+      description:
+        "Type most frequently used within 'keyof' operations, often indicating dynamic property access patterns.",
+    },
+    route: "keyof-type",
   },
   reverseMappedSourceType: {
-    title: "Reverse-Map Source",
-    unit: "reverse-mappings",
+    source: {
+      title: "Reverse Mapped Source",
+      unit: "",
+      description: "",
+    },
+    target: {
+      title: "Reverse-Map Source",
+      unit: "reverse-mappings",
+      description:
+        "Type most commonly appearing as the source in reverse-mapped type transforms (utility mapped types in reverse).",
+    },
+    route: "reverse-mapped-source-type",
   },
   reverseMappedMappedType: {
-    title: "Reverse-Map Mapped By",
-    unit: "reverse-mapped sources",
+    source: {
+      title: "Reverse Mapped Mapped",
+      unit: "",
+      description: "",
+    },
+    target: {
+      title: "Reverse-Map Mapped By",
+      unit: "reverse-mapped sources",
+      description:
+        "Type most commonly produced by reverse-mapped transformations.",
+    },
+    route: "reverse-mapped-mapped-type",
   },
   reverseMappedConstraintType: {
-    title: "Reverse-Map Constraints",
-    unit: "reverse-mapping constraints",
+    source: {
+      title: "Reverse Mapped Constraint",
+      unit: "",
+      description: "",
+    },
+    target: {
+      title: "Reverse-Map Constraints",
+      unit: "reverse-mapping constraints",
+      description:
+        "Type that often serves as a constraint in reverse-mapped transformations, indicating mapped type bounds.",
+    },
+    route: "reverse-mapped-constraint-type",
   },
-} satisfies Record<keyof typeof typeRelations, TypeRelationInfo>;
+  substitutionBaseType: {
+    source: {
+      title: "Substitution Base",
+      unit: "",
+      description: "",
+    },
+    target: {
+      title: "Substitution Bases",
+      unit: "substitution uses",
+      description:
+        "Type used as a substitution base during type substitution operations, signaling types that commonly serve as generic inference placeholders.",
+    },
+    route: "substitution-base-type",
+  },
+  constraintType: {
+    source: {
+      title: "Constraint",
+      unit: "",
+      description: "",
+    },
+    target: {
+      title: "Generic Constraints",
+      unit: "constraint uses",
+      description:
+        "Type most often appearing as a generic constraint (e.g. in `extends` clauses) when resolving generics and conditionals.",
+    },
+    route: "constraint-type",
+  },
+  evolvingArrayElementType: {
+    source: {
+      title: "Evolving Array Element",
+      unit: "",
+      description: "",
+    },
+    target: {
+      title: "Evolving Array Element",
+      unit: "array element uses",
+      description:
+        "Type most commonly used as the evolving array element during array widening/folding operations in inference.",
+    },
+    route: "evolving-array-element-type",
+  },
+  evolvingArrayFinalType: {
+    source: {
+      title: "Evolving Array Final",
+      unit: "",
+      description: "",
+    },
+    target: {
+      title: "Evolving Array Final",
+      unit: "array final uses",
+      description:
+        "Type that frequently becomes the final element type after array evolution/widening, useful to spot common widened shapes.",
+    },
+    route: "evolving-array-final-type",
+  },
+  aliasType: {
+    source: {
+      title: "Alias",
+      unit: "",
+      description: "",
+    },
+    target: {
+      title: "Aliased As",
+      unit: "alias uses",
+      description:
+        "Type most frequently used as an alias target, shows which aliases are heavily reused across the codebase.",
+    },
+    route: "alias-type",
+  },
+} as const satisfies Record<keyof typeof typeRelations, TypeRelationInfo>;
 
 export const resolvedType = z
   .object({

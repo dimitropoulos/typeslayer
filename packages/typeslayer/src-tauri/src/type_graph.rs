@@ -22,29 +22,26 @@ pub struct CountAndMax {
 #[derive(Eq, PartialEq, Hash, Debug, Clone, Serialize, Deserialize, VariantArray)]
 #[serde(rename_all = "camelCase")]
 pub enum LinkKind {
-    // one to many
-    AliasTypeArgument,
-    Intersection,
-    TypeArgument,
-    Union,
-
-    // one to one
-    Instantiated,
-    SubstitutionBase,
-    Constraint,
-    IndexedAccessObject,
-    IndexedAccessIndex,
-    ConditionalCheck,
-    ConditionalExtends,
-    ConditionalTrue,
-    ConditionalFalse,
-    Keyof,
-    EvolvingArrayElement,
-    EvolvingArrayFinal,
-    ReverseMappedSource,
-    ReverseMappedMapped,
-    ReverseMappedConstraint,
-    Alias,
+    UnionTypes,
+    IntersectionTypes,
+    TypeArguments,
+    InstantiatedType,
+    AliasTypeArguments,
+    ConditionalCheckType,
+    ConditionalExtendsType,
+    ConditionalFalseType,
+    ConditionalTrueType,
+    IndexedAccessObjectType,
+    IndexedAccessIndexType,
+    KeyofType,
+    ReverseMappedSourceType,
+    ReverseMappedMappedType,
+    ReverseMappedConstraintType,
+    SubstitutionBaseType,
+    ConstraintType,
+    EvolvingArrayElementType,
+    EvolvingArrayFinalType,
+    AliasType,
 }
 
 impl LinkKind {

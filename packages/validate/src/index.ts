@@ -39,6 +39,7 @@ export {
   type TypeRelationInfo,
   type TypesJsonSchema,
   typeRelationInfo,
+  typeRelationOrder,
   typesJsonSchema,
 } from "./types-json";
 export type { TypeId } from "./utils";

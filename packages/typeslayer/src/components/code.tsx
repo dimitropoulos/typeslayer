@@ -3,6 +3,7 @@ import { Box, type BoxProps, IconButton, Tooltip } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { type BundledLanguage, codeToHtml } from "shiki";
 import { shikiTheme } from "../shikiTheme";
+import { panelBackground } from "../theme";
 import { OpenablePath } from "./openable-path";
 import { ShowMore } from "./show-more";
 
@@ -128,7 +129,7 @@ export const Code = ({
         sx={{
           p: 2,
           paddingRight: 5,
-          backgroundColor: "#11111190",
+          backgroundColor: panelBackground,
           border: 1,
           borderColor: "divider",
           borderRadius: 1,

@@ -1,210 +1,43 @@
-import { depthLimitInfo } from "@typeslayer/validate";
+import {
+  depthLimitInfo,
+  typeRelationInfo,
+  typeRelationOrder,
+} from "@typeslayer/validate";
 import type { Env } from "./types";
-
-// type_graph_success.linkCounts is total counts of links in the project
-// need
 
 export const groupIds = [
   "compilation",
-  "type-metrics|count",
-  "type-metrics|max",
-  "type-relation-metrics|count",
-  "type-relation-metrics|max",
+  "raw-data",
+  "source_relations|count",
+  "source_relations|max",
+  "target_relations|count",
+  "target_relations|max",
   "performance-metrics",
   "type-level-limits",
   "bundle-implications",
-  "raw-data",
 ] as const;
 
 export type GroupId = (typeof groupIds)[number];
 
 const typeRelationMetrics = (
-  group: "type-metrics" | "type-relation-metrics",
+  group: "source_relations" | "target_relations",
   sub: "max" | "count",
-  direction: "byTarget" | "bySource",
-) =>
-  [
-    {
-      id: `${group}|${sub}|${direction}|union`,
-      label: "union",
-      subtitle: "TODO",
-      groupId: `${group}|${sub}`,
-      format: "count",
-      eventName: "type_graph_success",
-      dataPath: `$.linkKindDataByKind.union.${direction}.${sub}`,
-    },
-    {
-      id: `${group}|${sub}|${direction}|intersection`,
-      label: "intersection",
-      subtitle: "TODO",
-      groupId: `${group}|${sub}`,
-      format: "count",
-      eventName: "type_graph_success",
-      dataPath: `$.linkKindDataByKind.intersection.${direction}.${sub}`,
-    },
-    {
-      id: `${group}|${sub}|${direction}|typeArgument`,
-      label: "typeArgument",
-      subtitle: "TODO",
-      groupId: `${group}|${sub}`,
-      format: "count",
-      eventName: "type_graph_success",
-      dataPath: `$.linkKindDataByKind.typeArgument.${direction}.${sub}`,
-    },
-    {
-      id: `${group}|${sub}|${direction}|instantiated`,
-      label: "instantiated",
-      subtitle: "TODO",
-      groupId: `${group}|${sub}`,
-      format: "count",
-      eventName: "type_graph_success",
-      dataPath: `$.linkKindDataByKind.instantiated.${direction}.${sub}`,
-    },
-    {
-      id: `${group}|${sub}|${direction}|aliasTypeArgument`,
-      label: "aliasTypeArgument",
-      subtitle: "TODO",
-      groupId: `${group}|${sub}`,
-      format: "count",
-      eventName: "type_graph_success",
-      dataPath: `$.linkKindDataByKind.aliasTypeArgument.${direction}.${sub}`,
-    },
-    {
-      id: `${group}|${sub}|${direction}|conditionalCheck`,
-      label: "conditionalCheck",
-      subtitle: "TODO",
-      groupId: `${group}|${sub}`,
-      format: "count",
-      eventName: "type_graph_success",
-      dataPath: `$.linkKindDataByKind.conditionalCheck.${direction}.${sub}`,
-    },
-    {
-      id: `${group}|${sub}|${direction}|conditionalExtends`,
-      label: "conditionalExtends",
-      subtitle: "TODO",
-      groupId: `${group}|${sub}`,
-      format: "count",
-      eventName: "type_graph_success",
-      dataPath: `$.linkKindDataByKind.conditionalExtends.${direction}.${sub}`,
-    },
-    {
-      id: `${group}|${sub}|${direction}|conditionalFalse`,
-      label: "conditionalFalse",
-      subtitle: "TODO",
-      groupId: `${group}|${sub}`,
-      format: "count",
-      eventName: "type_graph_success",
-      dataPath: `$.linkKindDataByKind.conditionalFalse.${direction}.${sub}`,
-    },
-    {
-      id: `${group}|${sub}|${direction}|conditionalTrue`,
-      label: "conditionalTrue",
-      subtitle: "TODO",
-      groupId: `${group}|${sub}`,
-      format: "count",
-      eventName: "type_graph_success",
-      dataPath: `$.linkKindDataByKind.conditionalTrue.${direction}.${sub}`,
-    },
-    {
-      id: `${group}|${sub}|${direction}|indexedAccessObject`,
-      label: "indexedAccessObject",
-      subtitle: "TODO",
-      groupId: `${group}|${sub}`,
-      format: "count",
-      eventName: "type_graph_success",
-      dataPath: `$.linkKindDataByKind.indexedAccessObject.${direction}.${sub}`,
-    },
-    {
-      id: `${group}|${sub}|${direction}|indexedAccessIndex`,
-      label: "indexedAccessIndex",
-      subtitle: "TODO",
-      groupId: `${group}|${sub}`,
-      format: "count",
-      eventName: "type_graph_success",
-      dataPath: `$.linkKindDataByKind.indexedAccessIndex.${direction}.${sub}`,
-    },
-    {
-      id: `${group}|${sub}|${direction}|keyof`,
-      label: "keyof",
-      subtitle: "TODO",
-      groupId: `${group}|${sub}`,
-      format: "count",
-      eventName: "type_graph_success",
-      dataPath: `$.linkKindDataByKind.keyof.${direction}.${sub}`,
-    },
-    {
-      id: `${group}|${sub}|${direction}|reverseMappedSource`,
-      label: "reverseMappedSource",
-      subtitle: "TODO",
-      groupId: `${group}|${sub}`,
-      format: "count",
-      eventName: "type_graph_success",
-      dataPath: `$.linkKindDataByKind.reverseMappedSource.${direction}.${sub}`,
-    },
-    {
-      id: `${group}|${sub}|${direction}|reverseMappedMapped`,
-      label: "reverseMappedMapped",
-      subtitle: "TODO",
-      groupId: `${group}|${sub}`,
-      format: "count",
-      eventName: "type_graph_success",
-      dataPath: `$.linkKindDataByKind.reverseMappedMapped.${direction}.${sub}`,
-    },
-    {
-      id: `${group}|${sub}|${direction}|reverseMappedConstraint`,
-      label: "reverseMappedConstraint",
-      subtitle: "TODO",
-      groupId: `${group}|${sub}`,
-      format: "count",
-      eventName: "type_graph_success",
-      dataPath: `$.linkKindDataByKind.reverseMappedConstraint.${direction}.${sub}`,
-    },
-    {
-      id: `${group}|${sub}|${direction}|substitutionBase`,
-      label: "substitutionBase",
-      subtitle: "TODO",
-      groupId: `${group}|${sub}`,
-      format: "count",
-      eventName: "type_graph_success",
-      dataPath: `$.linkKindDataByKind.substitutionBase.${direction}.${sub}`,
-    },
-    {
-      id: `${group}|${sub}|${direction}|constraint`,
-      label: "constraint",
-      subtitle: "TODO",
-      groupId: `${group}|${sub}`,
-      format: "count",
-      eventName: "type_graph_success",
-      dataPath: `$.linkKindDataByKind.constraint.${direction}.${sub}`,
-    },
-    {
-      id: `${group}|${sub}|${direction}|evolvingArrayElement`,
-      label: "evolvingArrayElement",
-      subtitle: "TODO",
-      groupId: `${group}|${sub}`,
-      format: "count",
-      eventName: "type_graph_success",
-      dataPath: `$.linkKindDataByKind.evolvingArrayElement.${direction}.${sub}`,
-    },
-    {
-      id: `${group}|${sub}|${direction}|evolvingArrayFinal`,
-      label: "evolvingArrayFinal",
-      subtitle: "TODO",
-      groupId: `${group}|${sub}`,
-      format: "count",
-      eventName: "type_graph_success",
-      dataPath: `$.linkKindDataByKind.evolvingArrayFinal.${direction}.${sub}`,
-    },
-    {
-      id: `${group}|${sub}|${direction}|alias`,
-      label: "alias",
-      subtitle: "TODO",
-      groupId: `${group}|${sub}`,
-      format: "count",
-      eventName: "type_graph_success",
-      dataPath: `$.linkKindDataByKind.alias.${direction}.${sub}`,
-    },
-  ] satisfies Query[];
+) => {
+  const direction = group === "source_relations" ? "byTarget" : "bySource";
+  const infoPath = group === "source_relations" ? "source" : "target";
+  return typeRelationOrder.map(
+    linkKind =>
+      ({
+        id: `${group}|${sub}|${linkKind}`,
+        label: typeRelationInfo[linkKind][infoPath].title,
+        subtitle: typeRelationInfo[linkKind][infoPath].description,
+        groupId: `${group}|${sub}`,
+        format: "count",
+        eventName: "type_graph_success",
+        dataPath: `$.linkKindDataByKind.${linkKind}.${direction}.${sub}`,
+      }) as Query,
+  );
+};
 
 export const groupInfo = {
   compilation: {
@@ -229,8 +62,8 @@ export const groupInfo = {
         dataPath: "$.linkCount",
       },
       {
-        id: "total-duration",
-        label: "Total Duration",
+        id: "time-to-typecheck",
+        label: "Time To Typecheck",
         subtitle: "total time to typecheck",
         groupId: "compilation",
         format: "milliseconds",
@@ -258,24 +91,57 @@ export const groupInfo = {
     ],
   },
 
-  "type-metrics|count": {
+  "raw-data": {
+    label: "Raw Data",
+    queries: [
+      {
+        id: "types-json-size",
+        label: "Types JSON Size",
+        subtitle: "size of types.json file",
+        groupId: "raw-data",
+        format: "bytes",
+        eventName: "generate_trace_success",
+        dataPath: "$.typesJsonFileSize",
+      },
+      {
+        id: "trace-json-size",
+        label: "Trace JSON Size",
+        subtitle: "size of trace.json file",
+        groupId: "raw-data",
+        format: "bytes",
+        eventName: "generate_trace_success",
+        dataPath: "$.traceJsonFileSize",
+      },
+      {
+        id: "trace-count",
+        label: "Trace Count",
+        subtitle: "number of events in the trace file",
+        groupId: "raw-data",
+        format: "count",
+        eventName: "generate_trace_success",
+        dataPath: "$.traceCount",
+      },
+    ],
+  },
+
+  "source_relations|count": {
     label: "Type Metrics (Count)",
-    queries: typeRelationMetrics("type-metrics", "count", "bySource"),
+    queries: typeRelationMetrics("source_relations", "count"),
   },
 
-  "type-metrics|max": {
+  "source_relations|max": {
     label: "Type Metrics (Max)",
-    queries: typeRelationMetrics("type-metrics", "max", "bySource"),
+    queries: typeRelationMetrics("source_relations", "max"),
   },
 
-  "type-relation-metrics|count": {
+  "target_relations|count": {
     label: "Type Relation Metrics (Count)",
-    queries: typeRelationMetrics("type-relation-metrics", "count", "byTarget"),
+    queries: typeRelationMetrics("target_relations", "count"),
   },
 
-  "type-relation-metrics|max": {
+  "target_relations|max": {
     label: "Type Relation Metrics (Max)",
-    queries: typeRelationMetrics("type-relation-metrics", "max", "byTarget"),
+    queries: typeRelationMetrics("target_relations", "max"),
   },
 
   "performance-metrics": {
@@ -299,8 +165,7 @@ export const groupInfo = {
       {
         id: "traceUnionsOrIntersectionsTooLarge_DepthLimit",
         label:
-          depthLimitInfo.traceUnionsOrIntersectionsTooLarge_DepthLimit
-            .description,
+          depthLimitInfo.traceUnionsOrIntersectionsTooLarge_DepthLimit.title,
         subtitle: "traceUnionsOrIntersectionsTooLarge_DepthLimit",
         groupId: "type-level-limits",
         format: "count",
@@ -310,7 +175,7 @@ export const groupInfo = {
       },
       {
         id: "getTypeAtFlowNode_DepthLimit",
-        label: depthLimitInfo.getTypeAtFlowNode_DepthLimit.description,
+        label: depthLimitInfo.getTypeAtFlowNode_DepthLimit.title,
         subtitle: "getTypeAtFlowNode_DepthLimit",
         groupId: "type-level-limits",
         format: "count",
@@ -319,7 +184,7 @@ export const groupInfo = {
       },
       {
         id: "instantiateType_DepthLimit",
-        label: depthLimitInfo.instantiateType_DepthLimit.description,
+        label: depthLimitInfo.instantiateType_DepthLimit.title,
         subtitle: "instantiateType_DepthLimit",
         groupId: "type-level-limits",
         format: "count",
@@ -328,7 +193,7 @@ export const groupInfo = {
       },
       {
         id: "checkTypeRelatedTo_DepthLimit",
-        label: depthLimitInfo.checkTypeRelatedTo_DepthLimit.description,
+        label: depthLimitInfo.checkTypeRelatedTo_DepthLimit.title,
         subtitle: "checkTypeRelatedTo_DepthLimit",
         groupId: "type-level-limits",
         format: "count",
@@ -337,7 +202,7 @@ export const groupInfo = {
       },
       {
         id: "checkCrossProductUnion_DepthLimit",
-        label: depthLimitInfo.checkCrossProductUnion_DepthLimit.description,
+        label: depthLimitInfo.checkCrossProductUnion_DepthLimit.title,
         subtitle: "checkCrossProductUnion_DepthLimit",
         groupId: "type-level-limits",
         format: "count",
@@ -346,7 +211,7 @@ export const groupInfo = {
       },
       {
         id: "removeSubtypes_DepthLimit",
-        label: depthLimitInfo.removeSubtypes_DepthLimit.description,
+        label: depthLimitInfo.removeSubtypes_DepthLimit.title,
         subtitle: "removeSubtypes_DepthLimit",
         groupId: "type-level-limits",
         format: "count",
@@ -355,8 +220,7 @@ export const groupInfo = {
       },
       {
         id: "typeRelatedToDiscriminatedType_DepthLimit",
-        label:
-          depthLimitInfo.typeRelatedToDiscriminatedType_DepthLimit.description,
+        label: depthLimitInfo.typeRelatedToDiscriminatedType_DepthLimit.title,
         subtitle: "typeRelatedToDiscriminatedType_DepthLimit",
         groupId: "type-level-limits",
         format: "count",
@@ -366,7 +230,7 @@ export const groupInfo = {
       },
       {
         id: "recursiveTypeRelatedTo_DepthLimit",
-        label: depthLimitInfo.recursiveTypeRelatedTo_DepthLimit.description,
+        label: depthLimitInfo.recursiveTypeRelatedTo_DepthLimit.title,
         subtitle: "recursiveTypeRelatedTo_DepthLimit",
         groupId: "type-level-limits",
         format: "count",
@@ -399,30 +263,6 @@ export const groupInfo = {
       },
     ],
   },
-
-  "raw-data": {
-    label: "Raw Data",
-    queries: [
-      {
-        id: "types-json-size",
-        label: "Types JSON Size",
-        subtitle: "size of types.json file",
-        groupId: "raw-data",
-        format: "bytes",
-        eventName: "generate_trace_success",
-        dataPath: "$.typesJsonFileSize",
-      },
-      {
-        id: "trace-json-size",
-        label: "Trace JSON Size",
-        subtitle: "size of trace.json file",
-        groupId: "raw-data",
-        format: "bytes",
-        eventName: "generate_trace_success",
-        dataPath: "$.traceJsonFileSize",
-      },
-    ],
-  },
 } satisfies Record<
   GroupId,
   {
@@ -443,14 +283,14 @@ type Query = {
 
 export const queries = [
   ...groupInfo.compilation.queries,
-  ...groupInfo["type-metrics|count"].queries,
-  ...groupInfo["type-metrics|max"].queries,
-  ...groupInfo["type-relation-metrics|count"].queries,
-  ...groupInfo["type-relation-metrics|max"].queries,
+  ...groupInfo["raw-data"].queries,
+  ...groupInfo["source_relations|count"].queries,
+  ...groupInfo["source_relations|max"].queries,
+  ...groupInfo["target_relations|count"].queries,
+  ...groupInfo["target_relations|max"].queries,
   ...groupInfo["performance-metrics"].queries,
   ...groupInfo["type-level-limits"].queries,
   ...groupInfo["bundle-implications"].queries,
-  ...groupInfo["raw-data"].queries,
 ] satisfies Query[];
 
 export type LeaderboardNumberFormat = "count" | "bytes" | "milliseconds";

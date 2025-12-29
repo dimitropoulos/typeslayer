@@ -238,37 +238,46 @@ impl ResolvedType {
 
         // single relationships
         for (opt_target, kind) in [
-            (self.instantiated_type, LinkKind::Instantiated),
-            (self.substitution_base_type, LinkKind::SubstitutionBase),
-            (self.constraint_type, LinkKind::Constraint),
+            (self.instantiated_type, LinkKind::InstantiatedType),
+            (self.substitution_base_type, LinkKind::SubstitutionBaseType),
+            (self.constraint_type, LinkKind::ConstraintType),
             (
                 self.indexed_access_object_type,
-                LinkKind::IndexedAccessObject,
+                LinkKind::IndexedAccessObjectType,
             ),
-            (self.indexed_access_index_type, LinkKind::IndexedAccessIndex),
-            (self.conditional_check_type, LinkKind::ConditionalCheck),
-            (self.conditional_extends_type, LinkKind::ConditionalExtends),
-            (self.conditional_true_type, LinkKind::ConditionalTrue),
-            (self.conditional_false_type, LinkKind::ConditionalFalse),
-            (self.keyof_type, LinkKind::Keyof),
+            (
+                self.indexed_access_index_type,
+                LinkKind::IndexedAccessIndexType,
+            ),
+            (self.conditional_check_type, LinkKind::ConditionalCheckType),
+            (
+                self.conditional_extends_type,
+                LinkKind::ConditionalExtendsType,
+            ),
+            (self.conditional_true_type, LinkKind::ConditionalTrueType),
+            (self.conditional_false_type, LinkKind::ConditionalFalseType),
+            (self.keyof_type, LinkKind::KeyofType),
             (
                 self.evolving_array_element_type,
-                LinkKind::EvolvingArrayElement,
+                LinkKind::EvolvingArrayElementType,
             ),
-            (self.evolving_array_final_type, LinkKind::EvolvingArrayFinal),
+            (
+                self.evolving_array_final_type,
+                LinkKind::EvolvingArrayFinalType,
+            ),
             (
                 self.reverse_mapped_source_type,
-                LinkKind::ReverseMappedSource,
+                LinkKind::ReverseMappedSourceType,
             ),
             (
                 self.reverse_mapped_mapped_type,
-                LinkKind::ReverseMappedMapped,
+                LinkKind::ReverseMappedMappedType,
             ),
             (
                 self.reverse_mapped_constraint_type,
-                LinkKind::ReverseMappedConstraint,
+                LinkKind::ReverseMappedConstraintType,
             ),
-            (self.alias_type, LinkKind::Alias),
+            (self.alias_type, LinkKind::AliasType),
         ] {
             if let Some(target) = opt_target {
                 relations.push(GraphLinkWithKind {
@@ -283,11 +292,14 @@ impl ResolvedType {
         for (opt_targets, kind) in [
             (
                 self.alias_type_arguments.as_ref(),
-                LinkKind::AliasTypeArgument,
+                LinkKind::AliasTypeArguments,
             ),
-            (self.intersection_types.as_ref(), LinkKind::Intersection),
-            (self.union_types.as_ref(), LinkKind::Union),
-            (self.type_arguments.as_ref(), LinkKind::TypeArgument),
+            (
+                self.intersection_types.as_ref(),
+                LinkKind::IntersectionTypes,
+            ),
+            (self.union_types.as_ref(), LinkKind::UnionTypes),
+            (self.type_arguments.as_ref(), LinkKind::TypeArguments),
         ] {
             if let Some(targets) = opt_targets {
                 for &target in targets {

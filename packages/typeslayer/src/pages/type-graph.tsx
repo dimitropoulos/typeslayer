@@ -22,7 +22,11 @@ import {
   Typography,
 } from "@mui/material";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import type { TypeId } from "@typeslayer/validate";
+import {
+  type TypeId,
+  typeRelationInfo,
+  typeRelationOrder,
+} from "@typeslayer/validate";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CenterLoader } from "../components/center-loader";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
@@ -44,30 +48,6 @@ type EdgeConfig = {
   color: string;
   label: string;
 };
-
-// Ranking provided by user, highest to lowest
-const EDGE_RANKING: LinkKind[] = [
-  "union",
-  "intersection",
-  "typeArgument",
-  "instantiated",
-  "aliasTypeArgument",
-  "conditionalCheck",
-  "conditionalExtends",
-  "conditionalFalse",
-  "conditionalTrue",
-  "indexedAccessObject",
-  "indexedAccessIndex",
-  "keyof",
-  "reverseMappedSource",
-  "reverseMappedMapped",
-  "reverseMappedConstraint",
-  "substitutionBase",
-  "constraint",
-  "evolvingArrayElement",
-  "evolvingArrayFinal",
-  "alias",
-];
 
 // Color palette preference groups:
 // Top 3: R, G, B
@@ -96,30 +76,7 @@ const EDGE_COLORS_HEX: string[] = [
   "#00bfFF", // sky
 ];
 
-const EDGE_LABELS: Record<LinkKind, string> = {
-  union: "Union",
-  intersection: "Intersection",
-  typeArgument: "Type Argument",
-  instantiated: "Instantiated",
-  aliasTypeArgument: "Generic Argument",
-  conditionalCheck: "Conditional Check",
-  conditionalExtends: "Conditional Extends",
-  conditionalFalse: "Conditional False",
-  conditionalTrue: "Conditional True",
-  indexedAccessObject: "Indexed Access Object",
-  indexedAccessIndex: "Indexed Access Index",
-  keyof: "Keyof",
-  reverseMappedSource: "Reverse Mapped Source",
-  reverseMappedMapped: "Reverse Mapped Mapped",
-  reverseMappedConstraint: "Reverse Mapped Constraint",
-  substitutionBase: "Substitution Base",
-  constraint: "Constraint",
-  evolvingArrayElement: "Evolving Array Element",
-  evolvingArrayFinal: "Evolving Array Final",
-  alias: "Alias",
-};
-
-const EDGE_CONFIGS: EdgeConfig[] = EDGE_RANKING.map((id, i) => {
+const EDGE_CONFIGS: EdgeConfig[] = typeRelationOrder.map((id, i) => {
   const hex = EDGE_COLORS_HEX[i % EDGE_COLORS_HEX.length];
   // convert hex to RGB 0..1
   const r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -129,7 +86,7 @@ const EDGE_CONFIGS: EdgeConfig[] = EDGE_RANKING.map((id, i) => {
     id,
     colorRGB: [r, g, b],
     color: hex,
-    label: EDGE_LABELS[id],
+    label: typeRelationInfo[id].source.title,
   };
 });
 
