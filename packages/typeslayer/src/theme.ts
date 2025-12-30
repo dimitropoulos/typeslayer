@@ -74,7 +74,7 @@ declare module "@mui/material/styles" {
         strong: string;
       };
       sidebar: {
-        overlay: string; // gradient overlay for darkening & blending
+        overlay: string;
       };
     };
   }
