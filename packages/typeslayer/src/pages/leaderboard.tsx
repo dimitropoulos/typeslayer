@@ -155,7 +155,9 @@ export const LeaderboardPage = () => {
           </Typography>
 
           {isDebugMode ? (
-            <Button onClick={invalidate} variant="contained" sx={{ mt: 2 }}>invalidate leaderboard cache</Button>
+            <Button onClick={invalidate} variant="contained" sx={{ mt: 2 }}>
+              invalidate leaderboard cache
+            </Button>
           ) : null}
         </Stack>
         {isLoading ? (

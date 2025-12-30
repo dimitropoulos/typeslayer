@@ -11,18 +11,17 @@ import {
 import type { Env } from "./types";
 
 /** some moron on YouTube showed me how to do this.  fuck that guy. */
-type Path<T> =
-  T extends object
-    ? {
-        [K in keyof T & string]:
-          | [K]
-          | (Path<T[K]> extends infer P
-              ? P extends string[]
-                ? [K, ...P]
-                : never
-              : never)
-      }[keyof T & string]
-    : never
+type Path<T> = T extends object
+  ? {
+      [K in keyof T & string]:
+        | [K]
+        | (Path<T[K]> extends infer P
+            ? P extends string[]
+              ? [K, ...P]
+              : never
+            : never);
+    }[keyof T & string]
+  : never;
 
 export const groupIds = [
   "compilation",
@@ -57,8 +56,10 @@ const typeRelationMetrics = (
       groupId: `${group}|${sub}`,
       format: "count",
       eventName: "type_graph_success",
-      dataPath: ["linkKindDataByKind", linkKind, direction, sub] as Path<EventTypeGraphSuccess['data']>,
-    } satisfies Query<EventTypeGraphSuccess>
+      dataPath: ["linkKindDataByKind", linkKind, direction, sub] as Path<
+        EventTypeGraphSuccess["data"]
+      >,
+    } satisfies Query<EventTypeGraphSuccess>;
   });
 };
 
@@ -290,7 +291,7 @@ export const groupInfo = {
       } satisfies Query<EventAnalyzeTraceSuccess>,
     ],
   },
-}
+};
 
 type Query<Event extends Events> = {
   id: string;
@@ -405,15 +406,15 @@ export async function handleLeaderboard(
 ): Promise<Response> {
   try {
     const cache = caches.default;
-    
+
     // Create a consistent cache key URL (no query params)
     const url = new URL(request.url);
-    url.search = '';
+    url.search = "";
     const cacheKeyUrl = url.toString();
-    
+
     // Check if we have a cached response
     let response = await cache.match(cacheKeyUrl);
-    
+
     if (response) {
       // Return cached response with hit indicator
       const newHeaders = new Headers(response.headers);
@@ -460,21 +461,23 @@ export async function handleLeaderboard(
   }
 }
 
-export async function handleInvalidateCache(request: Request): Promise<Response> {
+export async function handleInvalidateCache(
+  request: Request,
+): Promise<Response> {
   try {
     const url = new URL(request.url);
     // Build the leaderboard URL with consistent cache key
     url.pathname = "/leaderboard";
-    url.search = '';
+    url.search = "";
     const cacheKeyUrl = url.toString();
-    
+
     const cache = caches.default;
     const deleted = await cache.delete(cacheKeyUrl);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: deleted ? "Cache invalidated" : "No cache entry found"
+      JSON.stringify({
+        success: true,
+        message: deleted ? "Cache invalidated" : "No cache entry found",
       }),
       {
         status: 200,
