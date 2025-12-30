@@ -1,11 +1,13 @@
 use crate::{
     analyze_trace::{AnalyzeTraceResult, constants::ANALYZE_TRACE_FILENAME},
     app_data::{Settings, settings::TypeScriptCompilerVariant},
-    layercake::{LayerCake, ResolveBoolArgs, ResolveNumberArgs, ResolveStringArgs},
+    layercake::{
+        LayerCake, ResolveArrayOfStringsArgs, ResolveBoolArgs, ResolveNumberArgs, ResolveStringArgs,
+    },
     type_graph::{TYPE_GRAPH_FILENAME, TypeGraph},
     utils::{
-        AVAILABLE_EDITORS, TSCONFIG_FILENAME, default_extra_tsc_flags,
-        detect_project_root_from_cwd, validate_project_root_path,
+        AVAILABLE_EDITORS, CONFIG_FILENAME, OUTPUTS_DIRECTORY, TSCONFIG_FILENAME,
+        default_extra_tsc_flags, detect_project_root_from_cwd, validate_project_root_path,
     },
     validate::{
         trace_json::{TRACE_JSON_FILENAME, TraceEvent, load_trace_json},
@@ -13,13 +15,64 @@ use crate::{
         utils::CPU_PROFILE_FILENAME,
     },
 };
+use nanoid::nanoid;
 use std::{
     io::BufReader,
     path::{Path, PathBuf},
 };
+use tokio::fs;
 use tracing::{debug, info};
 
-pub fn init_project_root(cake: &LayerCake) -> PathBuf {
+#[derive(serde::Deserialize)]
+struct ConfigVersion {
+    version: String,
+}
+
+pub async fn init_version_and_maybe_clear_outputs(data_dir: &Path) -> Result<String, String> {
+    let current_version = env!("CARGO_PKG_VERSION").to_string();
+    let config_path = data_dir.join(CONFIG_FILENAME);
+    let config_version = if let Ok(contents) = fs::read_to_string(&config_path).await {
+        if let Ok(cfg) = toml::from_str::<ConfigVersion>(&contents) {
+            Some(cfg.version)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    let versions_match = matches!(config_version, Some(ref v) if v == &current_version);
+
+    if !versions_match {
+        let outputs_dir = data_dir.join(OUTPUTS_DIRECTORY);
+        debug!(
+            "[init_version_and_maybe_clear_outputs] version mismatch or no config found (found: {:?}, current: {}), clearing outputs at {}",
+            config_version,
+            current_version,
+            outputs_dir.display()
+        );
+
+        if outputs_dir.exists()
+            && let Ok(mut entries) = fs::read_dir(&outputs_dir).await
+        {
+            while let Ok(Some(entry)) = entries.next_entry().await {
+                let path = entry.path();
+                if path.is_file()
+                    && let Err(e) = fs::remove_file(&path).await
+                {
+                    info!(
+                        "[init_version] failed to remove file {}: {}",
+                        path.display(),
+                        e
+                    );
+                }
+            }
+        }
+    }
+    Ok(current_version)
+}
+
+pub fn init_project_root(cake: &mut LayerCake) -> PathBuf {
     // If neither env nor CLI flag have been provided, favor the current working directory
     // when it already contains a package.json. This prevents stale typeslayer.toml entries
     // from overriding local runs.
@@ -60,17 +113,24 @@ pub async fn init_types_json(outputs_dir: &Path, project_root: &Path) -> TypesJs
         if p.exists() {
             match load_types_json(p.clone()).await {
                 Ok(parsed) => {
-                    debug!("[init_types_json] Loaded types.json from {:?}", p);
+                    debug!(
+                        "[init_types_json] [{}] loaded from {:?}",
+                        TYPES_JSON_FILENAME, p
+                    );
                     return parsed;
                 }
                 Err(e) => info!(
-                    "[init_types_json] Startup types.json ingestion failed at {}: {e}",
+                    "[init_types_json] [{}] startup ingestion failed at {}: {e}",
+                    TYPES_JSON_FILENAME,
                     p.display()
                 ),
             }
         }
     }
-    debug!("[init_types_json] No valid types.json found at startup");
+    debug!(
+        "[init_types_json] [{}] no valid file found at startup",
+        TYPES_JSON_FILENAME
+    );
     Vec::new()
 }
 
@@ -83,39 +143,63 @@ pub async fn init_trace_json(outputs_dir: &Path, project_root: &Path) -> Vec<Tra
         if p.exists() {
             match load_trace_json(p.clone()).await {
                 Ok(parsed) => {
-                    debug!("[init_trace_json] Loaded trace.json from {:?}", p);
+                    debug!(
+                        "[init_trace_json] [{}] loaded from {:?}",
+                        TRACE_JSON_FILENAME, p
+                    );
                     return parsed;
                 }
                 Err(e) => info!(
-                    "[init_trace_json] Startup trace.json ingestion failed at {}: {e}",
+                    "[init_trace_json] [{}] startup ingestion failed at {}: {e}",
+                    TRACE_JSON_FILENAME,
                     p.display()
                 ),
             }
         }
     }
-    debug!("[init_trace_json] No valid trace.json found at startup");
+    debug!(
+        "[init_trace_json] [{}] No valid file found at startup",
+        TRACE_JSON_FILENAME
+    );
     Vec::new()
 }
 
 pub async fn init_analyze_trace(outputs_dir: &Path) -> Option<AnalyzeTraceResult> {
     let analyze_path = outputs_dir.join(ANALYZE_TRACE_FILENAME);
-    read_file("init_analyze_trace", analyze_path).await
+    read_file(ANALYZE_TRACE_FILENAME, analyze_path).await
 }
 
 pub async fn init_type_graph(outputs_dir: &Path) -> Option<TypeGraph> {
     let path = outputs_dir.join(TYPE_GRAPH_FILENAME.trim_start_matches('/'));
-    read_file("init_type_graph", path).await
+    read_file(TYPE_GRAPH_FILENAME, path).await
 }
 
 pub async fn init_cpu_profile(outputs_dir: &Path) -> Option<String> {
     let cpu_profile_path = outputs_dir.join(CPU_PROFILE_FILENAME);
-    read_file("init_cpu_profile", cpu_profile_path).await
+    match std::fs::read_to_string(&cpu_profile_path) {
+        Ok(s) => {
+            debug!(
+                "[init_cpu_profile] [{}] loaded CPU profile",
+                CPU_PROFILE_FILENAME
+            );
+            Some(s)
+        }
+        Err(e) => {
+            info!(
+                "[init_cpu_profile] [{}] failed to read CPU profile at {}: {e}",
+                CPU_PROFILE_FILENAME,
+                cpu_profile_path.display()
+            );
+            None
+        }
+    }
 }
 
 async fn read_file<T: Send + serde::de::DeserializeOwned + 'static>(
     name: &'static str,
     path: PathBuf,
 ) -> Option<T> {
+    let path_display = path.display().to_string();
     let result = tauri::async_runtime::spawn_blocking(move || {
         let result = {
             match std::fs::File::open(&path) {
@@ -123,7 +207,7 @@ async fn read_file<T: Send + serde::de::DeserializeOwned + 'static>(
                     serde_json::from_reader(BufReader::new(file)).map_err(|e| e.to_string())
                 }
                 Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
-                    debug!("[{name}] No valid analyze-trace.json found at startup");
+                    debug!("[read_file] [{name}] no valid analyze-trace.json found at startup");
                     return None;
                 }
                 Err(err) => Err(err.to_string()),
@@ -134,7 +218,7 @@ async fn read_file<T: Send + serde::de::DeserializeOwned + 'static>(
             Ok(result) => Some(result),
             Err(e) => {
                 info!(
-                    "[{name}] Startup ingestion failed at {}: {}",
+                    "[read_file] [{name}] startup ingestion failed at {}: {}",
                     path.display(),
                     e
                 );
@@ -145,15 +229,18 @@ async fn read_file<T: Send + serde::de::DeserializeOwned + 'static>(
     .await;
 
     match result {
-        Ok(result) => result,
+        Ok(result) => {
+            debug!("[read_file] [{name}] loaded from {:?}", path_display);
+            result
+        }
         Err(err) => {
-            info!("[init_analyze_trace] Failed to run task: {err}");
+            info!("[read_file] failed to run task: {err}");
             None
         }
     }
 }
 
-pub fn init_settings(cake: &LayerCake) -> Settings {
+pub fn init_settings(cake: &mut LayerCake) -> Settings {
     let relative_paths = cake.resolve_bool(ResolveBoolArgs {
         env: "RELATIVE_PATHS",
         flag: "--relative-paths",
@@ -179,12 +266,6 @@ pub fn init_settings(cake: &LayerCake) -> Settings {
             }
         },
     }));
-    let auto_start = cake.resolve_bool(ResolveBoolArgs {
-        env: "AUTO_START",
-        flag: "--autoStart",
-        file: "settings.autoStart",
-        default: || true,
-    });
     let extra_tsc_flags = cake.resolve_string(ResolveStringArgs {
         env: "EXTRA_TSC_FLAGS",
         flag: "--extra-tsc-flags",
@@ -272,10 +353,29 @@ pub fn init_settings(cake: &LayerCake) -> Settings {
             }
         },
     });
+
+    let disable_analytics = cake.resolve_bool(ResolveBoolArgs {
+        env: "DISABLE_ANALYTICS",
+        flag: "--disable-analytics",
+        file: "settings.disableAnalytics",
+        default: || false,
+    });
+
+    let analytics_consent = if disable_analytics {
+        Vec::new()
+    } else {
+        cake.resolve_array_of_strings(ResolveArrayOfStringsArgs {
+            env: "ANALYTICS_CONSENT",
+            flag: "--analytics-consent",
+            file: "settings.analyticsConsent",
+            default: || Settings::default().analytics_consent,
+            validate: |items| Ok(items.to_vec()),
+        })
+    };
+
     Settings {
         relative_paths,
         prefer_editor_open,
-        auto_start,
         preferred_editor,
         extra_tsc_flags,
         apply_tsc_project_flag,
@@ -283,10 +383,11 @@ pub fn init_settings(cake: &LayerCake) -> Settings {
         max_stack_size,
         typescript_compiler_variant,
         max_nodes,
+        analytics_consent,
     }
 }
 
-pub fn init_verbose(cake: &LayerCake) -> bool {
+pub fn init_verbose(cake: &mut LayerCake) -> bool {
     cake.resolve_bool(ResolveBoolArgs {
         env: "VERBOSE",
         flag: "--verbose",
@@ -295,7 +396,7 @@ pub fn init_verbose(cake: &LayerCake) -> bool {
     })
 }
 
-pub fn init_auth_code(cake: &LayerCake) -> Option<String> {
+pub fn init_auth_code(cake: &mut LayerCake) -> Option<String> {
     let code = cake.resolve_string(ResolveStringArgs {
         env: "AUTH_CODE",
         flag: "--auth-code",
@@ -307,7 +408,7 @@ pub fn init_auth_code(cake: &LayerCake) -> Option<String> {
     if code.is_empty() { None } else { Some(code) }
 }
 pub fn init_selected_tsconfig_with(
-    cake: &LayerCake,
+    cake: &mut LayerCake,
     tsconfig_paths: &[PathBuf],
 ) -> Option<PathBuf> {
     let auto_detect = || {
@@ -345,4 +446,27 @@ pub fn init_selected_tsconfig_with(
     } else {
         Some(PathBuf::from(result))
     }
+}
+
+const ALPHABET: [char; 62] = [
+    '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
+    'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B',
+    'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U',
+    'V', 'W', 'X', 'Y', 'Z',
+];
+
+pub fn generate_session_id() -> String {
+    nanoid!(8, &ALPHABET)
+}
+
+pub fn init_session_id(cake: &mut LayerCake) -> String {
+    let id = cake.resolve_string(ResolveStringArgs {
+        env: "SESSION_ID",
+        flag: "--session-id",
+        file: "session_id",
+        default: || generate_session_id(),
+        validate: |s| Ok(s.to_string()),
+    });
+    tracing::info!("[init_session_id] resolved session_id = '{}'", id);
+    id
 }

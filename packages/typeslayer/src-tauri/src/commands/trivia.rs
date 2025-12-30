@@ -32,7 +32,7 @@ pub async fn get_app_stats(state: State<'_, &Mutex<AppData>>) -> Result<AppStats
         links_count: data
             .type_graph
             .as_ref()
-            .map_or(0, |graph| graph.links.len()),
+            .map_or(0, |graph| graph.calculate_links_total()),
     })
 }
 

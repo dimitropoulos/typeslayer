@@ -20,7 +20,7 @@
     "typecheck": "pnpm --recursive run typecheck"
   },
   "devDependencies": {
-    "@types/node": "^24.10.1",
-    "@biomejs/biome": "^2.3.7"
+    "@types/node": "^25.0.3",
+    "@biomejs/biome": "^2.3.10"
   }
 }

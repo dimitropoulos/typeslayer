@@ -2,12 +2,15 @@ use crate::{
     analyze_trace::{AnalyzeTraceResult, constants::ANALYZE_TRACE_FILENAME},
     app_data::AppData,
     process_controller::ProcessController,
-    type_graph::{CompactGraphLink, CompactGraphLinkStats, GraphNodeStats, GraphStats},
+    type_graph::{CountAndMax, LinkKind, LinkKindData, NodeStatKind, NodeStatKindData},
     utils::{compute_window_title, set_window_title},
-    validate::trace_json::TraceEvent,
+    validate::{trace_json::TraceEvent, utils::TypeId},
 };
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 use tauri::{AppHandle, State};
 use tokio::sync::Mutex;
 use tracing::debug;
@@ -152,9 +155,9 @@ pub async fn get_data_dir(state: State<'_, &Mutex<AppData>>) -> Result<String, S
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NodesAndLinks {
-    pub nodes: usize,
-    pub links: Vec<CompactGraphLink>,
+    pub node_count: usize,
     pub is_limited: bool,
+    pub links_by_type: HashMap<LinkKind, Vec<(TypeId, TypeId)>>,
 }
 
 #[tauri::command]
@@ -163,7 +166,7 @@ pub async fn get_type_graph_nodes_and_links(
 ) -> Result<NodesAndLinks, String> {
     let data = state.lock().await;
 
-    let tg = data
+    let type_graph = data
         .type_graph
         .as_ref()
         .ok_or_else(|| "type graph unavailable".to_string())?;
@@ -171,61 +174,128 @@ pub async fn get_type_graph_nodes_and_links(
     let max_nodes = data.settings.max_nodes as usize;
 
     // Filter nodes to only include those with ID < max_nodes
-    let filtered_nodes = tg.nodes.min(max_nodes);
+    let filtered_nodes = type_graph.node_count.min(max_nodes);
 
     // Filter links where both source and target are < max_nodes
-    let filtered_links: Vec<CompactGraphLink> = tg
-        .links
+    let filtered_links: HashMap<LinkKind, Vec<(TypeId, TypeId)>> = type_graph
+        .link_kind_data_by_kind
         .iter()
-        .filter(|l| l.source < max_nodes && l.target < max_nodes)
-        .map(|l| l.clone().into())
+        .map(|(kind, link_kind_data)| {
+            // loop through all the LinkKindData child_link_data entries
+            // and filter the links that have typeids (source and/or target) > max_nodes
+            // then flatten the results into a single Vec<(TypeId, TypeId)> where the parent is the source
+            let filtered_graph_links: Vec<(TypeId, TypeId)> = link_kind_data
+                .by_source
+                .source_to_targets
+                .iter()
+                .filter_map(|child_link| {
+                    // Check if target_id is within limits
+                    if *child_link.0 >= filtered_nodes as TypeId {
+                        return None;
+                    }
+                    // Filter source_ids within limits
+                    let valid_source_ids: Vec<TypeId> = child_link
+                        .1
+                        .iter()
+                        .cloned()
+                        .filter(|&source_id| source_id < filtered_nodes as TypeId)
+                        .collect();
+                    if valid_source_ids.is_empty() {
+                        return None;
+                    }
+                    Some(
+                        valid_source_ids
+                            .into_iter()
+                            .map(|source_id| (source_id, *child_link.0))
+                            .collect::<Vec<(TypeId, TypeId)>>(),
+                    )
+                })
+                .flatten()
+                .collect();
+            (kind.clone(), filtered_graph_links)
+        })
         .collect();
 
     Ok(NodesAndLinks {
-        nodes: filtered_nodes,
-        links: filtered_links,
-        is_limited: tg.nodes > max_nodes,
+        node_count: filtered_nodes,
+        is_limited: type_graph.node_count > max_nodes,
+        links_by_type: filtered_links,
     })
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct GraphStats {
+    pub link: HashMap<LinkKind, CountAndMax>,
+    pub node: HashMap<NodeStatKind, CountAndMax>,
 }
 
 #[tauri::command]
 pub async fn get_type_graph_stats(state: State<'_, &Mutex<AppData>>) -> Result<GraphStats, String> {
     let data = state.lock().await;
 
-    let tg = data
+    let type_graph = data
         .type_graph
         .as_ref()
         .ok_or_else(|| "type graph unavailable".to_string())?;
-    Ok(tg.stats.clone())
+    Ok(GraphStats {
+        link: type_graph.calculate_link_count_and_max(),
+        node: type_graph.calculate_node_stat_count_and_max(),
+    })
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NodeAndLinkStats {
-    pub node_stats: GraphNodeStats,
-    pub link_stats: CompactGraphLinkStats,
+    pub node_stats: HashMap<NodeStatKind, NodeStatKindData>,
+    pub link_stats: HashMap<LinkKind, LinkKindData>,
+    pub path_map: HashMap<TypeId, String>,
 }
 
+/// this command is for building the award winners page more efficiently (don't want to send the full stats)
 #[tauri::command]
-pub async fn get_type_graph_node_and_link_stats(
+pub async fn get_type_graph_limited_node_and_link_stats(
     state: State<'_, &Mutex<AppData>>,
 ) -> Result<NodeAndLinkStats, String> {
     let data = state.lock().await;
 
-    let tg = data
+    let type_graph = data
         .type_graph
         .as_ref()
         .ok_or_else(|| "type graph unavailable".to_string())?;
 
-    let compact_link_stats = tg
-        .link_stats
-        .iter()
-        .map(|(kind, stats)| (kind.clone(), stats.clone().into()))
+    // go through type_graph.node_data_by_kind and type_graph.link_kind_data_by_kind
+    // and limit to the first 100 entries for each kind
+    let limited_node_stats = type_graph
+        .node_data_by_kind
+        .clone()
+        .into_iter()
+        .map(|(kind, mut kind_data)| {
+            // limit kind_data.nodes to first 100 entries
+            kind_data.nodes = kind_data.nodes.into_iter().take(100).collect();
+            (kind, kind_data)
+        })
+        .collect();
+    let limited_link_stats = type_graph
+        .link_kind_data_by_kind
+        .clone()
+        .into_iter()
+        .map(|(kind, mut kind_data)| {
+            // limit parent_link_data.target_to_sources to first 100 entries
+            kind_data.by_target.target_to_sources = kind_data
+                .by_target
+                .target_to_sources
+                .into_iter()
+                .take(100)
+                .collect();
+            (kind, kind_data)
+        })
         .collect();
 
     Ok(NodeAndLinkStats {
-        node_stats: tg.node_stats.clone(),
-        link_stats: compact_link_stats,
+        node_stats: limited_node_stats,
+        link_stats: limited_link_stats,
+        path_map: type_graph.path_map.clone(),
     })
 }
 

@@ -1,33 +1,6 @@
-import {
-  Air,
-  AltRoute,
-  Calculate,
-  Check,
-  Close,
-  CopyAll,
-  Diversity1,
-  Expand,
-  Extension,
-  FilterListAlt,
-  FindReplace,
-  Input,
-  JoinFull,
-  JoinInner,
-  Key,
-  Lightbulb,
-  Polyline,
-  QuestionMark,
-  RotateRight,
-  SafetyDivider,
-  Search,
-  SettingsBackupRestore,
-  SportsKabaddi,
-  SubdirectoryArrowRight,
-  TrackChanges,
-  Whatshot,
-} from "@mui/icons-material";
 import { Box, Typography } from "@mui/material";
-import { typeRelationInfo } from "@typeslayer/validate";
+import { analyzeTraceInfo } from "@typeslayer/analyze-trace/browser";
+import { depthLimitInfo, typeRelationInfo } from "@typeslayer/validate";
 import { InlineCode } from "../../components/inline-code";
 import { useFriendlyPackageName } from "../../hooks/tauri-hooks";
 
@@ -47,187 +20,133 @@ const doesNotError = (
 
 export const awards = {
   //
-  // TYPE METRICS
+  // TYPE METRICS (source)
   //
 
-  type_unionTypes: {
-    title: "Largest Union",
-    property: "unionTypes",
-    description:
-      "Type whose union has the greatest number of distinct members (breadth of possible shapes).",
-    icon: JoinFull,
-    unit: "union members",
-    route: "largest-union",
+  source_unionTypes: {
+    ...typeRelationInfo.unionTypes.source,
+    icon: typeRelationInfo.unionTypes.icon,
+    route: `source-${typeRelationInfo.unionTypes.route}`,
   },
-  type_intersectionTypes: {
-    title: "Largest Intersection",
-    property: "intersectionTypes",
-    description:
-      "Type whose intersection combines the greatest number of constituent types (breadth of constraints).",
-    icon: JoinInner,
-    unit: "intersections",
-    route: "largest-intersection",
+  source_intersectionTypes: {
+    ...typeRelationInfo.intersectionTypes.source,
+    icon: typeRelationInfo.intersectionTypes.icon,
+    route: `source-${typeRelationInfo.intersectionTypes.route}`,
   },
-  type_typeArguments: {
-    title: "Most Type Arguments",
-    property: "typeArguments",
-    description:
-      "Generic type with the largest number of supplied type arguments at its most complex instantiation.",
-    icon: SportsKabaddi,
-    unit: "type arguments",
-    route: "most-type-arguments",
+  source_typeArguments: {
+    ...typeRelationInfo.typeArguments.source,
+    icon: typeRelationInfo.typeArguments.icon,
+    route: `source-${typeRelationInfo.typeArguments.route}`,
   },
-  type_aliasTypeArguments: {
-    title: "Generic Arguments",
-    property: "aliasTypeArguments",
-    description:
-      "Type alias pulling in the greatest number of distinct generic arguments through its resolution layers.",
-    icon: Input,
-    unit: "generic arguments",
-    route: "generic-arguments",
+  source_aliasTypeArguments: {
+    ...typeRelationInfo.aliasTypeArguments.source,
+    icon: typeRelationInfo.aliasTypeArguments.icon,
+    route: `source-${typeRelationInfo.aliasTypeArguments.route}`,
   },
 
   //
-  // TYPE RELATION METRICS
-  // (ordered by EDGE_RANKING)
+  // TYPE RELATION METRICS (target)
   //
 
-  relation_union: {
-    ...typeRelationInfo.unionTypes,
-    description: "The type most frequently included in unions.",
-    icon: JoinFull,
-    route: "union",
+  target_unionTypes: {
+    ...typeRelationInfo.unionTypes.target,
+    route: `target-${typeRelationInfo.unionTypes.route}`,
+    icon: typeRelationInfo.unionTypes.icon,
   },
-  relation_intersection: {
-    ...typeRelationInfo.intersectionTypes,
-    description: "The type most frequently included in intersections.",
-    icon: JoinInner,
-    route: "intersection",
+  target_intersectionTypes: {
+    ...typeRelationInfo.intersectionTypes.target,
+    route: `target-${typeRelationInfo.intersectionTypes.route}`,
+    icon: typeRelationInfo.intersectionTypes.icon,
   },
-  relation_typeArgument: {
-    ...typeRelationInfo.typeArguments,
-    description:
-      "The type most frequently used as a type argument (indicating complex generic interactions).",
-    icon: SportsKabaddi,
-    route: "type-argument-relations",
+  target_typeArguments: {
+    ...typeRelationInfo.typeArguments.target,
+    route: `target-${typeRelationInfo.typeArguments.route}`,
+    icon: typeRelationInfo.typeArguments.icon,
   },
-  relation_instantiated: {
-    ...typeRelationInfo.instantiatedType,
-    description: "Type that was instantiated the most, indicating high reuse.",
-    icon: Polyline,
-    route: "most-instantiated-type",
+  target_instantiatedType: {
+    ...typeRelationInfo.instantiatedType.target,
+    route: `target-${typeRelationInfo.instantiatedType.route}`,
+    icon: typeRelationInfo.instantiatedType.icon,
   },
-  relation_aliasTypeArgument: {
-    ...typeRelationInfo.aliasTypeArguments,
-    description:
-      'The types most often used as generic arguments.  The TypeScript compiler calls this "alias type-arguments."  There are technically other kinds of types that can show up here, but it\'s mostly generic type arguemnts.',
-    icon: Input,
-    route: "aliasTypeArgument",
+  target_aliasTypeArguments: {
+    ...typeRelationInfo.aliasTypeArguments.target,
+    route: `target-${typeRelationInfo.aliasTypeArguments.route}`,
+    icon: typeRelationInfo.aliasTypeArguments.icon,
   },
-  relation_conditionalCheck: {
-    ...typeRelationInfo.conditionalCheckType,
-    description:
-      "Type most often used as the checked type in conditional types (the `T` in `T extends U ? A : B`).",
-    icon: QuestionMark,
-    route: "conditionalCheck",
+  target_conditionalCheckType: {
+    ...typeRelationInfo.conditionalCheckType.target,
+    route: `target-${typeRelationInfo.conditionalCheckType.route}`,
+    icon: typeRelationInfo.conditionalCheckType.icon,
   },
-  relation_conditionalExtends: {
-    ...typeRelationInfo.conditionalExtendsType,
-    description:
-      "Type most frequently appearing on the `extends` side of conditional types (the `U` in `T extends U ? A : B`)), indicating common constraint relationships.",
-    icon: Extension,
-    route: "conditionalExtends",
+  target_conditionalExtendsType: {
+    ...typeRelationInfo.conditionalExtendsType.target,
+    route: `target-${typeRelationInfo.conditionalExtendsType.route}`,
+    icon: typeRelationInfo.conditionalExtendsType.icon,
   },
-  relation_conditionalFalse: {
-    ...typeRelationInfo.conditionalFalseType,
-    description:
-      "Type that most often appears as the `false` branch result of conditional types. Indicates fallback/resolution patterns.",
-    icon: Close,
-    route: "conditionalFalse",
+  target_conditionalFalseType: {
+    ...typeRelationInfo.conditionalFalseType.target,
+    route: `target-${typeRelationInfo.conditionalFalseType.route}`,
+    icon: typeRelationInfo.conditionalFalseType.icon,
   },
-  relation_conditionalTrue: {
-    ...typeRelationInfo.conditionalTrueType,
-    description:
-      "Type that most often appears as the `true` branch result of conditional types. Indicates favored resolution outcomes.",
-    icon: Check,
-    route: "conditionalTrue",
+  target_conditionalTrueType: {
+    ...typeRelationInfo.conditionalTrueType.target,
+    route: `target-${typeRelationInfo.conditionalTrueType.route}`,
+    icon: typeRelationInfo.conditionalTrueType.icon,
   },
-  relation_indexedAccessObject: {
-    ...typeRelationInfo.indexedAccessObjectType,
-    description:
-      "Type most frequently used as the object operand in indexed access (e.g. `T[K]`), indicating dynamic property shape usage.",
-    icon: Search,
-    route: "indexedAccessObject",
+  target_indexedAccessObjectType: {
+    ...typeRelationInfo.indexedAccessObjectType.target,
+    route: `target-${typeRelationInfo.indexedAccessObjectType.route}`,
+    icon: typeRelationInfo.indexedAccessObjectType.icon,
   },
-  relation_indexedAccessIndex: {
-    ...typeRelationInfo.indexedAccessIndexType,
-    description:
-      "Type most frequently used as the index operand in indexed access of a tuple (e.g. `SomeTuple[K]`).",
-    icon: Search,
-    route: "indexedAccessIndex",
+  target_indexedAccessIndexType: {
+    ...typeRelationInfo.indexedAccessIndexType.target,
+    route: `target-${typeRelationInfo.indexedAccessIndexType.route}`,
+    icon: typeRelationInfo.indexedAccessIndexType.icon,
   },
-  relation_keyof: {
-    ...typeRelationInfo.keyofType,
-    description:
-      "Type most frequently used within 'keyof' operations, often indicating dynamic property access patterns.",
-    icon: Key,
-    route: "keyof",
+  target_keyofType: {
+    ...typeRelationInfo.keyofType.target,
+    route: `target-${typeRelationInfo.keyofType.route}`,
+    icon: typeRelationInfo.keyofType.icon,
   },
-  relation_reverseMappedSource: {
-    ...typeRelationInfo.reverseMappedSourceType,
-    description:
-      "Type most commonly appearing as the source in reverse-mapped type transforms (utility mapped types in reverse).",
-    icon: SettingsBackupRestore,
-    route: "reverseMappedSource",
+  target_reverseMappedSourceType: {
+    ...typeRelationInfo.reverseMappedSourceType.target,
+    route: `target-${typeRelationInfo.reverseMappedSourceType.route}`,
+    icon: typeRelationInfo.reverseMappedSourceType.icon,
   },
-  relation_reverseMappedMapped: {
-    ...typeRelationInfo.reverseMappedMappedType,
-    description:
-      "Type most commonly produced by reverse-mapped transformations.",
-    icon: SettingsBackupRestore,
-    route: "reverseMappedMapped",
+  target_reverseMappedMappedType: {
+    ...typeRelationInfo.reverseMappedMappedType.target,
+    route: `target-${typeRelationInfo.reverseMappedMappedType.route}`,
+    icon: typeRelationInfo.reverseMappedMappedType.icon,
   },
-  relation_reverseMappedConstraint: {
-    ...typeRelationInfo.reverseMappedConstraintType,
-    description:
-      "Type that often serves as a constraint in reverse-mapped transformations, indicating mapped type bounds.",
-    icon: SettingsBackupRestore,
-    route: "reverseMappedConstraint",
+  target_reverseMappedConstraintType: {
+    ...typeRelationInfo.reverseMappedConstraintType.target,
+    route: `target-${typeRelationInfo.reverseMappedConstraintType.route}`,
+    icon: typeRelationInfo.reverseMappedConstraintType.icon,
   },
-  relation_substitutionBase: {
-    ...typeRelationInfo.substitutionBaseType,
-    description:
-      "Type used as a substitution base during type substitution operations, signaling types that commonly serve as generic inference placeholders.",
-    icon: FindReplace,
-    route: "substitutionBase",
+  target_substitutionBaseType: {
+    ...typeRelationInfo.substitutionBaseType.target,
+    route: `target-${typeRelationInfo.substitutionBaseType.route}`,
+    icon: typeRelationInfo.substitutionBaseType.icon,
   },
-  relation_constraint: {
-    ...typeRelationInfo.constraintType,
-    description:
-      "Type most often appearing as a generic constraint (e.g. in `extends` clauses) when resolving generics and conditionals.",
-    icon: FilterListAlt,
-    route: "constraint",
+  target_constraintType: {
+    ...typeRelationInfo.constraintType.target,
+    route: `target-${typeRelationInfo.constraintType.route}`,
+    icon: typeRelationInfo.constraintType.icon,
   },
-  relation_evolvingArrayElement: {
-    ...typeRelationInfo.evolvingArrayElementType,
-    description:
-      "Type most commonly used as the evolving array element during array widening/folding operations in inference.",
-    icon: TrackChanges,
-    route: "evolvingArrayElement",
+  target_evolvingArrayElementType: {
+    ...typeRelationInfo.evolvingArrayElementType.target,
+    route: `target-${typeRelationInfo.evolvingArrayElementType.route}`,
+    icon: typeRelationInfo.evolvingArrayElementType.icon,
   },
-  relation_evolvingArrayFinal: {
-    ...typeRelationInfo.evolvingArrayFinalType,
-    description:
-      "Type that frequently becomes the final element type after array evolution/widening, useful to spot common widened shapes.",
-    icon: TrackChanges,
-    route: "evolvingArrayFinal",
+  target_evolvingArrayFinalType: {
+    ...typeRelationInfo.evolvingArrayFinalType.target,
+    route: `target-${typeRelationInfo.evolvingArrayFinalType.route}`,
+    icon: typeRelationInfo.evolvingArrayFinalType.icon,
   },
-  relation_alias: {
-    ...typeRelationInfo.aliasType,
-    description:
-      "Type most frequently used as an alias target, shows which aliases are heavily reused across the codebase.",
-    icon: AltRoute,
-    route: "alias",
+  target_aliasType: {
+    ...typeRelationInfo.aliasType.target,
+    route: `target-${typeRelationInfo.aliasType.route}`,
+    icon: typeRelationInfo.aliasType.icon,
   },
 
   //
@@ -235,20 +154,15 @@ export const awards = {
   //
 
   perf_hotSpots: {
-    title: "Hot Spots",
-    description:
-      "Files or paths where the TypeScript compiler spent the most cumulative time. Use these to target expensive type-checking work for refactors.",
-    icon: Whatshot,
-    route: "hot-spots",
+    ...analyzeTraceInfo.hotSpots,
   },
 
   //
   // TYPE-LEVEL LIMITS
   //
 
-  limit_instantiateType: {
-    title: "Type Instantiation",
-    property: "limit_instantiateType",
+  instantiateType_DepthLimit: {
+    ...depthLimitInfo.instantiateType_DepthLimit,
     description: (
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
         <Typography>
@@ -273,12 +187,10 @@ export const awards = {
         </Typography>
       </Box>
     ),
-    icon: Lightbulb,
-    route: "type-instantiation-limit",
+    icon: depthLimitInfo.instantiateType_DepthLimit.icon,
   },
-  limit_recursiveTypeRelatedTo: {
-    title: "Recursive Relations",
-    property: "limit_recursiveTypeRelatedTo",
+  recursiveTypeRelatedTo_DepthLimit: {
+    ...depthLimitInfo.recursiveTypeRelatedTo_DepthLimit,
     description: (
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
         <Typography>
@@ -290,12 +202,10 @@ export const awards = {
         {doesNotError}
       </Box>
     ),
-    icon: Diversity1,
-    route: "recursive-relations-limit",
+    icon: depthLimitInfo.recursiveTypeRelatedTo_DepthLimit.icon,
   },
-  limit_typeRelatedToDiscriminatedType: {
-    title: "Discrimination",
-    property: "limit_typeRelatedToDiscriminatedType",
+  typeRelatedToDiscriminatedType_DepthLimit: {
+    ...depthLimitInfo.typeRelatedToDiscriminatedType_DepthLimit,
     description: (
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
         <Typography>
@@ -317,12 +227,10 @@ export const awards = {
         {doesNotError}
       </Box>
     ),
-    icon: SafetyDivider,
-    route: "discrimination-limit",
+    icon: depthLimitInfo.typeRelatedToDiscriminatedType_DepthLimit.icon,
   },
-  limit_checkCrossProductUnion: {
-    title: "Cross-Product Union",
-    property: "limit_checkCrossProductUnion",
+  checkCrossProductUnion_DepthLimit: {
+    ...depthLimitInfo.checkCrossProductUnion_DepthLimit,
     description: (
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
         <Typography>
@@ -342,12 +250,10 @@ export const awards = {
         </Typography>
       </Box>
     ),
-    icon: Calculate,
-    route: "cross-product-union-limit",
+    icon: depthLimitInfo.checkCrossProductUnion_DepthLimit.icon,
   },
-  limit_checkTypeRelatedTo: {
-    title: "Type Relation Depth",
-    property: "limit_checkTypeRelatedTo",
+  checkTypeRelatedTo_DepthLimit: {
+    ...depthLimitInfo.checkTypeRelatedTo_DepthLimit,
     description: (
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
         <Typography>
@@ -379,12 +285,10 @@ export const awards = {
         </Typography>
       </Box>
     ),
-    icon: RotateRight,
-    route: "type-related-to-limit",
+    icon: depthLimitInfo.checkTypeRelatedTo_DepthLimit.icon,
   },
-  limit_getTypeAtFlowNode: {
-    title: "Flow Node Type",
-    property: "limit_getTypeAtFlowNode",
+  getTypeAtFlowNode_DepthLimit: {
+    ...depthLimitInfo.getTypeAtFlowNode_DepthLimit,
     description: (
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
         <Typography>
@@ -406,12 +310,10 @@ export const awards = {
         </Typography>
       </Box>
     ),
-    icon: Air,
-    route: "flow-node-type-limit",
+    icon: depthLimitInfo.getTypeAtFlowNode_DepthLimit.icon,
   },
-  limit_removeSubtypes: {
-    title: "Remove Subtypes",
-    property: "limit_removeSubtypes",
+  removeSubtypes_DepthLimit: {
+    ...depthLimitInfo.removeSubtypes_DepthLimit,
     description: (
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
         <Typography>
@@ -432,12 +334,11 @@ export const awards = {
         </Typography>
       </Box>
     ),
-    icon: SubdirectoryArrowRight,
-    route: "remove-subtypes-limit",
+    icon: depthLimitInfo.removeSubtypes_DepthLimit.icon,
   },
-  limit_traceUnionsOrIntersectionsTooLarge: {
-    title: "Union/Intersection Size",
-    property: "limit_traceUnionsOrIntersectionsTooLarge",
+  traceUnionsOrIntersectionsTooLarge_DepthLimit: {
+    ...depthLimitInfo.traceUnionsOrIntersectionsTooLarge_DepthLimit,
+    property: "traceUnionsOrIntersectionsTooLarge_DepthLimit",
     description: (
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
         <Typography>
@@ -448,8 +349,7 @@ export const awards = {
         {doesNotError}
       </Box>
     ),
-    icon: Expand,
-    route: "union-intersection-size-limit",
+    icon: depthLimitInfo.traceUnionsOrIntersectionsTooLarge_DepthLimit.icon,
   },
 
   //
@@ -457,11 +357,7 @@ export const awards = {
   //
 
   bundle_duplicatePackages: {
-    title: "Duplicate Packages",
-    description:
-      "Packages that appear multiple times in the bundle (different install paths / versions). Consolidate to reduce size & divergence.",
-    icon: CopyAll,
-    route: "duplicate-packages",
+    ...analyzeTraceInfo.duplicatePackages,
   },
 } as const;
 

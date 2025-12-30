@@ -14,7 +14,8 @@
   "packageManager": "pnpm@10.6.5",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && pnpm gen:rust-types",
+    "gen:rust-types": "cargo test --manifest-path src-tauri/Cargo.toml export_types",
     "preview": "vite preview",
     "tauri": "tauri",
     "typecheck": "tsc --noEmit"
@@ -26,9 +27,9 @@
     "@fontsource/roboto": "5.2.9",
     "@mui/icons-material": "7.3.6",
     "@mui/material": "7.3.6",
-    "@tanstack/react-query": "5.90.12",
-    "@tanstack/react-query-devtools": "5.91.1",
-    "@tanstack/react-router": "1.141.2",
+    "@tanstack/react-query": "5.90.15",
+    "@tanstack/react-query-devtools": "5.91.2",
+    "@tanstack/react-router": "1.144.0",
     "@tauri-apps/api": "2.9.1",
     "@tauri-apps/plugin-clipboard-manager": "2.3.2",
     "@tauri-apps/plugin-dialog": "2.4.2",
@@ -44,14 +45,15 @@
   "devDependencies": {
     "@tauri-apps/cli": "2.9.6",
     "@types/mime-types": "3.0.1",
-    "@types/node": "24.10.4",
+    "@types/node": "25.0.3",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
+    "@typeslayer/analytics": "workspace:*",
     "@typeslayer/analyze-trace": "workspace:*",
     "@typeslayer/validate": "workspace:*",
     "@vitejs/plugin-react": "5.1.2",
     "typescript": "5.9.3",
     "vite": "7.3.0",
-    "zod": "4.2.0"
+    "zod": "4.2.1"
   }
 }

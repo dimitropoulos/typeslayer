@@ -1,0 +1,13 @@
+{
+  "name": "@typeslayer/rust-types",
+  "version": "0.1.27",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "default": "./index.ts"
+    }
+  },
+  "main": "./index.ts",
+  "types": "./index.ts"
+}

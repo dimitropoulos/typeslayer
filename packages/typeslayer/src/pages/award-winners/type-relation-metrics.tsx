@@ -25,9 +25,9 @@ import {
 import {
   useGetResolvedTypeById,
   useGetResolvedTypesByIds,
-  useTypeGraphNodeAndLinkStats,
+  useTypeGraphLimitedNodeAndLinkStats,
 } from "../../hooks/tauri-hooks";
-import { compactLinksStatsLinkIndex } from "../../types/type-graph";
+import { targetToSourcesIndex } from "../../types/type-graph";
 import { AwardNavItem } from "./award-nav-item";
 import {
   AWARD_SELECTOR_COLUMN_WIDTH,
@@ -46,7 +46,7 @@ export function RelationAward({
   const { title, description, icon: Icon, unit } = awards[awardId];
   const [selectedIndex, setSelectedIndex] = useState(0);
   const { data: typeGraph, isLoading: isLoadingTypeGraph } =
-    useTypeGraphNodeAndLinkStats();
+    useTypeGraphLimitedNodeAndLinkStats();
 
   const handleListItemClick = (
     _event: React.MouseEvent<HTMLDivElement, MouseEvent>,
@@ -56,17 +56,18 @@ export function RelationAward({
   };
   const hasData = typeGraph !== undefined;
 
-  const edgeStatProperty = getLinkStatProperty(awardId);
+  const edgeStatProperty = extractTargetAwardId(awardId);
   const linkStats = typeGraph?.linkStats[edgeStatProperty];
 
   const targets = useMemo(() => {
     return (
-      linkStats?.links.map(link => link[compactLinksStatsLinkIndex.targetId]) ??
-      []
+      linkStats?.byTarget.targetToSources.map(
+        link => link[targetToSourcesIndex.targetId],
+      ) ?? []
     );
   }, [linkStats]);
 
-  const selectedItem = linkStats?.links[selectedIndex];
+  const selectedItem = linkStats?.byTarget.targetToSources[selectedIndex];
   const {
     data: partialIndexedTypeRegistry,
     isLoading: isLoadingPartialIndexedTypeRegistry,
@@ -74,7 +75,7 @@ export function RelationAward({
 
   const isLoading = isLoadingTypeGraph || isLoadingPartialIndexedTypeRegistry;
 
-  const hasItems = linkStats && linkStats.links.length > 0;
+  const hasItems = linkStats && linkStats.byTarget.targetToSources.length > 0;
 
   const noneFound = (
     <Box
@@ -99,36 +100,40 @@ export function RelationAward({
 
   const items = (
     <List>
-      {linkStats?.links.map(([targetId, path, sourceIds], index) => {
-        const maybeResolvedType = partialIndexedTypeRegistry?.[targetId];
-        return (
-          <ListItemButton
-            selected={index === selectedIndex}
-            onClick={event => handleListItemClick(event, index)}
-            key={targetId}
-          >
-            <ListItemText>
-              <Stack sx={{ flexGrow: 1 }} gap={0}>
-                <TypeSummary
-                  typeId={targetId}
-                  flags={[]}
-                  showFlags={false}
-                  loading={isLoadingPartialIndexedTypeRegistry}
-                  name={getHumanReadableName(maybeResolvedType)}
-                  suppressActions
-                />
-                <Stack gap={0.5}>
-                  <MaybePathCaption maybePath={path} />
-                  <InlineBarGraph
-                    label={`${sourceIds.length.toLocaleString()} ${unit}`}
-                    width={`${(sourceIds.length / linkStats.max) * 100}%`}
+      {linkStats?.byTarget.targetToSources.map(
+        ([targetId, sourceIds], index) => {
+          const maybeResolvedType = partialIndexedTypeRegistry?.[targetId];
+          return (
+            <ListItemButton
+              selected={index === selectedIndex}
+              onClick={event => handleListItemClick(event, index)}
+              key={targetId}
+            >
+              <ListItemText>
+                <Stack sx={{ flexGrow: 1 }} gap={0}>
+                  <TypeSummary
+                    typeId={targetId}
+                    flags={[]}
+                    showFlags={false}
+                    loading={isLoadingPartialIndexedTypeRegistry}
+                    name={getHumanReadableName(maybeResolvedType)}
+                    suppressActions
                   />
+                  <Stack gap={0.5}>
+                    <MaybePathCaption
+                      maybePath={typeGraph?.pathMap[targetId]}
+                    />
+                    <InlineBarGraph
+                      label={`${sourceIds.length.toLocaleString()} ${unit}`}
+                      width={`${(sourceIds.length / linkStats.byTarget.max) * 100}%`}
+                    />
+                  </Stack>
                 </Stack>
-              </Stack>
-            </ListItemText>
-          </ListItemButton>
-        );
-      })}
+              </ListItemText>
+            </ListItemButton>
+          );
+        },
+      )}
     </List>
   );
 
@@ -180,7 +185,7 @@ export function RelationAward({
         {hasItems && selectedItem ? (
           <Stack gap={3}>
             <DisplayRecursiveType
-              id={selectedItem[compactLinksStatsLinkIndex.targetId]}
+              id={selectedItem[targetToSourcesIndex.targetId]}
             />
 
             {selectedItem && hasItems && (
@@ -189,13 +194,13 @@ export function RelationAward({
                 <Stack gap={1}>
                   <Typography variant="h6">
                     {selectedItem[
-                      compactLinksStatsLinkIndex.sourceIds
+                      targetToSourcesIndex.sourceIds
                     ].length.toLocaleString()}{" "}
                     {unit}
                   </Typography>
                   <List dense sx={{ backgroundColor: "transparent" }}>
                     <ShowMoreChildren incrementsOf={50}>
-                      {selectedItem[compactLinksStatsLinkIndex.sourceIds].map(
+                      {selectedItem[targetToSourcesIndex.sourceIds].map(
                         (sourceId, index) => (
                           <TypeMetricsListItem
                             key={`${index}-${sourceId}`}
@@ -223,6 +228,7 @@ const TypeMetricsListItem = ({ typeId }: { typeId: TypeId }) => {
     alignItems: "center",
     gap: 1,
     flexWrap: "nowrap",
+    pl: 0,
   };
 
   if (isLoading) {
@@ -249,52 +255,39 @@ const TypeMetricsListItem = ({ typeId }: { typeId: TypeId }) => {
         name={getHumanReadableName(resolvedType)}
         showFlags
       />
-
-      <Stack
-        className="action-buttons"
-        sx={{
-          opacity: 0,
-          pointerEvents: "none",
-          flexDirection: "row",
-          gap: 0.5,
-          flexShrink: 0,
-        }}
-      ></Stack>
     </ListItem>
   );
 };
 
 const typeRelationMetrics = [
-  "relation_union",
-  "relation_intersection",
-  "relation_typeArgument",
-  "relation_instantiated",
-  "relation_aliasTypeArgument",
-  "relation_conditionalCheck",
-  "relation_conditionalExtends",
-  "relation_conditionalFalse",
-  "relation_conditionalTrue",
-  "relation_indexedAccessObject",
-  "relation_indexedAccessIndex",
-  "relation_keyof",
-  "relation_reverseMappedSource",
-  "relation_reverseMappedMapped",
-  "relation_reverseMappedConstraint",
-  "relation_substitutionBase",
-  "relation_constraint",
-  "relation_evolvingArrayElement",
-  "relation_evolvingArrayFinal",
-  "relation_alias",
+  "target_unionTypes",
+  "target_intersectionTypes",
+  "target_typeArguments",
+  "target_instantiatedType",
+  "target_aliasTypeArguments",
+  "target_conditionalCheckType",
+  "target_conditionalExtendsType",
+  "target_conditionalFalseType",
+  "target_conditionalTrueType",
+  "target_indexedAccessObjectType",
+  "target_indexedAccessIndexType",
+  "target_keyofType",
+  "target_reverseMappedSourceType",
+  "target_reverseMappedMappedType",
+  "target_reverseMappedConstraintType",
+  "target_substitutionBaseType",
+  "target_constraintType",
+  "target_evolvingArrayElementType",
+  "target_evolvingArrayFinalType",
+  "target_aliasType",
 ] satisfies AwardId[];
 type TypeRelationMetricsAwardId = (typeof typeRelationMetrics)[number];
 
-const getLinkStatProperty = <T extends AwardId>(property: T) =>
-  property.replace("relation_", "") as T extends `relation_${infer U}`
-    ? U
-    : never;
+const extractTargetAwardId = <T extends AwardId>(property: T) =>
+  property.replace("target_", "") as T extends `target_${infer U}` ? U : never;
 
 const useTypeRelationMetricsValue = () => {
-  const { data: typeGraph } = useTypeGraphNodeAndLinkStats();
+  const { data: typeGraph } = useTypeGraphLimitedNodeAndLinkStats();
   if (!typeGraph) {
     return () => 0;
   }
@@ -302,28 +295,28 @@ const useTypeRelationMetricsValue = () => {
 
   return (awardId: TypeRelationMetricsAwardId): number => {
     switch (awardId) {
-      case "relation_union":
-      case "relation_intersection":
-      case "relation_typeArgument":
-      case "relation_instantiated":
-      case "relation_aliasTypeArgument":
-      case "relation_conditionalCheck":
-      case "relation_conditionalExtends":
-      case "relation_conditionalFalse":
-      case "relation_conditionalTrue":
-      case "relation_indexedAccessObject":
-      case "relation_indexedAccessIndex":
-      case "relation_keyof":
-      case "relation_reverseMappedSource":
-      case "relation_reverseMappedMapped":
-      case "relation_reverseMappedConstraint":
-      case "relation_substitutionBase":
-      case "relation_constraint":
-      case "relation_evolvingArrayElement":
-      case "relation_evolvingArrayFinal":
-      case "relation_alias": {
-        const linkStatProperty = getLinkStatProperty(awardId);
-        return linkStats[linkStatProperty]?.max ?? 0;
+      case "target_unionTypes":
+      case "target_intersectionTypes":
+      case "target_typeArguments":
+      case "target_instantiatedType":
+      case "target_aliasTypeArguments":
+      case "target_conditionalCheckType":
+      case "target_conditionalExtendsType":
+      case "target_conditionalFalseType":
+      case "target_conditionalTrueType":
+      case "target_indexedAccessObjectType":
+      case "target_indexedAccessIndexType":
+      case "target_keyofType":
+      case "target_reverseMappedSourceType":
+      case "target_reverseMappedMappedType":
+      case "target_reverseMappedConstraintType":
+      case "target_substitutionBaseType":
+      case "target_constraintType":
+      case "target_evolvingArrayElementType":
+      case "target_evolvingArrayFinalType":
+      case "target_aliasType": {
+        const linkStatProperty = extractTargetAwardId(awardId);
+        return linkStats[linkStatProperty]?.byTarget.max ?? 0;
       }
 
       default:

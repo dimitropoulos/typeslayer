@@ -4,7 +4,7 @@ import {
   type ResolvedType,
   relativizePath,
 } from "@typeslayer/validate";
-import type { MouseEvent } from "react";
+import { type MouseEvent, useCallback, useEffect, useState } from "react";
 
 export const createOpenHandler =
   (url: string) => async (event: MouseEvent<HTMLAnchorElement>) => {
@@ -82,26 +82,31 @@ export const friendlyPath = (
 
 export const serverBaseUrl = "http://127.0.0.1:4765";
 
-export const formatBytesSize = (bytes: number): string => {
+export const formatBytesSize = (
+  bytes: number,
+  space: boolean = true,
+): string => {
+  const s = space ? " " : "";
+
   const kibibyte = 1024;
   if (bytes < kibibyte) {
-    return `${bytes} B`;
+    return `${bytes}${s}B`;
   }
 
   const mebibyte = kibibyte * 1024;
   if (bytes < mebibyte) {
-    const kib = Math.round(bytes / kibibyte);
-    return `${kib} KiB`;
+    const kib = (bytes / kibibyte).toFixed(1);
+    return `${kib}${s}KiB`;
   }
 
   const gibibyte = mebibyte * 1024;
   if (bytes < gibibyte) {
-    const mib = Math.round(bytes / mebibyte);
-    return `${mib} MiB`;
+    const mib = (bytes / mebibyte).toFixed(1);
+    return `${mib}${s}MiB`;
   }
 
-  const gib = Math.round(bytes / gibibyte);
-  return `${gib} GiB`;
+  const gib = (bytes / gibibyte).toFixed(1);
+  return `${gib}${s}GiB`;
 };
 
 export const extractPath = (resolvedType: ResolvedType) => {
@@ -168,3 +173,37 @@ export const typeScriptCompilerVariants = ["tsc", "vue-tsc", "tsgo"] as const;
 
 export type TypeScriptCompilerVariant =
   (typeof typeScriptCompilerVariants)[number];
+
+/**
+ * Generates a random integer between min (inclusive) and max (inclusive)
+ */
+export const randBetween = (min: number, max: number) => {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+};
+
+const KONAMI_CODE = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65];
+export function useKonami(action: () => void, { code = KONAMI_CODE } = {}) {
+  const [input, setInput] = useState<number[]>([]);
+
+  const onKeyUp = useCallback(
+    (e: KeyboardEvent) => {
+      const newInput = input;
+      newInput.push(e.keyCode);
+      newInput.splice(-code.length - 1, input.length - code.length);
+
+      setInput(newInput);
+
+      if (newInput.join("").includes(code.join(""))) {
+        action();
+      }
+    },
+    [input, code, action],
+  );
+
+  useEffect(() => {
+    document.addEventListener("keyup", onKeyUp);
+    return () => {
+      document.removeEventListener("keyup", onKeyUp);
+    };
+  }, [onKeyUp]);
+}

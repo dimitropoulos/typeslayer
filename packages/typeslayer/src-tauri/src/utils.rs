@@ -1,4 +1,7 @@
-use std::{borrow::Cow, path::{Path, PathBuf}};
+use std::{
+    borrow::Cow,
+    path::{Path, PathBuf},
+};
 
 use tauri::{AppHandle, Manager};
 use tokio::fs;
@@ -172,13 +175,13 @@ pub async fn set_window_title(app: &AppHandle, title: String) -> Result<(), Stri
 // get the user's platform at runtime as a string
 // including, detect whether they're running on wsl
 // for linux and macos, we also return the output of `uname`
-pub async fn get_platform() -> Result<String, String> {
+pub fn get_platform() -> String {
     let info = os_info::get();
-    Ok(format!(
+    format!(
         "{} {} {}",
         info.os_type(),
         info.version(),
         info.architecture().unwrap_or("unknown")
     )
-    .to_string())
+    .to_string()
 }

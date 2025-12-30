@@ -1,6 +1,6 @@
 {
   "name": "@typeslayer/validate",
-  "version": "0.1.26",
+  "version": "0.1.27",
   "description": "Validation schemas and utilities for TypeScript compiler trace analysis",
   "license": "MIT",
   "private": false,
@@ -39,14 +39,16 @@
     "test": "vitest"
   },
   "dependencies": {
-    "zod": "^4.1.13"
+    "@mui/icons-material": "7.3.6",
+    "@mui/material": "7.3.6",
+    "zod": "4.2.1"
   },
   "devDependencies": {
-    "@arethetypeswrong/cli": "^0.18.2",
-    "@types/node": "^24.10.1",
-    "@types/stream-json": "^1.7.8",
-    "tsdown": "^0.17.2",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.15"
+    "@arethetypeswrong/cli": "0.18.2",
+    "@types/node": "25.0.3",
+    "@types/stream-json": "1.7.8",
+    "tsdown": "0.18.3",
+    "typescript": "5.9.3",
+    "vitest": "4.0.16"
   }
 }

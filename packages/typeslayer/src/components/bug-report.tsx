@@ -1,10 +1,8 @@
-import {
-  BugReport as BugReportIcon,
-  ContentCopy,
-  Description,
-  FolderOpen,
-  Upload,
-} from "@mui/icons-material";
+import BugReportIcon from "@mui/icons-material/BugReport";
+import ContentCopy from "@mui/icons-material/ContentCopy";
+import Description from "@mui/icons-material/Description";
+import FolderOpen from "@mui/icons-material/FolderOpen";
+import Upload from "@mui/icons-material/Upload";
 import {
   Alert,
   Box,
@@ -165,7 +163,7 @@ const CreateABugReport = ({
       showToast({
         message: `Bug report downloaded to: ${zipPath.split(detectPlatformSlash()).pop()}`,
         severity: "success",
-        duration: 10000,
+        duration: 10_000,
         action: {
           label: "Open Folder",
           icon: <FolderOpen />,

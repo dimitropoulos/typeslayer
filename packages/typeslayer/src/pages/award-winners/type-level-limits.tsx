@@ -11,31 +11,22 @@ import type {
 } from "@typeslayer/validate";
 import { useAnalyzeTrace } from "../../hooks/tauri-hooks";
 import { AwardNavItem } from "./award-nav-item";
-import { type AwardId, awards } from "./awards";
+import type { AwardId } from "./awards";
 import { InlineBarGraph } from "./inline-bar-graph";
 import { ShowTypeLimit } from "./show-type-limit";
 
 const typeLevelLimits = [
-  "limit_instantiateType",
-  "limit_recursiveTypeRelatedTo",
-  "limit_typeRelatedToDiscriminatedType",
-  "limit_checkCrossProductUnion",
-  "limit_checkTypeRelatedTo",
-  "limit_getTypeAtFlowNode",
-  "limit_removeSubtypes",
-  "limit_traceUnionsOrIntersectionsTooLarge",
+  "instantiateType_DepthLimit",
+  "recursiveTypeRelatedTo_DepthLimit",
+  "typeRelatedToDiscriminatedType_DepthLimit",
+  "checkCrossProductUnion_DepthLimit",
+  "checkTypeRelatedTo_DepthLimit",
+  "getTypeAtFlowNode_DepthLimit",
+  "removeSubtypes_DepthLimit",
+  "traceUnionsOrIntersectionsTooLarge_DepthLimit",
 ] satisfies AwardId[];
 
 export type TypeLevelLimitAwardId = (typeof typeLevelLimits)[number];
-
-export const getDepthLimitsProperty = <T extends TypeLevelLimitAwardId>(
-  awardId: T,
-) => {
-  return (awardId.replace("limit_", "") +
-    "_DepthLimit") as T extends `limit_${infer Stat}`
-    ? `${Stat}_DepthLimit`
-    : never;
-};
 
 const useTypeLevelLimitsValue = () => {
   const { data: analyzeTrace } = useAnalyzeTrace();
@@ -45,18 +36,16 @@ const useTypeLevelLimitsValue = () => {
   }
 
   return (awardId: TypeLevelLimitAwardId): number => {
-    const property = getDepthLimitsProperty(awardId);
-
     switch (awardId) {
-      case "limit_instantiateType":
-      case "limit_recursiveTypeRelatedTo":
-      case "limit_typeRelatedToDiscriminatedType":
-      case "limit_checkCrossProductUnion":
-      case "limit_checkTypeRelatedTo":
-      case "limit_getTypeAtFlowNode":
-      case "limit_removeSubtypes":
-      case "limit_traceUnionsOrIntersectionsTooLarge":
-        return analyzeTrace.depthLimits[property].length;
+      case "instantiateType_DepthLimit":
+      case "recursiveTypeRelatedTo_DepthLimit":
+      case "typeRelatedToDiscriminatedType_DepthLimit":
+      case "checkCrossProductUnion_DepthLimit":
+      case "checkTypeRelatedTo_DepthLimit":
+      case "getTypeAtFlowNode_DepthLimit":
+      case "removeSubtypes_DepthLimit":
+      case "traceUnionsOrIntersectionsTooLarge_DepthLimit":
+        return analyzeTrace.depthLimits[awardId].length;
       default:
         awardId satisfies never;
         throw new Error(`Unknown award: ${awardId}`);
@@ -88,14 +77,11 @@ export const TypeLevelLimitAward = ({
   awardId: TypeLevelLimitAwardId;
 }) => {
   switch (awardId) {
-    case "limit_instantiateType":
+    case "instantiateType_DepthLimit":
       return (
         <ShowTypeLimit<EventChecktypes__InstantiateType_DepthLimit>
           awardId={awardId}
           key={awardId}
-          notFound="No Type Instantiation Limits Found"
-          title={awards.limit_instantiateType.title}
-          icon={awards.limit_instantiateType.icon}
           inlineBarGraph={(current, first) => (
             <InlineBarGraph
               label={`${current.args.instantiationDepth.toLocaleString()} depth`}
@@ -114,14 +100,11 @@ export const TypeLevelLimitAward = ({
         />
       );
 
-    case "limit_recursiveTypeRelatedTo":
+    case "recursiveTypeRelatedTo_DepthLimit":
       return (
         <ShowTypeLimit<EventChecktypes__RecursiveTypeRelatedTo_DepthLimit>
           key={awardId}
           awardId={awardId}
-          notFound="No Recursive Relations Limits Found"
-          title={awards.limit_recursiveTypeRelatedTo.title}
-          icon={awards.limit_recursiveTypeRelatedTo.icon}
           inlineBarGraph={(current, first) => (
             <InlineBarGraph
               label={`${current.args.depth.toLocaleString()} depth`}
@@ -141,14 +124,11 @@ export const TypeLevelLimitAward = ({
         />
       );
 
-    case "limit_typeRelatedToDiscriminatedType":
+    case "typeRelatedToDiscriminatedType_DepthLimit":
       return (
         <ShowTypeLimit<EventChecktypes__TypeRelatedToDiscriminatedType_DepthLimit>
           key={awardId}
           awardId={awardId}
-          notFound="No Discriminated Type Limits Found"
-          title={awards.limit_typeRelatedToDiscriminatedType.title}
-          icon={awards.limit_typeRelatedToDiscriminatedType.icon}
           inlineBarGraph={(current, first) => (
             <InlineBarGraph
               label={`${current.args.numCombinations.toLocaleString()} depth`}
@@ -169,14 +149,11 @@ export const TypeLevelLimitAward = ({
         />
       );
 
-    case "limit_checkCrossProductUnion":
+    case "checkCrossProductUnion_DepthLimit":
       return (
         <ShowTypeLimit<EventChecktypes__CheckCrossProductUnion_DepthLimit>
           key={awardId}
           awardId={awardId}
-          notFound="No Cross-Product Union Limits Found"
-          title={awards.limit_checkCrossProductUnion.title}
-          icon={awards.limit_checkCrossProductUnion.icon}
           inlineBarGraph={(current, first) => (
             <InlineBarGraph
               label={`${current.args.size.toLocaleString()} size`}
@@ -194,14 +171,11 @@ export const TypeLevelLimitAward = ({
         />
       );
 
-    case "limit_checkTypeRelatedTo":
+    case "checkTypeRelatedTo_DepthLimit":
       return (
         <ShowTypeLimit<EventChecktypes__CheckTypeRelatedTo_DepthLimit>
           key={awardId}
           awardId={awardId}
-          notFound="No Type Relation Depth Limits Found"
-          title={awards.limit_checkTypeRelatedTo.title}
-          icon={awards.limit_checkTypeRelatedTo.icon}
           inlineBarGraph={(current, first) => (
             <InlineBarGraph
               label={`${current.args.depth.toLocaleString()} depth`}
@@ -219,14 +193,11 @@ export const TypeLevelLimitAward = ({
         />
       );
 
-    case "limit_getTypeAtFlowNode":
+    case "getTypeAtFlowNode_DepthLimit":
       return (
         <ShowTypeLimit<EventChecktypes__GetTypeAtFlowNode_DepthLimit>
           key={awardId}
           awardId={awardId}
-          notFound="No Flow Node Type Limits Found"
-          title={awards.limit_getTypeAtFlowNode.title}
-          icon={awards.limit_getTypeAtFlowNode.icon}
           inlineBarGraph={current => (
             <InlineBarGraph
               label={`${current.args.flowId.toLocaleString()} flowId`}
@@ -239,14 +210,11 @@ export const TypeLevelLimitAward = ({
         />
       );
 
-    case "limit_removeSubtypes":
+    case "removeSubtypes_DepthLimit":
       return (
         <ShowTypeLimit<EventChecktypes__RemoveSubtypes_DepthLimit>
           key={awardId}
           awardId={awardId}
-          notFound="No Remove Subtypes Limits Found"
-          title={awards.limit_removeSubtypes.title}
-          icon={awards.limit_removeSubtypes.icon}
           inlineBarGraph={() => (
             <InlineBarGraph label={`limit hit`} width={`100%`} />
           )}
@@ -261,14 +229,11 @@ export const TypeLevelLimitAward = ({
         />
       );
 
-    case "limit_traceUnionsOrIntersectionsTooLarge":
+    case "traceUnionsOrIntersectionsTooLarge_DepthLimit":
       return (
         <ShowTypeLimit<EventChecktypes__TraceUnionsOrIntersectionsTooLarge_DepthLimit>
           key={awardId}
           awardId={awardId}
-          notFound="No Union/Intersection Size Limits Found"
-          title={awards.limit_traceUnionsOrIntersectionsTooLarge.title}
-          icon={awards.limit_traceUnionsOrIntersectionsTooLarge.icon}
           inlineBarGraph={(current, first) => (
             <InlineBarGraph
               label={`${(current.args.sourceSize * current.args.targetSize).toLocaleString()} size`}

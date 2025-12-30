@@ -2,7 +2,7 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { useCallback } from "react";
 import { type AwardId, awards } from "./awards";
 
-const fallbackAward = "type_unionTypes";
+const fallbackAward = "source_unionTypes";
 
 const getAwardIdFromRoute = (route: string | undefined): AwardId => {
   if (!route) {

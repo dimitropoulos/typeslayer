@@ -4,6 +4,8 @@ import { createTheme } from "@mui/material";
 const black = "#000000";
 const white = "#FFFFFF";
 
+export const panelBackground = "#11111190";
+
 const doomRed = {
   main: "#C02929",
   light: "#D33030",
@@ -162,6 +164,25 @@ export const theme: Theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 0,
+        },
+      },
+    },
+    MuiSwitch: {
+      styleOverrides: {
+        thumb: {
+          borderRadius: 0,
+          height: 17,
+          width: 17,
+        },
+        track: {
+          borderRadius: 0,
+        },
+        switchBase: {
+          padding: 10,
+        },
+        root: {
+          height: 36,
+          padding: `12px 11px`,
         },
       },
     },

@@ -21,7 +21,7 @@ import {
   type TypeScriptCompilerVariant,
 } from "../components/utils";
 import type {
-  CompactGraphLink,
+  GraphLink,
   GraphLinkStats,
   GraphNodeStats,
   GraphStats,
@@ -237,31 +237,6 @@ export function usePreferEditorOpen() {
   };
 }
 
-export function useAutoStart() {
-  const queryClient = useQueryClient();
-
-  const query = useQuery({
-    queryKey: ["auto_start"],
-    queryFn: () => invoke<boolean>("get_auto_start"),
-    staleTime: Number.POSITIVE_INFINITY,
-  });
-
-  const mutation = useMutation({
-    mutationFn: (value: boolean) => invoke<void>("set_auto_start", { value }),
-    onSuccess: (_, value) => {
-      queryClient.setQueryData(["auto_start"], value);
-    },
-  });
-
-  return {
-    data: query.data,
-    isLoading: query.isLoading,
-    error: query.error,
-    set: mutation.mutateAsync,
-    isSettingValue: mutation.isPending,
-  };
-}
-
 export function useApplyTscProjectFlag() {
   const queryClient = useQueryClient();
 
@@ -411,13 +386,16 @@ export function useTraceJson() {
   });
 }
 
+export type NodesAndLinks = {
+  nodeCount: number;
+  isLimited: boolean;
+  linksByType: Record<LinkKind, GraphLink[]>;
+};
+
 export function useTypeGraphNodesAndLinks() {
   return useQuery({
     queryKey: ["type_graph_nodes_and_links"],
-    queryFn: () =>
-      invoke<{ nodes: number; links: CompactGraphLink[]; isLimited: boolean }>(
-        "get_type_graph_nodes_and_links",
-      ),
+    queryFn: () => invoke<NodesAndLinks>("get_type_graph_nodes_and_links"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 }
@@ -430,22 +408,33 @@ export function useTypeGraphStats() {
   });
 }
 
-export function useTypeGraphNodeAndLinkStats() {
+export function useTypeGraphLimitedNodeAndLinkStats() {
   return useQuery({
-    queryKey: ["type_graph_node_and_link_stats"],
+    queryKey: ["type_graph_limited_node_and_link_stats"],
     queryFn: () =>
       invoke<{
-        linkStats: GraphLinkStats;
         nodeStats: GraphNodeStats;
-      }>("get_type_graph_node_and_link_stats"),
+        linkStats: GraphLinkStats;
+        pathMap: Record<TypeId, string>;
+      }>("get_type_graph_limited_node_and_link_stats"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 }
 
+export type AnalyzeTraceRs = {
+  fileStatistics: {
+    totalFiles: number;
+    totalDuration: number;
+    meanDuration: number;
+    maxDuration: number;
+    minDuration: number;
+  };
+} & AnalyzeTraceResult;
+
 export function useAnalyzeTrace() {
   return useQuery({
     queryKey: ["analyze_trace"],
-    queryFn: () => invoke<AnalyzeTraceResult>("get_analyze_trace"),
+    queryFn: () => invoke<AnalyzeTraceRs>("get_analyze_trace"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 }
@@ -1057,6 +1046,45 @@ export const useMaxNodes = () => {
     onSettled: refreshTypeGraph(queryClient),
     onSuccess: (_, maxNodes) => {
       queryClient.setQueryData(["max_nodes"], maxNodes);
+    },
+  });
+
+  return {
+    data: query.data,
+    isLoading: query.isLoading,
+    error: query.error,
+    set: mutation.mutateAsync,
+    isSettingValue: mutation.isPending,
+  };
+};
+
+export type AnalyticsConsent = {
+  id: string;
+  description: string;
+  jsonExample: string;
+  enabled: boolean;
+};
+
+export type AnalyticsConsentResult = [
+  description: string,
+  success: AnalyticsConsent,
+  fail: AnalyticsConsent,
+][];
+
+export const useAnalyticsConsent = () => {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ["analytics_consent"],
+    queryFn: () => invoke<AnalyticsConsentResult>("get_analytics_consent"),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  const mutation = useMutation({
+    mutationFn: ({ eventId, consent }: { eventId: string; consent: boolean }) =>
+      invoke<void>("set_analytics_consent", { event: eventId, consent }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["analytics_consent"] });
     },
   });
 

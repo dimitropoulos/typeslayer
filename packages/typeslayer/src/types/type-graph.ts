@@ -4,61 +4,43 @@ import type { TypeId } from "@typeslayer/validate";
 export const TYPE_GRAPH_FILENAME = "type-graph.json";
 
 export type LinkKind =
-  | "union"
-  | "typeArgument"
-  | "instantiated"
-  | "substitutionBase"
-  | "constraint"
-  | "indexedAccessObject"
-  | "indexedAccessIndex"
-  | "conditionalCheck"
-  | "conditionalExtends"
-  | "conditionalTrue"
-  | "conditionalFalse"
-  | "keyof"
-  | "evolvingArrayElement"
-  | "evolvingArrayFinal"
-  | "reverseMappedSource"
-  | "reverseMappedMapped"
-  | "reverseMappedConstraint"
-  | "alias"
-  | "aliasTypeArgument"
-  | "intersection";
+  | "unionTypes"
+  | "intersectionTypes"
+  | "typeArguments"
+  | "instantiatedType"
+  | "aliasTypeArguments"
+  | "conditionalCheckType"
+  | "conditionalExtendsType"
+  | "conditionalFalseType"
+  | "conditionalTrueType"
+  | "indexedAccessObjectType"
+  | "indexedAccessIndexType"
+  | "keyofType"
+  | "reverseMappedSourceType"
+  | "reverseMappedMappedType"
+  | "reverseMappedConstraintType"
+  | "substitutionBaseType"
+  | "constraintType"
+  | "evolvingArrayElementType"
+  | "evolvingArrayFinalType"
+  | "aliasType";
 
-export type CompactGraphLink = [source: TypeId, target: TypeId, kind: LinkKind];
+export type GraphLink = [sourceId: TypeId, targetId: TypeId];
 
-export const compactGraphLinkIndex = {
+export const graphLinkIndex = {
   sourceId: 0,
   targetId: 1,
-  kind: 2,
 } as const;
+
+export type CountAndMax = {
+  count: number;
+  max: number;
+};
 
 export type GraphStats = {
-  count: Record<LinkKind, number>;
+  link: Record<LinkKind, CountAndMax>;
+  node: Record<NodeStatKind, CountAndMax>;
 };
-
-/**
- * to save lots of time/energy/space over the wire (and also memory and disk space)
- * we store this as a tuple to avoid needing to repeat the property names over and over
- */
-export type CompactLinkStatLink = [
-  target: TypeId,
-  humanReadableName: string | null,
-  sourceIds: TypeId[],
-];
-
-export const compactLinksStatsLinkIndex = {
-  targetId: 0,
-  humanReadableName: 1,
-  sourceIds: 2,
-} as const;
-
-export type CompactLinkStats = {
-  max: number;
-  links: CompactLinkStatLink[];
-};
-
-export type GraphLinkStats = Record<LinkKind, CompactLinkStats>;
 
 export type NodeStatKind =
   | "typeArguments"
@@ -66,16 +48,46 @@ export type NodeStatKind =
   | "intersectionTypes"
   | "aliasTypeArguments";
 
-export type NodeStatNode = {
+export type GraphStatNode = {
   id: TypeId;
   name: string;
   value: number;
-  path: AbsolutePath | null;
+  path?: AbsolutePath;
 };
 
-type NodeStatCategory = {
+export type NodeStatKindData = {
   max: number;
-  nodes: NodeStatNode[];
+  count: number;
+  nodes: GraphStatNode[];
 };
 
-export type GraphNodeStats = Record<NodeStatKind, NodeStatCategory>;
+export type GraphNodeStats = Record<NodeStatKind, NodeStatKindData>;
+
+export type LinkKindData = {
+  byTarget: ByTarget;
+  bySource: BySource;
+};
+
+export const targetToSourcesIndex = {
+  targetId: 0,
+  sourceIds: 1,
+} as const;
+
+export type ByTarget = {
+  max: number;
+  count: number;
+  targetToSources: [targetId: TypeId, sourceIds: TypeId[]][];
+};
+
+export const sourceToTargetsIndex = {
+  sourceId: 0,
+  targetIds: 1,
+} as const;
+
+export type BySource = {
+  max: number;
+  count: number;
+  sourceToTargets: [sourceId: TypeId, targetIds: TypeId[]][];
+};
+
+export type GraphLinkStats = Record<LinkKind, LinkKindData>;

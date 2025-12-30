@@ -1,4 +1,4 @@
-import { Info } from "@mui/icons-material";
+import Info from "@mui/icons-material/Info";
 import {
   Box,
   CircularProgress,
@@ -9,12 +9,13 @@ import {
 } from "@mui/material";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { StatPill } from "../components/stat-pill";
 import { detectPlatformSlash, friendlyPath } from "../components/utils";
 import { useToast } from "../contexts/toast-context";
 import {
   type TreemapNode,
+  useAnalyzeTrace,
   useProjectRoot,
   useRelativePaths,
   useTreemap,
@@ -25,17 +26,13 @@ export const Treemap = () => {
   const projectRoot = useProjectRoot();
   const { showToast } = useToast();
   const [_popoverOpen, _setPopoverOpen] = useState(false);
+  const { data, isLoading, error } = useTreemap();
+  const { data: analyzeTrace } = useAnalyzeTrace();
   const [popoverAnchorEl, setPopoverAnchorEl] =
     useState<HTMLButtonElement | null>(null);
 
-  const { data, isLoading, error } = useTreemap();
-
-  const totalTime = useMemo(() => {
-    if (!data) {
-      return 0;
-    }
-    return data.reduce((acc, node) => acc + node.value, 0);
-  }, [data]);
+  const totalTime = analyzeTrace?.fileStatistics.totalDuration;
+  const totalFiles = analyzeTrace?.fileStatistics.totalFiles;
 
   const formatPath = useCallback(
     (path: string | undefined) => {
@@ -67,7 +64,6 @@ export const Treemap = () => {
           message:
             "Copied file path to clipboard.\n\nPaste it into Perfetto to learn more.",
           severity: "success",
-          duration: 4000,
         });
       }
     },
@@ -129,12 +125,16 @@ export const Treemap = () => {
           typeof info.value === "number"
             ? (info.value / 1000).toLocaleString()
             : "0";
+
+        const percentage = totalTime
+          ? (((info.value as number) / totalTime) * 100).toFixed(2)
+          : "??";
         return `
           <div style="padding: 8px;">
             <strong>${info.name}</strong><br/>
             <span style="color: #000000;">${path}</span><br/>
             <span>${valueMs} ms</span><br/>
-            <span>${(((info.value as number) / totalTime) * 100).toFixed(2)}% of the total time</span>
+            <span>${percentage}% of the total time</span>
           </div>
         `;
       },
@@ -232,12 +232,13 @@ export const Treemap = () => {
             <Info />
           </IconButton>
           <span style={{ flexGrow: 1 }}></span>
-          {totalTime > 0 ? (
+          {totalTime ? (
             <StatPill
               label="milliseconds"
               value={Math.round(totalTime / 1000)}
             />
           ) : null}
+          {totalFiles ? <StatPill label="files" value={totalFiles} /> : null}
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           File compilation times visualized by directory and duration

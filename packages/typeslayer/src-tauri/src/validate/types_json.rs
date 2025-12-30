@@ -1,5 +1,7 @@
 use std::{io::BufReader, path::PathBuf};
 
+use crate::type_graph::{GraphLinkWithKind, LinkKind};
+
 use super::utils::{Location, TypeId};
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -230,16 +232,137 @@ pub struct ResolvedType {
     pub display: Option<String>,
 }
 
+impl ResolvedType {
+    pub fn get_relationships(self: &ResolvedType) -> Vec<GraphLinkWithKind> {
+        let mut relations = Vec::new();
+
+        // single relationships
+        for (opt_target, kind) in [
+            (self.instantiated_type, LinkKind::InstantiatedType),
+            (self.substitution_base_type, LinkKind::SubstitutionBaseType),
+            (self.constraint_type, LinkKind::ConstraintType),
+            (
+                self.indexed_access_object_type,
+                LinkKind::IndexedAccessObjectType,
+            ),
+            (
+                self.indexed_access_index_type,
+                LinkKind::IndexedAccessIndexType,
+            ),
+            (self.conditional_check_type, LinkKind::ConditionalCheckType),
+            (
+                self.conditional_extends_type,
+                LinkKind::ConditionalExtendsType,
+            ),
+            (self.conditional_true_type, LinkKind::ConditionalTrueType),
+            (self.conditional_false_type, LinkKind::ConditionalFalseType),
+            (self.keyof_type, LinkKind::KeyofType),
+            (
+                self.evolving_array_element_type,
+                LinkKind::EvolvingArrayElementType,
+            ),
+            (
+                self.evolving_array_final_type,
+                LinkKind::EvolvingArrayFinalType,
+            ),
+            (
+                self.reverse_mapped_source_type,
+                LinkKind::ReverseMappedSourceType,
+            ),
+            (
+                self.reverse_mapped_mapped_type,
+                LinkKind::ReverseMappedMappedType,
+            ),
+            (
+                self.reverse_mapped_constraint_type,
+                LinkKind::ReverseMappedConstraintType,
+            ),
+            (self.alias_type, LinkKind::AliasType),
+        ] {
+            if let Some(target) = opt_target {
+                relations.push(GraphLinkWithKind {
+                    source: self.id,
+                    target,
+                    kind,
+                });
+            }
+        }
+
+        // array relationships
+        for (opt_targets, kind) in [
+            (
+                self.alias_type_arguments.as_ref(),
+                LinkKind::AliasTypeArguments,
+            ),
+            (
+                self.intersection_types.as_ref(),
+                LinkKind::IntersectionTypes,
+            ),
+            (self.union_types.as_ref(), LinkKind::UnionTypes),
+            (self.type_arguments.as_ref(), LinkKind::TypeArguments),
+        ] {
+            if let Some(targets) = opt_targets {
+                for &target in targets {
+                    relations.push(GraphLinkWithKind {
+                        source: self.id,
+                        target,
+                        kind: kind.clone(),
+                    });
+                }
+            }
+        }
+
+        relations
+    }
+
+    pub fn get_path(self: &ResolvedType) -> Option<String> {
+        self.first_declaration
+            .as_ref()
+            .map(|l| l.path.clone())
+            .or_else(|| self.reference_location.as_ref().map(|l| l.path.clone()))
+            .or_else(|| self.destructuring_pattern.as_ref().map(|l| l.path.clone()))
+    }
+
+    /// Return a human-readable type name similar to frontend's getHumanReadableName
+    pub fn human_readable_name(self: &ResolvedType) -> String {
+        let is_literal = self.flags.iter().any(|f| {
+            matches!(
+                f,
+                Flag::StringLiteral
+                    | Flag::NumberLiteral
+                    | Flag::BooleanLiteral
+                    | Flag::BigIntLiteral
+            )
+        });
+        if is_literal
+            && let Some(d) = &self.display
+            && !d.is_empty()
+        {
+            return d.clone();
+        }
+
+        if let Some(s) = &self.symbol_name {
+            return s.clone();
+        }
+        if let Some(i) = &self.intrinsic_name {
+            return format!("{i}");
+        }
+        "<anonymous>".to_string()
+    }
+}
+
 /// `typesJsonSchema` – an array of `ResolvedType`
 pub type TypesJsonSchema = Vec<ResolvedType>;
 
-pub fn parse_types_json(path: PathBuf, json_reader: impl std::io::Read) -> Result<TypesJsonSchema, String> {
+pub fn parse_types_json(
+    path: PathBuf,
+    json_reader: impl std::io::Read,
+) -> Result<TypesJsonSchema, String> {
     let mut parsed: TypesJsonSchema = serde_json::from_reader(json_reader)
         .map_err(|e| format!("Failed to parse {path:?}: {e}"))?;
 
     parsed.insert(
         0,
-        // TODO: do a better job of splitting this up
         ResolvedType {
             id: 0,
             flags: vec![],

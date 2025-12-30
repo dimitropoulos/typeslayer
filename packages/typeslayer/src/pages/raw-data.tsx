@@ -1,12 +1,10 @@
-import {
-  Autorenew,
-  Description,
-  Download,
-  FileCopy,
-  FileUpload,
-  FolderOpen,
-  VerifiedUser,
-} from "@mui/icons-material";
+import Autorenew from "@mui/icons-material/Autorenew";
+import Description from "@mui/icons-material/Description";
+import Download from "@mui/icons-material/Download";
+import FileCopy from "@mui/icons-material/FileCopy";
+import FileUpload from "@mui/icons-material/FileUpload";
+import FolderOpen from "@mui/icons-material/FolderOpen";
+import VerifiedUser from "@mui/icons-material/VerifiedUser";
 import {
   Alert,
   Box,

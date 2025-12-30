@@ -1,8 +1,11 @@
-import { ContentCopy, Description, Done } from "@mui/icons-material";
+import ContentCopy from "@mui/icons-material/ContentCopy";
+import Description from "@mui/icons-material/Description";
+import Done from "@mui/icons-material/Done";
 import { Box, type BoxProps, IconButton, Tooltip } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { type BundledLanguage, codeToHtml } from "shiki";
 import { shikiTheme } from "../shikiTheme";
+import { panelBackground } from "../theme";
 import { OpenablePath } from "./openable-path";
 import { ShowMore } from "./show-more";
 
@@ -25,6 +28,8 @@ export const Code = ({
   maxSize = 1024 * 10,
   disableSyntaxHighlighting,
   copyThisInstead,
+  hideCopyButton = false,
+  hideFileNameIcon = false,
   ...boxProps
 }: {
   /** Data to render. Strings are parsed if they look like JSON, otherwise rendered as-is. */
@@ -39,6 +44,8 @@ export const Code = ({
   maxSize?: number;
   disableSyntaxHighlighting?: boolean | undefined;
   copyThisInstead?: string | undefined;
+  hideCopyButton?: boolean | undefined;
+  hideFileNameIcon?: boolean | undefined;
 } & BoxProps) => {
   const code = useMemo(() => toDisplayString(value, maxSize), [value, maxSize]);
   const [html, setHtml] = useState<string | null>(null);
@@ -99,9 +106,12 @@ export const Code = ({
             userSelect: "none",
             display: "flex",
             gap: 1,
+            alignItems: "center",
           }}
         >
-          <Description fontSize="small" color="disabled" />
+          {hideFileNameIcon ? null : (
+            <Description fontSize="small" color="disabled" />
+          )}
           {openableFilename ? (
             <OpenablePath
               absolutePath={fileName}
@@ -122,7 +132,7 @@ export const Code = ({
         sx={{
           p: 2,
           paddingRight: 5,
-          backgroundColor: "#11111190",
+          backgroundColor: panelBackground,
           border: 1,
           borderColor: "divider",
           borderRadius: 1,
@@ -131,29 +141,33 @@ export const Code = ({
           position: "relative",
         }}
       >
-        <Box sx={{ position: "absolute", top: 8, right: 8 }}>
-          <Tooltip title={copied ? "Copied" : "Copy"} placement="left">
-            <IconButton
-              size="small"
-              aria-label="copy code"
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(copyThisInstead ?? code);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 1200);
-                } catch (_error) {
-                  setCopied(false);
-                }
-              }}
-            >
-              {copied ? (
-                <Done fontSize="small" />
-              ) : (
-                <ContentCopy fontSize="small" />
-              )}
-            </IconButton>
-          </Tooltip>
-        </Box>
+        {hideCopyButton ? null : (
+          <Box sx={{ position: "absolute", top: 8, right: 8 }}>
+            <Tooltip title={copied ? "Copied" : "Copy"} placement="left">
+              <IconButton
+                size="small"
+                aria-label="copy code"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(
+                      copyThisInstead ?? code,
+                    );
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1200);
+                  } catch (_error) {
+                    setCopied(false);
+                  }
+                }}
+              >
+                {copied ? (
+                  <Done fontSize="small" />
+                ) : (
+                  <ContentCopy fontSize="small" />
+                )}
+              </IconButton>
+            </Tooltip>
+          </Box>
+        )}
 
         {html ? (
           <Box
