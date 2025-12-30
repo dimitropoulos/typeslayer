@@ -163,7 +163,7 @@ const CreateABugReport = ({
       showToast({
         message: `Bug report downloaded to: ${zipPath.split(detectPlatformSlash()).pop()}`,
         severity: "success",
-        duration: 10000,
+        duration: 10_000,
         action: {
           label: "Open Folder",
           icon: <FolderOpen />,

@@ -62,7 +62,7 @@ fn capture_window_to_png<R: tauri::Runtime>(window: &WebviewWindow<R>) -> Result
     // Find our window by title
     let xcap_window = windows
         .into_iter()
-        .find(|w| w.title().contains(&window_title))
+        .find(|w| w.title().ok().is_some_and(|t| t.contains(&window_title)))
         .ok_or("Could not find window for screenshot")?;
 
     // Capture the image

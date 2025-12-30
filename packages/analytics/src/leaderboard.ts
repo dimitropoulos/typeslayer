@@ -332,76 +332,160 @@ export type LeaderboardNumber = {
   bottom10: number[];
 };
 
+// Cache configuration
+const CACHE_TTL_SECONDS = 60 * 60; // 1 hour
+
 const getRows = async <EventName extends Events["name"]>(
   env: Env,
   eventName: EventName,
   dataPath: string[],
 ) => {
+  const fullPath = ["$", ...dataPath].join(".");
   const { results: rows } = await env.DB.prepare(
-    `SELECT json_extract(data, '${dataPath}') as value
+    `SELECT json_extract(data, '${fullPath}') as value
        FROM events
        WHERE name = '${eventName}'
-         AND json_extract(data, '${["$", ...dataPath].join(".")}') IS NOT NULL
+         AND json_extract(data, '${fullPath}') IS NOT NULL
        ORDER BY value DESC`,
   ).all<{ value: number }>();
 
   return rows;
 };
 
-export async function handleLeaderboard(env: Env): Promise<Response> {
+async function computeLeaderboard(env: Env): Promise<LeaderboardNumber[]> {
+  const results: LeaderboardNumber[] = [];
+
+  for (const query of queries) {
+    const rows = await getRows(env, query.eventName, query.dataPath);
+
+    if (rows && rows.length > 0) {
+      const values = rows.map(r => r.value);
+      const sorted = values.toSorted((a, b) => a - b);
+
+      const samples = values.length;
+      const winner = sorted[sorted.length - 1];
+      const sum = values.reduce((a, b) => a + b, 0);
+      const mean = sum / samples;
+
+      const median =
+        samples % 2 === 0
+          ? (sorted[samples / 2 - 1] + sorted[samples / 2]) / 2
+          : sorted[Math.floor(samples / 2)];
+
+      const variance =
+        values.reduce((acc, val) => acc + (val - mean) ** 2, 0) / samples;
+      const standardDeviation = Math.sqrt(variance);
+
+      const top10 = sorted.slice(-10).reverse();
+      const bottom10 = sorted.slice(0, 10);
+
+      results.push({
+        id: query.id,
+        label: query.label,
+        subtitle: query.subtitle,
+        groupId: query.groupId,
+        format: query.format,
+        winner,
+        median,
+        mean,
+        standardDeviation,
+        samples,
+        top10,
+        bottom10,
+      });
+    }
+  }
+
+  return results;
+}
+
+export async function handleLeaderboard(
+  env: Env,
+  request: Request,
+): Promise<Response> {
   try {
-    const results: LeaderboardNumber[] = [];
-
-    for (const query of queries) {
-      const rows = await getRows(env, query.eventName, query.dataPath);
-
-      if (rows && rows.length > 0) {
-        const values = rows.map(r => r.value);
-        const sorted = values.toSorted((a, b) => a - b);
-
-        const samples = values.length;
-        const winner = sorted[sorted.length - 1];
-        const sum = values.reduce((a, b) => a + b, 0);
-        const mean = sum / samples;
-
-        const median =
-          samples % 2 === 0
-            ? (sorted[samples / 2 - 1] + sorted[samples / 2]) / 2
-            : sorted[Math.floor(samples / 2)];
-
-        const variance =
-          values.reduce((acc, val) => acc + (val - mean) ** 2, 0) / samples;
-        const standardDeviation = Math.sqrt(variance);
-
-        const top10 = sorted.slice(-10).reverse();
-        const bottom10 = sorted.slice(0, 10);
-
-        results.push({
-          id: query.id,
-          label: query.label,
-          subtitle: query.subtitle,
-          groupId: query.groupId,
-          format: query.format,
-          winner,
-          median,
-          mean,
-          standardDeviation,
-          samples,
-          top10,
-          bottom10,
-        });
-      }
+    const cache = caches.default;
+    
+    // Create a consistent cache key URL (no query params)
+    const url = new URL(request.url);
+    url.search = '';
+    const cacheKeyUrl = url.toString();
+    
+    // Check if we have a cached response
+    let response = await cache.match(cacheKeyUrl);
+    
+    if (response) {
+      // Return cached response with hit indicator
+      const newHeaders = new Headers(response.headers);
+      newHeaders.set("X-Cache", "hit");
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: newHeaders,
+      });
     }
 
-    return new Response(JSON.stringify(results), {
+    // Compute fresh data
+    const results = await computeLeaderboard(env);
+
+    // Create response with cache headers
+    response = new Response(JSON.stringify(results), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
+        "X-Cache": "miss",
+        "Cache-Control": `public, max-age=${CACHE_TTL_SECONDS}`,
       },
     });
+
+    // Store in cache using consistent key (respects Cache-Control header)
+    await cache.put(cacheKeyUrl, response.clone());
+
+    return response;
   } catch (err: unknown) {
     console.error("Leaderboard error:", err);
+    return new Response(
+      JSON.stringify({
+        error: err instanceof Error ? err.message : String(err),
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+      },
+    );
+  }
+}
+
+export async function handleInvalidateCache(request: Request): Promise<Response> {
+  try {
+    const url = new URL(request.url);
+    // Build the leaderboard URL with consistent cache key
+    url.pathname = "/leaderboard";
+    url.search = '';
+    const cacheKeyUrl = url.toString();
+    
+    const cache = caches.default;
+    const deleted = await cache.delete(cacheKeyUrl);
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        message: deleted ? "Cache invalidated" : "No cache entry found"
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+      },
+    );
+  } catch (err: unknown) {
+    console.error("Cache invalidation error:", err);
     return new Response(
       JSON.stringify({
         error: err instanceof Error ? err.message : String(err),

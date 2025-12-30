@@ -57,7 +57,7 @@ const HelpDialog = () => {
 export const ActionBar: FC<{ collapsed: boolean }> = ({ collapsed }) => {
   const { showToast } = useToast();
 
-  const handleScreenshot = async () => {
+  const handleScreenshot = useCallback(async () => {
     try {
       const savedPath = await invoke<string>("take_screenshot");
       showToast({
@@ -65,16 +65,15 @@ export const ActionBar: FC<{ collapsed: boolean }> = ({ collapsed }) => {
           ? `Screenshot saved to ${savedPath} and copied to clipboard`
           : "Screenshot captured",
         severity: "success",
-        duration: 4000,
       });
     } catch (error) {
+      console.error("Failed to take screenshot", error);
       showToast({
         message: `Unable to capture screenshot: ${String(error)}`,
         severity: "error",
-        duration: 4000,
       });
     }
-  };
+  }, [showToast]);
 
   return (
     <Stack
