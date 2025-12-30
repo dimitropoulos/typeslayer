@@ -2,6 +2,55 @@
 
 This Cloudflare Worker ingests analytics events and stores them in a D1 database.
 
+**📖 [Security Documentation](./SECURITY.md)** - Public endpoint design, GitHub secrets setup, and CI deployment
+
+## API Endpoints
+
+### `GET /leaderboard`
+
+Returns aggregated leaderboard statistics across all collected events.
+
+**Caching:**
+- Results are cached at the Cloudflare edge using the Cache API for **1 hour**
+- First request computes the data (slow), subsequent requests are served from cache (fast)
+- Cache can be manually invalidated via the `/invalidate` endpoint
+
+**Response Headers:**
+- `X-Cache: hit` - Data served from Cloudflare cache (fast)
+- `X-Cache: miss` - Fresh data computed from database (slow)
+- `Cache-Control: public, max-age=3600` - CDN/browser can cache for 1 hour
+
+**Performance:**
+- Cached responses: ~10-50ms (served from edge)
+- Uncached responses: ~500-2000ms (database queries executed)
+
+### `GET /invalidate`
+
+Manually invalidates the leaderboard cache by deleting it from Cloudflare's Cache API.
+
+**No authentication required** - Publicly accessible for easy cache busting.
+
+**Example:**
+```bash
+curl https://analytics.typeslayer.dev/invalidate
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Cache invalidated"
+}
+```
+
+### `GET /health`
+
+Health check endpoint, returns `ok`.
+
+### `POST /` (root)
+
+Ingests analytics events (single or batch).
+
 ## Initial Setup (One-Time)
 
 ### 1. Find Your D1 Database ID

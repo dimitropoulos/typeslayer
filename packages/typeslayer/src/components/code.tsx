@@ -106,6 +106,7 @@ export const Code = ({
             userSelect: "none",
             display: "flex",
             gap: 1,
+            alignItems: "center",
           }}
         >
           {hideFileNameIcon ? null : (

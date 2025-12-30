@@ -14,6 +14,7 @@ import SupervisorAccount from "@mui/icons-material/SupervisorAccount";
 import Timelapse from "@mui/icons-material/Timelapse";
 import {
   Box,
+  Button,
   List,
   ListItemButton,
   ListItemIcon,
@@ -38,9 +39,10 @@ import {
 } from "@typeslayer/analytics";
 import { analyzeTraceInfo } from "@typeslayer/analyze-trace/browser";
 import { depthLimitInfo, typeRelationInfo } from "@typeslayer/validate";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { InlineCode } from "../components/inline-code";
-import { formatBytesSize, randBetween } from "../components/utils";
+import { formatBytesSize, randBetween, useKonami } from "../components/utils";
+import { useToast } from "../contexts/toast-context";
 import { panelBackground } from "../theme";
 import type { LinkKind } from "../types/type-graph";
 
@@ -70,6 +72,29 @@ export const LeaderboardPage = () => {
   const [hoveredId, setHoveredId] = useState<LeaderboardNumber["id"] | null>(
     null,
   );
+
+  const { showToast } = useToast();
+
+  const [isDebugMode, setIsDebugMode] = useState(false);
+  const toggleDebugMode = () => setIsDebugMode(d => !d);
+  useKonami(toggleDebugMode);
+
+  const invalidate = useCallback(async () => {
+    try {
+      const response = await fetch(
+        "https://typeslayer-analytics.typeslayer.workers.dev/invalidate",
+      );
+      showToast({
+        message: `Leaderboard cache invalidated: ${await response.text()}`,
+        severity: "success",
+      });
+    } catch (error) {
+      showToast({
+        message: `Failed to invalidate leaderboard cache: ${error}`,
+        severity: "error",
+      });
+    }
+  }, [showToast]);
 
   const selected = stats
     ? stats.find(
@@ -128,6 +153,10 @@ export const LeaderboardPage = () => {
             this started as a joke, but over time it became clear that having
             context on "how big is way too big" is actually tangibly useful.
           </Typography>
+
+          {isDebugMode ? (
+            <Button onClick={invalidate} variant="contained" sx={{ mt: 2 }}>invalidate leaderboard cache</Button>
+          ) : null}
         </Stack>
         {isLoading ? (
           <LeaderboardNavSkeleton />

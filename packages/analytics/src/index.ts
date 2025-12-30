@@ -1,6 +1,6 @@
 /// <reference types="@cloudflare/workers-types" />
 
-import { handleLeaderboard } from "./leaderboard";
+import { handleInvalidateCache, handleLeaderboard } from "./leaderboard";
 import type { Env } from "./types";
 
 export * from "./leaderboard";
@@ -49,7 +49,12 @@ export default {
 
     // Leaderboard endpoint
     if (request.method === "GET" && url.pathname === "/leaderboard") {
-      return handleLeaderboard(env);
+      return handleLeaderboard(env, request);
+    }
+
+    // Invalidate cache endpoint (public, no auth required)
+    if (request.method === "GET" && url.pathname === "/invalidate") {
+      return handleInvalidateCache(request);
     }
 
     // CORS preflight

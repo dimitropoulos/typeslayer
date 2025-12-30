@@ -64,7 +64,6 @@ export const Treemap = () => {
           message:
             "Copied file path to clipboard.\n\nPaste it into Perfetto to learn more.",
           severity: "success",
-          duration: 4000,
         });
       }
     },

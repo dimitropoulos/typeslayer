@@ -4,7 +4,7 @@ import {
   type ResolvedType,
   relativizePath,
 } from "@typeslayer/validate";
-import type { MouseEvent } from "react";
+import { type MouseEvent, useCallback, useEffect, useState } from "react";
 
 export const createOpenHandler =
   (url: string) => async (event: MouseEvent<HTMLAnchorElement>) => {
@@ -180,3 +180,30 @@ export type TypeScriptCompilerVariant =
 export const randBetween = (min: number, max: number) => {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 };
+
+const KONAMI_CODE = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65];
+export function useKonami(action: () => void, { code = KONAMI_CODE } = {}) {
+  const [input, setInput] = useState<number[]>([]);
+
+  const onKeyUp = useCallback(
+    (e: KeyboardEvent) => {
+      const newInput = input;
+      newInput.push(e.keyCode);
+      newInput.splice(-code.length - 1, input.length - code.length);
+
+      setInput(newInput);
+
+      if (newInput.join("").includes(code.join(""))) {
+        action();
+      }
+    },
+    [input, code, action],
+  );
+
+  useEffect(() => {
+    document.addEventListener("keyup", onKeyUp);
+    return () => {
+      document.removeEventListener("keyup", onKeyUp);
+    };
+  }, [onKeyUp]);
+}
