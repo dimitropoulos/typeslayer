@@ -1,3 +1,12 @@
+import type { SvgIconComponent } from "@mui/icons-material";
+import Air from "@mui/icons-material/Air";
+import Calculate from "@mui/icons-material/Calculate";
+import Diversity1 from "@mui/icons-material/Diversity1";
+import Expand from "@mui/icons-material/Expand";
+import Lightbulb from "@mui/icons-material/Lightbulb";
+import RotateRight from "@mui/icons-material/RotateRight";
+import SafetyDivider from "@mui/icons-material/SafetyDivider";
+import SubdirectoryArrowRight from "@mui/icons-material/SubdirectoryArrowRight";
 import { z } from "zod/v4";
 import { absolutePath, typeId } from "./utils";
 
@@ -9,7 +18,7 @@ export const eventPhase = {
   complete: "X",
   metadata: "M",
   instantGlobal: "I",
-  // 'i' is instantThread
+  // 'i' is instantThread (not currently used)
 } as const;
 
 export const instantScope = {
@@ -684,6 +693,65 @@ export type DepthLimitNames =
   | EventChecktypes__RemoveSubtypes_DepthLimit["name"]
   | EventChecktypes__TraceUnionsOrIntersectionsTooLarge_DepthLimit["name"]
   | EventChecktypes__TypeRelatedToDiscriminatedType_DepthLimit["name"];
+
+export const depthLimitInfo = {
+  instantiateType_DepthLimit: {
+    title: "Type Instantiation",
+    notFound: "No Type Instantiation Limits Found",
+    route: "instantiate-type-depth-limit",
+    icon: Lightbulb,
+  },
+  recursiveTypeRelatedTo_DepthLimit: {
+    title: "Recursive Relations",
+    notFound: "No Recursive Relations Limits Found",
+    route: "recursive-type-related-to-depth-limit",
+    icon: Diversity1,
+  },
+  typeRelatedToDiscriminatedType_DepthLimit: {
+    title: "Discrimination",
+    notFound: "No Discriminated Type Limits Found",
+    route: "type-related-to-discriminated-type-depth-limit",
+    icon: SafetyDivider,
+  },
+  checkCrossProductUnion_DepthLimit: {
+    title: "Cross-Product Union",
+    notFound: "No Cross-Product Union Limits Found",
+    route: "check-cross-product-union-depth-limit",
+    icon: Calculate,
+  },
+  checkTypeRelatedTo_DepthLimit: {
+    title: "Type Relation Depth",
+    notFound: "No Type Relation Depth Limits Found",
+    route: "check-type-related-to-depth-limit",
+    icon: RotateRight,
+  },
+  getTypeAtFlowNode_DepthLimit: {
+    title: "Flow Node Type",
+    notFound: "No Flow Node Type Limits Found",
+    route: "get-type-at-flow-node-depth-limit",
+    icon: Air,
+  },
+  removeSubtypes_DepthLimit: {
+    title: "Remove Subtypes",
+    notFound: "No Remove Subtypes Limits Found",
+    route: "remove-subtypes-depth-limit",
+    icon: SubdirectoryArrowRight,
+  },
+  traceUnionsOrIntersectionsTooLarge_DepthLimit: {
+    title: "Union/Intersection Size",
+    notFound: "No Union/Intersection Size Limits Found",
+    route: "trace-unions-or-intersections-too-large-depth-limit",
+    icon: Expand,
+  },
+} satisfies Record<
+  DepthLimitNames,
+  {
+    title: string;
+    notFound: string;
+    route: string;
+    icon: SvgIconComponent;
+  }
+>;
 
 /*
  * EMIT PHASE EVENTS

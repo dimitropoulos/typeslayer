@@ -1,3 +1,4 @@
+mod analytics;
 mod analyze_trace;
 pub mod app_data;
 mod commands;
@@ -10,6 +11,9 @@ mod treemap;
 mod type_graph;
 pub mod utils;
 mod validate;
+
+#[cfg(test)]
+mod export_types;
 
 use crate::process_controller::ProcessController;
 use tauri::Manager;
@@ -44,15 +48,6 @@ pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
             if let Some(win) = app.get_webview_window("main") {
                 let _ = win.set_title(&title);
             }
-
-            let handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                let version = handle.package_info().version.to_string();
-                let mut data = app_data.lock().await;
-                data.version = version;
-                data.update_typeslayer_config_toml().await;
-            });
-
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())
@@ -68,7 +63,7 @@ pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
             commands::app_data::get_selected_tsconfig,
             commands::app_data::get_trace_json,
             commands::app_data::get_tsconfig_paths,
-            commands::app_data::get_type_graph_node_and_link_stats,
+            commands::app_data::get_type_graph_limited_node_and_link_stats,
             commands::app_data::get_type_graph_nodes_and_links,
             commands::app_data::get_type_graph_stats,
             commands::app_data::set_project_root,
@@ -97,8 +92,8 @@ pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
             commands::query::get_resolved_type_by_id,
             commands::query::get_resolved_types_by_ids,
             commands::query::get_traces_related_to_typeid,
+            commands::settings::get_analytics_consent,
             commands::settings::get_apply_tsc_project_flag,
-            commands::settings::get_auto_start,
             commands::settings::get_default_extra_tsc_flags,
             commands::settings::get_extra_tsc_flags,
             commands::settings::get_max_nodes,
@@ -108,8 +103,8 @@ pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
             commands::settings::get_preferred_editor,
             commands::settings::get_relative_paths,
             commands::settings::get_typescript_compiler_variant,
+            commands::settings::set_analytics_consent,
             commands::settings::set_apply_tsc_project_flag,
-            commands::settings::set_auto_start,
             commands::settings::set_extra_tsc_flags,
             commands::settings::set_max_nodes,
             commands::settings::set_max_old_space_size,

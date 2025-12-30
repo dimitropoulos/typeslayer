@@ -1,179 +1,175 @@
+use indexmap::IndexMap;
 use serde::ser::Error as _;
 use serde::{Deserialize, Serialize, Serializer};
 use serde_json::value::RawValue;
 use std::collections::HashMap;
+use std::hash::Hash;
+use strum::VariantArray;
+use strum_macros::VariantArray;
+use ts_rs::TS;
 
-use crate::validate::types_json::{Flag, ResolvedType, TypesJsonSchema};
+use crate::validate::types_json::TypesJsonSchema;
 use crate::validate::utils::TypeId;
 
 pub const TYPE_GRAPH_FILENAME: &str = "type-graph.json";
 
-#[derive(Eq, PartialEq, Hash, Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+#[serde(rename_all = "camelCase")]
+pub struct CountAndMax {
+    pub count: usize,
+    pub max: usize,
+}
+
+#[derive(Eq, PartialEq, Hash, Debug, Clone, Serialize, Deserialize, VariantArray, TS)]
+#[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub enum LinkKind {
-    // one to many
-    AliasTypeArgument,
-    Intersection,
-    TypeArgument,
-    Union,
-
-    // one to one
-    Instantiated,
-    SubstitutionBase,
-    Constraint,
-    IndexedAccessObject,
-    IndexedAccessIndex,
-    ConditionalCheck,
-    ConditionalExtends,
-    ConditionalTrue,
-    ConditionalFalse,
-    Keyof,
-    EvolvingArrayElement,
-    EvolvingArrayFinal,
-    ReverseMappedSource,
-    ReverseMappedMapped,
-    ReverseMappedConstraint,
-    Alias,
+    UnionTypes,
+    IntersectionTypes,
+    TypeArguments,
+    InstantiatedType,
+    AliasTypeArguments,
+    ConditionalCheckType,
+    ConditionalExtendsType,
+    ConditionalFalseType,
+    ConditionalTrueType,
+    IndexedAccessObjectType,
+    IndexedAccessIndexType,
+    KeyofType,
+    ReverseMappedSourceType,
+    ReverseMappedMappedType,
+    ReverseMappedConstraintType,
+    SubstitutionBaseType,
+    ConstraintType,
+    EvolvingArrayElementType,
+    EvolvingArrayFinalType,
+    AliasType,
 }
 
 impl LinkKind {
-    pub fn values() -> &'static [LinkKind] {
-        use LinkKind::*;
-        &[
-            AliasTypeArgument,
-            Intersection,
-            TypeArgument,
-            Union,
-            Instantiated,
-            SubstitutionBase,
-            Constraint,
-            IndexedAccessObject,
-            IndexedAccessIndex,
-            ConditionalCheck,
-            ConditionalExtends,
-            ConditionalTrue,
-            ConditionalFalse,
-            Keyof,
-            EvolvingArrayElement,
-            EvolvingArrayFinal,
-            ReverseMappedSource,
-            ReverseMappedMapped,
-            ReverseMappedConstraint,
-            Alias,
-        ]
+    pub fn new_link_kind_data_by_kind() -> HashMap<LinkKind, LinkKindData> {
+        LinkKind::VARIANTS
+            .iter()
+            .map(|kind| (kind.clone(), LinkKindData::default()))
+            .collect()
+    }
+    pub fn new_count_and_max_map() -> HashMap<LinkKind, CountAndMax> {
+        LinkKind::VARIANTS
+            .iter()
+            .map(|kind| (kind.clone(), CountAndMax { count: 0, max: 0 }))
+            .collect()
     }
 }
 
+/// source is the type that contains the data for the link (originally, in the ResolvedType)
+/// so for example, if you have a union type:
+/// - the source is the id of the union type itself
+/// - each target id is one of the types that are members of the union
+/// - kind is LinkKind::Union
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct GraphLink {
+pub struct GraphLinkWithKind {
     pub source: TypeId,
     pub target: TypeId,
     pub kind: LinkKind,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CompactGraphLink(
-    TypeId, // sourceId
-    TypeId, // targetId
-    LinkKind,
-);
+// fn serialize_compact_typeids<S>(vec: &Vec<usize>, serializer: S) -> Result<S::Ok, S::Error>
+// where
+//     S: Serializer,
+// {
+//     // Make a compact JSON array like "[1,2,3]"
+//     let s = serde_json::to_string(vec).map_err(S::Error::custom)?;
+//     // Wrap it as raw JSON so pretty-printing won't reformat it
+//     let raw = RawValue::from_string(s).map_err(S::Error::custom)?;
+//     raw.serialize(serializer)
+// }
 
-impl From<GraphLink> for CompactGraphLink {
-    fn from(v: GraphLink) -> Self {
-        CompactGraphLink(v.source, v.target, v.kind)
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct GraphStats {
-    pub count: HashMap<LinkKind, usize>,
-}
-
-fn serialize_compact_typeids<S>(vec: &Vec<usize>, serializer: S) -> Result<S::Ok, S::Error>
+/// takes an IndexMap<TypeId, Vec<TypeId>>
+/// returns [(TypeId, Vec<TypeId>)] but with no spaces, and only newlines for each entry
+fn serialize_compact_typeid_to_typeids<S>(
+    map: &IndexMap<TypeId, Vec<TypeId>>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    // Make a compact JSON array like "[1,2,3]"
-    let s = serde_json::to_string(vec).map_err(S::Error::custom)?;
-    // Wrap it as raw JSON so pretty-printing won't reformat it
+    // Convert to a vector of tuples for serialization
+    let vec: Vec<(TypeId, &Vec<TypeId>)> = map.iter().map(|(k, v)| (*k, v)).collect();
+    // Serialize the vector using the compact serializer for Vec<TypeId>
+    let s = serde_json::to_string(&vec)
+        .map_err(S::Error::custom)?
+        .replace("[[", "[\n[") // and newline for first entry
+        .replace("],", "],\n"); // Add newlines between entries
     let raw = RawValue::from_string(s).map_err(S::Error::custom)?;
     raw.serialize(serializer)
 }
 
+fn deserialize_indexmap_typeid_to_typeids<'de, D>(
+    deserializer: D,
+) -> Result<IndexMap<TypeId, Vec<TypeId>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    // Deserialize into a vector of tuples first
+    let vec: Vec<(TypeId, Vec<TypeId>)> = serde::Deserialize::deserialize(deserializer)?;
+    // Convert the vector into an IndexMap
+    let map: IndexMap<TypeId, Vec<TypeId>> = IndexMap::from_iter(vec);
+    Ok(map)
+}
+
+/// this is sortof a reverse link representation because it's organized by the target
+/// consider that for a resolved type, you easily have access to what it's children relationships are via resolved_type.get_relationships()
+/// but if you want to go the other direction, that's what this is for
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct LinkStatLink {
-    pub target_id: TypeId,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub path: Option<String>,
-    #[serde(serialize_with = "serialize_compact_typeids")]
-    pub source_ids: Vec<TypeId>,
+pub struct ByTarget {
+    /// Largest source count across entries
+    pub max: usize,
+    /// number of total types are related to by any other type in this way
+    pub count: usize,
+    /// Record<TargetId, SourceId[]>
+    /// sorted by source_ids count descending
+    #[serde(
+        serialize_with = "serialize_compact_typeid_to_typeids",
+        deserialize_with = "deserialize_indexmap_typeid_to_typeids"
+    )]
+    pub target_to_sources: IndexMap<TypeId, Vec<TypeId>>,
 }
 
-/// The compact on-the-wire representation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct CompactLinkStatLink(
-    // targetId
-    TypeId,
-    // human readable name
-    Option<String>,
-    // sourceIds
-    Vec<TypeId>,
-);
-
-impl From<LinkStatLink> for CompactLinkStatLink {
-    fn from(v: LinkStatLink) -> Self {
-        CompactLinkStatLink(v.target_id, v.path, v.source_ids)
-    }
-}
-
-impl From<CompactLinkStatLink> for LinkStatLink {
-    fn from(v: CompactLinkStatLink) -> Self {
-        LinkStatLink {
-            target_id: v.0,
-            path: v.1,
-            source_ids: v.2,
-        }
-    }
+pub struct BySource {
+    /// Largest target count across entries
+    pub max: usize,
+    /// number of total types that are targeted by links of this kind
+    pub count: usize,
+    /// Record<SourceId, TargetId[]>
+    /// sorted by target_ids count descending
+    #[serde(
+        serialize_with = "serialize_compact_typeid_to_typeids",
+        deserialize_with = "deserialize_indexmap_typeid_to_typeids"
+    )]
+    pub source_to_targets: IndexMap<TypeId, Vec<TypeId>>,
 }
 
 /// Stats for a specific link kind: ordered list of (target_id, [source_ids])
 /// Ordered by number of sources (most connected first)
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct LinkStats {
-    /// Largest source count across entries
-    pub max: usize,
+pub struct LinkKindData {
     /// sorted by source_ids count descending
-    pub links: Vec<LinkStatLink>,
+    pub by_target: ByTarget,
+
+    /// sorted by target_ids count descending
+    pub by_source: BySource,
+
+    // the total number of links of this kind in the graph
+    pub link_count: usize,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct CompactLinkStats {
-    /// Largest source count across entries
-    pub max: usize,
-    /// sorted by source_ids count descending
-    pub links: Vec<CompactLinkStatLink>,
-}
-
-impl From<LinkStats> for CompactLinkStats {
-    fn from(v: LinkStats) -> Self {
-        CompactLinkStats {
-            max: v.max,
-            links: v.links.into_iter().map(|link| link.into()).collect(),
-        }
-    }
-}
-
-pub type GraphLinkStats = HashMap<LinkKind, LinkStats>;
-pub type CompactGraphLinkStats = HashMap<LinkKind, CompactLinkStats>;
-
-#[derive(Eq, PartialEq, Hash, Debug, Clone, Serialize, Deserialize)]
+#[derive(Eq, PartialEq, Hash, Debug, Clone, Serialize, Deserialize, VariantArray)]
 #[serde(rename_all = "camelCase")]
 pub enum NodeStatKind {
     TypeArguments,
@@ -182,169 +178,184 @@ pub enum NodeStatKind {
     AliasTypeArguments,
 }
 
+impl NodeStatKind {
+    pub fn new_count_and_max_map() -> HashMap<NodeStatKind, CountAndMax> {
+        NodeStatKind::VARIANTS
+            .iter()
+            .map(|kind| (kind.clone(), CountAndMax { count: 0, max: 0 }))
+            .collect()
+    }
+}
+
+/// this exists to summarize the info so we can use it in awards
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct NodeStatNode {
+pub struct GraphStatNode {
     pub id: TypeId,
     pub name: String,
-    pub value: usize,
+    pub value: usize, // how much of this stat this node has.  so for example if the stat is union, this value shows how many unions this type contains under it
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub path: Option<String>,
+    pub path: Option<String>, // necessary for showing in the UI before clicking
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct NodeStatCategory {
+pub struct NodeStatKindData {
+    pub count: usize,
     pub max: usize,
-    pub nodes: Vec<NodeStatNode>,
+    pub nodes: Vec<GraphStatNode>,
 }
-
-pub type GraphNodeStats = HashMap<NodeStatKind, NodeStatCategory>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TypeGraph {
-    pub nodes: usize,
-    pub stats: GraphStats,
-    pub link_stats: GraphLinkStats,
-    pub node_stats: GraphNodeStats,
-    pub links: Vec<GraphLink>,
-}
-
-/// Return a human-readable type name similar to frontend's getHumanReadableName
-pub fn human_readable_name(t: &ResolvedType) -> String {
-    let is_literal = t.flags.iter().any(|f| {
-        matches!(
-            f,
-            Flag::StringLiteral | Flag::NumberLiteral | Flag::BooleanLiteral | Flag::BigIntLiteral
-        )
-    });
-    if is_literal
-        && let Some(d) = &t.display
-        && !d.is_empty()
-    {
-        return d.clone();
-    }
-
-    if let Some(s) = &t.symbol_name {
-        return s.clone();
-    }
-    if let Some(i) = &t.intrinsic_name {
-        return format!("{i}");
-    }
-    "<anonymous>".to_string()
+    pub node_count: usize,
+    pub node_data_by_kind: HashMap<NodeStatKind, NodeStatKindData>,
+    pub link_count: usize,
+    pub link_kind_data_by_kind: HashMap<LinkKind, LinkKindData>,
+    pub path_map: HashMap<TypeId, String>,
 }
 
 impl TypeGraph {
     pub fn from_types(types: &TypesJsonSchema) -> Self {
         let mut graph = TypeGraph::default();
-        graph.calculate_nodes(types);
-        graph.calculate_links(types);
-        graph.calculate_link_stats(types);
-        graph.calculate_node_stats(types);
-        graph.calculate_counts();
+        graph.path_map = TypeGraph::build_path_map(types);
+        graph.node_count = graph.calculate_node_count(types);
+        graph.link_kind_data_by_kind = graph.calculate_link_kind_data_by_kind(types);
+        graph.link_count = graph.calculate_link_count();
+        graph.node_data_by_kind = graph.calculate_node_data_by_kind(types);
         graph
     }
 
     /// Build a map from type id -> optional path (mimics extractPath)
-    fn build_path_map(types: &TypesJsonSchema) -> HashMap<TypeId, Option<String>> {
-        let mut path_map: HashMap<TypeId, Option<String>> = HashMap::new();
-        for t in types.iter() {
-            let p = t
-                .first_declaration
-                .as_ref()
-                .map(|l| l.path.clone())
-                .or_else(|| t.reference_location.as_ref().map(|l| l.path.clone()))
-                .or_else(|| t.destructuring_pattern.as_ref().map(|l| l.path.clone()));
-            path_map.insert(t.id, p);
+    fn build_path_map(types: &TypesJsonSchema) -> HashMap<TypeId, String> {
+        let mut path_map = HashMap::new();
+        for resolved_type in types.iter() {
+            let path = resolved_type.get_path();
+            if let Some(path) = path {
+                // only store if there's a path
+                path_map.insert(resolved_type.id, path);
+            }
         }
         path_map
     }
 
-    fn calculate_nodes(&mut self, types: &TypesJsonSchema) {
+    fn calculate_node_count(&mut self, types: &TypesJsonSchema) -> usize {
         // TypeIds start at 1, but we add an index at 0 so it always lines up
-        if types.is_empty() {
-            self.nodes = 0;
-            return;
-        }
-        self.nodes = types.len() - 1;
+        if types.is_empty() { 0 } else { types.len() - 1 }
     }
 
-    fn calculate_links(&mut self, types: &TypesJsonSchema) {
-        // TypeIds start at 1
-        let last_type_id = self.nodes;
-        // Collect links to add in a temporary vector to avoid double borrowing self
-        let mut new_links = Vec::new();
+    fn calculate_link_count(&self) -> usize {
+        self.link_kind_data_by_kind
+            .values()
+            .map(|link_stat| link_stat.link_count)
+            .sum()
+    }
 
-        // Second pass: add links for supported relations
-        for t in types.iter() {
-            for link in get_relationships_for_type(t) {
-                let source_exists = link.source <= last_type_id;
-                let target_exists = link.target <= last_type_id;
-                if source_exists && target_exists {
-                    new_links.push(link);
-                }
+    /// total number of links in the graph
+    pub fn calculate_links_total(&self) -> usize {
+        self.link_kind_data_by_kind
+            .values()
+            .map(|link_stat| link_stat.link_count)
+            .sum()
+    }
+
+    fn calculate_link_kind_data_by_kind(
+        &mut self,
+        types: &TypesJsonSchema,
+    ) -> HashMap<LinkKind, LinkKindData> {
+        let mut link_kind_data_by_kind = LinkKind::new_link_kind_data_by_kind();
+
+        for resolved_type in types {
+            let relationships = resolved_type.get_relationships();
+            for relation in relationships {
+                let link_kind_data = link_kind_data_by_kind
+                    .get_mut(&relation.kind)
+                    .expect("LinkKind should exist in map");
+
+                // Update ParentLinkData (target -> sources)
+                let parent_data = &mut link_kind_data.by_target;
+                let sources = parent_data
+                    .target_to_sources
+                    .entry(relation.target)
+                    .or_default();
+                sources.push(relation.source);
+
+                // Update ChildLinkData (source -> targets)
+                let child_data = &mut link_kind_data.by_source;
+                let targets = child_data
+                    .source_to_targets
+                    .entry(relation.source)
+                    .or_default();
+                targets.push(relation.target);
             }
         }
 
-        self.links.extend(new_links);
-    }
-
-    fn calculate_link_stats(&mut self, types: &TypesJsonSchema) {
-        let mut link_stats_by_type_id: HashMap<LinkKind, HashMap<TypeId, Vec<TypeId>>> =
-            HashMap::new();
-        let path_map = TypeGraph::build_path_map(types);
-
-        // 1. loop through all the links and for each LinkKind and append to an internal hashmap by TypeId (target) -> Vec<TypeId> (sources)
-        // 2. transform the HashMap<TypeId, Vec<TypeId>> to a Vec<LinkStatLink>
-        // 3. sort the Vec<LinkStatLink> by the length of the sources vector descending
-        // 4. limit the Vec<LinkStatLink> to the top 100 entries
-        // 5. record the maximum length of the sources (the first entry's source_ids length)
-
-        // 1.
-        for link in &self.links {
-            let kind = &link.kind;
-            let target_id = link.target;
-            let source_id = link.source;
-            let sources = link_stats_by_type_id
-                .entry(kind.clone())
-                .or_default()
-                .entry(target_id)
-                .or_default();
-            sources.push(source_id);
-        }
-
-        // 2.
-        let mut link_stats: HashMap<LinkKind, LinkStats> = HashMap::new();
-        for (kind, by_type_id) in link_stats_by_type_id {
-            let mut links: Vec<LinkStatLink> = by_type_id
-                .into_iter()
-                .map(|(target_id, source_ids)| LinkStatLink {
-                    target_id,
-                    source_ids,
-                    path: None,
-                })
+        // sort each LinkKindData's links by number of sources descending and set max/count
+        for link_kind_data in link_kind_data_by_kind.values_mut() {
+            // ParentLinkData
+            let parent_data = &mut link_kind_data.by_target;
+            let mut parent_entries: Vec<(TypeId, Vec<TypeId>)> = parent_data
+                .target_to_sources
+                .iter()
+                .map(|(k, v)| (*k, v.clone()))
                 .collect();
-            // 3.
-            links.sort_by(|a, b| b.source_ids.len().cmp(&a.source_ids.len()));
-            // 4.
-            links.truncate(100);
-            // 5.
-            let max = links.first().map(|e| e.source_ids.len()).unwrap_or(0);
-            let mut stat = LinkStats { max, links };
-            // Add path info from path_map
-            for link in &mut stat.links {
-                if let Some(p) = path_map.get(&link.target_id) {
-                    link.path = p.clone();
-                }
-            }
-            link_stats.insert(kind, stat);
+            parent_entries.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+            parent_data.target_to_sources = IndexMap::from_iter(parent_entries.into_iter());
+            parent_data.count = parent_data.target_to_sources.len();
+            parent_data.max = parent_data
+                .target_to_sources
+                .values()
+                .map(|v| v.len())
+                .max()
+                .unwrap_or(0);
+
+            // ChildLinkData
+            let child_data = &mut link_kind_data.by_source;
+            let mut child_entries: Vec<(TypeId, Vec<TypeId>)> = child_data
+                .source_to_targets
+                .iter()
+                .map(|(k, v)| (*k, v.clone()))
+                .collect();
+            child_entries.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+            child_data.source_to_targets = IndexMap::from_iter(child_entries.into_iter());
+            child_data.count = child_data.source_to_targets.len();
+            child_data.max = child_data
+                .source_to_targets
+                .values()
+                .map(|v| v.len())
+                .max()
+                .unwrap_or(0);
+
+            let total_according_to_parents: usize = link_kind_data
+                .by_target
+                .target_to_sources
+                .values()
+                .map(|v| v.len())
+                .sum();
+
+            let total_according_to_children: usize = link_kind_data
+                .by_source
+                .source_to_targets
+                .values()
+                .map(|v| v.len())
+                .sum();
+
+            assert_eq!(
+                total_according_to_parents, total_according_to_children,
+                "Link counts from parents and children do not match, but they totally should",
+            );
+
+            link_kind_data.link_count = total_according_to_children
         }
 
-        self.link_stats = link_stats;
+        link_kind_data_by_kind
     }
 
-    fn calculate_node_stats(&mut self, types: &TypesJsonSchema) {
+    fn calculate_node_data_by_kind(
+        &mut self,
+        types: &TypesJsonSchema,
+    ) -> HashMap<NodeStatKind, NodeStatKindData> {
         // Helper to compute counts per node for a given accessor
         fn collect_counts<F>(types: &TypesJsonSchema, accessor: F) -> Vec<(TypeId, String, usize)>
         where
@@ -354,8 +365,7 @@ impl TypeGraph {
             for t in types.iter() {
                 let count = accessor(t).map(|v| v.len()).unwrap_or(0);
                 if count > 0 {
-                    let name = human_readable_name(t);
-                    entries.push((t.id, name, count));
+                    entries.push((t.id, t.human_readable_name(), count));
                 }
             }
             // Sort descending by count
@@ -363,38 +373,37 @@ impl TypeGraph {
             entries
         }
 
-        // Build path map to include in node entries
-        let path_map = TypeGraph::build_path_map(types);
-
         let type_arguments = collect_counts(types, |t| t.type_arguments.as_ref());
         let union_types = collect_counts(types, |t| t.union_types.as_ref());
         let intersection_types = collect_counts(types, |t| t.intersection_types.as_ref());
         let alias_type_arguments = collect_counts(types, |t| t.alias_type_arguments.as_ref());
 
         let limit = 100;
-        let build_category = |mut v: Vec<(TypeId, String, usize)>| -> NodeStatCategory {
+        let build_category = |mut v: Vec<(TypeId, String, usize)>| -> NodeStatKindData {
             let max = v.first().map(|e| e.2).unwrap_or(0);
-            if v.len() > limit {
+            let count = v.len();
+            if count > limit {
                 v.truncate(limit);
             }
             // Attach path info from path_map
             let nodes_with_path = v
                 .into_iter()
-                .map(|(id, name, value)| NodeStatNode {
+                .map(|(id, name, value)| GraphStatNode {
                     id,
                     name,
                     value,
-                    path: path_map.get(&id).cloned().unwrap_or(None),
+                    path: self.path_map.get(&id).cloned(),
                 })
                 .collect();
 
-            NodeStatCategory {
+            NodeStatKindData {
+                count,
                 max,
                 nodes: nodes_with_path,
             }
         };
 
-        self.node_stats = HashMap::from([
+        HashMap::from([
             (NodeStatKind::TypeArguments, build_category(type_arguments)),
             (NodeStatKind::UnionTypes, build_category(union_types)),
             (
@@ -405,72 +414,36 @@ impl TypeGraph {
                 NodeStatKind::AliasTypeArguments,
                 build_category(alias_type_arguments),
             ),
-        ]);
+        ])
     }
 
-    pub fn calculate_counts(&mut self) {
-        let mut count: HashMap<LinkKind, usize> = HashMap::new();
-        for link in &self.links {
-            let entry = count.entry(link.kind.clone()).or_insert(0);
-            *entry += 1;
-        }
-        self.stats = GraphStats { count };
-    }
-}
-
-pub fn get_relationships_for_type(t: &ResolvedType) -> Vec<GraphLink> {
-    let mut relations = Vec::new();
-
-    // Single relationships
-    for (opt_target, kind) in [
-        (t.instantiated_type, LinkKind::Instantiated),
-        (t.substitution_base_type, LinkKind::SubstitutionBase),
-        (t.constraint_type, LinkKind::Constraint),
-        (t.indexed_access_object_type, LinkKind::IndexedAccessObject),
-        (t.indexed_access_index_type, LinkKind::IndexedAccessIndex),
-        (t.conditional_check_type, LinkKind::ConditionalCheck),
-        (t.conditional_extends_type, LinkKind::ConditionalExtends),
-        (t.conditional_true_type, LinkKind::ConditionalTrue),
-        (t.conditional_false_type, LinkKind::ConditionalFalse),
-        (t.keyof_type, LinkKind::Keyof),
-        (
-            t.evolving_array_element_type,
-            LinkKind::EvolvingArrayElement,
-        ),
-        (t.evolving_array_final_type, LinkKind::EvolvingArrayFinal),
-        (t.reverse_mapped_source_type, LinkKind::ReverseMappedSource),
-        (t.reverse_mapped_mapped_type, LinkKind::ReverseMappedMapped),
-        (
-            t.reverse_mapped_constraint_type,
-            LinkKind::ReverseMappedConstraint,
-        ),
-        (t.alias_type, LinkKind::Alias),
-    ] {
-        if let Some(target) = opt_target {
-            relations.push(GraphLink {
-                source: t.id,
-                target,
-                kind,
-            });
-        }
+    pub fn calculate_node_stat_count_and_max(&self) -> HashMap<NodeStatKind, CountAndMax> {
+        self.node_data_by_kind
+            .iter()
+            .map(|(kind, node_stat_category)| {
+                (
+                    kind.clone(),
+                    CountAndMax {
+                        count: node_stat_category.count,
+                        max: node_stat_category.max,
+                    },
+                )
+            })
+            .collect()
     }
 
-    for (opt_targets, kind) in [
-        (t.alias_type_arguments.as_ref(), LinkKind::AliasTypeArgument),
-        (t.intersection_types.as_ref(), LinkKind::Intersection),
-        (t.union_types.as_ref(), LinkKind::Union),
-        (t.type_arguments.as_ref(), LinkKind::TypeArgument),
-    ] {
-        if let Some(targets) = opt_targets {
-            for &target in targets {
-                relations.push(GraphLink {
-                    source: t.id,
-                    target,
-                    kind: kind.clone(),
-                });
-            }
-        }
+    pub fn calculate_link_count_and_max(&self) -> HashMap<LinkKind, CountAndMax> {
+        self.link_kind_data_by_kind
+            .iter()
+            .map(|(kind, link_kind_data)| {
+                (
+                    kind.clone(),
+                    CountAndMax {
+                        count: link_kind_data.link_count,
+                        max: link_kind_data.by_source.max,
+                    },
+                )
+            })
+            .collect()
     }
-
-    relations
 }

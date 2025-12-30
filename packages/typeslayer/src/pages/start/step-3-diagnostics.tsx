@@ -1,4 +1,4 @@
-import { Insights } from "@mui/icons-material";
+import Insights from "@mui/icons-material/Insights";
 import { Alert, Button, Stack } from "@mui/material";
 import { useCallback, useState } from "react";
 import { BigAction } from "../../components/big-action";

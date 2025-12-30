@@ -186,7 +186,7 @@ async function makeHotFrame({
 
   switch (event.name) {
     // case "findSourceFile":
-    //     TODO (https://github.com/microsoft/typescript-analyze-trace/issues/2)
+    //     (https://github.com/microsoft/typescript-analyze-trace/issues/2)
 
     case "checkSourceFile": {
       const filePath = event.args.path;

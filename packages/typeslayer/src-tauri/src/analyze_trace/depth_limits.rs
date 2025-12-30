@@ -1,11 +1,15 @@
 use crate::validate::trace_json::TraceEvent;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
+use strum_macros::VariantArray;
+use ts_rs::TS;
 
 #[derive(
-    Eq, Hash, PartialEq, Clone, Copy, Debug, serde::Deserialize, serde::Serialize, EnumIter,
+    Eq, Hash, PartialEq, Clone, Copy, Debug, Deserialize, Serialize, EnumIter, VariantArray, TS,
 )]
+#[ts(export)]
 pub enum DepthLimitKind {
     #[serde(rename = "checkCrossProductUnion_DepthLimit")]
     CheckCrossProductUnion,

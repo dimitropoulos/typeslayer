@@ -1,6 +1,6 @@
 {
   "name": "@typeslayer/analyze-trace",
-  "version": "0.1.26",
+  "version": "0.1.27",
   "description": "Analyze TypeScript compiler trace events to identify performance bottlenecks",
   "license": "MIT",
   "private": false,
@@ -41,13 +41,15 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@mui/icons-material": "7.3.6",
+    "@mui/material": "7.3.6",
     "@typeslayer/validate": "workspace:*",
-    "zod": "4.1.13"
+    "zod": "4.2.1"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.2",
-    "@types/node": "24.10.1",
-    "tsdown": "^0.17.2",
+    "@types/node": "25.0.3",
+    "tsdown": "0.18.3",
     "typescript": "5.9.3"
   }
 }

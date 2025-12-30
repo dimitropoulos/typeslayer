@@ -3,18 +3,19 @@ pub mod init;
 pub mod settings;
 
 use crate::{
+    analytics::{TypeSlayerEvent, event_app_started_success::EventAppStartedSuccess},
     analyze_trace::{AnalyzeTraceResult, constants::ANALYZE_TRACE_FILENAME},
     app_data::{
         command::{PackageJSON, PackageManager, TSCCommand},
         init::{
             init_analyze_trace, init_auth_code, init_cpu_profile, init_project_root,
-            init_selected_tsconfig_with, init_settings, init_trace_json, init_type_graph,
-            init_types_json, init_verbose,
+            init_selected_tsconfig_with, init_session_id, init_settings, init_trace_json,
+            init_type_graph, init_types_json, init_verbose, init_version_and_maybe_clear_outputs,
         },
         settings::Settings,
     },
     layercake::{LayerCake, LayerCakeInitArgs, Source},
-    process_controller::ProcessController,
+    process_controller::{CommandOutput, ProcessController},
     type_graph::{TYPE_GRAPH_FILENAME, TypeGraph},
     utils::{
         CONFIG_FILENAME, OUTPUTS_DIRECTORY, TSCONFIG_FILENAME, file_mtime_iso, get_platform,
@@ -26,11 +27,21 @@ use crate::{
         utils::CPU_PROFILE_FILENAME,
     },
 };
+use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, path::PathBuf};
 use std::{fs::File, io::BufReader};
+use tokio::fs;
 use tokio::process::Command;
-use tokio::{fs, io::AsyncReadExt};
 use tracing::{debug, error, info};
+use ts_rs::TS;
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, TS)]
+#[ts(export)]
+pub enum AppMode {
+    GUI,
+    CLI,
+    MCP,
+}
 
 #[derive(Clone)]
 pub struct AppData {
@@ -50,11 +61,15 @@ pub struct AppData {
     pub data_dir: PathBuf,
     pub platform: String,
     pub version: String,
+    pub session_id: String,
+    pub mode: AppMode,
 }
 
 impl AppData {
-    pub async fn new(data_dir: PathBuf) -> Result<Self, String> {
+    pub async fn new(data_dir: PathBuf, mode: AppMode) -> Result<Self, String> {
         info!("[AppData::new] using base data_dir: {}", data_dir.display());
+        let version = init_version_and_maybe_clear_outputs(&data_dir).await?;
+
         // Build a single LayerCake and reuse it across init functions
         let mut cake = LayerCake::new(LayerCakeInitArgs {
             config_filename: CONFIG_FILENAME,
@@ -64,20 +79,21 @@ impl AppData {
         cake.load_config_in_dir(data_dir.to_string_lossy().to_string())
             .await?;
 
-        let project_root = init_project_root(&cake);
+        let project_root = init_project_root(&mut cake);
         let outputs_dir = data_dir.join(OUTPUTS_DIRECTORY);
         let types_json = init_types_json(&outputs_dir, &project_root).await;
         let trace_json = init_trace_json(&outputs_dir, &project_root).await;
         let analyze_trace = init_analyze_trace(&outputs_dir).await;
         let type_graph = init_type_graph(&outputs_dir).await;
         let cpu_profile = init_cpu_profile(&outputs_dir).await;
-        let settings = init_settings(&cake);
-        let verbose = init_verbose(&cake);
-        let auth_code = init_auth_code(&cake);
+        let settings = init_settings(&mut cake);
+        let verbose = init_verbose(&mut cake);
+        let auth_code = init_auth_code(&mut cake);
+        let session_id = init_session_id(&mut cake);
 
         let package_manager = Self::find_package_manager(project_root.clone()).await?;
 
-        let platform = get_platform().await?;
+        let platform = get_platform();
 
         let mut app = Self {
             project_root,
@@ -95,11 +111,14 @@ impl AppData {
             type_graph,
             data_dir,
             platform,
-            version: "unknown".to_string(),
+            version,
+            session_id,
+            mode,
         };
         app.discover_tsconfigs().await?;
-        app.selected_tsconfig = init_selected_tsconfig_with(&app.cake, &app.tsconfig_paths);
+        app.selected_tsconfig = init_selected_tsconfig_with(&mut app.cake, &app.tsconfig_paths);
         app.update_typeslayer_config_toml().await;
+        EventAppStartedSuccess::send(&app, ()).await;
         Ok(app)
     }
 
@@ -136,7 +155,7 @@ impl AppData {
         }
 
         // Otherwise, auto-detect
-        self.selected_tsconfig = init_selected_tsconfig_with(&self.cake, &self.tsconfig_paths);
+        self.selected_tsconfig = init_selected_tsconfig_with(&mut self.cake, &self.tsconfig_paths);
 
         Ok(())
     }
@@ -265,12 +284,11 @@ impl AppData {
         })
     }
 
-    pub async fn run_tsc(
+    pub async fn call_typescript(
         &self,
         process_controller: &ProcessController,
         flag: String,
-        context: &str,
-    ) -> Result<(), String> {
+    ) -> Result<CommandOutput, String> {
         let outputs_dir = self.outputs_dir().to_string_lossy().to_string();
 
         fs::create_dir_all(&outputs_dir)
@@ -281,9 +299,9 @@ impl AppData {
 
         let cwd = &self.project_root;
 
-        info!("[run_tsc] Executing command: {}", tsc_command);
-        info!("[run_tsc] Working directory: {:?}", cwd);
-        info!("[run_tsc] Outputs directory: {}", outputs_dir);
+        info!("[call_typescript] Executing command: {}", tsc_command);
+        info!("[call_typescript] Working directory: {:?}", cwd);
+        info!("[call_typescript] Outputs directory: {}", outputs_dir);
 
         let mut cmd = Command::new(tsc_command.shell);
         cmd.arg(tsc_command.shell_arg);
@@ -303,34 +321,12 @@ impl AppData {
         cmd.current_dir(cwd);
 
         let output = process_controller.run_command(cmd).await?;
-        let Some(mut output) = output else {
+
+        let Some(output) = output else {
             return Err("Command canceled".to_string());
         };
 
-        if !output.status.success() {
-            let mut stdout = Vec::new();
-            output
-                .stdout
-                .read_to_end(&mut stdout)
-                .await
-                .map_err(|e| e.to_string())?;
-
-            let mut stderr = Vec::new();
-            output
-                .stderr
-                .read_to_end(&mut stderr)
-                .await
-                .map_err(|e| e.to_string())?;
-
-            let stdout = String::from_utf8_lossy(&stdout);
-            let stderr = String::from_utf8_lossy(&stderr);
-            return Err(format!(
-                "{context} failed:\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}"
-            ));
-        }
-
-        info!("[run_tsc] Command completed successfully: {}", context);
-        Ok(())
+        Ok(output)
     }
 }
 

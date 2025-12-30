@@ -43,7 +43,8 @@
       "!**/public",
       "!**/dist",
       "!node_modules",
-      "!**/gen"
+      "!**/gen",
+      "!**/rust-types"
     ]
   }
 }

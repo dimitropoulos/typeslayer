@@ -1,6 +1,6 @@
 {
   "name": "@typeslayer/linux-x64",
-  "version": "0.1.26",
+  "version": "0.1.27",
   "description": "TypeSlayer binary for Linux x64",
   "private": false,
   "type": "module",

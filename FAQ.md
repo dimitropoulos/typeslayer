@@ -20,7 +20,8 @@
   - [but I refuse to run postinstall scripts..](#but-i-refuse-to-run-postinstall-scripts)
   - [why isn't this a CLI tool?](#why-isnt-this-a-cli-tool)
   - [how do I use this with a monorepo?](#how-do-i-use-this-with-a-monorepo)
-  - [Who needs this stupid thing, anyway?](#who-needs-this-stupid-thing-anyway)
+  - [what if I already have trace files?](#what-if-i-already-have-trace-files)
+  - [who needs this stupid thing, anyway?](#who-needs-this-stupid-thing-anyway)
 
 ## "but I just want to see my code"
 
@@ -30,9 +31,9 @@ here's a reminder from step 4 of the prerequisites in Start
 >
 > the point of a tool like this is to diagnose performance problems... _and it's perfectly possible your project doesn't have any!_ but if there _are_ problems, those problems can come from anywhere in your total build.
 >
->so, if you find yourself thinking "but I just want to look at _my types_ not all any of the 3rd party types": consider that when building and/or typechecking your project there literally is no such thing as "3rd party". if you pull in a dependency that has problems.. _now it's your problem, too_. try to think about things holistically.
+> so, if you find yourself thinking "but I just want to look at _my types_ not all any of the 3rd party types": consider that when building and/or typechecking your project there literally is no such thing as "3rd party". if you pull in a dependency that has problems.. _now it's your problem, too_. try to think about things holistically.
 
-___
+---
 
 in the context of diagnosing performance problems wanting to filter by "your code" is definitely wrongthink.
 
@@ -53,7 +54,7 @@ but for another thing, you _very much are in **direct** control of it_ unless of
 although you may not think of them as distinct types, consider something like this:
 
 ```typescript
-type Colors = ["red","green","blue"];
+type Colors = ["red", "green", "blue"];
 ```
 
 how many types are there? four.
@@ -74,7 +75,7 @@ but you didn't give them names, did you? no. you didn't.
 in language parlance, that'd qualify them as an "anonymous types" in the same way that the arrow function in
 
 ```typescript
-someArray.map(x => x + 1)
+someArray.map((x) => x + 1);
 ```
 
 is also anonymous.
@@ -125,11 +126,11 @@ so if you're submitting a bug report and worried about getting in trouble with y
 
 ## does TypeSlayer track me?
 
-no. TypeSlayer has no network activity whatsoever.
+yep! but only super anonymous data (in fact, the same data used to power the leaderboard). if that bothers you then you can turn it off with `--disable-analytics` or `TYPESLAYER_DISABLE_ANALYTICS=true` or setting `settings.disableAnalytics=true` in your `typeslayer.toml`.
 
-if you're submitting a bug report, we might ask for some of your trace files to help us debug the issue. but that's it.
+there's no evil empire here: it's very useful to have very basic "someone somewhere ran it at this time" diagnostics along with some some very very basic crash reporting.
 
-consider the door always open for the future, though. there's no evil empire here, but it might be useful in the future to implement some very basic "someone somewhere ran it at this time" diagnostics in the future or perhaps even some very very basic crash reporting.
+it couldn't be more transparent: the settings page shows an example of exactly what's sent for each event individually. so, if you consider things like "the number of types in your project" to be secret (completely independent of any way to link it back to you or your project) (??????) then in this case you really can "shut that whole thing down" (as the politicians say).
 
 ## why does the Type Graph keep moving?
 
@@ -141,7 +142,7 @@ eventually, the nodes will settle into a stable configuration (unless you change
 
 if that makes you wonder: "why can't you just have it start on the stable layout", then consider that it's _a live simulation_, which means that the to display the stable equilibrium state for a given set of filters you'd have to wait for the simulation to run until it reaches a stable state, which could take a while. so while it's equalizing... you might as well just see it in action. and that's exactly what it does.
 
-___
+---
 
 if you want to stop the movement, you can click on the ⏸ (pause) icon in the top right corner of the Type Graph view. this will lock the current layout and prevent the nodes from moving.
 
@@ -207,7 +208,7 @@ well lucky you, because although the `npx typeslayer` command does run a tiny po
 
 if you don't want to run that script, you can always just run the platform-specific binary directly. you can find the download links for all platforms by [searching `@typeslayer` on npm.](https://www.npmjs.com/search?q=%40typeslayer)
 
-for example you can do `npx @typeslayer/linux-x64` on Linux, `npx @typeslayer/darwin-x64` on Apple Silicon, or `npx @typeslayer/win32-x64` on Windows on Intel.
+for example you can do `npx @typeslayer/linux-x64` on Linux, `npx @typeslayer/darwin-x64` on Apple Silicon, or `npx @typeslayer/win32-x64` on Windows.
 
 ## why isn't this a CLI tool?
 
@@ -227,9 +228,19 @@ but for now, please just pick one package in your monorepo to analyze at a time.
 
 when you do, though, don't forget that you can just as easily run `tsc --generateTrace` manually on every package in your monorepo, and then gather all the traces and sort them by file size. it's almost a guarantee that the ones at the top of that list are the ones you most care about anyway.
 
-## Who needs this stupid thing, anyway?
+## what if I already have trace files?
 
-TypeSlayer is one of those things that most developers don't need.  others might just find it lulzy to play around with.
+if you already have the `trace.json` and `types.json` files generated from previous runs of `tsc --generateTrace`, you can still use TypeSlayer. I'm reluctant to give you these instructions because if _the reason_ you didn't use TypeSlayer to generate the trace is that something is wrong with TypeSlayer, I'd really like to know about it. Consider these instructions a last resort.
+
+so whatch'yer gonna do is take your trace files and navigate to `Raw Data | trace.json`. there, you'll find an `Upload` button. the `trace.json` and `types.json` files are always a pair, so you if you upload one of them, TypeSlayer will find the other that matches it.
+
+once that completes, go to `Raw Data | analyze-trace.json` and `Raw Data | type-graph.json` and hit the `Regenerate` button on both of those pages.
+
+(and if you have a cpu profile, then upload that - but the only module that uses that is SpeedScope, so it's not strictly necessary the way the other files are).
+
+## who needs this stupid thing, anyway?
+
+TypeSlayer is one of those things that most developers don't need. others might just find it lulzy to play around with.
 
 but then there's the power users. the library authors. the people attending SquiggleConf. you know the kind.
 

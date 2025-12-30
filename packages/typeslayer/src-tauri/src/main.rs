@@ -4,14 +4,21 @@
 use tokio::sync::Mutex;
 
 use typeslayer_lib::{
-    app_data::AppData, run_mcp_server, run_tauri_app, utils::get_typeslayer_base_data_dir,
+    app_data::{AppData, AppMode},
+    run_mcp_server, run_tauri_app,
+    utils::get_typeslayer_base_data_dir,
 };
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
     let args: Vec<String> = std::env::args().collect();
-    let is_mcp_mode = args.len() > 1 && args[1] == "mcp";
-    if !is_mcp_mode {
+    let mode = if args.len() > 1 && args[1] == "mcp" {
+        AppMode::MCP
+    } else {
+        AppMode::GUI
+    };
+
+    if mode != AppMode::MCP {
         // you can't use the regular logging in MCP mode, because it uses stdout and gets confused if you send logs to it
         typeslayer_lib::log::init();
     }
@@ -19,9 +26,12 @@ async fn main() -> Result<(), String> {
     let data_dir = get_typeslayer_base_data_dir();
 
     // Create AppData as the root of our application (single instance shared by all components)
-    let app_data = &*Box::leak(Box::new(Mutex::new(AppData::new(data_dir).await?)));
 
-    if is_mcp_mode {
+    let app_data = &*Box::leak(Box::new(Mutex::new(
+        AppData::new(data_dir, mode.clone()).await?,
+    )));
+
+    if mode == AppMode::MCP {
         // Run as MCP server (STDIO mode) with shared AppData
         // In MCP mode, stdout is reserved for JSON-RPC protocol, so no HTTP server or GUI
         if let Err(e) = run_mcp_server(app_data) {

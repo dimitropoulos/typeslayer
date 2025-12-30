@@ -1,10 +1,18 @@
 use crate::{
+    analytics::{
+        TypeSlayerEvent,
+        event_analyze_trace_fail::{EventAnalyzeTraceFail, EventAnalyzeTraceFailArgs},
+        event_analyze_trace_success::{EventAnalyzeTraceSuccess, EventAnalyzeTraceSuccessArgs},
+        event_generate_trace_fail::{EventGenerateTraceFail, EventGenerateTraceFailArgs},
+        event_generate_trace_success::{EventGenerateTraceSuccess, EventGenerateTraceSuccessArgs},
+        event_type_graph_success::{EventTypeGraphSuccess, EventTypeGraphSuccessArgs},
+    },
     analyze_trace::{
         AnalyzeTraceOptions, AnalyzeTraceResult, analyze_trace, constants::ANALYZE_TRACE_FILENAME,
     },
     app_data::AppData,
     commands::tasks::{TaskId, start_task},
-    process_controller::ProcessController,
+    process_controller::{ProcessController, process_output},
     type_graph::{TYPE_GRAPH_FILENAME, TypeGraph},
     utils::make_cli_arg,
     validate::{
@@ -14,6 +22,7 @@ use crate::{
     },
 };
 use std::path::Path;
+use std::time::Instant;
 use tauri::{AppHandle, State};
 use tokio::{fs, sync::Mutex};
 use tracing::{debug, error, info};
@@ -21,9 +30,16 @@ use tracing::{debug, error, info};
 // Async helper to validate outputs in outputs_dir and return parsed results
 pub async fn validate_types_and_trace_async(
     outputs_dir: &str,
-) -> Result<(TypesJsonSchema, Vec<TraceEvent>), String> {
+) -> Result<((TypesJsonSchema, usize), (Vec<TraceEvent>, usize)), String> {
     let types_path = Path::new(outputs_dir).join(TYPES_JSON_FILENAME.trim_start_matches('/'));
+    let types_json_size = std::fs::metadata(&types_path)
+        .map(|meta| meta.len() as usize)
+        .unwrap();
+
     let trace_path = Path::new(outputs_dir).join(TRACE_JSON_FILENAME.trim_start_matches('/'));
+    let trace_json_size = std::fs::metadata(&trace_path)
+        .map(|meta| meta.len() as usize)
+        .unwrap();
 
     // Read/parse concurrently
     let (types_res, trace_res) = tokio::join!(
@@ -46,7 +62,7 @@ pub async fn validate_types_and_trace_async(
         types.len(),
         trace.len()
     );
-    Ok((types, trace))
+    Ok(((types, types_json_size), (trace, trace_json_size)))
 }
 
 #[tauri::command]
@@ -59,18 +75,31 @@ pub async fn generate_trace(
 
     let mut data = app_data.lock().await;
     let outputs_dir = data.outputs_dir().to_string_lossy().to_string();
+    let start_time = Instant::now();
 
     info!("[generate_trace] will write outputs under {}", outputs_dir);
     let outputs_dir_for_closure = outputs_dir.clone();
     let flag = make_cli_arg("--generateTrace", &outputs_dir_for_closure);
 
-    data.run_tsc(
-        &process_controller,
-        flag,
-        "TypeScript compilation with trace generation",
-    )
-    .await
-    .map_err(|e| format!("[generate_trace] join error: {e}"))?;
+    let command_output = data.call_typescript(&process_controller, flag).await?;
+
+    if !command_output.status.success() {
+        let duration = start_time.elapsed().as_millis() as u64;
+        let (stdout, stderr) = process_output(command_output).await?;
+
+        EventGenerateTraceFail::send(
+            &data,
+            EventGenerateTraceFailArgs {
+                duration,
+                stdout: Some(stdout.clone()),
+                stderr: Some(stderr.clone()),
+            },
+        )
+        .await;
+        return Err(format!(
+            "generate trace failed:\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}"
+        ));
+    }
 
     info!("[generate_trace] Listing files in output directory: {outputs_dir}");
     if let Ok(entries) = std::fs::read_dir(&outputs_dir) {
@@ -83,15 +112,30 @@ pub async fn generate_trace(
         info!("[generate_trace] Could not read outputs directory: {outputs_dir}");
     }
 
-    let (types, trace) = validate_types_and_trace_async(&outputs_dir).await?;
+    let ((types, types_json_file_size), (trace, trace_json_file_size)) =
+        validate_types_and_trace_async(&outputs_dir).await?;
     data.types_json = types;
     data.trace_json = trace;
+    let duration = start_time.elapsed().as_millis() as u64;
     data.update_typeslayer_config_toml().await;
     debug!(
         "[generate_trace] cached {} types and {} trace events",
         data.types_json.len(),
         data.trace_json.len()
     );
+
+    let (stdout, stderr) = process_output(command_output).await?;
+    EventGenerateTraceSuccess::send(
+        &data,
+        EventGenerateTraceSuccessArgs {
+            duration,
+            stdout: Some(stdout),
+            stderr: Some(stderr),
+            trace_json_file_size,
+            types_json_file_size,
+        },
+    )
+    .await;
 
     Ok(())
 }
@@ -115,9 +159,14 @@ pub async fn generate_cpu_profile(
     let generation_path = Path::new(&outputs_dir_for_closure).join(CPU_PROFILE_FILENAME);
     let flag = make_cli_arg("--generateCpuProfile", &generation_path.to_string_lossy());
 
-    data.run_tsc(&process_controller, flag, "TypeScript CPU profile run")
-        .await
-        .map_err(|e| format!("[generate_cpu_profile] errored: {e}"))?;
+    let command_output = data.call_typescript(&process_controller, flag).await?;
+
+    if !command_output.status.success() {
+        let (stdout, stderr) = process_output(command_output).await?;
+        return Err(format!(
+            "generate CPU profile failed:\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}"
+        ));
+    }
 
     // On success, read and cache CPU profile contents
     let path = Path::new(&outputs_dir).join(CPU_PROFILE_FILENAME);
@@ -144,8 +193,10 @@ pub async fn generate_analyze_trace(
 ) -> Result<(), String> {
     let _guard = start_task(app, TaskId::GenerateAnalyzeTrace)?;
 
-    let mut data = state.lock().await;
-    let outputs_dir = data.outputs_dir().to_string_lossy().to_string();
+    let mut app_data = state.lock().await;
+    let start_time = Instant::now();
+
+    let outputs_dir = app_data.outputs_dir().to_string_lossy().to_string();
     debug!(
         "[generate_analyze_trace] reading inputs and writing output under {}",
         outputs_dir
@@ -164,20 +215,44 @@ pub async fn generate_analyze_trace(
             }
         });
 
+    let duration = start_time.elapsed().as_millis() as u64;
+
     match handle.await {
-        Ok(r) => {
-            if let Ok(res) = r {
-                data.analyze_trace = Some(res);
-                data.update_typeslayer_config_toml().await;
-                debug!(
-                    "[generate_analyze_trace] wrote {} in {}",
-                    ANALYZE_TRACE_FILENAME, trace_dir_for_log
-                );
-            }
+        Ok(Ok(analyze_trace_result)) => {
+            app_data.analyze_trace = Some(analyze_trace_result);
+            EventAnalyzeTraceSuccess::send(&app_data, EventAnalyzeTraceSuccessArgs { duration })
+                .await;
+            app_data.update_typeslayer_config_toml().await;
+            debug!(
+                "[generate_analyze_trace] wrote {} in {}",
+                ANALYZE_TRACE_FILENAME, trace_dir_for_log
+            );
+
             debug!("[generate_analyze_trace] completed");
             Ok(())
         }
-        Err(e) => Err(format!("[generate_analyze_trace] join error: {e}")),
+        Ok(Err(e)) => {
+            EventAnalyzeTraceFail::send(
+                &app_data,
+                EventAnalyzeTraceFailArgs {
+                    duration,
+                    reason: e.clone(),
+                },
+            )
+            .await;
+            Err(format!("[generate_analyze_trace] analyze_trace error: {e}"))
+        }
+        Err(e) => {
+            EventAnalyzeTraceFail::send(
+                &app_data,
+                EventAnalyzeTraceFailArgs {
+                    duration,
+                    reason: format!("Join error: {}", e),
+                },
+            )
+            .await;
+            Err(format!("[generate_analyze_trace] join error: {e}"))
+        }
     }
 }
 
@@ -190,6 +265,8 @@ pub async fn generate_type_graph(
     let _guard = start_task(app, TaskId::GenerateTypeGraph)?;
 
     let mut app_data = state.lock().await;
+    let start_time = Instant::now();
+
     let types: &TypesJsonSchema = {
         // Check if both types.json and trace.json exist
         if app_data.types_json.is_empty() {
@@ -204,8 +281,11 @@ pub async fn generate_type_graph(
     };
 
     let graph = TypeGraph::from_types(types);
+    let duration = start_time.elapsed().as_millis() as u64;
 
     app_data.type_graph = Some(graph);
+
+    EventTypeGraphSuccess::send(&app_data, EventTypeGraphSuccessArgs { duration }).await;
 
     let outputs_dir = app_data.outputs_dir();
     let path = outputs_dir.join(TYPE_GRAPH_FILENAME);

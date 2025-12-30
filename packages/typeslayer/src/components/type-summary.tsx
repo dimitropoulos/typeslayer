@@ -1,4 +1,6 @@
-import { Hub, Search, Share } from "@mui/icons-material";
+import Hub from "@mui/icons-material/Hub";
+import Search from "@mui/icons-material/Search";
+import Share from "@mui/icons-material/Share";
 import {
   Chip,
   IconButton,
@@ -11,6 +13,7 @@ import { useNavigate } from "@tanstack/react-router";
 import type { ResolvedType } from "@typeslayer/validate";
 import { useCallback, useState } from "react";
 import { TypeRelationsDialog } from "./type-relations";
+import { randBetween } from "./utils";
 
 export const getHumanReadableName = (
   resolvedType: ResolvedType | undefined,
@@ -114,13 +117,6 @@ const OpenRelationsAction = ({ typeId }: { typeId: number }) => {
       ) : null}
     </>
   );
-};
-
-/**
- * Generates a random integer between min (inclusive) and max (inclusive)
- */
-const randBetween = (min: number, max: number) => {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
 };
 
 export function TypeSummarySkeleton({

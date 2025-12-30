@@ -37,7 +37,7 @@ export const AwardNavItem = ({
       }}
       dense
     >
-      <ListItemIcon sx={{ minWidth: 38 }}>
+      <ListItemIcon sx={{ minWidth: 24, pr: 1 }}>
         <Icon />
       </ListItemIcon>
       <ListItemText primary={title} />

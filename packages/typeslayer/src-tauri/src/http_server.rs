@@ -52,7 +52,7 @@ pub async fn run_http_server(
     let cors = CorsLayer::new().allow_methods(Any).allow_origin(Any);
 
     let app_router = Router::new()
-        .route("/outputs/:name", get(serve_output))
+        .route("/outputs/{name}", get(serve_output))
         .layer(cors)
         .with_state(app_data);
 

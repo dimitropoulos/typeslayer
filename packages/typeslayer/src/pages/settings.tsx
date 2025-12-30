@@ -1,3 +1,4 @@
+import HelpOutline from "@mui/icons-material/HelpOutline";
 import {
   Button,
   Card,
@@ -5,20 +6,30 @@ import {
   FormControl,
   FormControlLabel,
   FormGroup,
+  IconButton,
   InputLabel,
   MenuItem,
+  Paper,
+  Popover,
   Select,
   type SelectChangeEvent,
   Stack,
   Switch,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
   Typography,
 } from "@mui/material";
 import { invoke } from "@tauri-apps/api/core";
-import { type ReactNode, useCallback, useMemo } from "react";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
+import { Code } from "../components/code";
 import { InlineCode } from "../components/inline-code";
 import { detectPlatformSlash } from "../components/utils";
 import {
-  useAutoStart,
+  type AnalyticsConsentResult,
+  useAnalyticsConsent,
   useAvailableEditors,
   useDataDir,
   useMaxNodes,
@@ -39,13 +50,15 @@ const limitNodes = [
 const Setting = ({
   children,
   title,
+  noMaxWidth,
 }: {
   children: ReactNode;
   title: string;
+  noMaxWidth?: boolean | undefined;
 }) => {
   return (
     <Card sx={{ flexShrink: 0 }}>
-      <CardContent>
+      <CardContent sx={{ maxWidth: noMaxWidth ? undefined : 600 }}>
         <Typography gutterBottom variant="h5" component="div">
           {title}
         </Typography>
@@ -58,7 +71,7 @@ const Setting = ({
 export const SettingsPage = () => {
   const relativePaths = useRelativePaths();
   const preferEditorOpen = usePreferEditorOpen();
-  const autoStart = useAutoStart();
+  const analyticsConsent = useAnalyticsConsent();
   const projectRoot = useProjectRoot();
   const availableEditors = useAvailableEditors();
   const preferredEditor = usePreferredEditor();
@@ -77,13 +90,6 @@ export const SettingsPage = () => {
       await preferEditorOpen.set(event.target.checked);
     },
     [preferEditorOpen.set],
-  );
-
-  const handleAutoStart = useCallback(
-    async (event: React.ChangeEvent<HTMLInputElement>) => {
-      await autoStart.set(event.target.checked);
-    },
-    [autoStart.set],
   );
 
   const handleEditorChange = useCallback(
@@ -251,23 +257,37 @@ export const SettingsPage = () => {
         </FormControl>
       </Setting>
 
-      <Setting title="Auto Start">
-        <FormGroup>
-          <FormControlLabel
-            label="Auto Start"
-            control={
-              <Switch
-                checked={autoStart.data ?? false}
-                onChange={handleAutoStart}
-                disabled={autoStart.isLoading}
-              />
-            }
+      <Setting title="Analytics">
+        <Typography variant="body2" color="textSecondary" gutterBottom>
+          TypeSlayer collects anonymous usage data. you can control which events
+          you consent to share (and see exactly what information each event
+          has).
+        </Typography>
+        <Typography variant="body2" color="textSecondary">
+          you can think of these in two categories:
+        </Typography>
+        <ul style={{ fontSize: "0.9rem", paddingLeft: 22, marginTop: 2 }}>
+          <li>
+            <Typography variant="body2" color="textSecondary">
+              <em>something went right</em>: it's hella cool of you to leave
+              these on
+            </Typography>
+          </li>
+          <li>
+            <Typography variant="body2" color="textSecondary">
+              <em>something went wrong</em>: pwetty pwease keep these on so I
+              can fix things
+            </Typography>
+          </li>
+        </ul>
+
+        {analyticsConsent.data ? (
+          <AnalyticsConsentTable
+            consents={analyticsConsent.data}
+            isLoading={analyticsConsent.isLoading}
+            set={analyticsConsent.set}
           />
-          <Typography variant="body2" color="textSecondary">
-            When enabled, TypeSlayer will automatically run trace, CPU profile,
-            and analysis on startup and then navigate to Award Winners.
-          </Typography>
-        </FormGroup>
+        ) : null}
       </Setting>
 
       <Setting title="Data Directory">
@@ -287,6 +307,122 @@ export const SettingsPage = () => {
           </InlineCode>
         </Stack>
       </Setting>
+    </Stack>
+  );
+};
+
+const AnalyticsConsentTable = ({
+  consents,
+  isLoading,
+  set,
+}: {
+  consents: AnalyticsConsentResult;
+  isLoading: boolean;
+  set: (args: { eventId: string; consent: boolean }) => Promise<void>;
+}) => {
+  return (
+    <Table sx={{ maxWidth: 400, mt: 2 }} size="small" component={Paper}>
+      <TableHead>
+        <TableRow>
+          <TableCell>Event</TableCell>
+          <TableCell sx={{ pl: "10px" }}>Success</TableCell>
+          <TableCell sx={{ pl: "10px" }}>Fail</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {consents.map(([description, ...events]) => (
+          <TableRow key={description}>
+            <TableCell>{description}</TableCell>
+            {events.map(event => (
+              <TableCell key={event.id} sx={{ pl: 0 }}>
+                <AnalyticsSetting
+                  id={event.id}
+                  description={event.description}
+                  jsonExample={event.jsonExample}
+                  enabled={event.enabled}
+                  onChange={async () => {
+                    await set({
+                      eventId: event.id,
+                      consent: !event.enabled,
+                    });
+                  }}
+                  isLoading={isLoading}
+                />
+              </TableCell>
+            ))}
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+};
+
+const AnalyticsSetting = ({
+  id,
+  description,
+  jsonExample,
+  enabled,
+  onChange,
+  isLoading,
+}: {
+  id: string;
+  description: string;
+  jsonExample: string;
+  enabled: boolean;
+  onChange: () => Promise<void>;
+  isLoading?: boolean;
+}) => {
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+
+  const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handlePopoverClose = () => {
+    setAnchorEl(null);
+  };
+
+  const open = Boolean(anchorEl);
+
+  return (
+    <Stack key={id} direction="row" alignItems="center">
+      <Switch checked={enabled} onChange={onChange} disabled={isLoading} />
+      <IconButton
+        aria-owns={open ? "mouse-over-popover" : undefined}
+        aria-haspopup="true"
+        onMouseEnter={handlePopoverOpen}
+        onMouseLeave={handlePopoverClose}
+        sx={{ ml: -1 }}
+      >
+        <HelpOutline />
+      </IconButton>
+      <Popover
+        id="mouse-over-popover"
+        sx={{ pointerEvents: "none", ml: 1 }}
+        open={open}
+        anchorEl={anchorEl}
+        anchorOrigin={{
+          vertical: "center",
+          horizontal: "right",
+        }}
+        transformOrigin={{
+          vertical: "center",
+          horizontal: "left",
+        }}
+        onClose={handlePopoverClose}
+        disableRestoreFocus
+      >
+        <Code
+          hideFileNameIcon
+          fileName={`example: ${description}`}
+          hideCopyButton
+          value={JSON.stringify(JSON.parse(jsonExample), null, 2)}
+          lang="json"
+          sx={{
+            fontSize: "0.7em",
+          }}
+        />
+      </Popover>
     </Stack>
   );
 };

@@ -71,19 +71,24 @@ export function OpenablePath({
           textDecoration: "underline",
           textDecorationColor: t => t.palette.secondary.dark,
         },
-        alignItems: "center",
+        alignItems: "flex-start",
         gap: 1,
         wordBreak: "break-all",
       }}
       key={exactLocation}
       onClick={findInPage}
     >
-      {title ? <Typography sx={propertyTextStyle}>{title}</Typography> : null}
+      {title ? (
+        <Typography sx={{ ...propertyTextStyle, wordBreak: "keep-all" }}>
+          {title}
+        </Typography>
+      ) : null}
       <Typography
         variant={pathVariant}
         sx={{
           fontSize: "0.8rem",
           color: "text.secondary",
+          marginTop: "3px",
           letterSpacing: -0.25,
           ...propertyTextStyle,
         }}

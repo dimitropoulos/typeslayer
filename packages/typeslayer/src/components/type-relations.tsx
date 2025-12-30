@@ -14,7 +14,7 @@ import {
   Typography,
   useMediaQuery,
 } from "@mui/material";
-import { type TypeRelationInfo, typeRelationInfo } from "@typeslayer/validate";
+import { typeRelationInfo } from "@typeslayer/validate";
 import { useCallback, useState } from "react";
 import {
   type LinksToType,
@@ -22,7 +22,7 @@ import {
   useGetResolvedTypeById,
   useGetTracesRelatedToTypeId,
 } from "../hooks/tauri-hooks";
-import { theme } from "../theme";
+import { panelBackground, theme } from "../theme";
 import type { LinkKind } from "../types/type-graph";
 import { CenterLoader } from "./center-loader";
 import { Code } from "./code";
@@ -81,73 +81,6 @@ const LastDitchEffort = ({ typeId }: { typeId: number }) => {
   );
 };
 
-const kindToTypesRelationInfo = (kind: LinkKind): TypeRelationInfo => {
-  switch (kind) {
-    case "typeArgument":
-      return typeRelationInfo.typeArguments;
-
-    case "union":
-      return typeRelationInfo.unionTypes;
-
-    case "intersection":
-      return typeRelationInfo.intersectionTypes;
-
-    case "aliasTypeArgument":
-      return typeRelationInfo.aliasTypeArguments;
-
-    case "instantiated":
-      return typeRelationInfo.instantiatedType;
-
-    case "substitutionBase":
-      return typeRelationInfo.substitutionBaseType;
-
-    case "constraint":
-      return typeRelationInfo.constraintType;
-
-    case "indexedAccessObject":
-      return typeRelationInfo.indexedAccessObjectType;
-
-    case "indexedAccessIndex":
-      return typeRelationInfo.indexedAccessIndexType;
-
-    case "conditionalCheck":
-      return typeRelationInfo.conditionalCheckType;
-
-    case "conditionalExtends":
-      return typeRelationInfo.conditionalExtendsType;
-
-    case "conditionalTrue":
-      return typeRelationInfo.conditionalTrueType;
-
-    case "conditionalFalse":
-      return typeRelationInfo.conditionalFalseType;
-
-    case "keyof":
-      return typeRelationInfo.keyofType;
-
-    case "alias":
-      return typeRelationInfo.aliasType;
-
-    case "evolvingArrayElement":
-      return typeRelationInfo.evolvingArrayElementType;
-
-    case "evolvingArrayFinal":
-      return typeRelationInfo.evolvingArrayFinalType;
-
-    case "reverseMappedSource":
-      return typeRelationInfo.reverseMappedSourceType;
-
-    case "reverseMappedMapped":
-      return typeRelationInfo.reverseMappedMappedType;
-
-    case "reverseMappedConstraint":
-      return typeRelationInfo.reverseMappedConstraintType;
-    default:
-      kind satisfies never;
-      return "<error>" as never;
-  }
-};
-
 function TargetsTabs({ linksToTypeId }: { linksToTypeId: LinksToType }) {
   const [selectedTab, setSelectedTab] = useState<LinkKind | undefined>(
     linksToTypeId[0][0],
@@ -170,7 +103,7 @@ function TargetsTabs({ linksToTypeId }: { linksToTypeId: LinksToType }) {
     <Stack
       sx={{
         flexDirection: isSmallWidth ? "column" : "row",
-        backgroundColor: "#11111190",
+        backgroundColor: panelBackground,
         border: 1,
         borderColor: "divider",
         p: 2,
@@ -195,7 +128,7 @@ function TargetsTabs({ linksToTypeId }: { linksToTypeId: LinksToType }) {
                     ...(selectedTab === kind ? { fontWeight: "bold" } : {}),
                   }}
                 >
-                  {kindToTypesRelationInfo(kind).title}
+                  {typeRelationInfo[kind].target.title}
                 </Typography>
                 <Typography
                   sx={{
@@ -219,7 +152,7 @@ function TargetsTabs({ linksToTypeId }: { linksToTypeId: LinksToType }) {
           {linksToTypeId.map(([kind, nodes]) => (
             <VerticalTab
               key={kind}
-              label={kindToTypesRelationInfo(kind).title}
+              label={typeRelationInfo[kind].target.title}
               count={nodes.length}
               value={kind}
             />

@@ -62,7 +62,7 @@ fn capture_window_to_png<R: tauri::Runtime>(window: &WebviewWindow<R>) -> Result
     // Find our window by title
     let xcap_window = windows
         .into_iter()
-        .find(|w| w.title().contains(&window_title))
+        .find(|w| w.title().ok().is_some_and(|t| t.contains(&window_title)))
         .ok_or("Could not find window for screenshot")?;
 
     // Capture the image
@@ -82,7 +82,7 @@ fn capture_window_to_png<R: tauri::Runtime>(window: &WebviewWindow<R>) -> Result
 
 #[tauri::command]
 pub async fn open_file(state: State<'_, &Mutex<AppData>>, path: String) -> Result<(), String> {
-    let data = state.lock().await;
+    let mut data = state.lock().await;
 
     // Extract settings without holding the lock during blocking operations.
     let prefer_editor = data.settings.prefer_editor_open;
@@ -141,10 +141,7 @@ pub async fn open_file(state: State<'_, &Mutex<AppData>>, path: String) -> Resul
             }
             eds
         } else {
-            available_editors
-                .into_iter()
-                .map(|(cmd, _)| cmd)
-                .collect()
+            available_editors.into_iter().map(|(cmd, _)| cmd).collect()
         };
 
         debug!("[open_file] editors_to_try: {:?}", editors_to_try);

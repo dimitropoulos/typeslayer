@@ -17,6 +17,7 @@ import { InlineCode } from "../components/inline-code";
 import { StatPill } from "../components/stat-pill";
 import { TypeRelationsContent } from "../components/type-relations";
 import { useGetAppStats, useGetResolvedTypeById } from "../hooks/tauri-hooks";
+import { panelBackground } from "../theme";
 
 export const SearchTypes = () => {
   const params = useParams({ strict: false });
@@ -138,7 +139,7 @@ export const SearchTypes = () => {
             ) : validSearch ? (
               <Box
                 sx={{
-                  backgroundColor: "#11111190",
+                  backgroundColor: panelBackground,
                   border: 1,
                   borderColor: "divider",
                   p: 2,
