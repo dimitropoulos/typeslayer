@@ -12,6 +12,9 @@ mod type_graph;
 pub mod utils;
 mod validate;
 
+#[cfg(test)]
+mod export_types;
+
 use crate::process_controller::ProcessController;
 use tauri::Manager;
 use tokio::sync::Mutex;

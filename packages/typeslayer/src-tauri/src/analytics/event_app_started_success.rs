@@ -1,5 +1,4 @@
 use serde::Serialize;
-use tracing::debug;
 use ts_rs::TS;
 
 use crate::{
@@ -50,15 +49,13 @@ impl TypeSlayerEvent for EventAppStartedSuccess {
     }
 
     async fn create(app_data: &AppData, _args: Self::Args) -> Self {
-        let event = EventAppStartedSuccess {
+        EventAppStartedSuccess {
             name: EventAppStartedSuccess::event_id(),
             metadata: create_event_metadata(app_data).await,
             data: EventAppStartedSuccessData {
                 settings: app_data.settings.clone(),
                 source_history: app_data.cake.source_history.clone(),
             },
-        };
-        debug!("[event] [app_started_success] create: {:?}", event);
-        event
+        }
     }
 }

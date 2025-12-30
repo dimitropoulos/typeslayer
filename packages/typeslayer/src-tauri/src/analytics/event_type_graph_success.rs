@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 use strum::VariantArray;
-use tracing::debug;
 use ts_rs::TS;
 
 use crate::{
@@ -109,7 +108,7 @@ impl TypeSlayerEvent for EventTypeGraphSuccess {
             .as_ref()
             .expect("type_graph must be Some to create EventAnalyzeTraceSuccess");
 
-        let event = EventTypeGraphSuccess {
+        EventTypeGraphSuccess {
             name: EventTypeGraphSuccess::event_id(),
             metadata: create_event_metadata(app_data).await,
             data: EventTypeGraphSuccessData {
@@ -124,8 +123,6 @@ impl TypeSlayerEvent for EventTypeGraphSuccess {
                     })
                     .collect(),
             },
-        };
-        debug!("[event] [type_graph_success] created event: {:?}", event);
-        event
+        }
     }
 }

@@ -9,7 +9,6 @@ use crate::{
 use serde::Serialize;
 use std::collections::HashMap;
 use strum::IntoEnumIterator;
-use tracing::debug;
 use ts_rs::TS;
 
 #[derive(Debug, Serialize, TS)]
@@ -76,7 +75,7 @@ impl TypeSlayerEvent for EventAnalyzeTraceSuccess {
             .as_ref()
             .expect("analyze_trace must be Some to create EventAnalyzeTraceSuccess");
 
-        let event = EventAnalyzeTraceSuccess {
+        EventAnalyzeTraceSuccess {
             name: EventAnalyzeTraceSuccess::event_id(),
             metadata: create_event_metadata(app_data).await,
             data: EventAnalyzeTraceSuccessData {
@@ -91,8 +90,6 @@ impl TypeSlayerEvent for EventAnalyzeTraceSuccess {
 
                 file_statistics: analyze_trace.file_statistics.clone(),
             },
-        };
-        debug!("[event] [analyze_trace_success] created event: {:?}", event);
-        event
+        }
     }
 }

@@ -1,5 +1,4 @@
 use serde::Serialize;
-use tracing::debug;
 use ts_rs::TS;
 
 use crate::{
@@ -71,7 +70,7 @@ impl TypeSlayerEvent for EventGenerateTraceFail {
 
     type Args = EventGenerateTraceFailArgs;
     async fn create(app_data: &AppData, args: Self::Args) -> Self {
-        let event = EventGenerateTraceFail {
+        EventGenerateTraceFail {
             name: EventGenerateTraceFail::event_id(),
             metadata: create_event_metadata(app_data).await,
             data: EventGenerateTraceFailData {
@@ -85,8 +84,6 @@ impl TypeSlayerEvent for EventGenerateTraceFail {
                 typescript_compiler_variant: app_data.settings.typescript_compiler_variant,
                 apply_tsc_project_flag: app_data.settings.apply_tsc_project_flag,
             },
-        };
-        debug!("[generate_trace_event_fail] create: {:?}", event);
-        event
+        }
     }
 }

@@ -1,5 +1,4 @@
 use serde::Serialize;
-use tracing::debug;
 use ts_rs::TS;
 
 use crate::{
@@ -53,14 +52,12 @@ impl TypeSlayerEvent for EventAppStartedFail {
     }
 
     async fn create(app_data: &AppData, args: Self::Args) -> Self {
-        let event = EventAppStartedFail {
+        EventAppStartedFail {
             name: EventAppStartedFail::event_id(),
             metadata: create_event_metadata(app_data).await,
             data: EventAppStartedFailData {
                 reason: args.reason,
             },
-        };
-        debug!("[event] [app_started_fail] create: {:?}", event);
-        event
+        }
     }
 }
