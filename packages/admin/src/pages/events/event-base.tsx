@@ -1,103 +1,46 @@
+import { Summarize } from "@mui/icons-material";
 import {
   Box,
   List,
   ListItemButton,
+  ListItemIcon,
   ListItemText,
+  ListSubheader,
   Stack,
   Typography,
 } from "@mui/material";
-import { useQuery } from "@tanstack/react-query";
-import type {
-  EventAnalyzeTraceFail,
-  EventAnalyzeTraceSuccess,
-  EventAppStartedFail,
-  EventAppStartedSuccess,
-  EventGenerateTraceFail,
-  EventGenerateTraceSuccess,
-  EventTypeGraphFail,
-  EventTypeGraphSuccess,
-} from "@typeslayer/rust-types";
-import { useState } from "react";
-import { z } from "zod";
-import { PlatformIcon } from "../../components/platform-icon";
+import { useNavigate, useParams } from "@tanstack/react-router";
+import { PlatformIcon } from "../../components/platform-detection";
+import {
+  type D1Event,
+  type Event,
+  type EventByName,
+  useEvents,
+} from "../../hooks";
 import { formatEpoch, middleDot } from "../../utils";
-
-const API_ORIGIN =
-  import.meta.env.VITE_ADMIN_API_ORIGIN ?? "http://127.0.0.1:8787";
-
-interface ExtraD1Columns {
-  id: number;
-  receivedAt: number;
-}
-
-const EventSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  sessionId: z.string(),
-  timestamp: z.number(),
-  version: z.string().nullable(),
-  platform: z.string().nullable(),
-  mode: z.string().nullable(),
-  receivedAt: z.number(),
-  data: z.json(),
-});
-
-const EventsResponseSchema = z.object({
-  events: z.array(EventSchema),
-});
-
-export type D1Event<E extends Event> = ExtraD1Columns & E;
-
-const fetchEvents = async <E extends Event>(
-  eventName: E["name"],
-): Promise<D1Event<E>[]> => {
-  const res = await fetch(
-    `${API_ORIGIN}/events/${encodeURIComponent(eventName)}?limit=200`,
-  );
-  if (!res.ok) {
-    throw new Error(`Failed to load events: ${res.status}`);
-  }
-
-  const json = await res.json();
-  const parsed = EventsResponseSchema.parse(json) as unknown as {
-    events: D1Event<E>[];
-  };
-  return parsed.events;
-};
-
-export type Event =
-  | EventAppStartedFail
-  | EventAppStartedSuccess
-  | EventGenerateTraceFail
-  | EventGenerateTraceSuccess
-  | EventAnalyzeTraceFail
-  | EventAnalyzeTraceSuccess
-  | EventTypeGraphFail
-  | EventTypeGraphSuccess;
-
-type EventByName = {
-  [E in Event as E["name"]]: E;
-};
+import { PlatformPercentages } from "../explore/app-started/platform-percentages";
+import { Metadata } from "./metadata";
 
 export const EventPage = <E extends Event["name"]>({
   eventName,
-  title,
   children,
 }: {
   eventName: E;
-  title: string;
   children: (event: D1Event<EventByName[E]>) => React.ReactNode;
 }) => {
-  const {
-    data: events,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ["events", eventName],
-    queryFn: () => fetchEvents(eventName),
-    refetchInterval: 15000,
-  });
-  const [selectedIndex, setSelectedIndex] = useState<number>(0);
+  const { data: events, isLoading, error } = useEvents(eventName);
+  const { id } = useParams({ strict: false });
+  const navigate = useNavigate();
+
+  const isMetadataView = id === "metadata";
+  const selectedEventId = isMetadataView
+    ? undefined
+    : id
+      ? Number(id)
+      : undefined;
+  const selectedIndex = selectedEventId
+    ? (events?.findIndex(e => e.id === selectedEventId) ?? -1)
+    : -1;
 
   if (isLoading) {
     return <div>Loading…</div>;
@@ -128,15 +71,26 @@ export const EventPage = <E extends Event["name"]>({
           background: "black",
         }}
       >
-        <Typography variant="h5" sx={{ pt: 2, px: 2 }}>
-          {title}
-        </Typography>
         <List>
+          <ListSubheader>Aggregated</ListSubheader>
+          <ListItemButton
+            selected={isMetadataView}
+            onClick={() => navigate({ to: `/events/${eventName}/metadata` })}
+          >
+            <ListItemIcon>
+              <Summarize color="disabled" />
+            </ListItemIcon>
+            <ListItemText primary="Metadata" />
+          </ListItemButton>
+
+          <ListSubheader>Raw Events</ListSubheader>
           {events.map((event, index) => (
             <ListItemButton
               key={event.id}
               selected={selectedIndex === index}
-              onClick={() => setSelectedIndex(index)}
+              onClick={() =>
+                navigate({ to: `/events/${eventName}/${event.id}` })
+              }
               sx={{ cursor: "pointer" }}
             >
               <ListItemText
@@ -169,9 +123,27 @@ export const EventPage = <E extends Event["name"]>({
         </List>
       </Stack>
 
-      <Box sx={{ flexGrow: 1, p: 2, maxHeight: "100vh", overflowY: "auto" }}>
-        {selected ? children(selected as D1Event<EventByName[E]>) : null}
-      </Box>
+      <Stack
+        sx={{
+          gap: 3,
+          flexGrow: 1,
+          maxHeight: "100vh",
+          overflowY: "auto",
+        }}
+      >
+        {isMetadataView ? (
+          <Box sx={{ p: 2 }}>
+            <PlatformPercentages eventName={eventName} />
+          </Box>
+        ) : (
+          <>
+            <Metadata event={selected} />
+            <Box sx={{ px: 2 }}>
+              {selected ? children(selected as D1Event<EventByName[E]>) : null}
+            </Box>
+          </>
+        )}
+      </Stack>
     </Stack>
   );
 };

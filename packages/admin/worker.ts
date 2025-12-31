@@ -19,6 +19,30 @@ export default {
         return new Response(null, { status: 204, headers: corsHeaders });
       }
 
+      if (request.method === "GET" && url.pathname === "/events/counts") {
+        const { results } = await env.DB.prepare(`
+          SELECT name, COUNT(*) as count
+          FROM events
+          GROUP BY name
+        `).all<{
+          name: string;
+          count: number;
+        }>();
+
+        const counts: Record<string, number> = {};
+        for (const row of results) {
+          counts[row.name] = row.count;
+        }
+
+        return new Response(JSON.stringify(counts), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        });
+      }
+
       const pathMatch = url.pathname.match(/^\/events\/([^/]+)$/);
       if (request.method === "GET" && pathMatch) {
         const eventName = decodeURIComponent(pathMatch[1]);

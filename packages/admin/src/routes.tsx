@@ -13,6 +13,8 @@ import { GenerateTraceFail } from "./pages/events/generate-trace-fail";
 import { GenerateTraceSuccess } from "./pages/events/generate-trace-success";
 import { TypeGraphFail } from "./pages/events/type-graph-fail";
 import { TypeGraphSuccess } from "./pages/events/type-graph-success";
+import { ExploreAppStartedPage } from "./pages/explore/app-started/app-started";
+import { ExploreGenerateTracePage } from "./pages/explore/generate-trace";
 
 // Root route – renders App which contains DashboardLayout and Outlet
 const rootRoute = createRootRoute({
@@ -20,52 +22,64 @@ const rootRoute = createRootRoute({
 });
 
 // Event type routes
-const appStartedSuccessRoute = createRoute({
+const appStartedSuccessDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/events/app-started-success",
+  path: "/events/app_started_success/$id",
   component: AppStartedSuccess,
 });
 
-const appStartedFailRoute = createRoute({
+const appStartedFailDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/events/app-started-fail",
+  path: "/events/app_started_fail/$id",
   component: AppStartedFail,
 });
 
-const generateTraceSuccessRoute = createRoute({
+const generateTraceSuccessDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/events/generate-trace-success",
+  path: "/events/generate_trace_success/$id",
   component: GenerateTraceSuccess,
 });
 
-const generateTraceFailRoute = createRoute({
+const generateTraceFailDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/events/generate-trace-fail",
+  path: "/events/generate_trace_fail/$id",
   component: GenerateTraceFail,
 });
 
-const analyzeTraceSuccessRoute = createRoute({
+const analyzeTraceSuccessDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/events/analyze-trace-success",
+  path: "/events/analyze_trace_success/$id",
   component: AnalyzeTraceSuccess,
 });
 
-const analyzeTraceFailRoute = createRoute({
+const analyzeTraceFailDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/events/analyze-trace-fail",
+  path: "/events/analyze_trace_fail/$id",
   component: AnalyzeTraceFail,
 });
 
-const typeGraphSuccessRoute = createRoute({
+const typeGraphSuccessDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/events/type-graph-success",
+  path: "/events/type_graph_success/$id",
   component: TypeGraphSuccess,
 });
 
-const typeGraphFailRoute = createRoute({
+const typeGraphFailDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/events/type-graph-fail",
+  path: "/events/type_graph_fail/$id",
   component: TypeGraphFail,
+});
+
+const exploreAppStartedRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/explore/app-started",
+  component: ExploreAppStartedPage,
+});
+
+const exploreGenerateTraceRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/explore/generate-trace",
+  component: ExploreGenerateTracePage,
 });
 
 // Index redirect to /events
@@ -74,7 +88,7 @@ const indexRoute = createRoute({
   path: "/",
   component: () => {
     if (typeof window !== "undefined") {
-      window.location.pathname = "/events";
+      window.location.pathname = "/events/app_started_success";
     }
     return null;
   },
@@ -83,14 +97,16 @@ const indexRoute = createRoute({
 // Create route tree
 const routeTree = rootRoute.addChildren([
   indexRoute,
-  appStartedSuccessRoute,
-  appStartedFailRoute,
-  generateTraceSuccessRoute,
-  generateTraceFailRoute,
-  analyzeTraceSuccessRoute,
-  analyzeTraceFailRoute,
-  typeGraphSuccessRoute,
-  typeGraphFailRoute,
+  appStartedSuccessDetailRoute,
+  appStartedFailDetailRoute,
+  generateTraceSuccessDetailRoute,
+  generateTraceFailDetailRoute,
+  analyzeTraceSuccessDetailRoute,
+  analyzeTraceFailDetailRoute,
+  typeGraphSuccessDetailRoute,
+  typeGraphFailDetailRoute,
+  exploreAppStartedRoute,
+  exploreGenerateTraceRoute,
 ]);
 
 // Create router instance

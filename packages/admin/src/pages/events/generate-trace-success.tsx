@@ -1,11 +1,13 @@
-import { Stack, Typography } from "@mui/material";
+import { Stack } from "@mui/material";
 import type { EventGenerateTraceSuccess } from "@typeslayer/rust-types";
+import { ChipsList } from "../../components/chips-list";
 import { Code } from "../../components/code";
-import { type D1Event, EventPage } from "./event-base";
-import { Metadata } from "./metadata";
+import { StatTable } from "../../components/stat-table";
+import type { D1Event } from "../../hooks";
+import { EventPage } from "./event-base";
 
 export const GenerateTraceSuccess = () => (
-  <EventPage eventName="generate_trace_success" title="Generate Trace Success">
+  <EventPage eventName="generate_trace_success">
     {event => <Page event={event} />}
   </EventPage>
 );
@@ -24,16 +26,9 @@ const Page = ({ event }: { event: D1Event<EventGenerateTraceSuccess> }) => {
   } = event.data;
 
   return (
-    <Stack
-      sx={{
-        padding: 1,
-        gap: 3,
-        overflowY: "auto",
-      }}
-    >
-      <Metadata
-        event={event}
-        extraRows={[
+    <Stack sx={{ gap: 2 }}>
+      <StatTable
+        items={[
           {
             label: "duration",
             data: duration,
@@ -43,7 +38,10 @@ const Page = ({ event }: { event: D1Event<EventGenerateTraceSuccess> }) => {
             data: tscExtraFlags,
           },
         ]}
-        extraChips={[
+      />
+
+      <ChipsList
+        chips={[
           {
             label: "compiler",
             value: typescriptCompilerVariant,
@@ -69,21 +67,8 @@ const Page = ({ event }: { event: D1Event<EventGenerateTraceSuccess> }) => {
       />
 
       <Stack sx={{ gap: 1 }}>
-        <Typography variant="h6">Stdout</Typography>
-        {stdout ? (
-          <Code lang="bash" value={stdout} />
-        ) : (
-          <span>No stdout output</span>
-        )}
-      </Stack>
-
-      <Stack sx={{ gap: 1 }}>
-        <Typography variant="h6">Stderr</Typography>
-        {stderr ? (
-          <Code lang="bash" value={stderr} />
-        ) : (
-          <span>No stderr output</span>
-        )}
+        <Code lang="bash" value={stdout || "\n"} title="stdout" />
+        <Code lang="bash" value={stderr || "\n"} title="stderr" />
       </Stack>
     </Stack>
   );

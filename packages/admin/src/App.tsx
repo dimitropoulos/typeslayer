@@ -12,7 +12,7 @@ import { NAVIGATION, RenderNavItem } from "./components/navigation.tsx";
 export function App() {
   const muiTheme = useTheme();
   const isMdUp = useMediaQuery(muiTheme.breakpoints.up("md"));
-  const drawerWidth = 224;
+  const drawerWidth = 300;
 
   const collapsedWidth = 64;
 
