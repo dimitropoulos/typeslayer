@@ -24,6 +24,7 @@ import { downloadDir } from "@tauri-apps/api/path";
 import { open } from "@tauri-apps/plugin-dialog";
 import { download } from "@tauri-apps/plugin-upload";
 import { ANALYZE_TRACE_FILENAME } from "@typeslayer/analyze-trace/browser";
+import { InlineCode } from "@typeslayer/common";
 import {
   CPU_PROFILE_FILENAME,
   TRACE_JSON_FILENAME,
@@ -32,7 +33,6 @@ import {
 import { useCallback, useMemo } from "react";
 import { CenterLoader } from "../components/center-loader";
 import { Code } from "../components/code";
-import { InlineCode } from "../components/inline-code";
 import {
   detectPlatformSlash,
   formatBytesSize,

@@ -2,4 +2,4 @@
 import type { AppMode } from "./AppMode";
 import type { EventTypeGraphFailData } from "./EventTypeGraphFailData";
 
-export type EventTypeGraphFail = { name: "type_graph_fail", data: EventTypeGraphFailData, sessionId: string, timestamp: bigint, version: string, platform: string, mode: AppMode, };
+export type EventTypeGraphFail = { name: "type_graph_fail", data: EventTypeGraphFailData, sessionId: string, timestamp: number, version: string, platform: string, mode: AppMode, };

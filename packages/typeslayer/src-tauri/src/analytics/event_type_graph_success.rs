@@ -53,6 +53,7 @@ impl From<&LinkKindData> for StrippedLinkKindData {
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct EventTypeGraphSuccessData {
+    #[ts(type = "number")]
     pub duration: u64,
     pub node_count: usize,
     pub link_count: usize,

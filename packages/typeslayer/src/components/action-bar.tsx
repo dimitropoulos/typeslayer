@@ -11,11 +11,11 @@ import {
   Typography,
 } from "@mui/material";
 import { invoke } from "@tauri-apps/api/core";
+import { InlineCode } from "@typeslayer/common";
 import { type FC, useCallback, useState } from "react";
 import { useToast } from "../contexts/toast-context";
 import { BugReport } from "./bug-report";
 import { MITS_DISCORD } from "./constants";
-import { InlineCode } from "./inline-code";
 import { createOpenHandler } from "./utils";
 
 const HelpDialog = () => {

@@ -7,9 +7,9 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import { InlineCode } from "@typeslayer/common";
 import { useCallback, useState } from "react";
 import { FlagsCustomizationDialog } from "../../components/flags-customization-dialog";
-import { InlineCode } from "../../components/inline-code";
 import { detectPlatformSlash } from "../../components/utils";
 import { useSelectedTsconfig, useTsconfigPaths } from "../../hooks/tauri-hooks";
 import { Step } from "./step";

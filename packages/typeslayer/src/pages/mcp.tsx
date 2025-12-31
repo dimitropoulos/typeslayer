@@ -21,9 +21,9 @@ import {
   Typography,
 } from "@mui/material";
 import { useNavigate, useParams } from "@tanstack/react-router";
+import { InlineCode } from "@typeslayer/common";
 import { type SyntheticEvent, useState } from "react";
 import { Code } from "../components/code";
-import { InlineCode } from "../components/inline-code";
 import { TabLabel } from "../components/tab-label";
 import { createOpenHandler } from "../components/utils";
 import {

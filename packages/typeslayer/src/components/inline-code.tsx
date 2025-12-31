@@ -1,4 +1,4 @@
-import { theme } from "../theme";
+import { muiTheme } from "@typeslayer/common";
 
 export const InlineCode = ({
   children,
@@ -11,7 +11,7 @@ export const InlineCode = ({
 }) => (
   <code
     style={{
-      color: theme.palette[primary ? "primary" : "secondary"].light,
+      color: muiTheme.palette[primary ? "primary" : "secondary"].light,
       ...style,
     }}
   >

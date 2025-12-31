@@ -11,11 +11,11 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import { InlineCode } from "@typeslayer/common";
 import type { TypeId } from "@typeslayer/validate";
 import { useMemo, useState } from "react";
 import { CenterLoader } from "../../components/center-loader";
 import { DisplayRecursiveType } from "../../components/display-recursive-type";
-import { InlineCode } from "../../components/inline-code";
 import { NoData } from "../../components/no-data";
 import { ShowMoreChildren } from "../../components/show-more-children";
 import {

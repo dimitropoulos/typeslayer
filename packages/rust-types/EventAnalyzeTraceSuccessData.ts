@@ -2,4 +2,4 @@
 import type { DepthLimitKind } from "./DepthLimitKind";
 import type { FileStatistics } from "./FileStatistics";
 
-export type EventAnalyzeTraceSuccessData = { duration: bigint, totalDuplicatePackages: number, mostDuplicatedPackageInstances: number, totalHotspots: number, depthLimitCounts: { [key in DepthLimitKind]?: number }, fileStatistics: FileStatistics, };
+export type EventAnalyzeTraceSuccessData = { duration: number, totalDuplicatePackages: number, mostDuplicatedPackageInstances: number, totalHotspots: number, depthLimitCounts: { [key in DepthLimitKind]?: number }, fileStatistics: FileStatistics, };

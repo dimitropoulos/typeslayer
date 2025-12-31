@@ -20,6 +20,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import { InlineCode } from "@typeslayer/common";
 import { useCallback } from "react";
 import {
   useApplyTscProjectFlag,
@@ -31,7 +32,6 @@ import {
   useTypeScriptCompilerVariant,
 } from "../hooks/tauri-hooks";
 import { Code } from "./code";
-import { InlineCode } from "./inline-code";
 import {
   formatBytesSize,
   processTscExample,

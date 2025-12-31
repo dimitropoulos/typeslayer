@@ -2,4 +2,4 @@
 import type { AppMode } from "./AppMode";
 import type { EventAppStartedSuccessData } from "./EventAppStartedSuccessData";
 
-export type EventAppStartedSuccess = { name: "app_started_success", data: EventAppStartedSuccessData, sessionId: string, timestamp: bigint, version: string, platform: string, mode: AppMode, };
+export type EventAppStartedSuccess = { name: "app_started_success", data: EventAppStartedSuccessData, sessionId: string, timestamp: number, version: string, platform: string, mode: AppMode, };

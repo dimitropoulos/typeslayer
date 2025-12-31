@@ -23,6 +23,7 @@
     "db:exec": "pnpm wrangler d1 execute typeslayer",
     "push:local": "node scripts/push-events.ts --local",
     "typecheck": "tsc --noEmit",
+    "database": "pnpm wrangler d1 export typeslayer --remote --output d1.sqlite",
     "push:remote": "node scripts/push-events.ts --remote"
   },
   "dependencies": {

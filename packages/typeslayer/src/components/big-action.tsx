@@ -142,7 +142,6 @@ export function BigAction({
                     {...hasIcon}
                     label={unlock}
                     sx={{ userSelect: "none" }}
-                    size="small"
                   />
                 );
               })}

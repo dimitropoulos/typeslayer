@@ -1,5 +1,5 @@
 import type { ThemeRegistrationAny } from "shiki";
-import { theme as muiTheme } from "./theme";
+import { muiTheme } from "./mui-theme";
 
 export const shikiTheme = {
   name: "typeslayer-dark",

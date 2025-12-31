@@ -15,6 +15,7 @@ use ts_rs::TS;
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct EventAnalyzeTraceSuccessData {
+    #[ts(type = "number")]
     pub duration: u64,
     pub total_duplicate_packages: usize,
     pub most_duplicated_package_instances: usize,

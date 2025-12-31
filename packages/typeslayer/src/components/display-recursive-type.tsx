@@ -3,11 +3,10 @@ import FiberManualRecord from "@mui/icons-material/FiberManualRecord";
 import KeyboardArrowDown from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowRight from "@mui/icons-material/KeyboardArrowRight";
 import { Alert, AlertTitle, Box, Stack, Typography } from "@mui/material";
+import { InlineCode } from "@typeslayer/common";
 import type { ResolvedType, TypeId } from "@typeslayer/validate";
 import { type FC, type ReactNode, useState } from "react";
 import { useGetRecursiveResolvedTypes } from "../hooks/tauri-hooks";
-import { theme } from "../theme";
-import { InlineCode } from "./inline-code";
 import { OpenablePath, propertyTextStyle } from "./openable-path";
 import { ShowMoreChildren } from "./show-more-children";
 import {
@@ -48,7 +47,7 @@ const noChildrenDot = (
       ...baseTwiddleSx,
       cursor: "default",
       transform: "scale(0.5)",
-      color: theme.palette.text.secondary,
+      color: t => t.palette.text.secondary,
     }}
   />
 );
@@ -238,11 +237,11 @@ export const DisplayRecursiveType: FC<{
           return (
             <Box
               sx={{
-                background: theme.palette.grey[900],
+                background: t => t.palette.grey[900],
                 borderRadius: 1,
                 px: 1,
                 py: 0.5,
-                border: `1px solid ${theme.palette.divider}`,
+                border: t => `1px solid ${t.palette.divider}`,
                 alignSelf: "flex-start",
               }}
               key={reactKey}

@@ -13,6 +13,7 @@ use crate::{
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct EventGenerateTraceSuccessData {
+    #[ts(type = "number")]
     pub duration: u64,
     pub package_manager: PackageManager,
     pub trace_count: usize,

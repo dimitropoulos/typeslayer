@@ -23,9 +23,9 @@ import {
   Typography,
 } from "@mui/material";
 import { invoke } from "@tauri-apps/api/core";
+import { InlineCode } from "@typeslayer/common";
 import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { Code } from "../components/code";
-import { InlineCode } from "../components/inline-code";
 import { detectPlatformSlash } from "../components/utils";
 import {
   type AnalyticsConsentResult,

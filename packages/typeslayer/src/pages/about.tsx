@@ -1,8 +1,7 @@
 import { Box, Divider, Link, Stack, Typography } from "@mui/material";
-
+import { InlineCode } from "@typeslayer/common";
 import dimitropoulosAvatar from "../assets/dimitropoulos.png";
 import { MITS_DISCORD } from "../components/constants";
-import { InlineCode } from "../components/inline-code";
 import { UsefulLinks } from "../components/useful-links";
 import { createOpenHandler } from "../components/utils";
 

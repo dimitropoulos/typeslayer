@@ -38,12 +38,11 @@ import {
   type LeaderboardNumberFormat,
 } from "@typeslayer/analytics";
 import { analyzeTraceInfo } from "@typeslayer/analyze-trace/browser";
+import { InlineCode, panelBackground } from "@typeslayer/common";
 import { depthLimitInfo, typeRelationInfo } from "@typeslayer/validate";
 import { useCallback, useState } from "react";
-import { InlineCode } from "../components/inline-code";
 import { formatBytesSize, randBetween, useKonami } from "../components/utils";
 import { useToast } from "../contexts/toast-context";
-import { panelBackground } from "../theme";
 import type { LinkKind } from "../types/type-graph";
 
 const useLeaderboardStats = () => {

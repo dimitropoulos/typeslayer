@@ -37,7 +37,7 @@ Actually TypeSlayer is a fully offline app - it does not make any network reques
 
 ## Contributing
 
-1. all commits (and therefor PR merges) must be the next bar from "My Name Is" by Eminem, until further notice
+1. all commits (and therefor PR merges) must be the next bar from ~~"My Name Is" (complete)~~ "The Real Slim Shady" by Eminem, until further notice
 2. no further requirements
 
 ## Thank You

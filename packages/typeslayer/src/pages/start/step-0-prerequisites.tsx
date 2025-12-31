@@ -5,8 +5,8 @@ import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
+import { InlineCode } from "@typeslayer/common";
 import { useCallback, useState } from "react";
-import { InlineCode } from "../../components/inline-code";
 import { Step } from "./step";
 
 export const step4 = (

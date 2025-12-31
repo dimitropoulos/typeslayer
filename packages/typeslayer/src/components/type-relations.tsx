@@ -13,7 +13,9 @@ import {
   Tabs,
   Typography,
   useMediaQuery,
+  useTheme,
 } from "@mui/material";
+import { InlineCode, panelBackground } from "@typeslayer/common";
 import { typeRelationInfo } from "@typeslayer/validate";
 import { useCallback, useState } from "react";
 import {
@@ -22,11 +24,9 @@ import {
   useGetResolvedTypeById,
   useGetTracesRelatedToTypeId,
 } from "../hooks/tauri-hooks";
-import { panelBackground, theme } from "../theme";
 import type { LinkKind } from "../types/type-graph";
 import { CenterLoader } from "./center-loader";
 import { Code } from "./code";
-import { InlineCode } from "./inline-code";
 import { ShowMoreChildren } from "./show-more-children";
 import { VerticalTab } from "./tab-label";
 import { getHumanReadableName, TypeSummary } from "./type-summary";
@@ -96,6 +96,8 @@ function TargetsTabs({ linksToTypeId }: { linksToTypeId: LinksToType }) {
     },
     [],
   );
+
+  const theme = useTheme();
 
   const isSmallWidth = useMediaQuery(theme.breakpoints.down("lg"));
 

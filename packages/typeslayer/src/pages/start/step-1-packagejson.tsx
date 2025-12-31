@@ -1,8 +1,8 @@
 import { Button, Stack, TextField, Typography } from "@mui/material";
 import { open } from "@tauri-apps/plugin-dialog";
+import { InlineCode } from "@typeslayer/common";
 import { useCallback, useEffect, useState } from "react";
 import { PACKAGE_JSON } from "../../components/constants";
-import { InlineCode } from "../../components/inline-code";
 import { useProjectRoot } from "../../hooks/tauri-hooks";
 import { Step } from "./step";
 

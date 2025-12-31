@@ -13,6 +13,7 @@ use crate::{
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct EventTypeGraphFailData {
+    #[ts(type = "number")]
     pub duration: u64,
     pub reason: String,
 }

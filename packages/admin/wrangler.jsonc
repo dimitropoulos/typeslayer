@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "typeslayer-admin-local",
+  "main": "worker.ts",
+  "compatibility_date": "2024-12-01",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "typeslayer",
+      "database_id": "596c57a4-d75a-4fd4-8586-984daeb0d9e5"
+    }
+  ]
+}

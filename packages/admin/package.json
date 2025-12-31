@@ -1,0 +1,50 @@
+{
+  "name": "@typeslayer/admin",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "packageManager": "pnpm@10.6.5",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "dev:api": "pnpm wrangler dev --remote --config wrangler.jsonc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cosmos.gl/graph": "2.6.2",
+    "@emotion/react": "11.14.0",
+    "@emotion/styled": "11.14.1",
+    "@fontsource/roboto": "5.2.9",
+    "@mui/icons-material": "7.3.6",
+    "@mui/material": "7.3.6",
+    "@mui/x-charts": "8.23.0",
+    "@tanstack/react-query": "5.90.15",
+    "@tanstack/react-query-devtools": "5.91.2",
+    "@tanstack/react-router": "1.144.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "shiki": "3.20.0",
+    "wrangler": "4.54.0"
+  },
+  "devDependencies": {
+    "@types/node": "25.0.3",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "@typeslayer/analytics": "workspace:*",
+    "@typeslayer/analyze-trace": "workspace:*",
+    "@typeslayer/common": "workspace:*",
+    "@typeslayer/rust-types": "workspace:*",
+    "@typeslayer/validate": "workspace:*",
+    "@vitejs/plugin-react": "5.1.2",
+    "@cloudflare/workers-types": "4.20251229.0",
+    "typescript": "5.9.3",
+    "vite": "7.3.0",
+    "zod": "4.2.1"
+  }
+}

@@ -39,7 +39,6 @@
     "echarts-for-react": "3.0.5",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "react-window": "2.2.3",
     "shiki": "3.20.0"
   },
   "devDependencies": {
@@ -50,6 +49,7 @@
     "@types/react-dom": "19.2.3",
     "@typeslayer/analytics": "workspace:*",
     "@typeslayer/analyze-trace": "workspace:*",
+    "@typeslayer/common": "workspace:*",
     "@typeslayer/validate": "workspace:*",
     "@vitejs/plugin-react": "5.1.2",
     "typescript": "5.9.3",

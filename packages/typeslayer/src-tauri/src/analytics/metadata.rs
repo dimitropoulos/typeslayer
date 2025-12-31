@@ -11,6 +11,7 @@ use crate::{
 #[serde(rename_all = "camelCase")]
 pub struct EventMetadata {
     pub session_id: String,
+    #[ts(type = "number")]
     pub timestamp: u64,
     pub version: String,
     pub platform: String,

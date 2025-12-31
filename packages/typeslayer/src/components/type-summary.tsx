@@ -198,13 +198,7 @@ export function TypeSummary({
       <Typography sx={{ fontFamily: "monospace" }}>id:{typeId}</Typography>
       {showFlags
         ? flags.map(flag => (
-            <Chip
-              variant="filled"
-              key={flag}
-              label={flag}
-              size="small"
-              sx={{ height: 20 }}
-            />
+            <Chip key={flag} label={flag} sx={{ height: 20 }} />
           ))
         : null}
       {suppressActions ? null : (

@@ -1,7 +1,7 @@
 import { Box, Typography } from "@mui/material";
 import { analyzeTraceInfo } from "@typeslayer/analyze-trace/browser";
+import { InlineCode } from "@typeslayer/common";
 import { depthLimitInfo, typeRelationInfo } from "@typeslayer/validate";
-import { InlineCode } from "../../components/inline-code";
 import { useFriendlyPackageName } from "../../hooks/tauri-hooks";
 
 export const AWARD_SELECTOR_COLUMN_WIDTH = 500;

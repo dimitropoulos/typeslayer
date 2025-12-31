@@ -1,0 +1,35 @@
+{
+  "name": "@typeslayer/common",
+  "version": "0.1.27",
+  "private": true,
+  "type": "module",
+  "repository": "github:dimitropoulos/typeslayer",
+  "homepage": "https://github.com/dimitropoulos/typeslayer#readme",
+  "bugs": "https://github.com/dimitropoulos/typeslayer/issues",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.6.5",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mui/material": "7.3.6",
+    "shiki": "3.20.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "tsdown": "0.18.3",
+    "typescript": "5.9.3"
+  }
+}

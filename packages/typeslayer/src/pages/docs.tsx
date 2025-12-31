@@ -11,9 +11,9 @@ import {
   Typography,
 } from "@mui/material";
 import { useNavigate, useParams } from "@tanstack/react-router";
+import { InlineCode } from "@typeslayer/common";
 import { useState } from "react";
 import { Code } from "../components/code";
-import { InlineCode } from "../components/inline-code";
 import { UsefulLinks } from "../components/useful-links";
 import { createOpenHandler } from "../components/utils";
 import { Step } from "./start/step";

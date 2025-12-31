@@ -2,4 +2,4 @@
 import type { AppMode } from "./AppMode";
 import type { EventGenerateTraceFailData } from "./EventGenerateTraceFailData";
 
-export type EventGenerateTraceFail = { name: "generate_trace_fail", data: EventGenerateTraceFailData, sessionId: string, timestamp: bigint, version: string, platform: string, mode: AppMode, };
+export type EventGenerateTraceFail = { name: "generate_trace_fail", data: EventGenerateTraceFailData, sessionId: string, timestamp: number, version: string, platform: string, mode: AppMode, };

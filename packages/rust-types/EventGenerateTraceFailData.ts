@@ -2,4 +2,4 @@
 import type { PackageManager } from "./PackageManager";
 import type { TypeScriptCompilerVariant } from "./TypeScriptCompilerVariant";
 
-export type EventGenerateTraceFailData = { duration: bigint, packageManager: PackageManager, stdout: string | null, stderr: string | null, maxOldSpaceSize: number | null, maxStackSize: number | null, tscExtraFlags: string, typescriptCompilerVariant: TypeScriptCompilerVariant, applyTscProjectFlag: boolean, };
+export type EventGenerateTraceFailData = { duration: number, packageManager: PackageManager, stdout: string | null, stderr: string | null, maxOldSpaceSize: number | null, maxStackSize: number | null, tscExtraFlags: string, typescriptCompilerVariant: TypeScriptCompilerVariant, applyTscProjectFlag: boolean, };

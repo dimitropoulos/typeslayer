@@ -2,4 +2,4 @@
 import type { AppMode } from "./AppMode";
 import type { EventGenerateTraceSuccessData } from "./EventGenerateTraceSuccessData";
 
-export type EventGenerateTraceSuccess = { name: "generate_trace_success", data: EventGenerateTraceSuccessData, sessionId: string, timestamp: bigint, version: string, platform: string, mode: AppMode, };
+export type EventGenerateTraceSuccess = { name: "generate_trace_success", data: EventGenerateTraceSuccessData, sessionId: string, timestamp: number, version: string, platform: string, mode: AppMode, };

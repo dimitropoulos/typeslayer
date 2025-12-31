@@ -2,4 +2,4 @@
 import type { AppMode } from "./AppMode";
 import type { EventAppStartedFailData } from "./EventAppStartedFailData";
 
-export type EventAppStartedFail = { name: "app_started_fail", data: EventAppStartedFailData, sessionId: string, timestamp: bigint, version: string, platform: string, mode: AppMode, };
+export type EventAppStartedFail = { name: "app_started_fail", data: EventAppStartedFailData, sessionId: string, timestamp: number, version: string, platform: string, mode: AppMode, };

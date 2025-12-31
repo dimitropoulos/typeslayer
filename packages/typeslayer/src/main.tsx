@@ -9,9 +9,9 @@ import "@fontsource/roboto/400.css";
 import "@fontsource/roboto/500.css";
 import "@fontsource/roboto/700.css";
 import { ThemeProvider } from "@mui/material";
+import { muiTheme } from "@typeslayer/common";
 import { LogoFadeProvider } from "./contexts/logo-fade-context";
 import { ToastProvider } from "./contexts/toast-context";
-import { theme } from "./theme";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,7 +39,7 @@ if (!root) {
 
 ReactDOM.createRoot(root).render(
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={muiTheme}>
       <ToastProvider>
         <CssBaseline />
         <LogoFadeProvider>

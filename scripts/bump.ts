@@ -56,10 +56,11 @@ console.log(`📦 Bumped main package: ${oldMainVersion} → ${newMainVersion}`)
 
 // Bump workspace packages
 const workspacePackages = [
-  "validate",
-  "analyze-trace",
   "analytics",
+  "analyze-trace",
+  "common",
   "rust-types",
+  "validate",
 ];
 
 for (const pkgName of workspacePackages) {

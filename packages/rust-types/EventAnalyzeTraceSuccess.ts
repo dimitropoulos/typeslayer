@@ -2,4 +2,4 @@
 import type { AppMode } from "./AppMode";
 import type { EventAnalyzeTraceSuccessData } from "./EventAnalyzeTraceSuccessData";
 
-export type EventAnalyzeTraceSuccess = { name: "analyze_trace_success", data: EventAnalyzeTraceSuccessData, sessionId: string, timestamp: bigint, version: string, platform: string, mode: AppMode, };
+export type EventAnalyzeTraceSuccess = { name: "analyze_trace_success", data: EventAnalyzeTraceSuccessData, sessionId: string, timestamp: number, version: string, platform: string, mode: AppMode, };

@@ -2,4 +2,4 @@
 import type { LinkKind } from "./LinkKind";
 import type { StrippedLinkKindData } from "./StrippedLinkKindData";
 
-export type EventTypeGraphSuccessData = { duration: bigint, nodeCount: number, linkCount: number, linkKindDataByKind: { [key in LinkKind]?: StrippedLinkKindData }, };
+export type EventTypeGraphSuccessData = { duration: number, nodeCount: number, linkCount: number, linkKindDataByKind: { [key in LinkKind]?: StrippedLinkKindData }, };

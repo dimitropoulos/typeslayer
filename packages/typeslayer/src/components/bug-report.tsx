@@ -25,11 +25,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open } from "@tauri-apps/plugin-dialog";
+import { InlineCode } from "@typeslayer/common";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useToast } from "../contexts/toast-context";
 import { useBugReportFiles, useCreateBugReport } from "../hooks/tauri-hooks";
 import { CenterLoader } from "./center-loader";
-import { InlineCode } from "./inline-code";
 import { detectPlatformSlash } from "./utils";
 
 const supportEmail = "typeslayer@dimitrimitropoulos.com";

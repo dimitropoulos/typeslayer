@@ -1,6 +1,5 @@
 import Info from "@mui/icons-material/Info";
 import { Stack, type SxProps, Typography } from "@mui/material";
-import { theme } from "../theme";
 
 export function Callout({
   children,
@@ -16,9 +15,9 @@ export function Callout({
       gap={2}
       direction="row"
       sx={{
-        background: theme.palette.background.paper,
+        background: t => t.palette.background.paper,
         padding: 2,
-        color: theme.palette.text.secondary,
+        color: t => t.palette.text.secondary,
         ...sx,
       }}
     >

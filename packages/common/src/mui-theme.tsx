@@ -85,7 +85,7 @@ declare module "@mui/material/styles" {
   }
 }
 
-export const theme: Theme = createTheme({
+export const muiTheme: Theme = createTheme({
   palette: {
     mode: "dark",
     primary: doomRed,
@@ -439,6 +439,9 @@ export const theme: Theme = createTheme({
         label: {
           alignSelf: "baseline",
         },
+      },
+      defaultProps: {
+        size: "small",
       },
     },
     MuiList: {

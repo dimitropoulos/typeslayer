@@ -7,17 +7,16 @@ import {
   Typography,
 } from "@mui/material";
 import { useNavigate, useParams } from "@tanstack/react-router";
+import { InlineCode, panelBackground } from "@typeslayer/common";
 import { TYPES_JSON_FILENAME } from "@typeslayer/validate";
 import { useEffect, useState } from "react";
 import { Callout } from "../components/callout";
 import { CenterLoader } from "../components/center-loader";
 import { Code } from "../components/code";
 import { DisplayRecursiveType } from "../components/display-recursive-type";
-import { InlineCode } from "../components/inline-code";
 import { StatPill } from "../components/stat-pill";
 import { TypeRelationsContent } from "../components/type-relations";
 import { useGetAppStats, useGetResolvedTypeById } from "../hooks/tauri-hooks";
-import { panelBackground } from "../theme";
 
 export const SearchTypes = () => {
   const params = useParams({ strict: false });

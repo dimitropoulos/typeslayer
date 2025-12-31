@@ -5,9 +5,9 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import { InlineCode } from "@typeslayer/common";
 import { useCallback } from "react";
 import { CenterLoader } from "../../components/center-loader";
-import { InlineCode } from "../../components/inline-code";
 import { NoData } from "../../components/no-data";
 import { OpenablePath } from "../../components/openable-path";
 import { useAnalyzeTrace } from "../../hooks/tauri-hooks";

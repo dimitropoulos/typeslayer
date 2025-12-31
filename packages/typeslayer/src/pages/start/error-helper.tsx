@@ -1,6 +1,6 @@
 import { Alert, AlertTitle, Divider, Stack, Typography } from "@mui/material";
+import { InlineCode } from "@typeslayer/common";
 import { Code } from "../../components/code";
-import { InlineCode } from "../../components/inline-code";
 
 const maxWidth = 700;
 

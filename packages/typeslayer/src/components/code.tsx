@@ -2,10 +2,9 @@ import ContentCopy from "@mui/icons-material/ContentCopy";
 import Description from "@mui/icons-material/Description";
 import Done from "@mui/icons-material/Done";
 import { Box, type BoxProps, IconButton, Tooltip } from "@mui/material";
+import { panelBackground, shikiTheme } from "@typeslayer/common";
 import { useEffect, useMemo, useState } from "react";
 import { type BundledLanguage, codeToHtml } from "shiki";
-import { shikiTheme } from "../shikiTheme";
-import { panelBackground } from "../theme";
 import { OpenablePath } from "./openable-path";
 import { ShowMore } from "./show-more";
 
@@ -24,7 +23,7 @@ export const Code = ({
   maxHeight,
   fileName,
   openableFilename,
-  lang,
+  lang = "json",
   maxSize = 1024 * 10,
   disableSyntaxHighlighting,
   copyThisInstead,
@@ -59,7 +58,7 @@ export const Code = ({
     const highlight = async () => {
       try {
         const rendered = await codeToHtml(code, {
-          lang: lang ?? "json",
+          lang,
           theme: shikiTheme,
           rootStyle: "background-color: transparent; margin: 0;",
         });
