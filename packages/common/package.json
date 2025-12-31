@@ -1,6 +1,6 @@
 {
   "name": "@typeslayer/common",
-  "version": "0.1.27",
+  "version": "0.1.28",
   "private": true,
   "type": "module",
   "repository": "github:dimitropoulos/typeslayer",
@@ -25,10 +25,13 @@
   },
   "dependencies": {
     "@mui/material": "7.3.6",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
     "shiki": "3.20.0"
   },
   "devDependencies": {
     "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
     "tsdown": "0.18.3",
     "typescript": "5.9.3"
   }

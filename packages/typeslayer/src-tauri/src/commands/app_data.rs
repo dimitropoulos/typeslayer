@@ -6,11 +6,9 @@ use crate::{
     utils::{compute_window_title, set_window_title},
     validate::{trace_json::TraceEvent, utils::TypeId},
 };
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 use tauri::{AppHandle, State};
 use tokio::sync::Mutex;
 use tracing::debug;
@@ -157,7 +155,7 @@ pub async fn get_data_dir(state: State<'_, &Mutex<AppData>>) -> Result<String, S
 pub struct NodesAndLinks {
     pub node_count: usize,
     pub is_limited: bool,
-    pub links_by_type: HashMap<LinkKind, Vec<(TypeId, TypeId)>>,
+    pub links_by_type: IndexMap<LinkKind, Vec<(TypeId, TypeId)>>,
 }
 
 #[tauri::command]
@@ -177,7 +175,7 @@ pub async fn get_type_graph_nodes_and_links(
     let filtered_nodes = type_graph.node_count.min(max_nodes);
 
     // Filter links where both source and target are < max_nodes
-    let filtered_links: HashMap<LinkKind, Vec<(TypeId, TypeId)>> = type_graph
+    let filtered_links: IndexMap<LinkKind, Vec<(TypeId, TypeId)>> = type_graph
         .link_kind_data_by_kind
         .iter()
         .map(|(kind, link_kind_data)| {
@@ -226,8 +224,8 @@ pub async fn get_type_graph_nodes_and_links(
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct GraphStats {
-    pub link: HashMap<LinkKind, CountAndMax>,
-    pub node: HashMap<NodeStatKind, CountAndMax>,
+    pub link: IndexMap<LinkKind, CountAndMax>,
+    pub node: IndexMap<NodeStatKind, CountAndMax>,
 }
 
 #[tauri::command]
@@ -247,9 +245,9 @@ pub async fn get_type_graph_stats(state: State<'_, &Mutex<AppData>>) -> Result<G
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NodeAndLinkStats {
-    pub node_stats: HashMap<NodeStatKind, NodeStatKindData>,
-    pub link_stats: HashMap<LinkKind, LinkKindData>,
-    pub path_map: HashMap<TypeId, String>,
+    pub node_stats: IndexMap<NodeStatKind, NodeStatKindData>,
+    pub link_stats: IndexMap<LinkKind, LinkKindData>,
+    pub path_map: IndexMap<TypeId, String>,
 }
 
 /// this command is for building the award winners page more efficiently (don't want to send the full stats)

@@ -103,10 +103,9 @@ const OOMError = ({
           need to update that first. <InlineCode>Node.js</InlineCode>,{" "}
           <InlineCode>npm</InlineCode>, or <InlineCode>tsc</InlineCode> can't
           increase it proactively. technically{" "}
-          <InlineCode>TypeSlayer</InlineCode>
-          has shell access and it could try to detect your OS and do it... I
-          draw the line at messing with your overall system configuration: you
-          gotta do it.
+          <InlineCode>TypeSlayer</InlineCode> has shell access and it could try
+          to detect your OS and do it... I draw the line at messing with your
+          overall system configuration: you gotta do it.
         </Typography>
       </Stack>
     </Alert>

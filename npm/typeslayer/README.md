@@ -4,7 +4,7 @@
 </p>
 
 <p align="center">
-  a tool for diagnosing and fixing TypeScript performance problems
+  a tool for diagnosing and fixing TypeScript performance problems</br>the nice thing is, you can't hide from TypeSlayer (even if you <code>//@ts-ignore</code> or <code>//@ts-expect-error</code>)
 </p>
 
 ## Quickstart

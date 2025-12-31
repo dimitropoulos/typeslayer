@@ -2,7 +2,6 @@ use indexmap::IndexMap;
 use serde::ser::Error as _;
 use serde::{Deserialize, Serialize, Serializer};
 use serde_json::value::RawValue;
-use std::collections::HashMap;
 use std::hash::Hash;
 use strum::VariantArray;
 use strum_macros::VariantArray;
@@ -48,16 +47,10 @@ pub enum LinkKind {
 }
 
 impl LinkKind {
-    pub fn new_link_kind_data_by_kind() -> HashMap<LinkKind, LinkKindData> {
+    pub fn new_link_kind_data_by_kind() -> IndexMap<LinkKind, LinkKindData> {
         LinkKind::VARIANTS
             .iter()
             .map(|kind| (kind.clone(), LinkKindData::default()))
-            .collect()
-    }
-    pub fn new_count_and_max_map() -> HashMap<LinkKind, CountAndMax> {
-        LinkKind::VARIANTS
-            .iter()
-            .map(|kind| (kind.clone(), CountAndMax { count: 0, max: 0 }))
             .collect()
     }
 }
@@ -178,15 +171,6 @@ pub enum NodeStatKind {
     AliasTypeArguments,
 }
 
-impl NodeStatKind {
-    pub fn new_count_and_max_map() -> HashMap<NodeStatKind, CountAndMax> {
-        NodeStatKind::VARIANTS
-            .iter()
-            .map(|kind| (kind.clone(), CountAndMax { count: 0, max: 0 }))
-            .collect()
-    }
-}
-
 /// this exists to summarize the info so we can use it in awards
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -210,10 +194,10 @@ pub struct NodeStatKindData {
 #[serde(rename_all = "camelCase")]
 pub struct TypeGraph {
     pub node_count: usize,
-    pub node_data_by_kind: HashMap<NodeStatKind, NodeStatKindData>,
+    pub node_data_by_kind: IndexMap<NodeStatKind, NodeStatKindData>,
     pub link_count: usize,
-    pub link_kind_data_by_kind: HashMap<LinkKind, LinkKindData>,
-    pub path_map: HashMap<TypeId, String>,
+    pub link_kind_data_by_kind: IndexMap<LinkKind, LinkKindData>,
+    pub path_map: IndexMap<TypeId, String>,
 }
 
 impl TypeGraph {
@@ -228,8 +212,8 @@ impl TypeGraph {
     }
 
     /// Build a map from type id -> optional path (mimics extractPath)
-    fn build_path_map(types: &TypesJsonSchema) -> HashMap<TypeId, String> {
-        let mut path_map = HashMap::new();
+    fn build_path_map(types: &TypesJsonSchema) -> IndexMap<TypeId, String> {
+        let mut path_map = IndexMap::new();
         for resolved_type in types.iter() {
             let path = resolved_type.get_path();
             if let Some(path) = path {
@@ -237,6 +221,7 @@ impl TypeGraph {
                 path_map.insert(resolved_type.id, path);
             }
         }
+        path_map.sort_keys();
         path_map
     }
 
@@ -263,7 +248,7 @@ impl TypeGraph {
     fn calculate_link_kind_data_by_kind(
         &mut self,
         types: &TypesJsonSchema,
-    ) -> HashMap<LinkKind, LinkKindData> {
+    ) -> IndexMap<LinkKind, LinkKindData> {
         let mut link_kind_data_by_kind = LinkKind::new_link_kind_data_by_kind();
 
         for resolved_type in types {
@@ -355,7 +340,7 @@ impl TypeGraph {
     fn calculate_node_data_by_kind(
         &mut self,
         types: &TypesJsonSchema,
-    ) -> HashMap<NodeStatKind, NodeStatKindData> {
+    ) -> IndexMap<NodeStatKind, NodeStatKindData> {
         // Helper to compute counts per node for a given accessor
         fn collect_counts<F>(types: &TypesJsonSchema, accessor: F) -> Vec<(TypeId, String, usize)>
         where
@@ -403,21 +388,27 @@ impl TypeGraph {
             }
         };
 
-        HashMap::from([
-            (NodeStatKind::TypeArguments, build_category(type_arguments)),
-            (NodeStatKind::UnionTypes, build_category(union_types)),
-            (
-                NodeStatKind::IntersectionTypes,
-                build_category(intersection_types),
-            ),
-            (
-                NodeStatKind::AliasTypeArguments,
-                build_category(alias_type_arguments),
-            ),
-        ])
+        NodeStatKind::VARIANTS
+            .iter()
+            .map(|kind| {
+                (
+                    kind.clone(),
+                    match kind {
+                        NodeStatKind::TypeArguments => build_category(type_arguments.clone()),
+                        NodeStatKind::UnionTypes => build_category(union_types.clone()),
+                        NodeStatKind::IntersectionTypes => {
+                            build_category(intersection_types.clone())
+                        }
+                        NodeStatKind::AliasTypeArguments => {
+                            build_category(alias_type_arguments.clone())
+                        }
+                    },
+                )
+            })
+            .collect()
     }
 
-    pub fn calculate_node_stat_count_and_max(&self) -> HashMap<NodeStatKind, CountAndMax> {
+    pub fn calculate_node_stat_count_and_max(&self) -> IndexMap<NodeStatKind, CountAndMax> {
         self.node_data_by_kind
             .iter()
             .map(|(kind, node_stat_category)| {
@@ -432,7 +423,7 @@ impl TypeGraph {
             .collect()
     }
 
-    pub fn calculate_link_count_and_max(&self) -> HashMap<LinkKind, CountAndMax> {
+    pub fn calculate_link_count_and_max(&self) -> IndexMap<LinkKind, CountAndMax> {
         self.link_kind_data_by_kind
             .iter()
             .map(|(kind, link_kind_data)| {

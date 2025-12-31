@@ -1,7 +1,7 @@
 use crate::analyze_trace::file_statistics::FileStatistics;
 use crate::{analyze_trace::depth_limits::DepthLimitKind, validate::trace_json::TraceEvent};
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -92,12 +92,12 @@ pub struct DuplicatedPackage {
     pub instances: Vec<DuplicatedPackageInstance>,
 }
 
-pub type NodeModulePaths = HashMap<String, Vec<String>>;
+pub type NodeModulePaths = IndexMap<String, Vec<String>>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnalyzeTraceResult {
-    pub depth_limits: HashMap<DepthLimitKind, Vec<TraceEvent>>,
+    pub depth_limits: IndexMap<DepthLimitKind, Vec<TraceEvent>>,
     pub file_statistics: FileStatistics,
     pub duplicate_packages: Vec<DuplicatedPackage>,
     pub hot_spots: Vec<HotSpot>,
@@ -122,8 +122,8 @@ impl AnalyzeTraceResult {
         self.hot_spots.len()
     }
 
-    pub fn depth_limit_counts(&self) -> HashMap<DepthLimitKind, usize> {
-        let mut counts = HashMap::new();
+    pub fn depth_limit_counts(&self) -> IndexMap<DepthLimitKind, usize> {
+        let mut counts = DepthLimitKind::new_counts_map();
         for (kind, events) in &self.depth_limits {
             counts.insert(*kind, events.len());
         }

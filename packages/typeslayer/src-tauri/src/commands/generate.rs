@@ -215,10 +215,9 @@ pub async fn generate_analyze_trace(
             }
         });
 
-    let duration = start_time.elapsed().as_millis() as u64;
-
     match handle.await {
         Ok(Ok(analyze_trace_result)) => {
+            let duration = start_time.elapsed().as_millis() as u64;
             app_data.analyze_trace = Some(analyze_trace_result);
             EventAnalyzeTraceSuccess::send(&app_data, EventAnalyzeTraceSuccessArgs { duration })
                 .await;
@@ -232,6 +231,7 @@ pub async fn generate_analyze_trace(
             Ok(())
         }
         Ok(Err(e)) => {
+            let duration = start_time.elapsed().as_millis() as u64;
             EventAnalyzeTraceFail::send(
                 &app_data,
                 EventAnalyzeTraceFailArgs {
@@ -243,6 +243,7 @@ pub async fn generate_analyze_trace(
             Err(format!("[generate_analyze_trace] analyze_trace error: {e}"))
         }
         Err(e) => {
+            let duration = start_time.elapsed().as_millis() as u64;
             EventAnalyzeTraceFail::send(
                 &app_data,
                 EventAnalyzeTraceFailArgs {

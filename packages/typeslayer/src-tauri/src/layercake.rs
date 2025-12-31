@@ -1,5 +1,6 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use ts_rs::TS;
@@ -27,7 +28,7 @@ pub struct LayerCake {
     pub precedence: Vec<Source>,
     pub cfg: Option<toml::Value>,
     /// Cached CLI flags parsed as `--flag=value` or `--flag value`.
-    pub flags: HashMap<String, String>,
+    pub flags: IndexMap<String, String>,
     /// Environment variable prefix (empty string means no prefix)
     pub env_prefix: String,
     /// Stored config filename (e.g. "typeslayer.toml")
@@ -134,8 +135,8 @@ impl LayerCake {
     }
 
     /// Parse CLI args into a simple flag map supporting `--name=value`, `--name value`, and `--name` (implied "true").
-    fn parse_flags() -> HashMap<String, String> {
-        let mut map = HashMap::new();
+    fn parse_flags() -> IndexMap<String, String> {
+        let mut map = IndexMap::new();
         let mut prev_flag: Option<String> = None;
         for arg in std::env::args() {
             if let Some(flag) = prev_flag.take() {

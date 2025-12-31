@@ -6210,6 +6210,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4994acea2522cd2b3b85c1d9529a55991e3ad5e25cdcd3de9d505972c4379424"
 dependencies = [
  "chrono",
+ "indexmap 2.12.1",
  "thiserror 2.0.17",
  "ts-rs-macros",
 ]
@@ -6240,7 +6241,7 @@ checksum = "562d481066bde0658276a35467c4af00bdc6ee726305698a55b86e61d7ad82bb"
 
 [[package]]
 name = "typeslayer"
-version = "0.1.27"
+version = "0.1.28"
 dependencies = [
  "axum",
  "base64 0.22.1",

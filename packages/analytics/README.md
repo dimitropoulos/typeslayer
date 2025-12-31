@@ -255,7 +255,7 @@ curl -X POST https://analytics.typeslayer.dev/collect \
 ### 4. Verify Data in Production
 
 ```bash
-pnpm wrangler d1 execute typeslayer --remote --command="SELECT * FROM events ORDER BY received_at DESC LIMIT 10"
+pnpm wrangler d1 execute typeslayer --remote --command="SELECT * FROM events ORDER BY timestamp DESC LIMIT 10"
 ```
 
 ## Monitoring & Debugging

@@ -30,7 +30,6 @@ const API_ORIGIN =
 
 interface ExtraD1Columns {
   id: number;
-  receivedAt: number;
 }
 
 const EventSchema = z.object({
@@ -41,7 +40,6 @@ const EventSchema = z.object({
   version: z.string().nullable(),
   platform: z.string().nullable(),
   mode: z.string().nullable(),
-  receivedAt: z.number(),
   data: z.json(),
 });
 

@@ -1,7 +1,8 @@
 use crate::validate::trace_json::TraceEvent;
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use strum::IntoEnumIterator;
+use strum::VariantArray;
 use strum_macros::EnumIter;
 use strum_macros::VariantArray;
 use ts_rs::TS;
@@ -29,8 +30,25 @@ pub enum DepthLimitKind {
     TypeRelatedToDiscriminatedType,
 }
 
-pub fn create_depth_limits(trace_file: &[TraceEvent]) -> HashMap<DepthLimitKind, Vec<TraceEvent>> {
-    let mut depth_limits: HashMap<DepthLimitKind, Vec<TraceEvent>> = HashMap::new();
+impl DepthLimitKind {
+    pub fn new_counts_map() -> IndexMap<DepthLimitKind, usize> {
+        DepthLimitKind::VARIANTS
+            .iter()
+            .map(|&kind| (kind, 0usize))
+            .collect()
+    }
+
+    pub fn new_trace_event_vec_map() -> IndexMap<DepthLimitKind, Vec<TraceEvent>> {
+        DepthLimitKind::VARIANTS
+            .iter()
+            .map(|&kind| (kind, Vec::new()))
+            .collect()
+    }
+}
+
+pub fn create_depth_limits(trace_file: &[TraceEvent]) -> IndexMap<DepthLimitKind, Vec<TraceEvent>> {
+    let mut depth_limits: IndexMap<DepthLimitKind, Vec<TraceEvent>> =
+        DepthLimitKind::new_trace_event_vec_map();
 
     fn kind_from_event_name(name: &str) -> Option<DepthLimitKind> {
         for kind in DepthLimitKind::iter() {

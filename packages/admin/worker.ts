@@ -70,7 +70,6 @@ export default {
           platform: string | null;
           mode: string | null;
           data: string;
-          received_at: number;
         }>();
 
         const events = results.map(row => {
@@ -89,7 +88,6 @@ export default {
             version: row.version,
             platform: row.platform,
             mode: row.mode,
-            receivedAt: row.received_at,
             data: parsed,
           };
         });

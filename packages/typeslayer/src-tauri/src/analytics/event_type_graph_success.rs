@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use strum::VariantArray;
 use ts_rs::TS;
@@ -57,7 +56,7 @@ pub struct EventTypeGraphSuccessData {
     pub duration: u64,
     pub node_count: usize,
     pub link_count: usize,
-    pub link_kind_data_by_kind: HashMap<LinkKind, StrippedLinkKindData>,
+    pub link_kind_data_by_kind: IndexMap<LinkKind, StrippedLinkKindData>,
 }
 
 #[derive(Debug, Serialize, TS)]

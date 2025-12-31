@@ -6,9 +6,8 @@ use crate::{
     analyze_trace::{DepthLimitKind, FileStatistics},
     app_data::AppData,
 };
+use indexmap::IndexMap;
 use serde::Serialize;
-use std::collections::HashMap;
-use strum::IntoEnumIterator;
 use ts_rs::TS;
 
 #[derive(Debug, Serialize, TS)]
@@ -20,7 +19,7 @@ pub struct EventAnalyzeTraceSuccessData {
     pub total_duplicate_packages: usize,
     pub most_duplicated_package_instances: usize,
     pub total_hotspots: usize,
-    pub depth_limit_counts: HashMap<DepthLimitKind, usize>,
+    pub depth_limit_counts: IndexMap<DepthLimitKind, usize>,
     pub file_statistics: FileStatistics,
 }
 
@@ -62,7 +61,7 @@ impl TypeSlayerEvent for EventAnalyzeTraceSuccess {
 
                 total_hotspots: 20,
 
-                depth_limit_counts: DepthLimitKind::iter().map(|kind| (kind, 0)).collect(),
+                depth_limit_counts: DepthLimitKind::new_counts_map(),
 
                 file_statistics: FileStatistics::default(),
             },
