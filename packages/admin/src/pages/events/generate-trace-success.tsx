@@ -2,6 +2,7 @@ import { Stack } from "@mui/material";
 import type { EventGenerateTraceSuccess } from "@typeslayer/rust-types";
 import { ChipsList } from "../../components/chips-list";
 import { Code } from "../../components/code";
+import { PackageManagerIcon } from "../../components/package-manager-icon";
 import { StatTable } from "../../components/stat-table";
 import type { D1Event } from "../../hooks";
 import { EventPage } from "./event-base";
@@ -27,19 +28,6 @@ const Page = ({ event }: { event: D1Event<EventGenerateTraceSuccess> }) => {
 
   return (
     <Stack sx={{ gap: 2 }}>
-      <StatTable
-        items={[
-          {
-            label: "duration",
-            data: duration,
-          },
-          {
-            label: "tscExtraFlags",
-            data: tscExtraFlags,
-          },
-        ]}
-      />
-
       <ChipsList
         chips={[
           {
@@ -58,10 +46,24 @@ const Page = ({ event }: { event: D1Event<EventGenerateTraceSuccess> }) => {
           {
             label: "package manager",
             value: packageManager,
+            icon: <PackageManagerIcon packageManager={packageManager} />,
           },
           {
             label: "project flag",
             value: `${applyTscProjectFlag}`,
+          },
+          {
+            label: "duration",
+            value: `${duration.toLocaleString()} ms`,
+          },
+        ]}
+      />
+
+      <StatTable
+        items={[
+          {
+            label: "tscExtraFlags",
+            data: tscExtraFlags,
           },
         ]}
       />

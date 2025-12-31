@@ -1,9 +1,17 @@
 import { Apple, HelpOutline, Microsoft } from "@mui/icons-material";
 import { ArchLinux, Ubuntu } from "../assets/icons";
 
+const colors = {
+  windows: "#087CD6",
+  mac: "#999999",
+  ubuntu: "#E95420",
+  archlinux: "#1793D1",
+  unknown: "#CC0000",
+};
+
 const icons = {
-  apple: <Apple sx={{ fill: "gray" }} />,
-  windows: <Microsoft sx={{ fill: "#357EC7" }} />,
+  apple: <Apple sx={{ fill: colors.mac }} />,
+  windows: <Microsoft sx={{ fill: colors.windows }} />,
   ubuntu: <Ubuntu />,
   archlinux: <ArchLinux />,
 };
@@ -13,84 +21,98 @@ const platforms = {
     operatingSystem: "Windows",
     version: "10",
     name: "Windows 10",
+    color: colors.windows,
     icon: icons.windows,
   },
   windows11: {
     operatingSystem: "Windows",
     version: "11",
     name: "Windows 11",
+    color: colors.windows,
     icon: icons.windows,
   },
   macTahoe: {
     operatingSystem: "Mac",
     version: "26",
     name: "MacOS Tahoe",
+    color: colors.mac,
     icon: icons.apple,
   },
   macSequoia: {
     operatingSystem: "Mac",
     version: "15",
     name: "MacOS Sequoia",
+    color: colors.mac,
     icon: icons.apple,
   },
   macSonoma: {
     operatingSystem: "Mac",
     version: "14",
     name: "MacOS Sonoma",
+    color: colors.mac,
     icon: icons.apple,
   },
   macVentura: {
     operatingSystem: "Mac",
     version: "13",
     name: "MacOS Ventura",
+    color: colors.mac,
     icon: icons.apple,
   },
   macMonterey: {
     operatingSystem: "Mac",
     version: "12",
     name: "MacOS Monterey",
+    color: colors.mac,
     icon: icons.apple,
   },
   macBigSur: {
     operatingSystem: "Mac",
     version: "11",
     name: "MacOS BigSur",
+    color: colors.mac,
     icon: icons.apple,
   },
   ubuntuNoble: {
     operatingSystem: "Linux",
     version: "24.04",
     name: "Ubuntu 24.04",
+    color: colors.ubuntu,
     icon: icons.ubuntu,
   },
   ubuntuOcular: {
     operatingSystem: "Linux",
     version: "24.10",
     name: "Ubuntu 24.10",
+    color: colors.ubuntu,
     icon: icons.ubuntu,
   },
   ubuntuPlucky: {
     operatingSystem: "Linux",
     version: "25.04",
     name: "Ubuntu 25.04",
+    color: colors.ubuntu,
     icon: icons.ubuntu,
   },
   ubuntuQuesting: {
     operatingSystem: "Linux",
     version: "25.10",
     name: "Ubuntu 25.10",
+    color: colors.ubuntu,
     icon: icons.ubuntu,
   },
   archlinux: {
     operatingSystem: "Linux",
     version: "Rolling",
     name: "Arch Linux",
+    color: colors.archlinux,
     icon: icons.archlinux,
   },
   unknown: {
     operatingSystem: "Unknown",
     version: "Unknown",
     name: "Unknown",
+    color: colors.unknown,
     icon: <HelpOutline />,
   },
 } as const;

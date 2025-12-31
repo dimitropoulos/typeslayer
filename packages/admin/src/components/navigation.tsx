@@ -1,8 +1,8 @@
 import {
   GeneratingTokens,
+  Hub,
   PowerSettingsNew,
-  ReportGmailerrorred,
-  ThumbUp,
+  ZoomIn,
 } from "@mui/icons-material";
 import {
   Box,
@@ -52,7 +52,6 @@ export type NavigationItem =
 
 const EventCount = ({ eventName }: { eventName: string }) => {
   const { data: counts } = useEventCounts();
-  console.log({ counts, eventName });
   const count = counts?.[eventName] ?? 0;
 
   return <InlineCode>{count}</InlineCode>;
@@ -67,56 +66,56 @@ export const NAVIGATION = [
     kind: "segment",
     segment: "events/app_started_success/metadata",
     title: "App Started Success",
-    icon: <ThumbUp color="success" />,
+    icon: <PowerSettingsNew color="success" />,
     progress: <EventCount eventName="app_started_success" />,
   },
   {
     kind: "segment",
     segment: "events/app_started_fail/metadata",
     title: "App Started Fail",
-    icon: <ReportGmailerrorred color="error" />,
+    icon: <PowerSettingsNew color="error" />,
     progress: <EventCount eventName="app_started_fail" />,
   },
   {
     kind: "segment",
     segment: "events/generate_trace_success/metadata",
     title: "Generate Trace Success",
-    icon: <ThumbUp color="success" />,
+    icon: <GeneratingTokens color="success" />,
     progress: <EventCount eventName="generate_trace_success" />,
   },
   {
     kind: "segment",
     segment: "events/generate_trace_fail/metadata",
     title: "Generate Trace Fail",
-    icon: <ReportGmailerrorred color="error" />,
+    icon: <GeneratingTokens color="error" />,
     progress: <EventCount eventName="generate_trace_fail" />,
   },
   {
     kind: "segment",
     segment: "events/analyze_trace_success/metadata",
     title: "Analyze Trace Success",
-    icon: <ThumbUp color="success" />,
+    icon: <ZoomIn color="success" />,
     progress: <EventCount eventName="analyze_trace_success" />,
   },
   {
     kind: "segment",
     segment: "events/analyze_trace_fail/metadata",
     title: "Analyze Trace Fail",
-    icon: <ReportGmailerrorred color="error" />,
+    icon: <ZoomIn color="error" />,
     progress: <EventCount eventName="analyze_trace_fail" />,
   },
   {
     kind: "segment",
     segment: "events/type_graph_success/metadata",
     title: "Type Graph Success",
-    icon: <ThumbUp color="success" />,
+    icon: <Hub color="success" />,
     progress: <EventCount eventName="type_graph_success" />,
   },
   {
     kind: "segment",
     segment: "events/type_graph_fail/metadata",
     title: "Type Graph Fail",
-    icon: <ReportGmailerrorred color="error" />,
+    icon: <Hub color="error" />,
     progress: <EventCount eventName="type_graph_fail" />,
   },
   {
@@ -134,6 +133,18 @@ export const NAVIGATION = [
     segment: "explore/generate-trace",
     title: "Generate Trace",
     icon: <GeneratingTokens />,
+  },
+  {
+    kind: "segment",
+    segment: "explore/analyze-trace",
+    title: "Analyze Trace",
+    icon: <ZoomIn />,
+  },
+  {
+    kind: "segment",
+    segment: "explore/type-graph",
+    title: "Type Graph",
+    icon: <Hub />,
   },
 ] as const satisfies NavigationItem[];
 
@@ -209,8 +220,6 @@ export const RenderNavItem = ({
   }
 
   const to = segment.startsWith("/") ? segment : `/${segment}`;
-
-  console.log({ to, activePath });
 
   const selected =
     activePath === to ||

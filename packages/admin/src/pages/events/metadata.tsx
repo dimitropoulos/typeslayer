@@ -1,52 +1,64 @@
-import { Stack, Typography } from "@mui/material";
+import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { InlineCode } from "@typeslayer/common";
+import { useCallback, useState } from "react";
+import { Code } from "../../components/code";
 import { PlatformIcon } from "../../components/platform-detection";
-import { StatChip, type StatChipProps } from "../../components/stat-chip";
+import { StatChip } from "../../components/stat-chip";
 import type { D1Event, Event } from "../../hooks";
 import { formatEpoch } from "../../utils";
 
 export const Metadata = <E extends D1Event<Event>>({ event }: { event: E }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const toggleModal = useCallback(() => {
+    setIsModalOpen(open => !open);
+  }, []);
+
   const { id, sessionId, timestamp, version, platform, mode } = event;
 
   const friendlyTimestamp = formatEpoch(timestamp);
-
-  const chips: StatChipProps[] = [
-    {
-      label: "event id",
-      value: `${id}`,
-    },
-    { label: "mode", value: mode },
-  ];
 
   return (
     <Stack sx={{ gap: 2 }}>
       <Stack
         sx={{
           flexDirection: "row",
-          gap: 2,
-          alignItems: "flex-end",
           backgroundColor: "black",
           p: 2,
           borderBottom: 1,
           borderColor: "divider",
+          alignItems: "center",
+          justifyContent: "space-between",
         }}
       >
-        <Typography variant="h4" title="epoch timestamp" color="secondary">
-          Event <InlineCode>{id}</InlineCode>
-        </Typography>
-        <Typography variant="h4" title="epoch timestamp">
-          {friendlyTimestamp}{" "}
-          <Typography
-            title="human friendly timestamp"
-            sx={{
-              display: "inline",
-              ml: 0.25,
-              fontFamily: "monospace",
-            }}
-          >
-            (timestamp: {timestamp})
+        <Stack sx={{ flexDirection: "row", gap: 1, alignItems: "flex-end" }}>
+          <Typography variant="h4" title="epoch timestamp" color="secondary">
+            Event <InlineCode>{id}</InlineCode>
           </Typography>
-        </Typography>
+          <Typography variant="h4" title="epoch timestamp">
+            {friendlyTimestamp}{" "}
+            <Typography
+              title="human friendly timestamp"
+              sx={{
+                display: "inline",
+                ml: 0.25,
+                fontFamily: "monospace",
+              }}
+            >
+              (timestamp: {timestamp})
+            </Typography>
+          </Typography>
+        </Stack>
+        <Button size="small" variant="outlined" onClick={toggleModal}>
+          View Raw JSON
+        </Button>
       </Stack>
 
       <Stack sx={{ flexDirection: "row", gap: 2, flexWrap: "wrap", px: 2 }}>
@@ -57,13 +69,20 @@ export const Metadata = <E extends D1Event<Event>>({ event }: { event: E }) => {
         />
         <StatChip label="session id" value={sessionId} />
         <StatChip label="version" value={version} />
+        <StatChip label="mode" value={mode} />
       </Stack>
 
-      <Stack sx={{ flexDirection: "row", gap: 2, flexWrap: "wrap", px: 2 }}>
-        {...chips.map(({ label, value, icon }) => (
-          <StatChip key={label} label={label} value={value} icon={icon} />
-        ))}
-      </Stack>
+      {isModalOpen ? (
+        <Dialog open={isModalOpen} onClose={toggleModal} maxWidth="lg">
+          <DialogTitle>Event Metadata JSON</DialogTitle>
+          <DialogContent>
+            <Code lang="json" value={JSON.stringify(event, null, 2)} />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={toggleModal}>Close</Button>
+          </DialogActions>
+        </Dialog>
+      ) : null}
     </Stack>
   );
 };

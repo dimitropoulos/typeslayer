@@ -1,5 +1,5 @@
 import ChevronLeft from "@mui/icons-material/ChevronLeft";
-import { Divider, List } from "@mui/material";
+import { Divider, List, Stack } from "@mui/material";
 import Box from "@mui/material/Box";
 import Drawer from "@mui/material/Drawer";
 import IconButton from "@mui/material/IconButton";
@@ -7,6 +7,8 @@ import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { Outlet } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import nightmareA from "./assets/doom-nightmare-a.png";
+import nightmareAdmin from "./assets/doom-nightmare-admin.png";
 import { NAVIGATION, RenderNavItem } from "./components/navigation.tsx";
 
 export function App() {
@@ -64,6 +66,24 @@ export function App() {
           },
         }}
       >
+        {" "}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            px: 1,
+          }}
+        >
+          <Stack direction="row" gap={2} alignItems="center" sx={{ p: 2 }}>
+            <img
+              src={collapsed ? nightmareA : nightmareAdmin}
+              alt="admin Logo"
+              style={{ width: collapsed ? 34 : 100, height: 26 }}
+            />
+          </Stack>{" "}
+        </Box>
+        <Divider />
         <List
           sx={{
             width: open ? (collapsed ? collapsedWidth : drawerWidth) : 0,

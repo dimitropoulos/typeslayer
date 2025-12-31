@@ -1,4 +1,6 @@
-export const middleDot = "·";
+import { Typography } from "@mui/material";
+
+export const middleDot = <Typography color="textDisabled">·</Typography>;
 
 export function formatEpoch(epochMs: number) {
   const parts = new Intl.DateTimeFormat("en-US", {

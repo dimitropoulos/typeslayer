@@ -10,6 +10,8 @@ import {
   Typography,
 } from "@mui/material";
 import { useNavigate, useParams } from "@tanstack/react-router";
+import { InlineCode } from "@typeslayer/common";
+import { PackageManagerIcon } from "../../components/package-manager-icon";
 import { PlatformIcon } from "../../components/platform-detection";
 import {
   type D1Event,
@@ -95,14 +97,25 @@ export const EventPage = <E extends Event["name"]>({
             >
               <ListItemText
                 primary={
-                  /// epoch timestamp formatted as `Dec 30 · 19:30:33`
-                  <Typography sx={{ fontFamily: "monospace" }}>
-                    {formatEpoch(event.timestamp)}
-                  </Typography>
+                  <Stack direction="row" alignItems="center" gap={1}>
+                    <InlineCode>{event.id}</InlineCode>
+                    {middleDot}
+                    <Typography sx={{ fontFamily: "monospace" }}>
+                      {formatEpoch(event.timestamp)}
+                    </Typography>
+                  </Stack>
                 }
                 secondary={
                   <Stack direction="row" gap={1} alignItems="center">
                     <PlatformIcon platform={event.platform} />
+                    {"packageManager" in event.data ? (
+                      <>
+                        <PackageManagerIcon
+                          packageManager={event.data.packageManager}
+                        />
+                        {middleDot}
+                      </>
+                    ) : null}
                     <Typography sx={{ fontFamily: "monospace" }}>
                       {event.sessionId}
                     </Typography>
@@ -125,7 +138,7 @@ export const EventPage = <E extends Event["name"]>({
 
       <Stack
         sx={{
-          gap: 3,
+          gap: 2,
           flexGrow: 1,
           maxHeight: "100vh",
           overflowY: "auto",

@@ -310,6 +310,16 @@ export const muiTheme: Theme = createTheme({
         },
       },
     },
+    MuiTable: {
+      defaultProps: {
+        size: "small",
+      },
+    },
+    MuiTableRow: {
+      defaultProps: {
+        hover: true,
+      },
+    },
     MuiTabs: {
       defaultProps: {
         variant: "scrollable",
