@@ -1,5 +1,5 @@
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::info;
@@ -18,14 +18,14 @@ pub struct ToolStatus {
 #[derive(Clone)]
 pub struct McpStatusTracker {
     // Map of tool_name -> ToolStatus
-    tools: Arc<Mutex<HashMap<String, ToolStatus>>>,
+    tools: Arc<Mutex<IndexMap<String, ToolStatus>>>,
 }
 
 impl McpStatusTracker {
     /// Create a new MCP status tracker
     pub fn new() -> Self {
         Self {
-            tools: Arc::new(Mutex::new(HashMap::new())),
+            tools: Arc::new(Mutex::new(IndexMap::new())),
         }
     }
 
@@ -53,7 +53,7 @@ impl McpStatusTracker {
     pub async fn end_tool(&self, tool_name: &str) {
         info!("MCP tool completed: {}", tool_name);
         let mut tools = self.tools.lock().await;
-        tools.remove(tool_name);
+        tools.shift_remove(tool_name);
     }
 
     /// Get the status of a specific tool if it's running

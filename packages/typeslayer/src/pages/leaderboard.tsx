@@ -418,9 +418,7 @@ const SelectedLeaderboardNumberDetails = ({
             <TableRow>
               <TableCell>Standard Deviation</TableCell>
               <TableCell align="right">
-                <InlineCode>
-                  {selected.standardDeviation.toLocaleString()}
-                </InlineCode>
+                <InlineCode>{format(selected.standardDeviation)}</InlineCode>
               </TableCell>
             </TableRow>
             <TableRow>

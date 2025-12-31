@@ -1,6 +1,6 @@
 [package]
 name = "typeslayer"
-version = "0.1.27"
+version = "0.1.28"
 description = "Slaying TypeScript types since 2026"
 authors = ["Dimitri Mitropoulos"]
 edition = "2024"
@@ -48,7 +48,7 @@ strum_macros = "0.27"
 serde_plain = "1.0"
 os_info = "3"
 shell-escape = "0.1"
-ts-rs = { version = "11.1", features = ["serde-compat", "chrono-impl"] }
+ts-rs = { version = "11.1", features = ["serde-compat", "chrono-impl", "indexmap-impl"] }
 nanoid = "0.4.0"
 reqwest = { version = "0.12", features = ["json"] }
 indexmap = { version = "2", features = ["std", "serde"] }

@@ -75,7 +75,6 @@ const ErrorStreamSection = ({
           whiteSpace: "pre-wrap",
           wordBreak: "break-word",
           overflow: "auto",
-          maxHeight: 320,
           bgcolor: theme => theme.palette.background.default,
         }}
       >

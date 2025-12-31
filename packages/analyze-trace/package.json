@@ -1,6 +1,6 @@
 {
   "name": "@typeslayer/analyze-trace",
-  "version": "0.1.27",
+  "version": "0.1.28",
   "description": "Analyze TypeScript compiler trace events to identify performance bottlenecks",
   "license": "MIT",
   "private": false,
