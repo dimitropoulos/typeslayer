@@ -23,6 +23,7 @@
     "@fontsource/roboto": "5.2.9",
     "@mui/icons-material": "7.3.6",
     "@mui/material": "7.3.6",
+    "@mui/x-data-grid": "8.23.0",
     "@mui/x-charts": "8.23.0",
     "@mui/x-charts-vendor": "8.23.0",
     "@tanstack/react-query": "5.90.15",

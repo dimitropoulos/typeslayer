@@ -38,7 +38,7 @@ export const Metadata = <E extends D1Event<Event>>({ event }: { event: E }) => {
           justifyContent: "space-between",
         }}
       >
-        <Stack sx={{ flexDirection: "row", gap: 1, alignItems: "flex-end" }}>
+        <Stack sx={{ flexDirection: "row", gap: 2, alignItems: "flex-end" }}>
           <Typography variant="h4" title="epoch timestamp" color="secondary">
             Event <InlineCode>{id}</InlineCode>
           </Typography>

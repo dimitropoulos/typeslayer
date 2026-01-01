@@ -81,7 +81,7 @@ export function App() {
               alt="admin Logo"
               style={{ width: collapsed ? 34 : 100, height: 26 }}
             />
-          </Stack>{" "}
+          </Stack>
         </Box>
         <Divider />
         <List

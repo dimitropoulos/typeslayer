@@ -33,6 +33,7 @@ import { CenterLoader } from "./center-loader";
 import { detectPlatformSlash } from "./utils";
 
 const supportEmail = "typeslayer@dimitrimitropoulos.com";
+const buttonText = "Zip and Download Locally";
 
 export const BugReport = ({
   stdout,
@@ -192,7 +193,7 @@ const CreateABugReport = ({
           />
 
           <Typography variant="body2">
-            clicking "Create Bug Report" will create a zip file containing these
+            clicking "{buttonText}" will create a zip file containing these
             files:
           </Typography>
 
@@ -258,7 +259,7 @@ const CreateABugReport = ({
           disabled={isSubmitting || !description.trim()}
           loading={isSubmitting}
         >
-          Zip and Download Locally
+          {buttonText}
         </Button>
       </DialogActions>
     </>

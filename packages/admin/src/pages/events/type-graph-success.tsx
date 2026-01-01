@@ -1,13 +1,6 @@
-import {
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-} from "@mui/material";
-import { InlineCode } from "@typeslayer/common";
+import { Stack } from "@mui/material";
 import type { EventTypeGraphSuccess } from "@typeslayer/rust-types";
+import { LinkKindTable } from "../../components/link-kind-table";
 import { StatChip } from "../../components/stat-chip";
 import type { D1Event } from "../../hooks";
 import { EventPage } from "./event-base";
@@ -30,42 +23,7 @@ const Page = ({ event }: { event: D1Event<EventTypeGraphSuccess> }) => {
         />
       </Stack>
 
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Link Kind</TableCell>
-            <TableCell align="right">byTarget (max)</TableCell>
-            <TableCell align="right">byTarget (count)</TableCell>
-            <TableCell align="right">bySource (max)</TableCell>
-            <TableCell align="right">bySource (count)</TableCell>
-            <TableCell align="right">total</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {Object.entries(event.data.linkKindDataByKind).map(([kind, data]) => (
-            <TableRow key={kind}>
-              <TableCell>
-                <InlineCode>{kind}</InlineCode>
-              </TableCell>
-              <TableCell align="right">
-                {data.byTarget.max.toLocaleString()}
-              </TableCell>
-              <TableCell align="right">
-                {data.byTarget.count.toLocaleString()}
-              </TableCell>
-              <TableCell align="right">
-                {data.bySource.max.toLocaleString()}
-              </TableCell>
-              <TableCell align="right">
-                {data.bySource.count.toLocaleString()}
-              </TableCell>
-              <TableCell align="right">
-                {data.linkCount.toLocaleString()}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <LinkKindTable linkKindDataByKind={event.data.linkKindDataByKind} />
     </>
   );
 };
