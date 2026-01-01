@@ -1,6 +1,5 @@
 pub mod actions;
 pub mod app_data;
-pub mod auth;
 pub mod bug_report;
 pub mod generate;
 pub mod mcp;

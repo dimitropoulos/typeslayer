@@ -4,7 +4,8 @@ use crate::{
     type_graph::TYPE_GRAPH_FILENAME,
     utils::{AVAILABLE_EDITORS, make_cli_arg},
     validate::{
-        trace_json::TRACE_JSON_FILENAME, types_json::TYPES_JSON_FILENAME,
+        trace_json::TRACE_JSON_FILENAME,
+        types_json::{Flag, TYPES_JSON_FILENAME},
         utils::CPU_PROFILE_FILENAME,
     },
 };
@@ -82,4 +83,26 @@ pub async fn get_output_file_sizes(
     }
 
     Ok(sizes)
+}
+
+#[tauri::command]
+pub async fn get_type_kinds(
+    state: State<'_, &Mutex<AppData>>,
+) -> Result<Vec<(usize, String, Vec<Flag>)>, String> {
+    let data = state.lock().await;
+    if let Some(type_graph) = &data.type_graph {
+        Ok(type_graph
+            .type_kinds
+            .iter()
+            .map(|(k, v)| {
+                (
+                    *v,
+                    format!("{:.2}%", (*v as f64 * 100.0) / type_graph.node_count as f64),
+                    k.clone(),
+                )
+            })
+            .collect())
+    } else {
+        Err("Type graph not available".to_string())
+    }
 }

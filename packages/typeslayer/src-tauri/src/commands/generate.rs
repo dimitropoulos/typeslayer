@@ -5,6 +5,7 @@ use crate::{
         event_analyze_trace_success::{EventAnalyzeTraceSuccess, EventAnalyzeTraceSuccessArgs},
         event_generate_trace_fail::{EventGenerateTraceFail, EventGenerateTraceFailArgs},
         event_generate_trace_success::{EventGenerateTraceSuccess, EventGenerateTraceSuccessArgs},
+        event_type_graph_fail::{EventTypeGraphFail, EventTypeGraphFailArgs},
         event_type_graph_success::{EventTypeGraphSuccess, EventTypeGraphSuccessArgs},
     },
     analyze_trace::{
@@ -82,10 +83,12 @@ pub async fn generate_trace(
     let flag = make_cli_arg("--generateTrace", &outputs_dir_for_closure);
 
     let command_output = data.call_typescript(&process_controller, flag).await?;
+    let exit_success = command_output.status.success();
+    let (stdout, stderr) = process_output(command_output).await?;
 
-    if !command_output.status.success() {
+    // Check for failure via exit code or error patterns in stderr
+    if !exit_success || stderr.contains("Error:") || stderr.contains("EACCES:") {
         let duration = start_time.elapsed().as_millis() as u64;
-        let (stdout, stderr) = process_output(command_output).await?;
 
         EventGenerateTraceFail::send(
             &data,
@@ -124,7 +127,6 @@ pub async fn generate_trace(
         data.trace_json.len()
     );
 
-    let (stdout, stderr) = process_output(command_output).await?;
     EventGenerateTraceSuccess::send(
         &data,
         EventGenerateTraceSuccessArgs {
@@ -271,11 +273,31 @@ pub async fn generate_type_graph(
     let types: &TypesJsonSchema = {
         // Check if both types.json and trace.json exist
         if app_data.types_json.is_empty() {
-            return Err("Cannot build type graph: types.json is required".to_string());
+            let duration = start_time.elapsed().as_millis() as u64;
+            let reason = "Cannot build type graph: types.json is required".to_string();
+            EventTypeGraphFail::send(
+                &app_data,
+                EventTypeGraphFailArgs {
+                    duration,
+                    reason: reason.clone(),
+                },
+            )
+            .await;
+            return Err(reason);
         }
 
         if app_data.trace_json.is_empty() {
-            return Err("Cannot build type graph: trace.json is required".to_string());
+            let duration = start_time.elapsed().as_millis() as u64;
+            let reason = "Cannot build type graph: trace.json is required".to_string();
+            EventTypeGraphFail::send(
+                &app_data,
+                EventTypeGraphFailArgs {
+                    duration,
+                    reason: reason.clone(),
+                },
+            )
+            .await;
+            return Err(reason);
         }
 
         &app_data.types_json
@@ -290,15 +312,48 @@ pub async fn generate_type_graph(
 
     let outputs_dir = app_data.outputs_dir();
     let path = outputs_dir.join(TYPE_GRAPH_FILENAME);
-    let json = serde_json::to_string_pretty(&app_data.type_graph)
-        .map_err(|e| format!("Failed to serialize type_graph: {e}"))?;
-    fs::create_dir_all(&outputs_dir)
-        .await
-        .map_err(|e| format!("Failed to create outputs dir: {e}"))?;
-    fs::write(&path, json)
-        .await
-        .map_err(|e| format!("Failed to write {}: {e}", path.display()))?;
-
+    let json = match serde_json::to_string_pretty(&app_data.type_graph) {
+        Ok(j) => j,
+        Err(e) => {
+            let duration = start_time.elapsed().as_millis() as u64;
+            let reason = format!("Failed to serialize type_graph: {e}");
+            EventTypeGraphFail::send(
+                &app_data,
+                EventTypeGraphFailArgs {
+                    duration,
+                    reason: reason.clone(),
+                },
+            )
+            .await;
+            return Err(reason);
+        }
+    };
+    if let Err(e) = fs::create_dir_all(&outputs_dir).await {
+        let duration = start_time.elapsed().as_millis() as u64;
+        let reason = format!("Failed to create outputs dir: {e}");
+        EventTypeGraphFail::send(
+            &app_data,
+            EventTypeGraphFailArgs {
+                duration,
+                reason: reason.clone(),
+            },
+        )
+        .await;
+        return Err(reason);
+    }
+    if let Err(e) = fs::write(&path, json).await {
+        let duration = start_time.elapsed().as_millis() as u64;
+        let reason = format!("Failed to write {}: {e}", path.display());
+        EventTypeGraphFail::send(
+            &app_data,
+            EventTypeGraphFailArgs {
+                duration,
+                reason: reason.clone(),
+            },
+        )
+        .await;
+        return Err(reason);
+    }
     Ok(())
 }
 

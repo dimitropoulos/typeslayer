@@ -73,7 +73,7 @@ export const Metadata = <E extends D1Event<Event>>({ event }: { event: E }) => {
       </Stack>
 
       {isModalOpen ? (
-        <Dialog open={isModalOpen} onClose={toggleModal} maxWidth="lg">
+        <Dialog open={isModalOpen} onClose={toggleModal} fullWidth>
           <DialogTitle>Event Metadata JSON</DialogTitle>
           <DialogContent>
             <Code lang="json" value={JSON.stringify(event, null, 2)} />

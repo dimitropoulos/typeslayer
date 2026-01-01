@@ -11,7 +11,7 @@ pub mod metadata;
 use crate::{analytics::metadata::EventMetadata, app_data::AppData};
 use tracing::debug;
 
-const ANALYTICS_EVENTS_FILENAME: &str = "events.ndjson";
+pub const ANALYTICS_EVENTS_FILENAME: &str = "events.ndjson";
 
 pub trait TypeSlayerEvent: Sized + serde::Serialize + std::fmt::Debug + Send + 'static {
     type Args;
@@ -21,19 +21,11 @@ pub trait TypeSlayerEvent: Sized + serde::Serialize + std::fmt::Debug + Send + '
     fn description() -> &'static str;
     async fn create(app_data: &AppData, args: Self::Args) -> Self;
     async fn send(app_data: &AppData, args: Self::Args) {
-        if !app_data
-            .settings
-            .analytics_consent
-            .iter()
-            .any(|id| id == Self::event_id())
-        {
-            debug!("[analytics] skipping {} (no consent)", Self::event_id());
-            return;
-        }
+        let logs_location = app_data.data_dir.join(ANALYTICS_EVENTS_FILENAME);
         let event = Self::create(app_data, args).await;
 
-        let logs_location = app_data.data_dir.join(ANALYTICS_EVENTS_FILENAME);
         {
+            // write logs to the local file before checking consent because the consent is for sending the files off of the computer over the network - but we can (and should) still keep a local-only log for debugging.
             use std::io::Write;
             let mut file = std::fs::OpenOptions::new()
                 .create(true)
@@ -42,6 +34,16 @@ pub trait TypeSlayerEvent: Sized + serde::Serialize + std::fmt::Debug + Send + '
                 .expect("failed to open analytics logs file");
             let json = serde_json::to_string(&event).expect("failed to serialize analytics event");
             writeln!(file, "{}", json).expect("failed to write analytics event to logs file");
+        }
+
+        if !app_data
+            .settings
+            .analytics_consent
+            .iter()
+            .any(|id| id == Self::event_id())
+        {
+            debug!("[analytics] skipping {} (no consent)", Self::event_id());
+            return;
         }
 
         send_event::<Self>(event);

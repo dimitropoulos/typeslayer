@@ -396,17 +396,6 @@ pub fn init_verbose(cake: &mut LayerCake) -> bool {
     })
 }
 
-pub fn init_auth_code(cake: &mut LayerCake) -> Option<String> {
-    let code = cake.resolve_string(ResolveStringArgs {
-        env: "AUTH_CODE",
-        flag: "--auth-code",
-        file: "auth_code",
-        default: || "".to_string(),
-        validate: |s| Ok(s.to_string()),
-    });
-    tracing::info!("[init_auth_code] resolved code = '{}'", code);
-    if code.is_empty() { None } else { Some(code) }
-}
 pub fn init_selected_tsconfig_with(
     cake: &mut LayerCake,
     tsconfig_paths: &[PathBuf],

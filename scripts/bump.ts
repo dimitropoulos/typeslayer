@@ -127,4 +127,25 @@ console.log(
   `  ✅ Cargo.toml: ${oldCargoVersion} → version = "${newMainVersion}"`,
 );
 
+// update Cargo.lock
+const cargoLockPath = join(
+  rootDir,
+  "packages",
+  "typeslayer",
+  "src-tauri",
+  "Cargo.lock",
+);
+const cargoLock = readFileSync(cargoLockPath, "utf-8");
+const cargoLockVersionRegex =
+  /(\[\[package\]\]\nname = "typeslayer"\nversion = ")[^"]*(")/m;
+const oldCargoLockVersion = cargoLock.match(cargoLockVersionRegex)?.[0];
+const updatedCargoLock = cargoLock.replace(
+  cargoLockVersionRegex,
+  `$1${newMainVersion}$2`,
+);
+writeFileSync(cargoLockPath, updatedCargoLock);
+console.log(
+  `  ✅ Cargo.lock: ${oldCargoLockVersion} → [[package]]\nname = "typeslayer"\nversion = "${newMainVersion}"`,
+);
+
 console.log("\n✨ All packages bumped and synced!");

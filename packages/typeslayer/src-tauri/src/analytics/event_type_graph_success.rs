@@ -10,6 +10,7 @@ use crate::{
     },
     app_data::AppData,
     type_graph::{LinkKind, LinkKindData},
+    validate::types_json::Flag,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, TS)]
@@ -57,6 +58,7 @@ pub struct EventTypeGraphSuccessData {
     pub node_count: usize,
     pub link_count: usize,
     pub link_kind_data_by_kind: IndexMap<LinkKind, StrippedLinkKindData>,
+    pub type_kinds: Vec<(Vec<Flag>, usize)>,
 }
 
 #[derive(Debug, Serialize, TS)]
@@ -97,6 +99,17 @@ impl TypeSlayerEvent for EventTypeGraphSuccess {
                     .iter()
                     .map(|kind| (kind.clone(), StrippedLinkKindData::default()))
                     .collect(),
+                type_kinds: vec![
+                    (vec![Flag::Object], 49801),
+                    (vec![Flag::Union], 17939),
+                    (vec![Flag::StringLiteral], 9087),
+                    (vec![Flag::TypeParameter, Flag::IncludesMissingType], 5399),
+                    (vec![Flag::Intersection], 4795),
+                    (vec![Flag::Conditional, Flag::IncludesEmptyObject], 2748),
+                    (vec![Flag::IndexedAccess, Flag::IncludesWildcard], 999),
+                    (vec![Flag::TemplateLiteral], 554),
+                    (vec![Flag::NumberLiteral], 242),
+                ],
             },
         }
     }
@@ -121,6 +134,11 @@ impl TypeSlayerEvent for EventTypeGraphSuccess {
                     .map(|(kind, link_kind_data)| {
                         (kind.clone(), StrippedLinkKindData::from(link_kind_data))
                     })
+                    .collect(),
+                type_kinds: type_graph
+                    .type_kinds
+                    .iter()
+                    .map(|(flags, count)| (flags.clone(), *count))
                     .collect(),
             },
         }

@@ -33,6 +33,7 @@ export {
 export { CPU_PROFILE_FILENAME } from "./tsc-cpuprofile";
 export { createTypeRegistry, type TypeRegistry } from "./type-registry";
 export {
+  type Flag,
   type ResolvedType,
   resolvedType,
   TYPES_JSON_FILENAME,

@@ -7,6 +7,7 @@ import {
   PerformanceMetricsAward,
   PerformanceMetricsNavItems,
 } from "./performance-metrics";
+import { TriviaAwardPage, TriviaNavItems } from "./trivia";
 import {
   TypeLevelLimitAward,
   TypeLevelLimitsNavItems,
@@ -72,6 +73,9 @@ export const RenderPlayground = () => {
         <BundleImplicationsAward key={activeAward} awardId={activeAward} />
       );
 
+    case "trivia_typeKinds":
+      return <TriviaAwardPage key={activeAward} />;
+
     default:
       activeAward satisfies never;
       throw new Error(`Unknown award: ${activeAward}`);
@@ -114,6 +118,8 @@ export const AwardWinners = () => {
         <TypeLevelLimitsNavItems />
         <Divider sx={{ mt: 1 }} />
         <BundleImplicationsNavItems />
+        <Divider sx={{ mt: 1 }} />
+        <TriviaNavItems />
       </List>
 
       <Box

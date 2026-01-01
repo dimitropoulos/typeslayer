@@ -8,9 +8,9 @@ use crate::{
     app_data::{
         command::{PackageJSON, PackageManager, TSCCommand},
         init::{
-            init_analyze_trace, init_auth_code, init_cpu_profile, init_project_root,
-            init_selected_tsconfig_with, init_session_id, init_settings, init_trace_json,
-            init_type_graph, init_types_json, init_verbose, init_version_and_maybe_clear_outputs,
+            init_analyze_trace, init_cpu_profile, init_project_root, init_selected_tsconfig_with,
+            init_session_id, init_settings, init_trace_json, init_type_graph, init_types_json,
+            init_verbose, init_version_and_maybe_clear_outputs,
         },
         settings::Settings,
     },
@@ -56,7 +56,6 @@ pub struct AppData {
     pub settings: Settings,
     pub verbose: bool,
     pub cake: LayerCake,
-    pub auth_code: Option<String>,
     pub type_graph: Option<TypeGraph>,
     pub data_dir: PathBuf,
     pub platform: String,
@@ -88,7 +87,6 @@ impl AppData {
         let cpu_profile = init_cpu_profile(&outputs_dir).await;
         let settings = init_settings(&mut cake);
         let verbose = init_verbose(&mut cake);
-        let auth_code = init_auth_code(&mut cake);
         let session_id = init_session_id(&mut cake);
 
         let package_manager = Self::find_package_manager(project_root.clone()).await?;
@@ -107,7 +105,6 @@ impl AppData {
             settings,
             verbose,
             cake,
-            auth_code,
             type_graph,
             data_dir,
             platform,

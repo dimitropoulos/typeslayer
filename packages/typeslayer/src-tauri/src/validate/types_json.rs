@@ -4,10 +4,12 @@ use crate::type_graph::{GraphLinkWithKind, LinkKind};
 
 use super::utils::{Location, TypeId};
 use serde::{Deserialize, Deserializer, Serialize};
+use ts_rs::TS;
 
 pub const TYPES_JSON_FILENAME: &str = "types.json";
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, TS)]
+#[ts(export)]
 pub enum Flag {
     Any,
     Unknown,

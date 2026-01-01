@@ -96,6 +96,8 @@ const flag = z.enum([
   "NotPrimitiveUnion",
 ]);
 
+export type Flag = z.infer<typeof flag>;
+
 const typeRelations = {
   typeArguments: z.array(typeId).optional(),
   unionTypes: z.array(typeId).optional(),

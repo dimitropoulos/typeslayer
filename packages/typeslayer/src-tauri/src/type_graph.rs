@@ -7,7 +7,7 @@ use strum::VariantArray;
 use strum_macros::VariantArray;
 use ts_rs::TS;
 
-use crate::validate::types_json::TypesJsonSchema;
+use crate::validate::types_json::{Flag, TypesJsonSchema};
 use crate::validate::utils::TypeId;
 
 pub const TYPE_GRAPH_FILENAME: &str = "type-graph.json";
@@ -112,6 +112,32 @@ where
     Ok(map)
 }
 
+pub fn serialize_indexmap_vec_flag_key<S>(
+    map: &IndexMap<Vec<Flag>, usize>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let vec: Vec<(&Vec<Flag>, &usize)> = map.iter().collect();
+    let s = serde_json::to_string(&vec)
+        .map_err(S::Error::custom)?
+        .replace("],[", "],\n[")
+        .replace("[[[", "[\n[[");
+    let raw = RawValue::from_string(s).map_err(S::Error::custom)?;
+    raw.serialize(serializer)
+}
+
+pub fn deserialize_indexmap_vec_flag_key<'de, D>(
+    deserializer: D,
+) -> Result<IndexMap<Vec<Flag>, usize>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let vec: Vec<(Vec<Flag>, usize)> = serde::Deserialize::deserialize(deserializer)?;
+    Ok(IndexMap::from_iter(vec))
+}
+
 /// this is sortof a reverse link representation because it's organized by the target
 /// consider that for a resolved type, you easily have access to what it's children relationships are via resolved_type.get_relationships()
 /// but if you want to go the other direction, that's what this is for
@@ -198,17 +224,23 @@ pub struct TypeGraph {
     pub link_count: usize,
     pub link_kind_data_by_kind: IndexMap<LinkKind, LinkKindData>,
     pub path_map: IndexMap<TypeId, String>,
+    #[serde(
+        serialize_with = "serialize_indexmap_vec_flag_key",
+        deserialize_with = "deserialize_indexmap_vec_flag_key"
+    )]
+    pub type_kinds: IndexMap<Vec<Flag>, usize>,
 }
 
 impl TypeGraph {
     pub fn from_types(types: &TypesJsonSchema) -> Self {
-        let mut graph = TypeGraph::default();
-        graph.path_map = TypeGraph::build_path_map(types);
-        graph.node_count = graph.calculate_node_count(types);
-        graph.link_kind_data_by_kind = graph.calculate_link_kind_data_by_kind(types);
-        graph.link_count = graph.calculate_link_count();
-        graph.node_data_by_kind = graph.calculate_node_data_by_kind(types);
-        graph
+        let mut type_graph = TypeGraph::default();
+        type_graph.path_map = TypeGraph::build_path_map(types);
+        type_graph.node_count = type_graph.calculate_node_count(types);
+        type_graph.link_kind_data_by_kind = type_graph.calculate_link_kind_data_by_kind(types);
+        type_graph.link_count = type_graph.calculate_link_count();
+        type_graph.node_data_by_kind = type_graph.calculate_node_data_by_kind(types);
+        type_graph.type_kinds = type_graph.calculate_type_kinds(types);
+        type_graph
     }
 
     /// Build a map from type id -> optional path (mimics extractPath)
@@ -436,5 +468,15 @@ impl TypeGraph {
                 )
             })
             .collect()
+    }
+
+    pub fn calculate_type_kinds(&self, types: &TypesJsonSchema) -> IndexMap<Vec<Flag>, usize> {
+        let mut type_kinds_map: IndexMap<Vec<Flag>, usize> = IndexMap::new();
+        for t in types.iter().skip(1) {
+            *type_kinds_map.entry(t.flags.clone()).or_insert(0) += 1;
+        }
+        let mut type_kinds_vec: Vec<(Vec<Flag>, usize)> = type_kinds_map.into_iter().collect();
+        type_kinds_vec.sort_by(|a, b| b.1.cmp(&a.1));
+        IndexMap::from_iter(type_kinds_vec)
     }
 }

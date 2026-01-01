@@ -22,6 +22,7 @@ export * from "./EventTypeGraphSuccessData";
 export * from "./AppMode";
 export * from "./DepthLimitKind";
 export * from "./FileStatistics";
+export * from "./Flag";
 export * from "./LinkKind";
 export * from "./PackageManager";
 export * from "./Settings";

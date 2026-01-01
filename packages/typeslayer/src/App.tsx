@@ -12,9 +12,8 @@ import tsLogo from "./assets/ts.png";
 import tsNightmareLogo from "./assets/ts-nightmare.png";
 import typeslayerLogo from "./assets/typeslayer.png";
 import typeslayerNightmareLogo from "./assets/typeslayer-nightmare.png";
-import { AuthGate } from "./components/auth-gate";
 import { NAVIGATION, RenderNavItem } from "./components/navigation";
-import { useTaskProgressEvents } from "./hooks/tauri-hooks";
+import { useTaskProgressEvents, useTypeKinds } from "./hooks/tauri-hooks";
 
 function AppBrand({
   collapsed,
@@ -45,13 +44,15 @@ function AppBrand({
 export function App() {
   const muiTheme = useTheme();
   const isMdUp = useMediaQuery(muiTheme.breakpoints.up("md"));
-  const drawerWidth = 224;
 
+  const x = useTypeKinds();
+  console.log("type kinds distribution", x.data);
+
+  const drawerWidth = 224;
   const collapsedWidth = 64;
 
   const [open, setOpen] = useState<boolean>(isMdUp);
   const [collapsed, setCollapsed] = useState<boolean>(false);
-  const [authenticated, setAuthenticated] = useState<boolean>(false);
   useTaskProgressEvents();
 
   // keep open state in sync with screen size
@@ -81,10 +82,6 @@ export function App() {
       setOpen(o => !o);
     }
   };
-
-  if (!authenticated) {
-    return <AuthGate onAuthorized={() => setAuthenticated(true)} />;
-  }
 
   return (
     <Box sx={{ display: "flex", height: "100vh" }}>

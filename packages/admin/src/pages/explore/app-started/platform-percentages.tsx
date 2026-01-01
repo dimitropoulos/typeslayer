@@ -166,7 +166,6 @@ export function PlatformPercentages({
       sx={{
         border: 1,
         borderColor: "divider",
-        borderRadius: 1,
         m: 2,
         p: 2,
         backgroundColor: panelBackground,

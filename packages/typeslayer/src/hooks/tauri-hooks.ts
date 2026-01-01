@@ -10,6 +10,7 @@ import { listen } from "@tauri-apps/api/event";
 import type { AnalyzeTraceResult } from "@typeslayer/analyze-trace/browser";
 import {
   extractPackageName,
+  type Flag,
   type ResolvedType,
   type TraceEvent,
   type TraceJsonSchema,
@@ -581,6 +582,7 @@ const refreshTypeGraphInvalidations = new Set([
   "get_output_file_sizes",
   "bug_report_files",
   "max_nodes",
+  "type_kinds",
 ]);
 
 const refreshTypeGraph = (queryClient: QueryClient) => async () => {
@@ -1095,4 +1097,12 @@ export const useAnalyticsConsent = () => {
     set: mutation.mutateAsync,
     isSettingValue: mutation.isPending,
   };
+};
+
+export const useTypeKinds = () => {
+  return useQuery({
+    queryKey: ["type_kinds"],
+    queryFn: () => invoke<[number, `${string}%`, Flag[]][]>("get_type_kinds"),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
 };

@@ -1,3 +1,4 @@
+import { Flag } from "@mui/icons-material";
 import { Box, Typography } from "@mui/material";
 import { analyzeTraceInfo } from "@typeslayer/analyze-trace/browser";
 import { InlineCode } from "@typeslayer/common";
@@ -358,6 +359,15 @@ export const awards = {
 
   bundle_duplicatePackages: {
     ...analyzeTraceInfo.duplicatePackages,
+  },
+
+  //
+  // TRIVIA
+  //
+  trivia_typeKinds: {
+    title: "Type Kinds",
+    icon: Flag,
+    route: `trivia-type-kinds`,
   },
 } as const;
 

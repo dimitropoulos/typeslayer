@@ -1,4 +1,5 @@
 use crate::{
+    analytics::ANALYTICS_EVENTS_FILENAME,
     analyze_trace::constants::ANALYZE_TRACE_FILENAME,
     app_data::{AppData, AppMode},
     type_graph::TYPE_GRAPH_FILENAME,
@@ -30,57 +31,41 @@ pub async fn get_bug_report_files(
 
     let outputs_dir = data.outputs_dir();
 
-    // Check typeslayer.toml in data directory
-    let typeslayer_toml_path = data.data_dir.join(CONFIG_FILENAME);
-    if typeslayer_toml_path.exists() {
-        files.push(BugReportFile {
-            name: CONFIG_FILENAME.to_string(),
-            description: "TypeSlayer config file".to_string(),
-        });
-    }
-
-    // Check output files only if they exist
-    let output_files = [
-        ("types.json", TYPES_JSON_FILENAME, "Type definitions data"),
+    let bug_report_files = [
+        (&data.data_dir, CONFIG_FILENAME, "TypeSlayer config file"),
+        (&outputs_dir, TYPES_JSON_FILENAME, "Type definitions data"),
         (
-            "trace.json",
+            &outputs_dir,
             TRACE_JSON_FILENAME,
             "Compilation trace events",
         ),
         (
-            "analyze-trace.json",
+            &outputs_dir,
             ANALYZE_TRACE_FILENAME,
             "Trace analysis results",
         ),
+        (&outputs_dir, TYPE_GRAPH_FILENAME, "Type relationship graph"),
+        (&outputs_dir, CPU_PROFILE_FILENAME, "TypeScript CPU profile"),
         (
-            "type-graph.json",
-            TYPE_GRAPH_FILENAME,
-            "Type relationship graph",
+            &data.data_dir,
+            ANALYTICS_EVENTS_FILENAME,
+            "Local Events log",
         ),
         (
-            "tsc.cpuprofile",
-            CPU_PROFILE_FILENAME,
-            "TypeScript CPU profile",
+            &data.project_root,
+            PACKAGE_JSON_FILENAME,
+            "Project package configuration",
         ),
     ];
 
-    for (zip_name, filename, description) in output_files {
-        let file_path = outputs_dir.join(filename);
+    for (dir_path, filename, description) in bug_report_files {
+        let file_path = dir_path.join(filename);
         if file_path.exists() {
             files.push(BugReportFile {
-                name: zip_name.to_string(),
+                name: filename.to_string(),
                 description: description.to_string(),
             });
         }
-    }
-
-    let project_root = &data.project_root;
-    let pkg_json_path = project_root.join(PACKAGE_JSON_FILENAME);
-    if pkg_json_path.exists() {
-        files.push(BugReportFile {
-            name: PACKAGE_JSON_FILENAME.to_string(),
-            description: "Project package configuration".to_string(),
-        });
     }
 
     // Check if selected tsconfig exists
@@ -153,6 +138,7 @@ pub async fn create_bug_report(
         // Define the files to include
         let files_to_include = [
             CONFIG_FILENAME,
+            ANALYTICS_EVENTS_FILENAME,
             TYPES_JSON_FILENAME,
             TRACE_JSON_FILENAME,
             ANALYZE_TRACE_FILENAME,
@@ -162,8 +148,9 @@ pub async fn create_bug_report(
 
         // Add each file to the zip
         for filename in files_to_include {
-            let file_path = if filename == CONFIG_FILENAME {
-                // typeslayer.toml is in the data directory
+            let file_path = if filename == CONFIG_FILENAME || filename == ANALYTICS_EVENTS_FILENAME
+            {
+                // typeslayer.toml and events.ndjson are in the data directory
                 data_dir.join(filename)
             } else {
                 // Other files are in the outputs directory
