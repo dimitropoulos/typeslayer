@@ -227,7 +227,7 @@ pnpm deploy
 
 Output will show:
 
-```
+```txt
 Total Upload: XX.XX KiB / gzip: XX.XX KiB
 Uploaded typeslayer-analytics (X.XX sec)
 Published typeslayer-analytics (X.XX sec)

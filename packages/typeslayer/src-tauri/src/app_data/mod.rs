@@ -3,7 +3,10 @@ pub mod init;
 pub mod settings;
 
 use crate::{
-    analytics::{TypeSlayerEvent, event_app_started_success::EventAppStartedSuccess},
+    analytics::{
+        TypeSlayerEvent,
+        event_app_started_success::{EventAppStartedSuccess, EventAppStartedSuccessArgs},
+    },
     analyze_trace::{AnalyzeTraceResult, constants::ANALYZE_TRACE_FILENAME},
     app_data::{
         command::{PackageJSON, PackageManager, TSCCommand},
@@ -115,7 +118,7 @@ impl AppData {
         app.discover_tsconfigs().await?;
         app.selected_tsconfig = init_selected_tsconfig_with(&mut app.cake, &app.tsconfig_paths);
         app.update_typeslayer_config_toml().await;
-        EventAppStartedSuccess::send(&app, ()).await;
+        EventAppStartedSuccess::send(&app, EventAppStartedSuccessArgs {}).await;
         Ok(app)
     }
 

@@ -10,8 +10,8 @@ use crate::{
 };
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct EventAnalyzeTraceFailData {
     #[ts(type = "number")]
     pub duration: u64,
@@ -19,8 +19,8 @@ pub struct EventAnalyzeTraceFailData {
 }
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct EventAnalyzeTraceFail {
     #[ts(type = "\"analyze_trace_fail\"")]
     pub name: &'static str,

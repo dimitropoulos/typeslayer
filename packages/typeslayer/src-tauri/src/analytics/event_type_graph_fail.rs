@@ -1,6 +1,3 @@
-use serde::Serialize;
-use ts_rs::TS;
-
 use crate::{
     analytics::{
         TypeSlayerEvent,
@@ -8,10 +5,12 @@ use crate::{
     },
     app_data::AppData,
 };
+use serde::Serialize;
+use ts_rs::TS;
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct EventTypeGraphFailData {
     #[ts(type = "number")]
     pub duration: u64,
@@ -19,8 +18,8 @@ pub struct EventTypeGraphFailData {
 }
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct EventTypeGraphFail {
     #[ts(type = "\"type_graph_fail\"")]
     pub name: &'static str,

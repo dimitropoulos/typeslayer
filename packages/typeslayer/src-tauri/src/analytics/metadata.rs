@@ -7,8 +7,8 @@ use crate::{
 };
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct EventMetadata {
     pub session_id: String,
     #[ts(type = "number")]

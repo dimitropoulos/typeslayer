@@ -16,8 +16,8 @@ impl Display for TSCCommand {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, TS)]
-#[ts(export)]
 #[serde(rename_all = "lowercase")]
+#[ts(export)]
 pub enum PackageManager {
     Bun,
     NPM,

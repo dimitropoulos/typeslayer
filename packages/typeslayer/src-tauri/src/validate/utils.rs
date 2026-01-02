@@ -7,12 +7,14 @@ pub const CPU_PROFILE_FILENAME: &str = "tsc.cpuprofile";
 pub type TypeId = usize;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Position {
     pub line: TypeId,
     pub character: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Location {
     pub path: String,
     pub start: Position,

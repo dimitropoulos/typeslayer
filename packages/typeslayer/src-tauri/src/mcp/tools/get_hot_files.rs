@@ -16,6 +16,7 @@ pub struct HotFileInfo {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GetHotFilesResponse {
     pub files: Vec<HotFileInfo>,
     pub total_files: usize,

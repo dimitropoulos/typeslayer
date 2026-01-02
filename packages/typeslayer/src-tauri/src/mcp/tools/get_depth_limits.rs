@@ -26,6 +26,7 @@ pub struct DepthLimitEvent {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GetDepthLimitsResponse {
     pub categories: Vec<DepthLimitCategory>,
     pub total_events: usize,

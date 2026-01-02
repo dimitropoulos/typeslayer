@@ -1,11 +1,11 @@
-use serde::Serialize;
-use ts_rs::TS;
-
 use crate::{
     analytics::{EventMetadata, TypeSlayerEvent, metadata::create_event_metadata},
     app_data::{AppData, settings::Settings},
     layercake::SourceHistory,
 };
+use serde::Serialize;
+use std::path::PathBuf;
+use ts_rs::TS;
 
 #[derive(Debug, Serialize, TS)]
 #[ts(export)]
@@ -13,11 +13,12 @@ use crate::{
 pub struct EventAppStartedSuccessData {
     pub settings: Settings,
     pub source_history: SourceHistory,
+    pub project_root: PathBuf,
 }
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct EventAppStartedSuccess {
     #[ts(type = "\"app_started_success\"")]
     pub name: &'static str,
@@ -26,8 +27,13 @@ pub struct EventAppStartedSuccess {
     pub data: EventAppStartedSuccessData,
 }
 
+#[derive(Debug, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct EventAppStartedSuccessArgs {}
+
 impl TypeSlayerEvent for EventAppStartedSuccess {
-    type Args = ();
+    type Args = EventAppStartedSuccessArgs;
 
     fn event_id() -> &'static str {
         "app_started_success"
@@ -44,6 +50,7 @@ impl TypeSlayerEvent for EventAppStartedSuccess {
             data: EventAppStartedSuccessData {
                 settings: Settings::default(),
                 source_history: SourceHistory::default(),
+                project_root: PathBuf::from("/path/to/project"),
             },
         }
     }
@@ -55,6 +62,7 @@ impl TypeSlayerEvent for EventAppStartedSuccess {
             data: EventAppStartedSuccessData {
                 settings: app_data.settings.clone(),
                 source_history: app_data.cake.source_history.clone(),
+                project_root: app_data.project_root.clone(),
             },
         }
     }

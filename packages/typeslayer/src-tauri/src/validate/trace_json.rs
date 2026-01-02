@@ -98,6 +98,7 @@ pub enum EventName {
 
 // Common event structures
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct EventCommon {
     pub pid: u64,
     pub tid: u64,
@@ -131,75 +132,79 @@ pub enum InstantScope {
 
 // Metadata Events
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct TracingStartedInBrowserArgs {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProcessNameArgs {
     pub name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ThreadNameArgs {
     pub name: String,
 }
 
 // Parse Events
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PathArgs {
     pub path: String,
 }
 
 // Program Events
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ConfigFilePathArgs {
-    #[serde(rename = "configFilePath")]
     pub config_file_path: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FindSourceFileArgs {
-    #[serde(rename = "fileName")]
     pub file_name: String,
-    #[serde(rename = "fileIncludeKind")]
     pub file_include_kind: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CountArgs {
     pub count: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProcessTypeReferenceDirectiveArgs {
     pub directive: String,
-    #[serde(rename = "hasResolved")]
     pub has_resolved: bool,
-    #[serde(rename = "refKind")]
     pub ref_kind: u64,
-    #[serde(rename = "refPath", skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ref_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ResolveFromArgs {
-    #[serde(rename = "resolveFrom")]
     pub resolve_from: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ContainingFileNameArgs {
-    #[serde(rename = "containingFileName")]
     pub containing_file_name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct HasOldProgramArgs {
-    #[serde(rename = "hasOldProgram")]
     pub has_old_program: bool,
 }
 
 // Check Events
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CheckExpressionArgs {
     pub kind: u64,
     pub pos: u64,
@@ -209,6 +214,7 @@ pub struct CheckExpressionArgs {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CheckNodeArgs {
     pub kind: u64,
     pub pos: u64,
@@ -218,17 +224,20 @@ pub struct CheckNodeArgs {
 
 // CheckTypes Events
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CheckTypeParameterDeferredArgs {
     pub parent: i64,
     pub id: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct VarianceResults {
     pub variances: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GetVariancesWorkerArgs {
     pub arity: u64,
     pub id: i64,
@@ -236,78 +245,66 @@ pub struct GetVariancesWorkerArgs {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StructuredTypeRelatedToArgs {
-    #[serde(rename = "sourceId")]
     pub source_id: i64,
-    #[serde(rename = "targetId")]
     pub target_id: i64,
 }
 
 // CheckTypes Depth Limit Events
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CheckCrossProductUnionDepthLimitArgs {
-    #[serde(rename = "typeIds")]
     pub type_ids: Vec<i64>,
     pub size: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CheckTypeRelatedToDepthLimitArgs {
-    #[serde(rename = "sourceId")]
     pub source_id: i64,
-    #[serde(rename = "targetId")]
     pub target_id: i64,
     pub depth: u64,
-    #[serde(rename = "targetDepth")]
     pub target_depth: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GetTypeAtFlowNodeDepthLimitArgs {
-    #[serde(rename = "flowId")]
     pub flow_id: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct InstantiateTypeDepthLimitArgs {
-    #[serde(rename = "typeId")]
     pub type_id: i64,
-    #[serde(rename = "instantiationDepth")]
     pub instantiation_depth: i64,
-    #[serde(rename = "instantiationCount")]
     pub instantiation_count: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RecursiveTypeRelatedToDepthLimitArgs {
-    #[serde(rename = "sourceId")]
     pub source_id: i64,
-    #[serde(rename = "sourceIdStack")]
     pub source_id_stack: Vec<i64>,
-    #[serde(rename = "targetId")]
     pub target_id: i64,
-    #[serde(rename = "targetIdStack")]
     pub target_id_stack: Vec<i64>,
     pub depth: u64,
-    #[serde(rename = "targetDepth")]
     pub target_depth: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RemoveSubtypesDepthLimitArgs {
-    #[serde(rename = "typeIds")]
     pub type_ids: Vec<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TraceUnionsOrIntersectionsTooLargeDepthLimitArgs {
-    #[serde(rename = "sourceId")]
     pub source_id: i64,
-    #[serde(rename = "sourceSize")]
     pub source_size: u64,
-    #[serde(rename = "targetId")]
     pub target_id: i64,
-    #[serde(rename = "targetSize")]
     pub target_size: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pos: Option<u64>,
@@ -316,12 +313,10 @@ pub struct TraceUnionsOrIntersectionsTooLargeDepthLimitArgs {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TypeRelatedToDiscriminatedTypeDepthLimitArgs {
-    #[serde(rename = "sourceId")]
     pub source_id: i64,
-    #[serde(rename = "targetId")]
     pub target_id: i64,
-    #[serde(rename = "numCombinations")]
     pub num_combinations: u64,
 }
 
@@ -330,36 +325,41 @@ pub struct TypeRelatedToDiscriminatedTypeDepthLimitArgs {
 pub struct EmitArgs {}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct EmitBuildInfoArgs {
-    #[serde(rename = "buildInfoPath", skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub build_info_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct EmitDeclarationFileOrBundleArgs {
-    #[serde(rename = "declarationFilePath")]
     pub declaration_file_path: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct EmitJsFileOrBundleArgs {
-    #[serde(rename = "jsFilePath")]
-    pub js_file_path: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub js_file_path: Option<String>,
 }
 
 // Session Events
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CancellationThrownArgs {
     pub kind: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CommandArgs {
     pub seq: u64,
     pub command: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CommandErrorArgs {
     pub seq: u64,
     pub command: String,
@@ -367,13 +367,14 @@ pub struct CommandErrorArgs {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DocumentRegistryBucketArgs {
-    #[serde(rename = "configFilePath")]
     pub config_file_path: String,
     pub key: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DocumentRegistryBucketOverlapArgs {
     pub path: String,
     pub key1: String,
@@ -381,23 +382,26 @@ pub struct DocumentRegistryBucketOverlapArgs {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GetUnresolvedImportsArgs {
     pub count: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FileAndConfigArgs {
     pub file: String,
-    #[serde(rename = "configFilePath")]
     pub config_file_path: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SeqArgs {
     pub seq: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StepCanceledArgs {
     pub seq: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -405,12 +409,14 @@ pub struct StepCanceledArgs {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StepErrorArgs {
     pub seq: u64,
     pub message: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ResponseArgs {
     pub seq: u64,
     pub command: String,
@@ -418,6 +424,7 @@ pub struct ResponseArgs {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateGraphArgs {
     pub name: String,
     pub kind: u64,

@@ -14,6 +14,7 @@ pub enum Source {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default, TS)]
+#[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct SourceHistory {
     from_env: Vec<String>,

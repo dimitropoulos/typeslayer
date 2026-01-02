@@ -1,21 +1,22 @@
-use serde::Serialize;
-use ts_rs::TS;
-
 use crate::{
     analytics::{EventMetadata, TypeSlayerEvent, metadata::create_event_metadata},
     app_data::AppData,
 };
+use serde::Serialize;
+use std::path::PathBuf;
+use ts_rs::TS;
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct EventAppStartedFailData {
     pub reason: String,
+    pub project_root: PathBuf,
 }
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct EventAppStartedFail {
     #[ts(type = "\"app_started_fail\"")]
     pub name: &'static str,
@@ -47,6 +48,7 @@ impl TypeSlayerEvent for EventAppStartedFail {
             metadata: EventMetadata::example(),
             data: EventAppStartedFailData {
                 reason: "unknown".to_string(),
+                project_root: PathBuf::from("/path/to/project"),
             },
         }
     }
@@ -57,6 +59,7 @@ impl TypeSlayerEvent for EventAppStartedFail {
             metadata: create_event_metadata(app_data).await,
             data: EventAppStartedFailData {
                 reason: args.reason,
+                project_root: app_data.project_root.clone(),
             },
         }
     }

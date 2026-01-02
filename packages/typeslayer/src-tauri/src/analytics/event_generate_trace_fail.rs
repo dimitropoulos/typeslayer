@@ -1,6 +1,3 @@
-use serde::Serialize;
-use ts_rs::TS;
-
 use crate::{
     analytics::{
         TypeSlayerEvent,
@@ -8,10 +5,13 @@ use crate::{
     },
     app_data::{AppData, command::PackageManager, settings::TypeScriptCompilerVariant},
 };
+use serde::Serialize;
+use std::path::PathBuf;
+use ts_rs::TS;
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct EventGenerateTraceFailData {
     #[ts(type = "number")]
     pub duration: u64,
@@ -23,11 +23,12 @@ pub struct EventGenerateTraceFailData {
     pub tsc_extra_flags: String,
     pub typescript_compiler_variant: TypeScriptCompilerVariant,
     pub apply_tsc_project_flag: bool,
+    pub project_root: PathBuf,
 }
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct EventGenerateTraceFail {
     #[ts(type = "\"generate_trace_fail\"")]
     pub name: &'static str,
@@ -65,6 +66,7 @@ impl TypeSlayerEvent for EventGenerateTraceFail {
                 tsc_extra_flags: String::new(),
                 typescript_compiler_variant: TypeScriptCompilerVariant::Corsa,
                 apply_tsc_project_flag: true,
+                project_root: PathBuf::from("/path/to/project"),
             },
         }
     }
@@ -84,6 +86,7 @@ impl TypeSlayerEvent for EventGenerateTraceFail {
                 tsc_extra_flags: app_data.settings.extra_tsc_flags.clone(),
                 typescript_compiler_variant: app_data.settings.typescript_compiler_variant,
                 apply_tsc_project_flag: app_data.settings.apply_tsc_project_flag,
+                project_root: app_data.project_root.clone(),
             },
         }
     }

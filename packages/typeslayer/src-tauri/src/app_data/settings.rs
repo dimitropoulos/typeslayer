@@ -45,8 +45,8 @@ impl TypeScriptCompilerVariant {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct Settings {
     pub relative_paths: bool,
     pub prefer_editor_open: bool,

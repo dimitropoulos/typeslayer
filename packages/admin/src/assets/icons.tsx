@@ -1,4 +1,18 @@
+import { keyframes } from "@emotion/react";
 import { SvgIcon } from "@mui/material";
+
+const rainbow = keyframes`
+  0% {
+    filter: hue-rotate(0deg) drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
+  }
+  50% {
+    filter: hue-rotate(180deg) drop-shadow(0 0 5px rgba(255, 255, 255, 0.8));
+  }
+  100% {
+    filter: hue-rotate(360deg) drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
+  }
+`;
+
 
 export const Ubuntu = () => {
   return (
@@ -7,7 +21,7 @@ export const Ubuntu = () => {
         xmlns="http://www.w3.org/2000/svg"
         width="64"
         height="64"
-        viewBox="0 0 32 32"
+        viewBox="-4 -4 36 36"
         preserveAspectRatio="xMidYMid"
       >
         <title>Ubuntu Logo</title>
@@ -171,6 +185,301 @@ export const Yarn = () => {
       <path
         d="M435.2 337.5c-1.8-14.2-13.8-24-29.2-23.8-23 .3-42.3 12.2-55.1 20.1-5 3.1-9.3 5.4-13 7.1.8-11.6.1-26.8-5.9-43.5-7.3-20-17.1-32.3-24.1-39.4 8.1-11.8 19.2-29 24.4-55.6 4.5-22.7 3.1-58-7.2-77.8-2.1-4-5.6-6.9-10-8.1-1.8-.5-5.2-1.5-11.9.4C293.1 96 289.6 93.8 286.9 92c-5.6-3.6-12.2-4.4-18.4-2.1-8.3 3-15.4 11-22.1 25.2-1 2.1-1.9 4.1-2.7 6.1-12.7.9-32.7 5.5-49.6 23.8-2.1 2.3-6.2 4-10.5 5.6h .1c-8.8 3.1-12.8 10.3-17.7 23.3-6.8 18.2.2 36.1 7.1 47.7-9.4 8.4-21.9 21.8-28.5 37.5-8.2 19.4-9.1 38.4-8.8 48.7-7 7.4-17.8 21.3-19 36.9-1.6 21.8 6.3 36.6 9.8 42 1 1.6 2.1 2.9 3.3 4.2-.4 2.7-.5 5.6.1 8.6 1.3 7 5.7 12.7 12.4 16.3 13.2 7 31.6 10 45.8 2.9 5.1 5.4 14.4 10.6 31.3 10.6h1c4.3 0 58.9-2.9 74.8-6.8 7.1-1.7 12-4.7 15.2-7.4 10.2-3.2 38.4-12.8 65-30 18.8-12.2 25.3-14.8 39.3-18.2 13.6-3.3 22.1-15.7 20.4-29.4zm-23.8 14.7c-16 3.8-24.1 7.3-43.9 20.2-30.9 20-64.7 29.3-64.7 29.3s-2.8 4.2-10.9 6.1c-14 3.4-66.7 6.3-71.5 6.4-12.9.1-20.8-3.3-23-8.6-6.7-16 9.6-23 9.6-23s-3.6-2.2-5.7-4.2c-1.9-1.9-3.9-5.7-4.5-4.3-2.5 6.1-3.8 21-10.5 27.7-9.2 9.3-26.6 6.2-36.9.8-11.3-6 .8-20.1.8-20.1s-6.1 3.6-11-3.8c-4.4-6.8-8.5-18.4-7.4-32.7 1.2-16.3 19.4-32.1 19.4-32.1s-3.2-24.1 7.3-48.8c9.5-22.5 35.1-40.6 35.1-40.6s-21.5-23.8-13.5-45.2c5.2-14 7.3-13.9 9-14.5 6-2.3 11.8-4.8 16.1-9.5 21.5-23.2 48.9-18.8 48.9-18.8s13-39.5 25-31.8c3.7 2.4 17 32 17 32s14.2-8.3 15.8-5.2c8.6 16.7 9.6 48.6 5.8 68-6.4 32-22.4 49.2-28.8 60-1.5 2.5 17.2 10.4 29 43.1 10.9 29.9 1.2 55 2.9 57.8.3.5.4.7.4.7s12.5 1 37.6-14.5c13.4-8.3 29.3-17.6 47.4-17.8 17.5-.3 18.4 20.2 5.2 23.4z"
         fill="#fff"
+      />
+    </SvgIcon>
+  );
+};
+
+export const Manjaro = () => {
+  return (
+    <SvgIcon viewBox="-20 -20 140 140">
+      <path
+        d="M 9.146469,0 C 4.079334,0 0,4.079334 0,9.146469 v 82.318325 c 0,5.06718 4.079334,9.146466 9.146469,9.146466 H 27.439457 V 27.439407 H 64.025338 V 0 Z m 64.025389,0 v 100.61126 h 18.29294 c 5.06713,0 9.146472,-4.079286 9.146472,-9.146466 V 9.146469 C 100.61127,4.079334 96.531928,0 91.464798,0 Z M 36.585926,36.585926 V 100.61126 H 64.025338 V 36.585926 Z"
+        fill="#35bfa4"
+      />
+    </SvgIcon>
+  );
+};
+
+export const Fedora = () => {
+  return (
+    <SvgIcon viewBox="0 0 267 267">
+      <defs>
+        <path
+          id="fedora-in"
+          d="M 77.126289,142.09756 C 77.126289,142.09756 124.97104,142.09756 124.97104,142.09756 C 124.97104,142.09756 124.97104,189.94234 124.97104,189.94234 C 124.97104,216.35263 103.53659,237.78707 77.126289,237.78707 C 50.715979,237.78707 29.28153,216.35263 29.28153,189.94234 C 29.28153,163.53203 50.715979,142.09756 77.126289,142.09756 z"
+          fill="none"
+          stroke="#3c6eb4"
+          strokeWidth="29.21"
+        />
+        <path
+          id="fedora-free"
+          d="M 139.6074,127.52923 L 139.6074,189.87541 C 139.6074,224.37943 111.63203,252.35541 77.12679,252.35541 C 71.89185,252.35541 68.1703,251.7644 63.32444,250.49771 C 56.25849,248.64859 50.48398,242.85518 50.48158,236.1166 C 50.48158,227.97147 56.39394,222.0467 65.23187,222.0467 C 69.43824,222.0467 70.96454,222.85435 77.12679,222.85435 C 95.3184,222.85435 110.07443,208.11916 110.10634,189.92756 L 110.10634,161.27099 C 110.10634,158.70324 108.01971,156.62274 105.44767,156.62274 L 83.78246,156.61846 C 75.71034,156.61846 69.18845,150.18003 69.18845,142.0858 C 69.18414,133.94124 75.77725,127.52923 83.93653,127.52923"
+          fill="#ffffff"
+        />
+      </defs>
+      <path
+        d="M 266.62575,133.50613 C 266.62575,59.98128 207.02222,0.37583 133.49792,0.37583 C 60.00668,0.37583 0.42639,59.93123 0.37425,133.41225 L 0.37425,236.4333 C 0.4138,253.11763 13.94545,266.62417 30.64027,266.62417 L 133.55192,266.62417 C 207.05167,266.59532 266.62575,207.01142 266.62575,133.50613"
+        fill="#294172"
+      />
+      <use href="#fedora-in" />
+      <use
+        href="#fedora-in"
+        transform="matrix(-1,0,0,-1,249.71151,284.2882)"
+      />
+      <use href="#fedora-free" />
+      <use
+        href="#fedora-free"
+        transform="matrix(-1,0,0,-1,249.71152,284.28821)"
+      />
+    </SvgIcon>
+  );
+};
+
+export const CachyOs = () => {
+  return (
+    <SvgIcon viewBox="0 0 17.921 17.921">
+      <defs>
+        <linearGradient
+          id="linearGradient939"
+          x1="237.19"
+          x2="237.07"
+          y1="296.2"
+          y2="304.08"
+          gradientTransform="matrix(.04476 0 0 .044679 -8.5923 -4.6302)"
+          gradientUnits="userSpaceOnUse"
+          href="#linearGradient937"
+        />
+        <linearGradient id="linearGradient937">
+          <stop stopColor="#001313" offset="0" />
+          <stop stopColor="#001313" stopOpacity="0" offset="1" />
+        </linearGradient>
+        <linearGradient
+          id="linearGradient5185"
+          x1="994.81"
+          x2="982.34"
+          y1="1533.3"
+          y2="1556.8"
+          gradientTransform="matrix(.084141 0 0 .083989 -76.331 -126.67)"
+          gradientUnits="userSpaceOnUse"
+          href="#linearGradient4353"
+        />
+        <linearGradient id="linearGradient4353">
+          <stop stopColor="#020202" offset="0" />
+          <stop stopColor="#020202" stopOpacity="0" offset="1" />
+        </linearGradient>
+        <linearGradient
+          id="linearGradient9102"
+          x1="1022.5"
+          x2="1018.6"
+          y1="1582.4"
+          y2="1575.6"
+          gradientTransform="matrix(.086381 0 0 .081808 -79.192 -124.97)"
+          gradientUnits="userSpaceOnUse"
+          href="#linearGradient4353"
+        />
+        <linearGradient
+          id="linearGradient11890"
+          x1="940.43"
+          x2="930.59"
+          y1="1612.5"
+          y2="1594.5"
+          gradientTransform="matrix(.084141 0 0 .083989 -76.331 -126.67)"
+          gradientUnits="userSpaceOnUse"
+          href="#linearGradient4353"
+        />
+        <linearGradient
+          id="linearGradient11670"
+          x1="965.6"
+          x2="951.66"
+          y1="1571.4"
+          y2="1571.3"
+          gradientTransform="matrix(.084141 0 0 .083989 -76.331 -126.67)"
+          gradientUnits="userSpaceOnUse"
+          href="#linearGradient4353"
+        />
+        <linearGradient
+          id="linearGradient13770"
+          x1="946.23"
+          x2="961.37"
+          y1="1655.9"
+          y2="1655.8"
+          gradientTransform="matrix(.084141 0 0 .083989 -76.331 -126.67)"
+          gradientUnits="userSpaceOnUse"
+          href="#linearGradient4353"
+        />
+        <linearGradient
+          id="linearGradient2816"
+          x1="366.15"
+          x2="350.92"
+          y1="427.32"
+          y2="419.64"
+          gradientTransform="matrix(.04476 0 0 .044679 -10.921 -4.4349)"
+          gradientUnits="userSpaceOnUse"
+          href="#linearGradient937"
+        />
+        <linearGradient
+          id="linearGradient12421"
+          x1="936.34"
+          x2="933.38"
+          y1="1628.8"
+          y2="1623"
+          gradientTransform="matrix(.084141 0 0 .083989 -76.331 -126.67)"
+          gradientUnits="userSpaceOnUse"
+          href="#linearGradient4353"
+        />
+        <linearGradient
+          id="linearGradient13391"
+          x1="950.33"
+          x2="941.97"
+          y1="1618.6"
+          y2="1645.8"
+          gradientTransform="matrix(.084141 0 0 .083989 -76.331 -126.67)"
+          gradientUnits="userSpaceOnUse"
+          href="#linearGradient4353"
+        />
+        <linearGradient
+          id="linearGradient13599"
+          x1="1008.2"
+          x2="1015.7"
+          y1="1681.3"
+          y2="1668.4"
+          gradientTransform="matrix(.084141 0 0 .083989 -76.331 -126.67)"
+          gradientUnits="userSpaceOnUse"
+          href="#linearGradient4353"
+        />
+        <linearGradient
+          id="linearGradient18175"
+          x1="1148.3"
+          x2="1145.4"
+          y1="1585.5"
+          y2="1630"
+          gradientTransform="matrix(.34992 0 0 .34992 -282.87 -491.67)"
+          gradientUnits="userSpaceOnUse"
+          href="#linearGradient18299"
+        />
+        <linearGradient id="linearGradient18299">
+          <stop stopColor="#008066" stopOpacity="0" offset="0" />
+          <stop stopColor="#0fc" offset="1" />
+        </linearGradient>
+        <linearGradient
+          id="linearGradient18632"
+          x1="1148.3"
+          x2="1145.4"
+          y1="1585.5"
+          y2="1630"
+          gradientTransform="matrix(.26565 0 0 .26565 -211.15 -375.49)"
+          gradientUnits="userSpaceOnUse"
+          href="#linearGradient18299"
+        />
+        <linearGradient
+          id="linearGradient18659"
+          x1="1148.3"
+          x2="1145.4"
+          y1="1585.5"
+          y2="1630"
+          gradientTransform="matrix(.13679 0 0 .13679 -53.624 -195.03)"
+          gradientUnits="userSpaceOnUse"
+          href="#linearGradient18299"
+        />
+        <linearGradient
+          id="linearGradient3254"
+          x1="348.05"
+          x2="361.21"
+          y1="194.78"
+          y2="187.24"
+          gradientTransform="matrix(.04476 0 0 .044679 -10.921 -4.4349)"
+          gradientUnits="userSpaceOnUse"
+          href="#linearGradient937"
+        />
+      </defs>
+      <circle cx="64.51" cy="62.02" r="87.45" opacity="0" strokeWidth=".27971" />
+      <path
+        d="m4.3286 1.9244h8.3458l-2.1127 3.6528h-4.526l-1.8859 3.2605 1.9121 3.306h8.8286l-2.1664 3.7456h-8.5747l-4.1369-7.1525 3.9605-6.8475z"
+        fill="#fff"
+      />
+      <path d="m3.973 1.8893 6.5887 3.6879 2.1127-3.6528z" fill="#0a8" />
+      <path d="m6.0619 12.144-1.9125 3.7456h8.5747l2.1664-3.7456z" fill="#0a8" />
+      <path
+        d="m3.973 1.8893 6.5887 3.6879h-4.526l-1.8859 3.2605 1.9121 3.306-1.9125 3.7456-4.1369-7.1525 3.9605-6.8475"
+        fill="#00ccff"
+      />
+      <path
+        d="m0.0125 8.7368 4.1373 0.10091 0.11568 0.19788-4.123-0.082887z"
+        fill="url(#linearGradient939)"
+      />
+      <path
+        d="m10.562 5.5772-6.5887-3.6879-0.50106 0.9021 4.9947 2.7648z"
+        fill="url(#linearGradient5185)"
+      />
+      <path
+        d="m6.0029 5.5427 6.7111-3.7832-2.169 3.5579z"
+        fill="url(#linearGradient9102)"
+      />
+      <path d="m6.0356 5.5772 6.6388-3.6528-2.1127 3.6528z" fill="#0a8" />
+      <path d="m0.0125 8.7368 6.0231-3.1596-1.8859 3.2605z" fill="#0a8" />
+      <path
+        d="m0.0125 8.7368 6.0231-3.1596-0.4069-0.6354-5.1908 3.0036z"
+        fill="url(#linearGradient11890)"
+      />
+      <path d="m6.0356 5.5772-2.0626-3.6879 0.17673 6.9484z" fill="#0a8" />
+      <path d="m6.0619 12.144 6.6622 3.7456 2.1664-3.7456z" fill="#00ccff" />
+      <path
+        d="m3.973 1.8893-0.50106 0.9021 0.048066 6.0168 0.62973 0.029556z"
+        fill="url(#linearGradient11670)"
+      />
+      <path d="m4.1498 8.8377-3.1586 1.5811 3.1583 5.4705z" fill="#0a8" />
+      <path
+        d="m4.1498 8.8377v7.0516l0.77392-1.5077 0.059767-4.1337z"
+        fill="url(#linearGradient13770)"
+      />
+      <path
+        d="m4.1494 15.889-0.29801-0.53544 1.9191-3.6995 0.29137 0.48935z"
+        fill="url(#linearGradient2816)"
+      />
+      <path
+        d="m0.99115 10.419 3.1586-1.5811-0.62972-0.029556-2.7405 1.307z"
+        fill="url(#linearGradient12421)"
+      />
+      <path d="m0.99115 10.419 5.0708 1.7248-1.9121-3.306z" fill="#0a8" />
+      <path
+        d="m6.0619 12.144-5.0708-1.7248 0.55061 0.94903 4.1672 1.5109z"
+        fill="url(#linearGradient13391)"
+      />
+      <path
+        d="m6.0619 12.144 6.6622 3.7456 0.79849-1.4187-4.2878-2.3635z"
+        fill="url(#linearGradient13599)"
+      />
+      <g transform="matrix(.14699 0 0 .14672 -.84757 -.42617)">
+        <circle cx="117.95" cy="75.441" r="9.6894" fill="#00ccff" />
+        <circle
+          cx="118.08"
+          cy="75.341"
+          r="9.6894"
+          fill="url(#linearGradient18175)"
+        />
+      </g>
+      <g transform="matrix(.14699 0 0 .14672 -.20056 -.74963)">
+        <circle cx="93.138" cy="55.045" r="7.3559" fill="#00ccff" />
+        <circle
+          cx="93.239"
+          cy="54.969"
+          r="7.3559"
+          fill="url(#linearGradient18632)"
+        />
+      </g>
+      <g transform="matrix(.14699 0 0 .14672 -.17051 -.32616)">
+        <circle cx="103.06" cy="26.657" r="3.7877" fill="#00ccff" />
+        <circle
+          cx="103.11"
+          cy="26.618"
+          r="3.7877"
+          fill="url(#linearGradient18659)"
+        />
+      </g>
+      <path
+        d="m6.0356 5.5772-2.0626-3.6879 0.52544-0.0074221 1.9387 3.4465z"
+        fill="url(#linearGradient3254)"
       />
     </SvgIcon>
   );

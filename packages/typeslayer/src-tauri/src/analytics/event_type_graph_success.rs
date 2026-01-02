@@ -14,8 +14,8 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct StrippedDirectionData {
     pub max: usize,
     pub count: usize,
@@ -24,8 +24,8 @@ pub struct StrippedDirectionData {
 /// Stats for a specific link kind: ordered list of (target_id, [source_ids])
 /// Ordered by number of sources (most connected first)
 #[derive(Debug, Clone, Serialize, Deserialize, Default, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct StrippedLinkKindData {
     pub by_target: StrippedDirectionData,
     pub by_source: StrippedDirectionData,
@@ -50,8 +50,8 @@ impl From<&LinkKindData> for StrippedLinkKindData {
 }
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct EventTypeGraphSuccessData {
     #[ts(type = "number")]
     pub duration: u64,
@@ -62,8 +62,8 @@ pub struct EventTypeGraphSuccessData {
 }
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct EventTypeGraphSuccess {
     #[ts(type = "\"type_graph_success\"")]
     pub name: &'static str,

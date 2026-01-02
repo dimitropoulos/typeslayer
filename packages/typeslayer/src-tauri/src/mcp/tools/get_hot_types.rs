@@ -12,6 +12,7 @@ pub const COMMAND: &str = "get_hot_types";
 pub const DESCRIPTION: &str = "Analyzes TypeScript compilation traces to identify performance hotspots - the types that take the most time to check.";
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct HotTypeInfo {
     pub duration: f64,
     pub description: String,

@@ -1,4 +1,5 @@
-import { Summarize } from "@mui/icons-material";
+import { keyframes } from "@emotion/react";
+import { Cake, Summarize } from "@mui/icons-material";
 import {
   Box,
   List,
@@ -9,6 +10,19 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+
+const rainbow = keyframes`
+  0% {
+    filter: hue-rotate(0deg) drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
+  }
+  50% {
+    filter: hue-rotate(180deg) drop-shadow(0 0 5px rgba(255, 255, 255, 0.8));
+  }
+  100% {
+    filter: hue-rotate(360deg) drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
+  }
+`;
+
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { InlineCode } from "@typeslayer/common";
 import { PackageManagerIcon } from "../../components/package-manager-icon";
@@ -119,6 +133,16 @@ export const EventPage = <E extends Event["name"]>({
                     <Typography sx={{ fontFamily: "monospace" }}>
                       {event.sessionId}
                     </Typography>
+                    {"sourceHistory" in event.data &&
+                    event.data.sourceHistory.from_file.length === 0 ? (
+                      <Cake
+                        titleAccess="first time opening TypeSlayer"
+                        sx={{
+                          animation: `${rainbow} 2s linear infinite`,
+                          color: "#ffd700",
+                        }}
+                      />
+                    ) : null}
                     {middleDot}
                     <Typography variant="body2">v{event.version}</Typography>
                   </Stack>

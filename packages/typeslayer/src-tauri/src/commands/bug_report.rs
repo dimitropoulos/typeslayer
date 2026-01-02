@@ -17,6 +17,7 @@ use tokio::sync::Mutex;
 use tracing::debug;
 
 #[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BugReportFile {
     pub name: String,
     pub description: String,

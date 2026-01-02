@@ -5,8 +5,8 @@ use ts_rs::TS;
 use crate::{analyze_trace::create_spans, validate::trace_json::TraceEvent};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct FileStatistics {
     pub total_files: usize,
     pub total_duration: f64,

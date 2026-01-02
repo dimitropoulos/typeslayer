@@ -11,8 +11,8 @@ use serde::Serialize;
 use ts_rs::TS;
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct EventAnalyzeTraceSuccessData {
     #[ts(type = "number")]
     pub duration: u64,
@@ -24,8 +24,8 @@ pub struct EventAnalyzeTraceSuccessData {
 }
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct EventAnalyzeTraceSuccess {
     #[ts(type = "\"analyze_trace_success\"")]
     pub name: &'static str,

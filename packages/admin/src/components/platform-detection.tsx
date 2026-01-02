@@ -1,166 +1,154 @@
 import { Apple, HelpOutline, Microsoft } from "@mui/icons-material";
-import { ArchLinux, Ubuntu } from "../assets/icons";
+import { ArchLinux, CachyOs, Fedora, Manjaro, Ubuntu } from "../assets/icons";
 
-const colors = {
-  windows: "#087CD6",
-  mac: "#999999",
-  ubuntu: "#E95420",
-  archlinux: "#1793D1",
-  unknown: "#CC0000",
-};
-
-const icons = {
-  apple: <Apple sx={{ fill: colors.mac }} />,
-  windows: <Microsoft sx={{ fill: colors.windows }} />,
-  ubuntu: <Ubuntu />,
-  archlinux: <ArchLinux />,
+const extractTwoDigitsAfterMatch = (matchString: string, platform: string) => {
+  const regex = new RegExp(`${matchString}(\\d{1,2})`, "i");
+  const match = platform.match(regex);
+  if (match?.[1]) {
+    return match[1];
+  }
+  console.error("Could not extract version from platform string:", platform);
+  return "Unknown";
 };
 
 const platforms = {
-  windows10: {
-    operatingSystem: "Windows",
-    version: "10",
-    name: "Windows 10",
-    color: colors.windows,
-    icon: icons.windows,
+  windows: (platform: string) => {
+    const version = extractTwoDigitsAfterMatch("windows ", platform);
+    const color = "#087CD6";
+    return {
+      operatingSystem: "Windows",
+      version,
+      name: `Windows ${version}`,
+      color,
+      icon: <Microsoft sx={{ fill: color }} />,
+    };
   },
-  windows11: {
-    operatingSystem: "Windows",
-    version: "11",
-    name: "Windows 11",
-    color: colors.windows,
-    icon: icons.windows,
+  mac: (platform: string) => {
+    const version = extractTwoDigitsAfterMatch("mac os ", platform);
+    const color = "#999999";
+    const productName = {
+      "11": "Big Sur",
+      "12": "Monterey",
+      "13": "Ventura",
+      "14": "Sonoma",
+      "15": "Sequoia",
+      "26": "Tahoe",
+    }[version];
+
+    if (!productName) {
+      console.error("Unknown Mac version:", platform, version);
+    }
+
+    return {
+      operatingSystem: "Mac",
+      version,
+      name: `MacOS ${productName ?? "Unknown"}`,
+      color,
+      icon: <Apple sx={{ fill: color }} />,
+    };
   },
-  macTahoe: {
-    operatingSystem: "Mac",
-    version: "26",
-    name: "MacOS Tahoe",
-    color: colors.mac,
-    icon: icons.apple,
+  ubuntu: (platform: string) => {
+    const regex = /ubuntu (\d{1,2}\.\d{1,2})/i;
+    const match = platform.match(regex);
+    let version: string;
+    if (match?.[1]) {
+      version = match[1];
+
+      // replace .4 with .04 for LTS versions
+      if (version.endsWith(".4")) {
+        version = version.replace(".4", ".04");
+      }
+    } else {
+      console.error(
+        "Could not extract Ubuntu version from platform string:",
+        platform,
+      );
+      version = "Unknown";
+    }
+
+    return {
+      operatingSystem: "Linux",
+      version,
+      name: `Ubuntu ${version}`,
+      color: "#E95420",
+      icon: <Ubuntu />,
+    };
   },
-  macSequoia: {
-    operatingSystem: "Mac",
-    version: "15",
-    name: "MacOS Sequoia",
-    color: colors.mac,
-    icon: icons.apple,
-  },
-  macSonoma: {
-    operatingSystem: "Mac",
-    version: "14",
-    name: "MacOS Sonoma",
-    color: colors.mac,
-    icon: icons.apple,
-  },
-  macVentura: {
-    operatingSystem: "Mac",
-    version: "13",
-    name: "MacOS Ventura",
-    color: colors.mac,
-    icon: icons.apple,
-  },
-  macMonterey: {
-    operatingSystem: "Mac",
-    version: "12",
-    name: "MacOS Monterey",
-    color: colors.mac,
-    icon: icons.apple,
-  },
-  macBigSur: {
-    operatingSystem: "Mac",
-    version: "11",
-    name: "MacOS BigSur",
-    color: colors.mac,
-    icon: icons.apple,
-  },
-  ubuntuNoble: {
-    operatingSystem: "Linux",
-    version: "24.04",
-    name: "Ubuntu 24.04",
-    color: colors.ubuntu,
-    icon: icons.ubuntu,
-  },
-  ubuntuOcular: {
-    operatingSystem: "Linux",
-    version: "24.10",
-    name: "Ubuntu 24.10",
-    color: colors.ubuntu,
-    icon: icons.ubuntu,
-  },
-  ubuntuPlucky: {
-    operatingSystem: "Linux",
-    version: "25.04",
-    name: "Ubuntu 25.04",
-    color: colors.ubuntu,
-    icon: icons.ubuntu,
-  },
-  ubuntuQuesting: {
-    operatingSystem: "Linux",
-    version: "25.10",
-    name: "Ubuntu 25.10",
-    color: colors.ubuntu,
-    icon: icons.ubuntu,
-  },
-  archlinux: {
+  archlinux: (_platform: string) => ({
     operatingSystem: "Linux",
     version: "Rolling",
     name: "Arch Linux",
-    color: colors.archlinux,
-    icon: icons.archlinux,
+    color: "#1793D1",
+    icon: <ArchLinux />,
+  }),
+  manjaro: (platform: string) => ({
+    operatingSystem: "Linux", // Arch variant
+    version: extractTwoDigitsAfterMatch("manjaro ", platform),
+    name: "Manjaro",
+    color: "#35BFA4",
+    icon: <Manjaro />,
+  }),
+  fedora: (platform: string) => ({
+    operatingSystem: "Linux",
+    version: extractTwoDigitsAfterMatch("fedora ", platform),
+    name: "Fedora",
+    color: "#3c6eb4",
+    icon: <Fedora />,
+  }),
+  cachyOs: (_platform: string) => ({
+    operatingSystem: "Linux", // Arch variant
+    version: "Rolling",
+    name: "Cachy OS",
+    color: "#00ccff",
+    icon: <CachyOs />,
+  }),
+  unknown: (_platform: string) => {
+    const color = "#CC0000";
+    return {
+      operatingSystem: "Unknown",
+      version: "Unknown",
+      name: "Unknown",
+      color,
+      icon: <HelpOutline sx={{ fill: color }} />,
+    };
   },
-  unknown: {
-    operatingSystem: "Unknown",
-    version: "Unknown",
-    name: "Unknown",
-    color: colors.unknown,
-    icon: <HelpOutline />,
-  },
-} as const;
+} satisfies Record<
+  string,
+  (platform: string) => {
+    operatingSystem: string;
+    version: string;
+    name: string;
+    color: string;
+    icon: React.ReactNode;
+  }
+>;
 
 export const detectPlatform = (platform: string) => {
   const lowercased = platform?.toLowerCase() ?? "";
 
-  if (lowercased.includes("windows 10")) {
-    return platforms.windows10;
+  if (lowercased.includes("windows ")) {
+    return platforms.windows(platform);
   }
-  if (lowercased.includes("windows 11")) {
-    return platforms.windows11;
+  if (lowercased.includes("mac os ")) {
+    return platforms.mac(platform);
   }
-  if (lowercased.includes("mac os 26")) {
-    return platforms.macTahoe;
+  if (lowercased.includes("ubuntu 2")) {
+    return platforms.ubuntu(platform);
   }
-  if (lowercased.includes("mac os 15")) {
-    return platforms.macSequoia;
+  if (lowercased.includes("arch linux ")) {
+    return platforms.archlinux(platform);
   }
-  if (lowercased.includes("mac os 14")) {
-    return platforms.macSonoma;
+  if (lowercased.includes("manjaro ")) {
+    return platforms.manjaro(platform);
   }
-  if (lowercased.includes("mac os 13")) {
-    return platforms.macVentura;
+  if (lowercased.includes("cachyos ")) {
+    return platforms.cachyOs(platform);
   }
-  if (lowercased.includes("mac os 12")) {
-    return platforms.macMonterey;
-  }
-  if (lowercased.includes("mac os 11")) {
-    return platforms.macBigSur;
-  }
-  if (lowercased.includes("ubuntu 24.4")) {
-    return platforms.ubuntuNoble;
-  }
-  if (lowercased.includes("ubuntu 24.10")) {
-    return platforms.ubuntuOcular;
-  }
-  if (lowercased.includes("ubuntu 25.4")) {
-    return platforms.ubuntuPlucky;
-  }
-  if (lowercased.includes("ubuntu 25.10")) {
-    return platforms.ubuntuQuesting;
-  }
-  if (lowercased.includes("arch linux")) {
-    return platforms.archlinux;
+  if (lowercased.includes("fedora ")) {
+    return platforms.fedora(platform);
   }
   console.log("Unknown platform:", platform);
-  return platforms.unknown;
+  return platforms.unknown(platform);
 };
 
 export const PlatformIcon = ({ platform }: { platform: string }) => {
