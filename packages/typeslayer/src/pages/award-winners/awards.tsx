@@ -1,4 +1,5 @@
-import { Flag } from "@mui/icons-material";
+import Diversity2 from "@mui/icons-material/Diversity2";
+import Flag from "@mui/icons-material/Flag";
 import { Box, Typography } from "@mui/material";
 import { analyzeTraceInfo } from "@typeslayer/analyze-trace/browser";
 import { InlineCode } from "@typeslayer/common";
@@ -368,6 +369,11 @@ export const awards = {
     title: "Type Kinds",
     icon: Flag,
     route: `trivia-type-kinds`,
+  },
+  trivia_relations: {
+    title: "Type Relations",
+    icon: Diversity2,
+    route: `trivia-relations`,
   },
 } as const;
 

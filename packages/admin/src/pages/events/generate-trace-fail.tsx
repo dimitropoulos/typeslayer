@@ -1,7 +1,7 @@
 import { Stack } from "@mui/material";
+import { Code } from "@typeslayer/common";
 import type { EventGenerateTraceFail } from "@typeslayer/rust-types";
 import { ChipsList } from "../../components/chips-list";
-import { Code } from "../../components/code";
 import { PackageManagerIcon } from "../../components/package-manager-icon";
 import { StatTable } from "../../components/stat-table";
 import type { D1Event } from "../../hooks";
@@ -27,7 +27,7 @@ const Page = ({ event }: { event: D1Event<EventGenerateTraceFail> }) => {
   } = event.data;
 
   return (
-    <Stack sx={{ gap: 2 }}>
+    <Stack sx={{ gap: 2, mb: 2 }}>
       <ChipsList
         chips={[
           {
@@ -69,7 +69,6 @@ const Page = ({ event }: { event: D1Event<EventGenerateTraceFail> }) => {
       />
 
       <Code lang="bash" value={stdout || "\n"} title="stdout" />
-
       <Code lang="bash" value={stderr || "\n"} title="stderr" />
     </Stack>
   );

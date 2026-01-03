@@ -1,6 +1,6 @@
 {
   "name": "@typeslayer/common",
-  "version": "0.1.29",
+  "version": "0.1.30",
   "private": true,
   "type": "module",
   "repository": "github:dimitropoulos/typeslayer",
@@ -25,6 +25,9 @@
   },
   "dependencies": {
     "@mui/material": "7.3.6",
+    "@mui/icons-material": "7.3.6",
+    "@mui/x-data-grid": "8.23.0",
+    "@typeslayer/rust-types": "workspace:*",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "shiki": "3.20.0"

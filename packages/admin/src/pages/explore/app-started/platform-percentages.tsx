@@ -125,7 +125,16 @@ export function PlatformPercentages({
     });
 
   const BarWithColor = (props: BarProps) => {
-    const { color: barColor, id, ...other } = props;
+    const {
+      color: barColor,
+      id,
+      dataIndex: _dataIndex,
+      xOrigin: _xOrigin,
+      yOrigin: _yOrigin,
+      skipAnimation: _skipAnimation,
+      ownerState: _ownerState,
+      ...other
+    } = props;
     const theme = useTheme();
 
     const animatedProps = useAnimateBar(props);

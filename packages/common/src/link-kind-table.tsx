@@ -14,9 +14,10 @@ import {
   type GridColDef,
   type GridColumnGroupingModel,
 } from "@mui/x-data-grid";
-import { InlineCode, panelBackground } from "@typeslayer/common";
 import type { LinkKind, StrippedLinkKindData } from "@typeslayer/rust-types";
 import { Code } from "./code";
+import { InlineCode } from "./inline-code";
+import { panelBackground } from "./mui-theme";
 
 const columns: GridColDef[] = [
   {
@@ -72,7 +73,8 @@ const columns: GridColDef[] = [
   },
 ] satisfies GridColDef[];
 
-const totalWidth = columns.reduce((sum, col) => sum + (col.width ?? 100), 0) + 2;
+const totalWidth =
+  columns.reduce((sum, col) => sum + (col.width ?? 100), 0) + 2;
 
 const columnGroupingModel = [
   {
@@ -132,15 +134,14 @@ export const LinkKindTable = ({
   }));
 
   return (
-    <Stack sx={{ pb: 2 }}>
+    <Stack>
       <Explainer linkKindDataByKind={linkKindDataByKind} />
 
       <DataGrid
+        density="compact"
         rows={rows}
         columns={columns}
         columnGroupingModel={columnGroupingModel}
-        autoHeight
-        autoPageSize
         hideFooter
         disableRowSelectionOnClick
         sx={{
@@ -150,7 +151,7 @@ export const LinkKindTable = ({
             fontFamily: "monospace !important",
           },
           background: panelBackground,
-          width: totalWidth
+          width: totalWidth,
         }}
       />
     </Stack>
@@ -174,7 +175,9 @@ const Explainer = ({
             flexDirection: "row",
           }}
         >
-          <Typography variant="h6">what's all this stuff mean??</Typography>
+          <Typography fontStyle="italic">
+            ....what's all this stuff mean??
+          </Typography>
         </Stack>
       </AccordionSummary>
       <AccordionDetails>
@@ -200,7 +203,7 @@ const Explainer = ({
             TypeScript will generate 4 types internally: one for each of the
             three string literals and one for the union itself:
           </Typography>
-          <Code lang="json" value={stringifiedExample} />
+          <Code title="types.json" lang="json" value={stringifiedExample} />
           <Alert severity="info">
             <AlertTitle>btw</AlertTitle>
             <Stack sx={{ gap: 1 }}>

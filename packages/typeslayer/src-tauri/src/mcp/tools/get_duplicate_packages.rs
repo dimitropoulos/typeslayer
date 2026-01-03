@@ -74,14 +74,14 @@ pub fn tool_definition() -> ToolDefinition<GetDuplicatePackagesExample> {
     }
 }
 
-pub async fn execute(app_data: &Mutex<AppData>) -> String {
+pub async fn execute(state: &Mutex<AppData>) -> String {
     info!("[get_duplicate_packages] called");
 
     // Lock app_data to access duplicate packages data
-    let data = app_data.lock().await;
+    let app_data = state.lock().await;
 
     // Check if analyze_trace data is available
-    let analyze_trace = match data.analyze_trace.as_ref() {
+    let analyze_trace = match app_data.analyze_trace.as_ref() {
         Some(at) => at,
         None => {
             return r#"{"error": "No duplicate packages data available. Please run analysis first."}"#

@@ -51,19 +51,19 @@ pub fn tool_definition() -> ToolDefinition<GetHotFilesExample> {
     }
 }
 
-pub async fn execute(app_data: &Mutex<AppData>) -> String {
+pub async fn execute(state: &Mutex<AppData>) -> String {
     info!("[get_hot_files] called");
 
     // Lock app_data to access trace data
-    let data = app_data.lock().await;
+    let app_data = state.lock().await;
 
-    if data.trace_json.is_empty() {
+    if app_data.trace_json.is_empty() {
         return r#"{"error": "No trace data available. Please generate a trace first."}"#
             .to_string();
     }
 
     // Build treemap data (already sorted desc by duration)
-    let treemap_nodes = match crate::treemap::build_treemap_from_trace(&data.trace_json) {
+    let treemap_nodes = match crate::treemap::build_treemap_from_trace(&app_data.trace_json) {
         Ok(nodes) => nodes,
         Err(e) => return format!("{{\"error\": \"Failed to build treemap data: {e}\"}}"),
     };

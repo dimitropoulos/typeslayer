@@ -35,8 +35,8 @@ where
     let parsed_data = parser(file_path.clone()).await?;
 
     // Copy file to outputs directory
-    let mut data = state.lock().await;
-    let outputs_dir = data.outputs_dir();
+    let mut app_data = state.lock().await;
+    let outputs_dir = app_data.outputs_dir();
 
     tokio::fs::create_dir_all(&outputs_dir)
         .await
@@ -48,8 +48,8 @@ where
         .map_err(|e| format!("Failed to copy file: {e}"))?;
 
     // Update state
-    state_updater(&mut data, parsed_data);
-    data.update_typeslayer_config_toml().await;
+    state_updater(&mut app_data, parsed_data);
+    app_data.update_typeslayer_config_toml().await;
 
     Ok(())
 }
@@ -80,36 +80,35 @@ async fn regenerate_analysis_after_upload(
 
     // Regenerate analyze trace
     let analyze_result = analyze_trace(&outputs_dir, None);
-    let mut data = state.lock().await;
+    let mut app_data = state.lock().await;
     if let Ok(result) = analyze_result {
-        data.analyze_trace = Some(result);
+        app_data.analyze_trace = Some(result);
     }
 
     // Generate type graph if both trace and types are available
-    let should_generate_graph = !data.trace_json.is_empty() && !data.types_json.is_empty();
+    let should_generate_graph = !app_data.trace_json.is_empty() && !app_data.types_json.is_empty();
 
     if should_generate_graph {
-        let types = &data.types_json;
+        let types = &app_data.types_json;
 
         let graph = TypeGraph::from_types(types);
 
         // Store in AppData and persist to disk
-        data.type_graph = Some(graph);
+        app_data.type_graph = Some(graph);
 
         // Persist to outputs/type-graph.json
-        let outputs_dir = data.outputs_dir();
+        let outputs_dir = app_data.outputs_dir();
         let path = outputs_dir.join(TYPE_GRAPH_FILENAME);
-        let json = serde_json::to_string_pretty(&data.type_graph)
+        let json = serde_json::to_string_pretty(&app_data.type_graph)
             .map_err(|e| format!("Failed to serialize type_graph: {e}"))?;
 
         std::fs::create_dir_all(&outputs_dir)
             .map_err(|e| format!("Failed to create outputs directory: {e}"))?;
-        std::fs::write(&path, json)
-            .map_err(|e| format!("Failed to write type-graph.json: {e}"))?;
+        std::fs::write(&path, json).map_err(|e| format!("Failed to write type-graph.json: {e}"))?;
     }
 
     // Update outputs after regeneration
-    data.update_typeslayer_config_toml().await;
+    app_data.update_typeslayer_config_toml().await;
     Ok(())
 }
 

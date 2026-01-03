@@ -57,7 +57,7 @@ pub fn send_event<T: TypeSlayerEvent + serde::Serialize + std::fmt::Debug + Send
     tauri::async_runtime::spawn(async move {
         let client = reqwest::Client::new();
         let res = client
-            .post("https://analytics.typeslayer.dev/collect")
+            .post("https://typeslayer-analytics.typeslayer.workers.dev/collect")
             .json(&event)
             .send()
             .await;

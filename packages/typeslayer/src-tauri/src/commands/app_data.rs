@@ -29,37 +29,37 @@ pub async fn set_project_root(
     state: State<'_, &Mutex<AppData>>,
     project_root: String,
 ) -> Result<(), String> {
-    let mut data = state.lock().await;
+    let mut app_data = state.lock().await;
     let path_buf = PathBuf::from(project_root.clone());
     let window_title = compute_window_title(path_buf.clone()).await;
     set_window_title(&app, window_title).await?;
-    data.set_project_root(path_buf).await?;
+    app_data.set_project_root(path_buf).await?;
     Ok(())
 }
 
 #[tauri::command]
 pub async fn get_trace_json(state: State<'_, &Mutex<AppData>>) -> Result<Vec<TraceEvent>, String> {
-    let data = state.lock().await;
+    let app_data = state.lock().await;
     debug!(
         "[get_trace_json] returning {} trace events",
-        data.trace_json.len()
+        app_data.trace_json.len()
     );
-    Ok(data.trace_json.clone())
+    Ok(app_data.trace_json.clone())
 }
 
 #[tauri::command]
 pub async fn get_analyze_trace(
     state: State<'_, &Mutex<AppData>>,
 ) -> Result<AnalyzeTraceResult, String> {
-    let mut data = state.lock().await;
+    let mut app_data = state.lock().await;
     // Serve cached value if present
-    if let Some(result) = &data.analyze_trace {
+    if let Some(result) = &app_data.analyze_trace {
         return Ok(result.clone());
     }
 
     // Read from disk and cache
     let path = {
-        let outputs_dir = data.outputs_dir().to_string_lossy().to_string();
+        let outputs_dir = app_data.outputs_dir().to_string_lossy().to_string();
         Path::new(&outputs_dir).join(ANALYZE_TRACE_FILENAME)
     };
     let contents = tokio::fs::read_to_string(&path)
@@ -67,7 +67,7 @@ pub async fn get_analyze_trace(
         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
     let parsed: AnalyzeTraceResult = serde_json::from_str(&contents)
         .map_err(|e| format!("Failed to parse {}: {}", path.display(), e))?;
-    data.analyze_trace = Some(parsed.clone());
+    app_data.analyze_trace = Some(parsed.clone());
     debug!(
         "[get_analyze_trace] loaded analyze trace from disk with size {} bytes",
         contents.len()
@@ -77,22 +77,22 @@ pub async fn get_analyze_trace(
 
 #[tauri::command]
 pub async fn get_cpu_profile(state: State<'_, &Mutex<AppData>>) -> Result<Option<String>, String> {
-    let data = state.lock().await;
+    let app_data = state.lock().await;
     debug!(
         "[get_cpu_profile] returning CPU profile of size {} bytes",
-        data.cpu_profile.as_ref().map_or(0, |s| s.len())
+        app_data.cpu_profile.as_ref().map_or(0, |s| s.len())
     );
-    Ok(data.cpu_profile.clone())
+    Ok(app_data.cpu_profile.clone())
 }
 
 #[tauri::command]
 pub async fn get_tsconfig_paths(state: State<'_, &Mutex<AppData>>) -> Result<Vec<String>, String> {
-    let data = state.lock().await;
+    let app_data = state.lock().await;
     debug!(
         "[get_tsconfig_paths] returning {} tsconfig paths",
-        data.tsconfig_paths.len()
+        app_data.tsconfig_paths.len()
     );
-    Ok(data
+    Ok(app_data
         .tsconfig_paths
         .iter()
         .map(|p| p.to_string_lossy().to_string())
@@ -103,12 +103,12 @@ pub async fn get_tsconfig_paths(state: State<'_, &Mutex<AppData>>) -> Result<Vec
 pub async fn get_selected_tsconfig(
     state: State<'_, &Mutex<AppData>>,
 ) -> Result<Option<String>, String> {
-    let data = state.lock().await;
+    let app_data = state.lock().await;
     debug!(
         "[get_selected_tsconfig] returning selected tsconfig = {:?}",
-        data.selected_tsconfig
+        app_data.selected_tsconfig
     );
-    Ok(data
+    Ok(app_data
         .selected_tsconfig
         .as_ref()
         .map(|p| p.to_string_lossy().to_string()))
@@ -119,35 +119,35 @@ pub async fn set_selected_tsconfig(
     state: State<'_, &Mutex<AppData>>,
     tsconfig_path: String,
 ) -> Result<(), String> {
-    let mut data = state.lock().await;
+    let mut app_data = state.lock().await;
 
     // Empty string means no tsconfig (valid)
     if tsconfig_path.is_empty() {
-        data.selected_tsconfig = None;
+        app_data.selected_tsconfig = None;
         debug!("[set_selected_tsconfig] selected tsconfig set to None (empty string provided)");
         return Ok(());
     }
 
     // Validate that the path exists in discovered tsconfigs
     let path_buf = PathBuf::from(&tsconfig_path);
-    if !data.tsconfig_paths.contains(&path_buf) {
+    if !app_data.tsconfig_paths.contains(&path_buf) {
         return Err(format!(
             "tsconfig {tsconfig_path:?} not found in discovered paths"
         ));
     }
 
-    data.selected_tsconfig = Some(path_buf);
+    app_data.selected_tsconfig = Some(path_buf);
     debug!(
         "[set_selected_tsconfig] selected tsconfig set to {:?}",
-        data.selected_tsconfig
+        app_data.selected_tsconfig
     );
     Ok(())
 }
 
 #[tauri::command]
 pub async fn get_data_dir(state: State<'_, &Mutex<AppData>>) -> Result<String, String> {
-    let data = state.lock().await;
-    Ok(data.data_dir.to_string_lossy().to_string())
+    let app_data = state.lock().await;
+    Ok(app_data.data_dir.to_string_lossy().to_string())
 }
 
 #[derive(Serialize, Deserialize)]
@@ -162,14 +162,14 @@ pub struct NodesAndLinks {
 pub async fn get_type_graph_nodes_and_links(
     state: State<'_, &Mutex<AppData>>,
 ) -> Result<NodesAndLinks, String> {
-    let data = state.lock().await;
+    let app_data = state.lock().await;
 
-    let type_graph = data
+    let type_graph = app_data
         .type_graph
         .as_ref()
         .ok_or_else(|| "type graph unavailable".to_string())?;
 
-    let max_nodes = data.settings.max_nodes as usize;
+    let max_nodes = app_data.settings.max_nodes as usize;
 
     // Filter nodes to only include those with ID < max_nodes
     let filtered_nodes = type_graph.node_count.min(max_nodes);
@@ -230,9 +230,9 @@ pub struct GraphStats {
 
 #[tauri::command]
 pub async fn get_type_graph_stats(state: State<'_, &Mutex<AppData>>) -> Result<GraphStats, String> {
-    let data = state.lock().await;
+    let app_data = state.lock().await;
 
-    let type_graph = data
+    let type_graph = app_data
         .type_graph
         .as_ref()
         .ok_or_else(|| "type graph unavailable".to_string())?;
@@ -255,9 +255,9 @@ pub struct NodeAndLinkStats {
 pub async fn get_type_graph_limited_node_and_link_stats(
     state: State<'_, &Mutex<AppData>>,
 ) -> Result<NodeAndLinkStats, String> {
-    let data = state.lock().await;
+    let app_data = state.lock().await;
 
-    let type_graph = data
+    let type_graph = app_data
         .type_graph
         .as_ref()
         .ok_or_else(|| "type graph unavailable".to_string())?;

@@ -2,4 +2,4 @@
 import type { Settings } from "./Settings";
 import type { SourceHistory } from "./SourceHistory";
 
-export type EventAppStartedSuccessData = { settings: Settings, sourceHistory: SourceHistory, };
+export type EventAppStartedSuccessData = { settings: Settings, sourceHistory: SourceHistory, projectRoot: string, };

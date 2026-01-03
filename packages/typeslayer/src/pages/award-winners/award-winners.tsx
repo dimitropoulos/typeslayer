@@ -74,7 +74,8 @@ export const RenderPlayground = () => {
       );
 
     case "trivia_typeKinds":
-      return <TriviaAwardPage key={activeAward} />;
+    case "trivia_relations":
+      return <TriviaAwardPage key={activeAward} awardId={activeAward} />;
 
     default:
       activeAward satisfies never;
@@ -103,7 +104,7 @@ export const AwardWinners = () => {
           overflowY: "auto",
           borderRight: 1,
           borderColor: "divider",
-          pb: 4,
+          pb: 1,
           "& .MuiListItemButton-root": {
             whiteSpace: "nowrap",
           },

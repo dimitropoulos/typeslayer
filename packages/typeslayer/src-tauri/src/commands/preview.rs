@@ -27,20 +27,16 @@ pub async fn get_output_file_preview(path: &PathBuf) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn get_types_json_preview(
-    state: State<'_, &Mutex<AppData>>,
-) -> Result<String, String> {
-    let data = state.lock().await;
-    let filepath = data.outputs_dir().join(TYPES_JSON_FILENAME);
+pub async fn get_types_json_preview(state: State<'_, &Mutex<AppData>>) -> Result<String, String> {
+    let app_data = state.lock().await;
+    let filepath = app_data.outputs_dir().join(TYPES_JSON_FILENAME);
     get_output_file_preview(&filepath).await
 }
 
 #[tauri::command]
-pub async fn get_trace_json_preview(
-    state: State<'_, &Mutex<AppData>>,
-) -> Result<String, String> {
-    let data = state.lock().await;
-    let filepath = data.outputs_dir().join(TRACE_JSON_FILENAME);
+pub async fn get_trace_json_preview(state: State<'_, &Mutex<AppData>>) -> Result<String, String> {
+    let app_data = state.lock().await;
+    let filepath = app_data.outputs_dir().join(TRACE_JSON_FILENAME);
     get_output_file_preview(&filepath).await
 }
 
@@ -48,26 +44,22 @@ pub async fn get_trace_json_preview(
 pub async fn get_analyze_trace_preview(
     state: State<'_, &Mutex<AppData>>,
 ) -> Result<String, String> {
-    let data = state.lock().await;
-    let filepath = data.outputs_dir().join(ANALYZE_TRACE_FILENAME);
+    let app_data = state.lock().await;
+    let filepath = app_data.outputs_dir().join(ANALYZE_TRACE_FILENAME);
     get_output_file_preview(&filepath).await
 }
 
 #[tauri::command]
-pub async fn get_cpu_profile_preview(
-    state: State<'_, &Mutex<AppData>>,
-) -> Result<String, String> {
-    let data = state.lock().await;
-    let filepath = data.outputs_dir().join(CPU_PROFILE_FILENAME);
+pub async fn get_cpu_profile_preview(state: State<'_, &Mutex<AppData>>) -> Result<String, String> {
+    let app_data = state.lock().await;
+    let filepath = app_data.outputs_dir().join(CPU_PROFILE_FILENAME);
     get_output_file_preview(&filepath).await
 }
 
 #[tauri::command]
-pub async fn get_type_graph_preview(
-    state: State<'_, &Mutex<AppData>>,
-) -> Result<String, String> {
-    let data = state.lock().await;
-    let filepath = data
+pub async fn get_type_graph_preview(state: State<'_, &Mutex<AppData>>) -> Result<String, String> {
+    let app_data = state.lock().await;
+    let filepath = app_data
         .outputs_dir()
         .join(crate::type_graph::TYPE_GRAPH_FILENAME);
     get_output_file_preview(&filepath).await

@@ -119,6 +119,10 @@ export const EventPage = <E extends Event["name"]>({
                     </Typography>
                   </Stack>
                 }
+                slots={{
+                  secondary: Box,
+                  primary: Box,
+                }}
                 secondary={
                   <Stack direction="row" gap={1} alignItems="center">
                     <PlatformIcon platform={event.platform} />
@@ -134,7 +138,8 @@ export const EventPage = <E extends Event["name"]>({
                       {event.sessionId}
                     </Typography>
                     {"sourceHistory" in event.data &&
-                    event.data.sourceHistory.from_file.length === 0 ? (
+                    "fromFile" in event.data.sourceHistory &&
+                    event.data.sourceHistory.fromFile.length === 0 ? (
                       <Cake
                         titleAccess="first time opening TypeSlayer"
                         sx={{

@@ -9,7 +9,7 @@ use tokio::sync::Mutex;
 pub async fn get_treemap_data(
     state: State<'_, &Mutex<AppData>>,
 ) -> Result<Vec<TreemapNode>, String> {
-    let data = state.lock().await;
-    let treemap_data = build_treemap_from_trace(&data.trace_json)?;
+    let app_data = state.lock().await;
+    let treemap_data = build_treemap_from_trace(&app_data.trace_json)?;
     Ok(treemap_data)
 }

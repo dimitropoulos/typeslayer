@@ -27,13 +27,17 @@ pub struct BugReportFile {
 pub async fn get_bug_report_files(
     state: State<'_, &Mutex<AppData>>,
 ) -> Result<Vec<BugReportFile>, String> {
-    let data = state.lock().await;
+    let app_data = state.lock().await;
     let mut files = Vec::new();
 
-    let outputs_dir = data.outputs_dir();
+    let outputs_dir = app_data.outputs_dir();
 
     let bug_report_files = [
-        (&data.data_dir, CONFIG_FILENAME, "TypeSlayer config file"),
+        (
+            &app_data.data_dir,
+            CONFIG_FILENAME,
+            "TypeSlayer config file",
+        ),
         (&outputs_dir, TYPES_JSON_FILENAME, "Type definitions data"),
         (
             &outputs_dir,
@@ -48,12 +52,12 @@ pub async fn get_bug_report_files(
         (&outputs_dir, TYPE_GRAPH_FILENAME, "Type relationship graph"),
         (&outputs_dir, CPU_PROFILE_FILENAME, "TypeScript CPU profile"),
         (
-            &data.data_dir,
+            &app_data.data_dir,
             ANALYTICS_EVENTS_FILENAME,
             "Local Events log",
         ),
         (
-            &data.project_root,
+            &app_data.project_root,
             PACKAGE_JSON_FILENAME,
             "Project package configuration",
         ),
@@ -70,7 +74,7 @@ pub async fn get_bug_report_files(
     }
 
     // Check if selected tsconfig exists
-    if let Some(tsconfig_path) = &data.selected_tsconfig
+    if let Some(tsconfig_path) = &app_data.selected_tsconfig
         && tsconfig_path.exists()
     {
         let filename = tsconfig_path
@@ -93,9 +97,9 @@ pub async fn create_bug_report(
     stdout: Option<String>,
     stderr: Option<String>,
 ) -> Result<String, String> {
-    let data = state.lock().await;
-    let outputs_dir = data.outputs_dir();
-    let data_dir = data.data_dir.clone();
+    let app_data = state.lock().await;
+    let outputs_dir = app_data.outputs_dir();
+    let data_dir = app_data.data_dir.clone();
 
     // Create bug report zip file
     let downloads_dir =
@@ -192,8 +196,8 @@ pub async fn upload_bug_report(
     }
 
     let (outputs_dir, data_dir) = {
-        let data = state.lock().await;
-        (data.outputs_dir().clone(), data.data_dir.clone())
+        let app_data = state.lock().await;
+        (app_data.outputs_dir().clone(), app_data.data_dir.clone())
     };
 
     // Clone paths for the blocking unzip task so originals remain available
@@ -202,8 +206,8 @@ pub async fn upload_bug_report(
 
     // Clear the outputs directory first
     {
-        let mut data = state.lock().await;
-        data.clear_outputs_dir().await?;
+        let mut app_data = state.lock().await;
+        app_data.clear_outputs_dir().await?;
     }
 
     // Unzip and process files in a blocking task
@@ -248,8 +252,8 @@ pub async fn upload_bug_report(
         .map_err(|e| format!("Failed to reinitialize app data: {e}"))?;
 
     {
-        let mut data = state.lock().await;
-        *data = new_app_data;
+        let mut app_data = state.lock().await;
+        *app_data = new_app_data;
     }
 
     Ok(())

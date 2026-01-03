@@ -8,6 +8,7 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { AnalyzeTraceResult } from "@typeslayer/analyze-trace/browser";
+import type { StrippedLinkKindData } from "@typeslayer/rust-types";
 import {
   extractPackageName,
   type Flag,
@@ -1103,6 +1104,17 @@ export const useTypeKinds = () => {
   return useQuery({
     queryKey: ["type_kinds"],
     queryFn: () => invoke<[number, `${string}%`, Flag[]][]>("get_type_kinds"),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+};
+
+export const useLinkKindDataByKind = () => {
+  return useQuery({
+    queryKey: ["link_kind_data_by_kind"],
+    queryFn: () =>
+      invoke<Partial<Record<LinkKind, StrippedLinkKindData>>>(
+        "get_link_kind_data_by_kind",
+      ),
     staleTime: Number.POSITIVE_INFINITY,
   });
 };

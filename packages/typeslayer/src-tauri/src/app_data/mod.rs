@@ -198,7 +198,7 @@ impl AppData {
         Ok(())
     }
 
-    pub fn get_tsc_call(&self, user_flags: &str) -> Result<TSCCommand, String> {
+    pub fn get_tsc_call(&self, user_flags: &str) -> TSCCommand {
         let shell;
         let shell_arg;
         if cfg!(target_os = "windows") {
@@ -277,11 +277,17 @@ impl AppData {
             args.push(&tsconfig_string);
         }
 
-        Ok(TSCCommand {
+        TSCCommand {
             shell,
             shell_arg: shell_arg.to_string(),
             command: args.join(" "),
-        })
+        }
+    }
+
+    pub fn get_example_tsc_call(&self) -> String {
+        let outputs_dir = self.outputs_dir().to_string_lossy().to_string();
+        let flag = format!("--generateTrace {}", quote_if_needed(&outputs_dir));
+        self.get_tsc_call(&flag).to_string()
     }
 
     pub async fn call_typescript(
@@ -295,7 +301,7 @@ impl AppData {
             .await
             .map_err(|e| format!("Failed to create data directory: {e}"))?;
 
-        let tsc_command = self.get_tsc_call(&flag)?;
+        let tsc_command = self.get_tsc_call(&flag);
 
         let cwd = &self.project_root;
 

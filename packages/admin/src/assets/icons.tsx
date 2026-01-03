@@ -1,18 +1,4 @@
-import { keyframes } from "@emotion/react";
 import { SvgIcon } from "@mui/material";
-
-const rainbow = keyframes`
-  0% {
-    filter: hue-rotate(0deg) drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
-  }
-  50% {
-    filter: hue-rotate(180deg) drop-shadow(0 0 5px rgba(255, 255, 255, 0.8));
-  }
-  100% {
-    filter: hue-rotate(360deg) drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
-  }
-`;
-
 
 export const Ubuntu = () => {
   return (
@@ -223,10 +209,7 @@ export const Fedora = () => {
         fill="#294172"
       />
       <use href="#fedora-in" />
-      <use
-        href="#fedora-in"
-        transform="matrix(-1,0,0,-1,249.71151,284.2882)"
-      />
+      <use href="#fedora-in" transform="matrix(-1,0,0,-1,249.71151,284.2882)" />
       <use href="#fedora-free" />
       <use
         href="#fedora-free"
@@ -393,13 +376,22 @@ export const CachyOs = () => {
           href="#linearGradient937"
         />
       </defs>
-      <circle cx="64.51" cy="62.02" r="87.45" opacity="0" strokeWidth=".27971" />
+      <circle
+        cx="64.51"
+        cy="62.02"
+        r="87.45"
+        opacity="0"
+        strokeWidth=".27971"
+      />
       <path
         d="m4.3286 1.9244h8.3458l-2.1127 3.6528h-4.526l-1.8859 3.2605 1.9121 3.306h8.8286l-2.1664 3.7456h-8.5747l-4.1369-7.1525 3.9605-6.8475z"
         fill="#fff"
       />
       <path d="m3.973 1.8893 6.5887 3.6879 2.1127-3.6528z" fill="#0a8" />
-      <path d="m6.0619 12.144-1.9125 3.7456h8.5747l2.1664-3.7456z" fill="#0a8" />
+      <path
+        d="m6.0619 12.144-1.9125 3.7456h8.5747l2.1664-3.7456z"
+        fill="#0a8"
+      />
       <path
         d="m3.973 1.8893 6.5887 3.6879h-4.526l-1.8859 3.2605 1.9121 3.306-1.9125 3.7456-4.1369-7.1525 3.9605-6.8475"
         fill="#00ccff"

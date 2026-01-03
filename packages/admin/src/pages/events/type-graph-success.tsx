@@ -1,6 +1,6 @@
 import { Stack } from "@mui/material";
+import { LinkKindTable } from "@typeslayer/common";
 import type { EventTypeGraphSuccess } from "@typeslayer/rust-types";
-import { LinkKindTable } from "../../components/link-kind-table";
 import { StatChip } from "../../components/stat-chip";
 import type { D1Event } from "../../hooks";
 import { EventPage } from "./event-base";

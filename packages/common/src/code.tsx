@@ -1,9 +1,10 @@
 import ContentCopy from "@mui/icons-material/ContentCopy";
 import Done from "@mui/icons-material/Done";
 import { Box, type BoxProps, IconButton, Tooltip } from "@mui/material";
-import { panelBackground, shikiTheme } from "@typeslayer/common";
 import { useEffect, useState } from "react";
 import { type BundledLanguage, codeToHtml } from "shiki";
+import { panelBackground } from "./mui-theme";
+import { shikiTheme } from "./shiki-theme";
 
 export const Code = ({
   value,
@@ -82,6 +83,9 @@ export const Code = ({
             display: "flex",
             gap: 1,
             alignItems: "center",
+            fontFamily: "monospace",
+            fontSize: "0.85rem",
+            fontWeight: "bold",
           }}
         >
           {title}

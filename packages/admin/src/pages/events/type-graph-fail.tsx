@@ -1,5 +1,5 @@
+import { Code } from "@typeslayer/common";
 import type { EventTypeGraphFail } from "@typeslayer/rust-types";
-import { Code } from "../../components/code";
 import type { D1Event } from "../../hooks";
 import { EventPage } from "./event-base";
 

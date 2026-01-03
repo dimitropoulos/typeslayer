@@ -58,15 +58,12 @@ pub mod data {
     }
 
     #[allow(dead_code)]
-    pub async fn read_output_resource(
-        uri: &str,
-        app_data: &Mutex<AppData>,
-    ) -> Result<String, String> {
-        let data = app_data.lock().await;
+    pub async fn read_output_resource(uri: &str, state: &Mutex<AppData>) -> Result<String, String> {
+        let app_data = state.lock().await;
 
         match uri {
             "typeslayer://outputs/analyze-trace" => {
-                let analyze_trace = data
+                let analyze_trace = app_data
                     .analyze_trace
                     .as_ref()
                     .ok_or("No analyze-trace data available. Please run trace analysis first.")?;
@@ -74,23 +71,23 @@ pub mod data {
                     .map_err(|e| format!("Failed to serialize analyze-trace: {e}"))
             }
             "typeslayer://outputs/trace" => {
-                if data.trace_json.is_empty() {
+                if app_data.trace_json.is_empty() {
                     Err("No trace data available.".to_string())
                 } else {
-                    serde_json::to_string_pretty(&data.trace_json)
+                    serde_json::to_string_pretty(&app_data.trace_json)
                         .map_err(|e| format!("Failed to serialize trace: {e}"))
                 }
             }
             "typeslayer://outputs/types" => {
-                if data.types_json.is_empty() {
+                if app_data.types_json.is_empty() {
                     Err("No types data available.".to_string())
                 } else {
-                    serde_json::to_string_pretty(&data.types_json)
+                    serde_json::to_string_pretty(&app_data.types_json)
                         .map_err(|e| format!("Failed to serialize types: {e}"))
                 }
             }
             "typeslayer://outputs/cpu-profile" => {
-                let cpu_profile = data
+                let cpu_profile = app_data
                     .cpu_profile
                     .as_ref()
                     .ok_or("No CPU profile available. Please generate one.")?;
@@ -98,7 +95,7 @@ pub mod data {
                     .map_err(|e| format!("Failed to serialize CPU profile: {e}"))
             }
             "typeslayer://outputs/type-graph" => {
-                let type_graph = data
+                let type_graph = app_data
                     .type_graph
                     .as_ref()
                     .ok_or("No type graph available. Please build it first.")?;

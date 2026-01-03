@@ -552,7 +552,7 @@ const Setup = () => {
           </Stack>
         </li>
         <li>
-          <Typography>restart or reload your MCP clien.</Typography>
+          <Typography>restart or reload your MCP client.</Typography>
         </li>
         <li>
           <Typography>

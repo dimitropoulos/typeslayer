@@ -69,20 +69,20 @@ pub async fn validate_types_and_trace_async(
 #[tauri::command]
 pub async fn generate_trace(
     app: AppHandle,
-    app_data: State<'_, &Mutex<AppData>>,
+    state: State<'_, &Mutex<AppData>>,
     process_controller: State<'_, ProcessController>,
 ) -> Result<(), String> {
     let _guard = start_task(app, TaskId::GenerateTrace)?;
 
-    let mut data = app_data.lock().await;
-    let outputs_dir = data.outputs_dir().to_string_lossy().to_string();
+    let mut app_data = state.lock().await;
+    let outputs_dir = app_data.outputs_dir().to_string_lossy().to_string();
     let start_time = Instant::now();
 
     info!("[generate_trace] will write outputs under {}", outputs_dir);
     let outputs_dir_for_closure = outputs_dir.clone();
     let flag = make_cli_arg("--generateTrace", &outputs_dir_for_closure);
 
-    let command_output = data.call_typescript(&process_controller, flag).await?;
+    let command_output = app_data.call_typescript(&process_controller, flag).await?;
     let exit_success = command_output.status.success();
     let (stdout, stderr) = process_output(command_output).await?;
 
@@ -91,7 +91,7 @@ pub async fn generate_trace(
         let duration = start_time.elapsed().as_millis() as u64;
 
         EventGenerateTraceFail::send(
-            &data,
+            &app_data,
             EventGenerateTraceFailArgs {
                 duration,
                 stdout: Some(stdout.clone()),
@@ -117,18 +117,18 @@ pub async fn generate_trace(
 
     let ((types, types_json_file_size), (trace, trace_json_file_size)) =
         validate_types_and_trace_async(&outputs_dir).await?;
-    data.types_json = types;
-    data.trace_json = trace;
+    app_data.types_json = types;
+    app_data.trace_json = trace;
     let duration = start_time.elapsed().as_millis() as u64;
-    data.update_typeslayer_config_toml().await;
+    app_data.update_typeslayer_config_toml().await;
     debug!(
         "[generate_trace] cached {} types and {} trace events",
-        data.types_json.len(),
-        data.trace_json.len()
+        app_data.types_json.len(),
+        app_data.trace_json.len()
     );
 
     EventGenerateTraceSuccess::send(
-        &data,
+        &app_data,
         EventGenerateTraceSuccessArgs {
             duration,
             stdout: Some(stdout),
@@ -150,8 +150,8 @@ pub async fn generate_cpu_profile(
 ) -> Result<(), String> {
     let _guard = start_task(app, TaskId::GenerateCpuProfile)?;
 
-    let mut data = state.lock().await;
-    let outputs_dir = data.outputs_dir().to_string_lossy().to_string();
+    let mut app_data = state.lock().await;
+    let outputs_dir = app_data.outputs_dir().to_string_lossy().to_string();
 
     info!(
         "[generate_cpu_profile]: will write profile under {}",
@@ -161,7 +161,7 @@ pub async fn generate_cpu_profile(
     let generation_path = Path::new(&outputs_dir_for_closure).join(CPU_PROFILE_FILENAME);
     let flag = make_cli_arg("--generateCpuProfile", &generation_path.to_string_lossy());
 
-    let command_output = data.call_typescript(&process_controller, flag).await?;
+    let command_output = app_data.call_typescript(&process_controller, flag).await?;
 
     if !command_output.status.success() {
         let (stdout, stderr) = process_output(command_output).await?;
@@ -174,12 +174,12 @@ pub async fn generate_cpu_profile(
     let path = Path::new(&outputs_dir).join(CPU_PROFILE_FILENAME);
     match tokio::fs::read_to_string(&path).await {
         Ok(contents) => {
-            data.cpu_profile = Some(contents);
+            app_data.cpu_profile = Some(contents);
             debug!(
                 "[generate_cpu_profile] cached CPU profile of size {} bytes",
-                data.cpu_profile.as_ref().map_or(0, |s| s.len())
+                app_data.cpu_profile.as_ref().map_or(0, |s| s.len())
             );
-            data.update_typeslayer_config_toml().await;
+            app_data.update_typeslayer_config_toml().await;
         }
         Err(e) => error!("Failed to read CPU profile after generation: {}", e),
     };

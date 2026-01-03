@@ -360,7 +360,8 @@ async function computeLeaderboard(env: Env): Promise<LeaderboardNumber[]> {
     const rows = await getRows(env, query.eventName, query.dataPath);
 
     if (rows && rows.length > 0) {
-      const values = rows.map(r => r.value);
+      // remove duplicates (which can happen if someone *cough cough me* repeatedly runs on the same codebase)
+      const values = Array.from(new Set(rows.map(r => r.value)));
       const sorted = values.toSorted((a, b) => a - b);
 
       const samples = values.length;
@@ -409,6 +410,7 @@ export async function handleLeaderboard(
 
     // Create a consistent cache key URL (no query params)
     const url = new URL(request.url);
+    url.pathname = "/leaderboard";
     url.search = "";
     const cacheKeyUrl = url.toString();
 
@@ -436,7 +438,8 @@ export async function handleLeaderboard(
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
         "X-Cache": "miss",
-        "Cache-Control": `public, max-age=${CACHE_TTL_SECONDS}`,
+        // Browser: don't cache (0s). CDN: cache for 1 hour (which avoids waking up the worker)
+        "Cache-Control": `public, max-age=0, s-maxage=${CACHE_TTL_SECONDS}`,
       },
     });
 

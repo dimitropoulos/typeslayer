@@ -50,6 +50,7 @@
     "@typeslayer/analytics": "workspace:*",
     "@typeslayer/analyze-trace": "workspace:*",
     "@typeslayer/common": "workspace:*",
+    "@typeslayer/rust-types": "workspace:*",
     "@typeslayer/validate": "workspace:*",
     "@vitejs/plugin-react": "5.1.2",
     "typescript": "5.9.3",

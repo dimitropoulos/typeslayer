@@ -1,6 +1,6 @@
 import Insights from "@mui/icons-material/Insights";
 import { Alert, Button, Stack } from "@mui/material";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { BigAction } from "../../components/big-action";
 import { useLogoFade } from "../../contexts/logo-fade-context";
 import { useCancelGeneration, useClearOutputs } from "../../hooks/tauri-hooks";
@@ -85,6 +85,24 @@ export const Step3Diagnostics = () => {
       setIsClearingOutputs(false);
     }
   }, [isProcessing, clearOutputs, cancelGeneration]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const trigger =
+        (event.ctrlKey && event.key === "Enter") ||
+        (event.metaKey && event.key === "Enter");
+      if (trigger) {
+        event.preventDefault();
+        if (!isProcessing) {
+          processTypes();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isProcessing, processTypes]);
 
   return (
     <>

@@ -12,13 +12,14 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import { InlineCode, panelBackground } from "@typeslayer/common";
-import { useTypeKinds } from "../../hooks/tauri-hooks";
+import { InlineCode, LinkKindTable, panelBackground } from "@typeslayer/common";
+import { useLinkKindDataByKind, useTypeKinds } from "../../hooks/tauri-hooks";
 import { AwardNavItem } from "./award-nav-item";
 import type { AwardId } from "./awards";
 import { TitleSubtitle } from "./title-subtitle";
 
-const trivia = ["trivia_typeKinds"] satisfies AwardId[];
+const trivia = ["trivia_typeKinds", "trivia_relations"] satisfies AwardId[];
+type TriviaAwardId = (typeof trivia)[number];
 
 export const TriviaNavItems = () => {
   const { data: typeKinds } = useTypeKinds();
@@ -37,11 +38,36 @@ export const TriviaNavItems = () => {
   );
 };
 
-export const TriviaAwardPage = () => {
+export const TriviaAwardPage = ({ awardId }: { awardId: TriviaAwardId }) => {
+  switch (awardId) {
+    case "trivia_typeKinds":
+      return <TriviaTypeKinds />;
+
+    case "trivia_relations":
+      return <TriviaRelations />;
+
+    default:
+      awardId satisfies never;
+      throw new Error(`Unknown award: ${awardId}`);
+  }
+};
+
+const TriviaTypeKinds = () => {
   const { data: typeKinds } = useTypeKinds();
 
   if (!typeKinds) {
-    return <CircularProgress />;
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100%",
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return (
@@ -96,11 +122,8 @@ export const TriviaAwardPage = () => {
                   </Stack>
                 </TableCell>
                 <TableCell align="left">
-                  <Stack sx={{ marginTop: "-2px" }}>
-                    <Typography
-                      color="text.secondary"
-                      sx={{ fontSize: "0.8em" }}
-                    >
+                  <Stack sx={{ marginTop: "-6px", py: "2px" }}>
+                    <Typography color="text.secondary" sx={{ fontSize: "1em" }}>
                       {percentage}
                     </Typography>
 
@@ -110,7 +133,7 @@ export const TriviaAwardPage = () => {
                         width: "100%",
                         height: 3,
                         backgroundColor: "divider",
-                        marginTop: "-2px",
+                        marginTop: "0px",
                       }}
                     >
                       <Box
@@ -143,6 +166,37 @@ export const TriviaAwardPage = () => {
             ))}
           </TableBody>
         </Table>
+      </Stack>
+    </Stack>
+  );
+};
+
+const TriviaRelations = () => {
+  const { data } = useLinkKindDataByKind();
+  return (
+    <Stack
+      sx={{
+        p: 1,
+        pt: 2,
+        gap: 1,
+      }}
+    >
+      <TitleSubtitle
+        title="Type Relations"
+        subtitle={
+          <Typography>
+            this is just for fun - a list of all the kinds of types in your
+            project
+          </Typography>
+        }
+        icon={<Flag fontSize="large" />}
+      />
+      <Stack
+        sx={{
+          mx: 2,
+        }}
+      >
+        <LinkKindTable linkKindDataByKind={data} />
       </Stack>
     </Stack>
   );

@@ -13,8 +13,8 @@ use tracing::debug;
 #[tauri::command]
 pub async fn validate_analyze_trace(state: State<'_, &Mutex<AppData>>) -> Result<(), String> {
     let path = {
-        let data = state.lock().await;
-        data.outputs_dir().join(ANALYZE_TRACE_FILENAME)
+        let app_data = state.lock().await;
+        app_data.outputs_dir().join(ANALYZE_TRACE_FILENAME)
     };
 
     let contents = tokio::fs::read_to_string(&path)
@@ -30,16 +30,16 @@ pub async fn validate_analyze_trace(state: State<'_, &Mutex<AppData>>) -> Result
         contents.len()
     );
 
-    let mut data = state.lock().await;
-    data.analyze_trace = Some(parsed);
+    let mut app_data = state.lock().await;
+    app_data.analyze_trace = Some(parsed);
     Ok(())
 }
 
 #[tauri::command]
 pub async fn validate_trace_json(state: State<'_, &Mutex<AppData>>) -> Result<(), String> {
     let path = {
-        let data = state.lock().await;
-        data.outputs_dir().join(TRACE_JSON_FILENAME)
+        let app_data = state.lock().await;
+        app_data.outputs_dir().join(TRACE_JSON_FILENAME)
     };
 
     let parsed = load_trace_json(path).await?;
@@ -49,16 +49,16 @@ pub async fn validate_trace_json(state: State<'_, &Mutex<AppData>>) -> Result<()
         parsed.len()
     );
 
-    let mut data = state.lock().await;
-    data.trace_json = parsed;
+    let mut app_data = state.lock().await;
+    app_data.trace_json = parsed;
     Ok(())
 }
 
 #[tauri::command]
 pub async fn validate_types_json(state: State<'_, &Mutex<AppData>>) -> Result<(), String> {
     let path = {
-        let data = state.lock().await;
-        data.outputs_dir().join(TYPES_JSON_FILENAME)
+        let app_data = state.lock().await;
+        app_data.outputs_dir().join(TYPES_JSON_FILENAME)
     };
 
     let parsed = load_types_json(path).await?;
@@ -68,16 +68,16 @@ pub async fn validate_types_json(state: State<'_, &Mutex<AppData>>) -> Result<()
         parsed.len()
     );
 
-    let mut data = state.lock().await;
-    data.types_json = parsed;
+    let mut app_data = state.lock().await;
+    app_data.types_json = parsed;
     Ok(())
 }
 
 #[tauri::command]
 pub async fn validate_cpu_profile(state: State<'_, &Mutex<AppData>>) -> Result<(), String> {
     let path = {
-        let data = state.lock().await;
-        data.outputs_dir().join(CPU_PROFILE_FILENAME)
+        let app_data = state.lock().await;
+        app_data.outputs_dir().join(CPU_PROFILE_FILENAME)
     };
 
     let contents = tokio::fs::read_to_string(&path)
@@ -93,16 +93,16 @@ pub async fn validate_cpu_profile(state: State<'_, &Mutex<AppData>>) -> Result<(
         contents.len()
     );
 
-    let mut data = state.lock().await;
-    data.cpu_profile = Some(contents);
+    let mut app_data = state.lock().await;
+    app_data.cpu_profile = Some(contents);
     Ok(())
 }
 
 #[tauri::command]
 pub async fn validate_type_graph(state: State<'_, &Mutex<AppData>>) -> Result<(), String> {
     let path = {
-        let data = state.lock().await;
-        data.outputs_dir().join(TYPE_GRAPH_FILENAME)
+        let app_data = state.lock().await;
+        app_data.outputs_dir().join(TYPE_GRAPH_FILENAME)
     };
 
     let contents = tokio::fs::read_to_string(&path)
@@ -117,7 +117,7 @@ pub async fn validate_type_graph(state: State<'_, &Mutex<AppData>>) -> Result<()
         parsed.node_count
     );
 
-    let mut data = state.lock().await;
-    data.type_graph = Some(parsed);
+    let mut app_data = state.lock().await;
+    app_data.type_graph = Some(parsed);
     Ok(())
 }

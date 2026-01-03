@@ -19,12 +19,12 @@ use tracing::debug;
 
 #[tauri::command]
 pub async fn get_relative_paths(state: State<'_, &Mutex<AppData>>) -> Result<bool, String> {
-    let data = state.lock().await;
+    let app_data = state.lock().await;
     debug!(
         "[get_relative_paths] returning {}",
-        data.settings.relative_paths
+        app_data.settings.relative_paths
     );
-    Ok(data.settings.relative_paths)
+    Ok(app_data.settings.relative_paths)
 }
 
 #[tauri::command]
@@ -32,17 +32,17 @@ pub async fn set_relative_paths(
     state: State<'_, &Mutex<AppData>>,
     value: bool,
 ) -> Result<(), String> {
-    let mut data = state.lock().await;
-    data.settings.relative_paths = value;
+    let mut app_data = state.lock().await;
+    app_data.settings.relative_paths = value;
     debug!("[set_relative_paths] set to {}", value);
-    data.update_typeslayer_config_toml().await;
+    app_data.update_typeslayer_config_toml().await;
     Ok(())
 }
 
 #[tauri::command]
 pub async fn get_prefer_editor_open(state: State<'_, &Mutex<AppData>>) -> Result<bool, String> {
-    let data = state.lock().await;
-    Ok(data.settings.prefer_editor_open)
+    let app_data = state.lock().await;
+    Ok(app_data.settings.prefer_editor_open)
 }
 
 #[tauri::command]
@@ -50,9 +50,9 @@ pub async fn set_prefer_editor_open(
     state: State<'_, &Mutex<AppData>>,
     value: bool,
 ) -> Result<(), String> {
-    let mut data = state.lock().await;
-    data.settings.prefer_editor_open = value;
-    data.update_typeslayer_config_toml().await;
+    let mut app_data = state.lock().await;
+    app_data.settings.prefer_editor_open = value;
+    app_data.update_typeslayer_config_toml().await;
     Ok(())
 }
 
@@ -60,8 +60,8 @@ pub async fn set_prefer_editor_open(
 pub async fn get_preferred_editor(
     state: State<'_, &Mutex<AppData>>,
 ) -> Result<Option<String>, String> {
-    let data = state.lock().await;
-    Ok(data.settings.preferred_editor.clone())
+    let app_data = state.lock().await;
+    Ok(app_data.settings.preferred_editor.clone())
 }
 
 #[tauri::command]
@@ -69,7 +69,7 @@ pub async fn set_preferred_editor(
     state: State<'_, &Mutex<AppData>>,
     editor: String,
 ) -> Result<(), String> {
-    let mut data = state.lock().await;
+    let mut app_data = state.lock().await;
 
     // Validate that editor is in AVAILABLE_EDITORS
     let is_valid = AVAILABLE_EDITORS.iter().any(|(cmd, _)| *cmd == editor);
@@ -80,15 +80,15 @@ pub async fn set_preferred_editor(
         ));
     }
 
-    data.settings.preferred_editor = Some(editor);
-    data.update_typeslayer_config_toml().await;
+    app_data.settings.preferred_editor = Some(editor);
+    app_data.update_typeslayer_config_toml().await;
     Ok(())
 }
 
 #[tauri::command]
 pub async fn get_extra_tsc_flags(state: State<'_, &Mutex<AppData>>) -> Result<String, String> {
-    let data = state.lock().await;
-    Ok(data.settings.extra_tsc_flags.clone())
+    let app_data = state.lock().await;
+    Ok(app_data.settings.extra_tsc_flags.clone())
 }
 
 #[tauri::command]
@@ -101,16 +101,16 @@ pub async fn set_extra_tsc_flags(
     state: State<'_, &Mutex<AppData>>,
     flags: String,
 ) -> Result<(), String> {
-    let mut data = state.lock().await;
-    data.settings.extra_tsc_flags = flags;
-    data.update_typeslayer_config_toml().await;
+    let mut app_data = state.lock().await;
+    app_data.settings.extra_tsc_flags = flags;
+    app_data.update_typeslayer_config_toml().await;
     Ok(())
 }
 
 #[tauri::command]
 pub async fn get_apply_tsc_project_flag(state: State<'_, &Mutex<AppData>>) -> Result<bool, String> {
-    let data = state.lock().await;
-    Ok(data.settings.apply_tsc_project_flag)
+    let app_data = state.lock().await;
+    Ok(app_data.settings.apply_tsc_project_flag)
 }
 
 #[tauri::command]
@@ -118,9 +118,9 @@ pub async fn set_apply_tsc_project_flag(
     state: State<'_, &Mutex<AppData>>,
     value: bool,
 ) -> Result<(), String> {
-    let mut data = state.lock().await;
-    data.settings.apply_tsc_project_flag = value;
-    data.update_typeslayer_config_toml().await;
+    let mut app_data = state.lock().await;
+    app_data.settings.apply_tsc_project_flag = value;
+    app_data.update_typeslayer_config_toml().await;
     Ok(())
 }
 
@@ -128,8 +128,8 @@ pub async fn set_apply_tsc_project_flag(
 pub async fn get_max_old_space_size(
     state: State<'_, &Mutex<AppData>>,
 ) -> Result<Option<i32>, String> {
-    let data = state.lock().await;
-    Ok(data.settings.max_old_space_size)
+    let app_data = state.lock().await;
+    Ok(app_data.settings.max_old_space_size)
 }
 
 #[tauri::command]
@@ -137,16 +137,16 @@ pub async fn set_max_old_space_size(
     state: State<'_, &Mutex<AppData>>,
     size: Option<i32>,
 ) -> Result<(), String> {
-    let mut data = state.lock().await;
-    data.settings.max_old_space_size = size;
-    data.update_typeslayer_config_toml().await;
+    let mut app_data = state.lock().await;
+    app_data.settings.max_old_space_size = size;
+    app_data.update_typeslayer_config_toml().await;
     Ok(())
 }
 
 #[tauri::command]
 pub async fn get_max_stack_size(state: State<'_, &Mutex<AppData>>) -> Result<Option<i32>, String> {
-    let data = state.lock().await;
-    Ok(data.settings.max_stack_size)
+    let app_data = state.lock().await;
+    Ok(app_data.settings.max_stack_size)
 }
 
 #[tauri::command]
@@ -154,9 +154,9 @@ pub async fn set_max_stack_size(
     state: State<'_, &Mutex<AppData>>,
     size: Option<i32>,
 ) -> Result<(), String> {
-    let mut data = state.lock().await;
-    data.settings.max_stack_size = size;
-    data.update_typeslayer_config_toml().await;
+    let mut app_data = state.lock().await;
+    app_data.settings.max_stack_size = size;
+    app_data.update_typeslayer_config_toml().await;
     Ok(())
 }
 
@@ -164,8 +164,8 @@ pub async fn set_max_stack_size(
 pub async fn get_typescript_compiler_variant(
     state: State<'_, &Mutex<AppData>>,
 ) -> Result<String, String> {
-    let data = state.lock().await;
-    Ok(data
+    let app_data = state.lock().await;
+    Ok(app_data
         .settings
         .typescript_compiler_variant
         .as_str()
@@ -180,16 +180,16 @@ pub async fn set_typescript_compiler_variant(
     let compiler_variant = TypeScriptCompilerVariant::from_str(&variant)
         .map_err(|_| format!("Invalid TypeScript compiler variant: {}", variant))?;
 
-    let mut data = state.lock().await;
-    data.settings.typescript_compiler_variant = compiler_variant;
-    data.update_typeslayer_config_toml().await;
+    let mut app_data = state.lock().await;
+    app_data.settings.typescript_compiler_variant = compiler_variant;
+    app_data.update_typeslayer_config_toml().await;
     Ok(())
 }
 
 #[tauri::command]
 pub async fn get_max_nodes(state: State<'_, &Mutex<AppData>>) -> Result<i32, String> {
-    let data = state.lock().await;
-    Ok(data.settings.max_nodes)
+    let app_data = state.lock().await;
+    Ok(app_data.settings.max_nodes)
 }
 
 #[tauri::command]
@@ -200,9 +200,9 @@ pub async fn set_max_nodes(
     if max_nodes > 10_000_000 {
         return Err("maxNodes must not exceed 10,000,000".to_string());
     }
-    let mut data = state.lock().await;
-    data.settings.max_nodes = max_nodes;
-    data.update_typeslayer_config_toml().await;
+    let mut app_data = state.lock().await;
+    app_data.settings.max_nodes = max_nodes;
+    app_data.update_typeslayer_config_toml().await;
     Ok(())
 }
 
@@ -236,8 +236,8 @@ fn get_event_info<T: TypeSlayerEvent + serde::Serialize>(
 pub async fn get_analytics_consent(
     state: State<'_, &Mutex<AppData>>,
 ) -> Result<Vec<(String, AnalyticsInfo, AnalyticsInfo)>, String> {
-    let data = state.lock().await;
-    let enabled_events = &data.settings.analytics_consent;
+    let app_data = state.lock().await;
+    let enabled_events = &app_data.settings.analytics_consent;
 
     let things: Vec<(String, AnalyticsInfo, AnalyticsInfo)> = vec![
         (
@@ -271,14 +271,14 @@ pub async fn set_analytics_consent(
     event: String,
     consent: bool,
 ) -> Result<(), String> {
-    let mut data = state.lock().await;
+    let mut app_data = state.lock().await;
     if consent {
-        if !data.settings.analytics_consent.contains(&event) {
-            data.settings.analytics_consent.push(event);
+        if !app_data.settings.analytics_consent.contains(&event) {
+            app_data.settings.analytics_consent.push(event);
         }
     } else {
-        data.settings.analytics_consent.retain(|e| e != &event);
+        app_data.settings.analytics_consent.retain(|e| e != &event);
     }
-    data.update_typeslayer_config_toml().await;
+    app_data.update_typeslayer_config_toml().await;
     Ok(())
 }

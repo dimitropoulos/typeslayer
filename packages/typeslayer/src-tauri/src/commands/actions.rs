@@ -82,14 +82,14 @@ fn capture_window_to_png<R: tauri::Runtime>(window: &WebviewWindow<R>) -> Result
 
 #[tauri::command]
 pub async fn open_file(state: State<'_, &Mutex<AppData>>, path: String) -> Result<(), String> {
-    let mut data = state.lock().await;
+    let mut app_data = state.lock().await;
 
     // Extract settings without holding the lock during blocking operations.
-    let prefer_editor = data.settings.prefer_editor_open;
+    let prefer_editor = app_data.settings.prefer_editor_open;
 
     // Resolve editor via precedence using the app's cake (Env > Flag > File)
     let cli_or_env_editor = {
-        let v = data.cake.resolve_string(ResolveStringArgs {
+        let v = app_data.cake.resolve_string(ResolveStringArgs {
             env: "EDITOR",
             flag: "--editor",
             file: "settings.preferredEditor",
@@ -122,13 +122,13 @@ pub async fn open_file(state: State<'_, &Mutex<AppData>>, path: String) -> Resul
             .collect();
         // Determine editor to use: CLI/env > preferred_editor > first available
         let editor_to_use = cli_or_env_editor
-            .or_else(|| data.settings.preferred_editor.clone())
+            .or_else(|| app_data.settings.preferred_editor.clone())
             .or_else(|| available_editors.first().map(|(cmd, _)| cmd.clone()));
 
         debug!("[open_file] editor_to_use: {:?}", editor_to_use);
         debug!(
             "[open_file] preferred_editor setting: {:?}",
-            data.settings.preferred_editor
+            app_data.settings.preferred_editor
         );
 
         // Build list of editors to try

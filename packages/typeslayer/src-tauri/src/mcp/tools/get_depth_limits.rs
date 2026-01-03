@@ -65,14 +65,14 @@ pub fn tool_definition() -> ToolDefinition<GetDepthLimitsExample> {
     }
 }
 
-pub async fn execute(app_data: &Mutex<AppData>) -> String {
+pub async fn execute(state: &Mutex<AppData>) -> String {
     info!("[get_depth_limits] called");
 
     // Lock app_data to access analyze_trace
-    let data = app_data.lock().await;
+    let app_data = state.lock().await;
 
     // Check if analyze-trace data is available
-    let analyze_trace = match data.analyze_trace.as_ref() {
+    let analyze_trace = match app_data.analyze_trace.as_ref() {
         Some(at) => at,
         None => {
             return r#"{"error": "No analyze-trace data available. Please run trace analysis first."}"#

@@ -14,9 +14,9 @@ pub async fn get_links_to_type_id(
     state: State<'_, &Mutex<AppData>>,
     type_id: usize,
 ) -> Result<Links, String> {
-    let data = state.lock().await;
+    let app_data = state.lock().await;
 
-    if let Some(graph) = &data.type_graph {
+    if let Some(graph) = &app_data.type_graph {
         let mut results: Links = graph
             .link_kind_data_by_kind
             .iter()
@@ -25,7 +25,7 @@ pub async fn get_links_to_type_id(
                 let sources = link_kind_data.by_target.target_to_sources.get(&type_id);
                 if let Some(sources) = sources {
                     for source_id in sources {
-                        let name = data
+                        let name = app_data
                             .types_json
                             .get(*source_id)
                             .map(|t| t.human_readable_name())
@@ -50,8 +50,8 @@ pub async fn get_resolved_type_by_id(
     type_id: Option<usize>,
 ) -> Result<Option<ResolvedType>, String> {
     if let Some(id) = type_id {
-        let data = state.lock().await;
-        if let Some(t) = data.types_json.get(id) {
+        let app_data = state.lock().await;
+        if let Some(t) = app_data.types_json.get(id) {
             Ok(Some(t.clone()))
         } else {
             Err(format!("Type with id {id} not found"))
@@ -67,10 +67,10 @@ pub async fn get_resolved_types_by_ids(
     type_ids: Option<Vec<usize>>,
 ) -> Result<HashMap<usize, Option<ResolvedType>>, String> {
     let mut result = HashMap::new();
-    let data = state.lock().await;
+    let app_data = state.lock().await;
     if let Some(ids) = type_ids {
         for id in ids {
-            let entry = data.types_json.get(id).cloned();
+            let entry = app_data.types_json.get(id).cloned();
             result.insert(id, entry);
         }
     }
@@ -86,7 +86,7 @@ pub async fn get_recursive_resolved_types(
         return Ok(HashMap::new());
     }
 
-    let data = state.lock().await;
+    let app_data = state.lock().await;
 
     let mut result = HashMap::new();
 
@@ -106,7 +106,7 @@ pub async fn get_recursive_resolved_types(
         }
     }
 
-    let types: &[ResolvedType] = &data.types_json;
+    let types: &[ResolvedType] = &app_data.types_json;
     collect_types(type_id.unwrap(), &mut result, types);
     Ok(result)
 }
@@ -117,8 +117,8 @@ pub async fn get_traces_related_to_typeid(
     type_id: usize,
 ) -> Result<Vec<TraceEvent>, String> {
     let typeid = type_id as i64;
-    let data = state.lock().await;
-    let events = data
+    let app_data = state.lock().await;
+    let events = app_data
         .trace_json
         .iter()
         .filter(|event| match event {

@@ -2,4 +2,4 @@
 import type { PackageManager } from "./PackageManager";
 import type { TypeScriptCompilerVariant } from "./TypeScriptCompilerVariant";
 
-export type EventGenerateTraceSuccessData = { duration: number, packageManager: PackageManager, traceCount: number, traceJsonFileSize: number, typeCount: number, typesJsonFileSize: number, stdout: string | null, stderr: string | null, maxOldSpaceSize: number | null, maxStackSize: number | null, tscExtraFlags: string, typescriptCompilerVariant: TypeScriptCompilerVariant, applyTscProjectFlag: boolean, };
+export type EventGenerateTraceSuccessData = { duration: number, packageManager: PackageManager, traceCount: number, traceJsonFileSize: number, typeCount: number, typesJsonFileSize: number, stdout: string | null, stderr: string | null, maxOldSpaceSize: number | null, maxStackSize: number | null, tscExtraFlags: string, typescriptCompilerVariant: TypeScriptCompilerVariant, applyTscProjectFlag: boolean, projectRoot: string, };

@@ -1,7 +1,7 @@
 import { Stack } from "@mui/material";
+import { Code } from "@typeslayer/common";
 import type { EventGenerateTraceSuccess } from "@typeslayer/rust-types";
 import { ChipsList } from "../../components/chips-list";
-import { Code } from "../../components/code";
 import { PackageManagerIcon } from "../../components/package-manager-icon";
 import { StatTable } from "../../components/stat-table";
 import type { D1Event } from "../../hooks";

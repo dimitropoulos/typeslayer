@@ -13,7 +13,7 @@ import tsNightmareLogo from "./assets/ts-nightmare.png";
 import typeslayerLogo from "./assets/typeslayer.png";
 import typeslayerNightmareLogo from "./assets/typeslayer-nightmare.png";
 import { NAVIGATION, RenderNavItem } from "./components/navigation";
-import { useTaskProgressEvents, useTypeKinds } from "./hooks/tauri-hooks";
+import { useTaskProgressEvents } from "./hooks/tauri-hooks";
 
 function AppBrand({
   collapsed,
@@ -44,9 +44,6 @@ function AppBrand({
 export function App() {
   const muiTheme = useTheme();
   const isMdUp = useMediaQuery(muiTheme.breakpoints.up("md"));
-
-  const x = useTypeKinds();
-  console.log("type kinds distribution", x.data);
 
   const drawerWidth = 224;
   const collapsedWidth = 64;

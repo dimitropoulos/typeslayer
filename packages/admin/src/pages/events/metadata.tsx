@@ -7,9 +7,8 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { InlineCode } from "@typeslayer/common";
+import { Code, InlineCode } from "@typeslayer/common";
 import { useCallback, useState } from "react";
-import { Code } from "../../components/code";
 import { PlatformIcon } from "../../components/platform-detection";
 import { StatChip } from "../../components/stat-chip";
 import type { D1Event, Event } from "../../hooks";
