@@ -239,8 +239,9 @@ impl AppData {
 
         args.push("--eval");
 
-        // Only here to satisfy lifetimes. Super let when?
         let compiler_variant = self.settings.typescript_compiler_variant;
+
+        // Only here to satisfy lifetimes. Super let when?
         let compiler_require = format!(
             r#""require('{}/bin/{}')""#,
             compiler_variant.npm_package(),
