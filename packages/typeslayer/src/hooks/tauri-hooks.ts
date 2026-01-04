@@ -753,6 +753,7 @@ export const useTscExample = () => {
 };
 
 export interface BugReportFile {
+  filePath: string;
   name: string;
   description: string;
 }

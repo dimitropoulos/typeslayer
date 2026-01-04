@@ -125,13 +125,18 @@ const CreateABugReport = ({
 
     if (stdout) {
       files.push({
-        name: "stdout.txt",
+        name: "stdout",
+        filePath: "terminal",
         description: "Compiler standard output",
       });
     }
 
     if (stderr) {
-      files.push({ name: "stderr.txt", description: "Compiler error output" });
+      files.push({
+        name: "stderr",
+        filePath: "terminal",
+        description: "Compiler error output",
+      });
     }
 
     return files;

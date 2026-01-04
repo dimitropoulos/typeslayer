@@ -2,16 +2,17 @@ use crate::{
     analytics::ANALYTICS_EVENTS_FILENAME,
     analyze_trace::constants::ANALYZE_TRACE_FILENAME,
     app_data::{AppData, AppMode},
+    log::LOG_FILENAME,
     type_graph::TYPE_GRAPH_FILENAME,
-    utils::{CONFIG_FILENAME, PACKAGE_JSON_FILENAME, TSCONFIG_FILENAME},
+    utils::{CONFIG_FILENAME, PACKAGE_JSON_FILENAME},
     validate::{
         trace_json::TRACE_JSON_FILENAME, types_json::TYPES_JSON_FILENAME,
         utils::CPU_PROFILE_FILENAME,
     },
 };
 use serde::{Deserialize, Serialize};
-use std::io::Write;
 use std::path::Path;
+use std::{io::Write, path::PathBuf};
 use tauri::State;
 use tokio::sync::Mutex;
 use tracing::debug;
@@ -20,6 +21,7 @@ use tracing::debug;
 #[serde(rename_all = "camelCase")]
 pub struct BugReportFile {
     pub name: String,
+    pub file_path: PathBuf,
     pub description: String,
 }
 
@@ -61,12 +63,14 @@ pub async fn get_bug_report_files(
             PACKAGE_JSON_FILENAME,
             "Project package configuration",
         ),
+        (&app_data.data_dir, LOG_FILENAME, "Application log file"),
     ];
 
     for (dir_path, filename, description) in bug_report_files {
         let file_path = dir_path.join(filename);
         if file_path.exists() {
             files.push(BugReportFile {
+                file_path,
                 name: filename.to_string(),
                 description: description.to_string(),
             });
@@ -77,12 +81,12 @@ pub async fn get_bug_report_files(
     if let Some(tsconfig_path) = &app_data.selected_tsconfig
         && tsconfig_path.exists()
     {
-        let filename = tsconfig_path
-            .file_name()
-            .and_then(|f| f.to_str())
-            .unwrap_or(TSCONFIG_FILENAME);
         files.push(BugReportFile {
-            name: filename.to_string(),
+            file_path: tsconfig_path.clone(),
+            name: tsconfig_path
+                .file_name()
+                .map(|f| f.to_string_lossy().to_string())
+                .unwrap_or_else(|| "tsconfig.json".to_string()),
             description: "TypeScript compiler configuration".to_string(),
         });
     }
@@ -97,9 +101,7 @@ pub async fn create_bug_report(
     stdout: Option<String>,
     stderr: Option<String>,
 ) -> Result<String, String> {
-    let app_data = state.lock().await;
-    let outputs_dir = app_data.outputs_dir();
-    let data_dir = app_data.data_dir.clone();
+    let files_to_include = get_bug_report_files(state).await?;
 
     // Create bug report zip file
     let downloads_dir =
@@ -140,37 +142,21 @@ pub async fn create_bug_report(
             zip.write_all(stderr_content.as_bytes())
                 .map_err(|e| format!("Failed to write stderr: {e}"))?;
         }
-        // Define the files to include
-        let files_to_include = [
-            CONFIG_FILENAME,
-            ANALYTICS_EVENTS_FILENAME,
-            TYPES_JSON_FILENAME,
-            TRACE_JSON_FILENAME,
-            ANALYZE_TRACE_FILENAME,
-            TYPE_GRAPH_FILENAME,
-            CPU_PROFILE_FILENAME,
-        ];
 
         // Add each file to the zip
-        for filename in files_to_include {
-            let file_path = if filename == CONFIG_FILENAME || filename == ANALYTICS_EVENTS_FILENAME
-            {
-                // typeslayer.toml and events.ndjson are in the data directory
-                data_dir.join(filename)
-            } else {
-                // Other files are in the outputs directory
-                outputs_dir.join(filename)
-            };
+        for bug_report_file in files_to_include {
+            let mut file = std::fs::File::open(&bug_report_file.file_path)
+                .map_err(|e| format!("Failed to open {:?}: {e}", &bug_report_file.file_path))?;
 
-            if file_path.exists() {
-                let mut file = std::fs::File::open(&file_path)
-                    .map_err(|e| format!("Failed to open {filename}: {e}"))?;
-
-                zip.start_file(filename, options)
-                    .map_err(|e| format!("Failed to add {filename} to zip: {e}"))?;
-                std::io::copy(&mut file, &mut zip)
-                    .map_err(|e| format!("Failed to write {filename} to zip: {e}"))?;
-            }
+            zip.start_file(bug_report_file.name, options).map_err(|e| {
+                format!("Failed to add {:?} to zip: {e}", &bug_report_file.file_path)
+            })?;
+            std::io::copy(&mut file, &mut zip).map_err(|e| {
+                format!(
+                    "Failed to write {:?} to zip: {e}",
+                    &bug_report_file.file_path
+                )
+            })?;
         }
 
         zip.finish()

@@ -18,12 +18,12 @@ async fn main() -> Result<(), String> {
         AppMode::GUI
     };
 
+    let data_dir = get_typeslayer_base_data_dir();
+
     if mode != AppMode::MCP {
         // you can't use the regular logging in MCP mode, because it uses stdout and gets confused if you send logs to it
-        typeslayer_lib::log::init();
+        typeslayer_lib::log::init(data_dir.clone());
     }
-
-    let data_dir = get_typeslayer_base_data_dir();
 
     // Create AppData as the root of our application (single instance shared by all components)
 

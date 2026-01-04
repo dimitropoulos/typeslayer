@@ -1,3 +1,4 @@
+import { BugReport } from "@mui/icons-material";
 import Pause from "@mui/icons-material/Pause";
 import {
   Box,
@@ -681,6 +682,32 @@ export const DocsPage = () => {
             (and if you have a cpu profile, then upload that - but the only
             module that uses that is SpeedScope, so it's not strictly necessary
             the way the other files are).
+          </Typography>
+        </Stack>
+      ),
+    },
+    {
+      id: "going-for-a-while",
+      title: <span>what if it's been going for a long time?</span>,
+      description: (
+        <Stack gap={1}>
+          <Typography>
+            the first question on your mind might be "how long is a while?". the
+            leaderboard is a tool that can help you understand that!
+          </Typography>
+          <Typography>
+            in this situation, the very first debugging step is to go to the
+            "Customize Flags" button in the <Link href="/start">Start</Link>{" "}
+            module and copy the example script you see there. then open a
+            terminal (completely outside of TypeSlayer) and run that command
+            (make sure it's from the path shown in TypeSlayer). this will tell
+            you if it's a TypeSlayer bug - or something upstream at the level of
+            the TypeScript compiler.
+          </Typography>
+          <Typography>
+            failing that - please submit a bug report! you can generate one with
+            the little bug icon guy (<BugReport sx={{ verticalAlign: "sub" }} />
+            ) in the bottom left of the app.
           </Typography>
         </Stack>
       ),

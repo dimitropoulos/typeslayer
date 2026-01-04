@@ -6115,6 +6115,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-appender"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "786d480bce6247ab75f005b14ae1624ad978d3029d9113f0a22fa1ac773faeaf"
+dependencies = [
+ "crossbeam-channel",
+ "thiserror 2.0.17",
+ "time",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "tracing-attributes"
 version = "0.1.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6241,7 +6253,7 @@ checksum = "562d481066bde0658276a35467c4af00bdc6ee726305698a55b86e61d7ad82bb"
 
 [[package]]
 name = "typeslayer"
-version = "0.1.30"
+version = "0.1.31"
 dependencies = [
  "axum",
  "base64 0.22.1",
@@ -6275,6 +6287,7 @@ dependencies = [
  "toml 0.8.2",
  "tower-http",
  "tracing",
+ "tracing-appender",
  "tracing-subscriber",
  "ts-rs",
  "xcap 0.8.0",

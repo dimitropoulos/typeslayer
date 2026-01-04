@@ -1,27 +1,28 @@
+<!-- omit from toc -->
 # TypeSlayer FAQ
 
-- [TypeSlayer FAQ](#typeslayer-faq)
-  - ["but I just want to see my code"](#but-i-just-want-to-see-my-code)
-  - [why do I see lots of `<anonymous>` everywhere?](#why-do-i-see-lots-of-anonymous-everywhere)
-  - [what about `tsgo`?](#what-about-tsgo)
-  - [what about `Svelte` or `Vue`?](#what-about-svelte-or-vue)
-  - [where does TypeSlayer store my data?](#where-does-typeslayer-store-my-data)
-  - [how sensitive is the data in the outputs?](#how-sensitive-is-the-data-in-the-outputs)
-  - [does TypeSlayer track me?](#does-typeslayer-track-me)
-  - [why does the Type Graph keep moving?](#why-does-the-type-graph-keep-moving)
-  - [how is testing a library different?](#how-is-testing-a-library-different)
-  - [this is a lot. where do I start?](#this-is-a-lot-where-do-i-start)
-    - [1. is there _actually_ a problem?](#1-is-there-actually-a-problem)
-    - [2. is there an outlier in the Treemap?](#2-is-there-an-outlier-in-the-treemap)
-    - [3. does anything look weird in Perfetto?](#3-does-anything-look-weird-in-perfetto)
-    - [4. are there any Award Winners that stand out?](#4-are-there-any-award-winners-that-stand-out)
-    - [5. sometimes, you still gotta RTFM](#5-sometimes-you-still-gotta-rtfm)
-  - [can I pay you to help me? 💸](#can-i-pay-you-to-help-me-)
-  - [but I refuse to run postinstall scripts..](#but-i-refuse-to-run-postinstall-scripts)
-  - [why isn't this a CLI tool?](#why-isnt-this-a-cli-tool)
-  - [how do I use this with a monorepo?](#how-do-i-use-this-with-a-monorepo)
-  - [what if I already have trace files?](#what-if-i-already-have-trace-files)
-  - [who needs this stupid thing, anyway?](#who-needs-this-stupid-thing-anyway)
+- ["but I just want to see my code"](#but-i-just-want-to-see-my-code)
+- [why do I see lots of `<anonymous>` everywhere?](#why-do-i-see-lots-of-anonymous-everywhere)
+- [what about `tsgo`?](#what-about-tsgo)
+- [what about `Svelte` or `Vue`?](#what-about-svelte-or-vue)
+- [where does TypeSlayer store my data?](#where-does-typeslayer-store-my-data)
+- [how sensitive is the data in the outputs?](#how-sensitive-is-the-data-in-the-outputs)
+- [does TypeSlayer track me?](#does-typeslayer-track-me)
+- [why does the Type Graph keep moving?](#why-does-the-type-graph-keep-moving)
+- [how is testing a library different?](#how-is-testing-a-library-different)
+- [this is a lot. where do I start?](#this-is-a-lot-where-do-i-start)
+  - [1. is there _actually_ a problem?](#1-is-there-actually-a-problem)
+  - [2. is there an outlier in the Treemap?](#2-is-there-an-outlier-in-the-treemap)
+  - [3. does anything look weird in Perfetto?](#3-does-anything-look-weird-in-perfetto)
+  - [4. are there any Award Winners that stand out?](#4-are-there-any-award-winners-that-stand-out)
+  - [5. sometimes, you still gotta RTFM](#5-sometimes-you-still-gotta-rtfm)
+- [can I pay you to help me? 💸](#can-i-pay-you-to-help-me-)
+- [but I refuse to run postinstall scripts..](#but-i-refuse-to-run-postinstall-scripts)
+- [why isn't this a CLI tool?](#why-isnt-this-a-cli-tool)
+- [how do I use this with a monorepo?](#how-do-i-use-this-with-a-monorepo)
+- [what if I already have trace files?](#what-if-i-already-have-trace-files)
+- [who needs this stupid thing, anyway?](#who-needs-this-stupid-thing-anyway)
+- [what if it's been going for a long time?](#what-if-its-been-going-for-a-long-time)
 
 ## "but I just want to see my code"
 
@@ -251,3 +252,11 @@ consider the fact that this can sometimes feel like an impossible task for a lib
 I made TypeSlayer because I learned delulu-levels-of-detail about TypeScript performance tuning [while getting Doom to run in TypeScript types](https://youtu.be/0mCsluv5FXA), yet many of those techniques are still opaque to most people.
 
 I wanted to make it easy for others to put up PRs at their companies all like "I increased type-checking perf on this file by 380,000x and shaved 23 seconds off every CI run" (real story btw lol). I took what I learned about how to debug type performance and wrapped it all up into this tool.
+
+## what if it's been going for a long time?
+
+the first question on your mind might be "how long is a while?".  the leaderboard is a tool that can help you understand that!
+
+in this situation, the very first debugging step is to go to the "Customize Flags" button in the Start module and copy the example script you see there.  then open a terminal (completely outside of TypeSlayer) and run that command (make sure it's from the path shown in TypeSlayer).  this will tell you if it's a TypeSlayer bug - or something upstream at the level of the TypeScript compiler.
+
+failing that - please submit a bug report!  you can generate one with the little bug icon guy in the bottom left of the app.
