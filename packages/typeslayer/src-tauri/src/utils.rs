@@ -8,7 +8,17 @@ use tokio::fs;
 use tracing::debug;
 
 pub fn quote_if_needed(s: &str) -> String {
-    shell_escape::escape(Cow::Borrowed(s)).into_owned()
+    let s = Cow::Borrowed(s);
+
+    if cfg!(windows) {
+        // Git Bash would ordinarily be (properly) detected as needing Unix-like escaping but as of today all commands are running in `cmd`.
+        // Therefore we need to specifically escape for Windows.
+        // The other approach would be to run it in the Git Bash terminal but then the path would have to be converted
+        // as Tauri appears to always give Windows style paths.
+        shell_escape::windows::escape(s).to_string()
+    } else {
+        shell_escape::unix::escape(s).to_string()
+    }
 }
 
 /// takes in a string flag and a string path and makes it a cli arg, handing quoting if the arg contains spaces
