@@ -1118,3 +1118,11 @@ export const useLinkKindDataByKind = () => {
     staleTime: Number.POSITIVE_INFINITY,
   });
 };
+
+export const useVersion = () => {
+  return useQuery({
+    queryKey: ["app_version"],
+    queryFn: () => invoke<string>("get_version"),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+};

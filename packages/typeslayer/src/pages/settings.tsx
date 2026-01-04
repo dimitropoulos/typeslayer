@@ -37,6 +37,7 @@ import {
   usePreferredEditor,
   useProjectRoot,
   useRelativePaths,
+  useVersion,
 } from "../hooks/tauri-hooks";
 
 const limitNodes = [
@@ -112,6 +113,8 @@ export const SettingsPage = () => {
     await invoke<void>("open_file", { path: dataDir.data });
   }, [dataDir.data]);
 
+  const { data: version } = useVersion();
+
   return (
     <Stack
       sx={{
@@ -122,7 +125,12 @@ export const SettingsPage = () => {
         minHeight: "100%",
       }}
     >
-      <Typography variant="h2">Settings</Typography>
+      <Stack sx={{ flexDirection: "row", alignItems: "flex-end", gap: 2 }}>
+        <Typography variant="h2">Settings</Typography>
+        <Typography variant="body1" color="textSecondary">
+          v{version}
+        </Typography>
+      </Stack>
 
       <Setting title="Path Display">
         <FormGroup>

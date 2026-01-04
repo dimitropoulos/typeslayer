@@ -101,6 +101,7 @@ pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
             commands::settings::get_preferred_editor,
             commands::settings::get_relative_paths,
             commands::settings::get_typescript_compiler_variant,
+            commands::settings::get_version,
             commands::settings::set_analytics_consent,
             commands::settings::set_apply_tsc_project_flag,
             commands::settings::set_extra_tsc_flags,

@@ -1,5 +1,14 @@
 import { Apple, HelpOutline, Microsoft } from "@mui/icons-material";
-import { ArchLinux, CachyOs, Fedora, Manjaro, Ubuntu } from "../assets/icons";
+import {
+  ArchLinux,
+  CachyOs,
+  Fedora,
+  GuarudaLinux,
+  LinuxMint,
+  Manjaro,
+  OpenSUSE,
+  Ubuntu,
+} from "../assets/icons";
 
 const extractTwoDigitsAfterMatch = (matchString: string, platform: string) => {
   const regex = new RegExp(`${matchString}(\\d{1,2})`, "i");
@@ -92,15 +101,36 @@ const platforms = {
     operatingSystem: "Linux",
     version: extractTwoDigitsAfterMatch("fedora ", platform),
     name: "Fedora",
-    color: "#3c6eb4",
+    color: "#3C6EB4",
     icon: <Fedora />,
   }),
   cachyOs: (_platform: string) => ({
     operatingSystem: "Linux", // Arch variant
     version: "Rolling",
     name: "Cachy OS",
-    color: "#00ccff",
+    color: "#00CCFF",
     icon: <CachyOs />,
+  }),
+  garuda: (_platform: string) => ({
+    operatingSystem: "Linux", // Arch variant
+    version: "Rolling",
+    name: "Garuda Linux",
+    color: "#CBA6F7",
+    icon: <GuarudaLinux />,
+  }),
+  linuxMint: (platform: string) => ({
+    operatingSystem: "Linux",
+    version: extractTwoDigitsAfterMatch("linux mint ", platform),
+    name: "Linux Mint",
+    color: "#87CF5E",
+    icon: <LinuxMint />,
+  }),
+  openSUSE: (_platform: string) => ({
+    operatingSystem: "Linux",
+    version: "Rolling",
+    name: "openSUSE",
+    color: "#73BA25",
+    icon: <OpenSUSE />,
   }),
   unknown: (_platform: string) => {
     const color = "#CC0000";
@@ -147,6 +177,16 @@ export const detectPlatform = (platform: string) => {
   if (lowercased.includes("fedora ")) {
     return platforms.fedora(platform);
   }
+  if (lowercased.includes("garuda linux ")) {
+    return platforms.garuda(platform);
+  }
+  if (lowercased.includes("linux mint ")) {
+    return platforms.linuxMint(platform);
+  }
+  if (lowercased.includes("opensuse ")) {
+    return platforms.openSUSE(platform);
+  }
+
   console.log("Unknown platform:", platform);
   return platforms.unknown(platform);
 };

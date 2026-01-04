@@ -159,11 +159,15 @@ export const LinkKindTable = ({
 };
 
 const Explainer = ({
-  linkKindDataByKind,
+  linkKindDataByKind: {
+    unionTypes: { bySource, byTarget, linkCount } = {
+      bySource: { count: 0, max: 0 },
+      byTarget: { count: 0, max: 0 },
+      linkCount: 0,
+    },
+  },
 }: {
-  linkKindDataByKind:
-    | Partial<Record<LinkKind, StrippedLinkKindData>>
-    | undefined;
+  linkKindDataByKind: Partial<Record<LinkKind, StrippedLinkKindData>>;
 }) => {
   return (
     <Accordion sx={{ width: totalWidth }}>
@@ -246,19 +250,15 @@ const Explainer = ({
                 in your code you see that in the row for the{" "}
                 <InlineCode>unionTypes</InlineCode> relation, the first column
                 is <InlineCode>Source | count</InlineCode> and it has the value{" "}
-                <InlineCode>
-                  {linkKindDataByKind?.unionTypes?.bySource.count.toLocaleString()}
-                </InlineCode>
-                . that's telling you{" "}
+                <InlineCode>{bySource.count.toLocaleString()}</InlineCode>.
+                that's telling you{" "}
                 <em>
                   the total number of types in this project that are unions.
                 </em>{" "}
                 Just like <InlineCode>Colors</InlineCode> in the example above.
                 in your project's case, there are{" "}
-                <InlineCode>
-                  {linkKindDataByKind?.unionTypes?.bySource.count.toLocaleString()}
-                </InlineCode>{" "}
-                of them - all distinct unions.
+                <InlineCode>{bySource.count.toLocaleString()}</InlineCode> of
+                them - all distinct unions.
               </Typography>
               <Typography>
                 you can think of source types as the "parents" in this
@@ -285,16 +285,18 @@ const Explainer = ({
               </Typography>
               <Typography>
                 in your project's case, the value is{" "}
-                <InlineCode>
-                  {linkKindDataByKind?.unionTypes?.bySource.max.toLocaleString()}
-                </InlineCode>
-                . that means that the largest union type in your project has{" "}
-                <InlineCode>
-                  {linkKindDataByKind?.unionTypes?.bySource.max.toLocaleString()}
-                </InlineCode>{" "}
+                <InlineCode>{bySource.max.toLocaleString()}</InlineCode>. that
+                means that the largest union type in your project has{" "}
+                <InlineCode>{bySource.max.toLocaleString()}</InlineCode>{" "}
                 individual members. TypeScript starts erroring at{" "}
                 <InlineCode>{(100_000).toLocaleString()}</InlineCode> union
                 members, for example.
+              </Typography>
+              <Typography>
+                before we move on, notice that the top four items in this Award
+                Winners module of TypeSlayer directly correspond to the four
+                source columns that have a many-to-one relationship! those
+                sections of the app are literally explorers for this data.
               </Typography>
             </Stack>
 
@@ -307,33 +309,36 @@ const Explainer = ({
                 </Typography>
               </Stack>
               <Typography>
-                the next column group, <InlineCode>Target</InlineCode>, is all
-                about the types that are being referenced by those union types.
-                so the <InlineCode>Target | count</InlineCode> column is telling
-                you{" "}
+                if "source" types are parents, then you can think of target
+                types as the "children" in this relationship - they are the
+                types that are directly referenced by the source types via this
+                kind of relation.
+              </Typography>
+              <Typography>
+                it follows, then, that the next column group,{" "}
+                <InlineCode>Target</InlineCode>, is all about the types that are
+                referenced at least once by some union. so the{" "}
+                <InlineCode>Target | count</InlineCode> column is telling you{" "}
                 <em>
-                  the total number of unique types that are used as members of
-                  union types
+                  the number of types in your project that are a member of at
+                  least one union.
                 </em>{" "}
-                throughout your project. in our example above, that would be 3,
-                since we have 3 unique string literal types.
+                in our example above, that would be <InlineCode>3</InlineCode>,
+                since <InlineCode>3</InlineCode> types are members of a union.
+                you gotta watch out for those, btw. if enough of them band
+                together they use collective bargaining as a means to get
+                reasonable working hours and bans on unsafe working conditions
+                like when <InlineCode>as unknown as any</InlineCode> is used or{" "}
+                <InlineCode>strict mode</InlineCode> mode is turned off.
               </Typography>
               <Typography>
-                in your project's case, the value is{" "}
-                <InlineCode>
-                  {linkKindDataByKind?.unionTypes?.byTarget.count.toLocaleString()}
-                </InlineCode>
-                . that means that across all union types in your project, there
-                are{" "}
-                <InlineCode>
-                  {linkKindDataByKind?.unionTypes?.byTarget.count.toLocaleString()}
-                </InlineCode>{" "}
-                types that are used as members in all of those unions, combined.
-              </Typography>
-              <Typography>
-                you can think of target types as the "children" in this
-                relationship - they are the types that are directly referenced
-                by the source types via this kind of relation.
+                anyway. in your project's case, the value is{" "}
+                <InlineCode>{byTarget.count.toLocaleString()}</InlineCode>. that
+                means that across all union types in your project, there are{" "}
+                <InlineCode>{byTarget.count.toLocaleString()}</InlineCode> types
+                that appear as a member in some union at least once. you can
+                deduce, then, that they most not have worked for
+                Starbucks/Walmart/Amazon or whatever.
               </Typography>
             </Stack>
 
@@ -346,11 +351,20 @@ const Explainer = ({
                 </Typography>
               </Stack>
               <Typography>
-                finally, the <InlineCode>Total</InlineCode> column is just the
-                total number of links of this kind in your project. so in our
-                example, that's 3, since there are 3 links from the{" "}
-                <InlineCode>Colors</InlineCode> union type to its 3 member
-                types.
+                is it starting to make a little more sense now? can you guess
+                what this column shows?
+              </Typography>
+              <Typography>
+                this column directly corresponds to all the{" "}
+                <InlineCode>Type Relation Metrics</InlineCode> you see in this
+                "Award Winners" module. it's a catalog of types that have the
+                "most of" being linked in that way.
+              </Typography>
+              <Typography>
+                so, yes, there's a type in your project that is included in{" "}
+                <InlineCode>{byTarget.max.toLocaleString()}</InlineCode>{" "}
+                different unions! can you guess what it is? go look take a look
+                and see what you find :)
               </Typography>
             </Stack>
 
@@ -364,20 +378,16 @@ const Explainer = ({
               <Typography>
                 finally, the <InlineCode>Total</InlineCode> column is just the
                 total number of links of this kind in your project. so in our
-                example, that's 3, since there are 3 links from the{" "}
-                <InlineCode>Colors</InlineCode> union type to its 3 member
-                types.
+                example, that's <InlineCode>3</InlineCode>, since there are{" "}
+                <InlineCode>3</InlineCode> links from the{" "}
+                <InlineCode>Colors</InlineCode> union type to its{" "}
+                <InlineCode>3</InlineCode> member types.
               </Typography>
               <Typography>
                 in your project's case, the value is{" "}
-                <InlineCode>
-                  {linkKindDataByKind?.unionTypes?.linkCount.toLocaleString()}
-                </InlineCode>
-                . that means that across all union types in your project, there
-                are a total of{" "}
-                <InlineCode>
-                  {linkKindDataByKind?.unionTypes?.linkCount.toLocaleString()}
-                </InlineCode>{" "}
+                <InlineCode>{linkCount.toLocaleString()}</InlineCode>. that
+                means that across all union types in your project, there are a
+                total of <InlineCode>{linkCount.toLocaleString()}</InlineCode>{" "}
                 links from those union types to their member types.
               </Typography>
             </Stack>

@@ -282,3 +282,9 @@ pub async fn set_analytics_consent(
     app_data.update_typeslayer_config_toml().await;
     Ok(())
 }
+
+#[tauri::command]
+pub async fn get_version(state: State<'_, &Mutex<AppData>>) -> Result<String, String> {
+    let app_data = state.lock().await;
+    Ok(app_data.version.clone())
+}
