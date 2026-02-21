@@ -289,6 +289,26 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
 
   const absolutePath = `${dataDir.data ?? ""}/outputs/${filename}`;
 
+  const onCopyPath = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(absolutePath);
+      showToast({
+        message: `Path copied to clipboard: ${absolutePath}`,
+        severity: "success",
+      });
+    } catch {
+      showToast({ message: "Copy path failed", severity: "error" });
+    }
+  }, [absolutePath, showToast]);
+
+  const onOpenFile = useCallback(async () => {
+    try {
+      await invoke<void>("open_file", { path: absolutePath });
+    } catch {
+      showToast({ message: "Failed to open file", severity: "error" });
+    }
+  }, [absolutePath, showToast]);
+
   return (
     <Stack
       sx={{
@@ -332,7 +352,7 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
         </Button>
 
         <Button variant="outlined" onClick={onCopy} startIcon={<FileCopy />}>
-          Copy
+          Copy Contents
         </Button>
 
         <Button
@@ -350,6 +370,22 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
           loading={isUploading}
         >
           Upload
+        </Button>
+
+        <Button
+          variant="outlined"
+          onClick={onCopyPath}
+          startIcon={<FileCopy />}
+        >
+          Copy Path
+        </Button>
+
+        <Button
+          variant="outlined"
+          onClick={onOpenFile}
+          startIcon={<FolderOpen />}
+        >
+          Open File
         </Button>
       </Stack>
 

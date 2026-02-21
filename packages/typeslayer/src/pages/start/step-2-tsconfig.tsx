@@ -9,7 +9,7 @@ import {
 } from "@mui/material";
 import { InlineCode } from "@typeslayer/common";
 import { useCallback, useState } from "react";
-import { FlagsCustomizationDialog } from "../../components/flags-customization-dialog";
+import { CustomizeFlagsDialog } from "../../components/customize-flags-dialog";
 import { detectPlatformSlash } from "../../components/utils";
 import { useSelectedTsconfig, useTsconfigPaths } from "../../hooks/tauri-hooks";
 import { Step } from "./step";
@@ -116,7 +116,7 @@ export const Step2Tsconfig = () => {
             >
               Customize Flags
             </Button>
-            <FlagsCustomizationDialog
+            <CustomizeFlagsDialog
               open={isFlagsDialogOpen}
               onClose={() => setIsFlagsDialogOpen(false)}
             />

@@ -39,7 +39,7 @@ import {
   typeScriptCompilerVariants,
 } from "./utils";
 
-export type FlagsCustomizationDialogProps = {
+export type CustomizeFlagsDialogProps = {
   readonly open: boolean;
   readonly onClose: () => void;
 };
@@ -78,10 +78,10 @@ const maxStackSizeOptions = [
   },
 ];
 
-export function FlagsCustomizationDialog({
+export function CustomizeFlagsDialog({
   open,
   onClose,
-}: FlagsCustomizationDialogProps) {
+}: CustomizeFlagsDialogProps) {
   const {
     data: currentFlags,
     set: setFlags,
