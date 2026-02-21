@@ -251,8 +251,8 @@ export function useApplyTscProjectFlag() {
   const mutation = useMutation({
     mutationFn: (value: boolean) =>
       invoke<void>("set_apply_tsc_project_flag", { value }),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
     },
     onSuccess: (_, value) => {
       queryClient.setQueryData(["apply_tsc_project_flag"], value);
@@ -312,8 +312,8 @@ export function useExtraTscFlags() {
   const mutation = useMutation({
     mutationFn: (flags: string) =>
       invoke<void>("set_extra_tsc_flags", { flags }),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
     },
     onSuccess: (_, flags) => {
       queryClient.setQueryData(["extra_tsc_flags"], flags);
@@ -351,10 +351,10 @@ export function useProjectRoot() {
   const mutation = useMutation({
     mutationFn: (projectRoot: string) =>
       invoke<void>("set_project_root", { projectRoot }),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["tsconfig_paths"] });
-      queryClient.invalidateQueries({ queryKey: ["selected_tsconfig"] });
-      queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["tsconfig_paths"] });
+      await queryClient.invalidateQueries({ queryKey: ["selected_tsconfig"] });
+      await queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
     },
     onSuccess: (_, projectRoot) => {
       queryClient.setQueryData(["project_root"], projectRoot);
@@ -605,13 +605,8 @@ export const useGenerateAll = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => invoke<void>("generate_all"),
-    onMutate: async () => {
-      queryClient.invalidateQueries();
-    },
     onSettled: async () => {
-      queryClient.invalidateQueries({
-        'queryKey': ['trace_json']
-      })
+      await queryClient.invalidateQueries();
     }
   });
 };
@@ -638,8 +633,8 @@ export function useSelectedTsconfig() {
   const mutation = useMutation({
     mutationFn: (tsconfigPath: string) =>
       invoke<void>("set_selected_tsconfig", { tsconfigPath }),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
     },
     onSuccess: (_, tsconfigPath) => {
       queryClient.setQueryData(["selected_tsconfig"], tsconfigPath || null);
@@ -807,8 +802,8 @@ export const useMaxOldSpaceSize = () => {
   const mutation = useMutation({
     mutationFn: (size: number | null) =>
       invoke<void>("set_max_old_space_size", { size }),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
     },
     onSuccess: (_, size) => {
       queryClient.setQueryData(["max_old_space_size"], size);
@@ -891,8 +886,8 @@ export const useMaxStackSize = () => {
   const mutation = useMutation({
     mutationFn: (size: number | null) =>
       invoke<void>("set_max_stack_size", { size }),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
     },
     onSuccess: (_, size) => {
       queryClient.setQueryData(["max_stack_size"], size);
@@ -913,10 +908,10 @@ export const useValidateAnalyzeTrace = () => {
 
   return useMutation({
     mutationFn: async () => invoke<void>("validate_analyze_trace"),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["analyze_trace"] });
-      queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
-      queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["analyze_trace"] });
+      await queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
+      await queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
     },
   });
 };
@@ -944,10 +939,10 @@ export const useValidateTypeGraph = () => {
 
   return useMutation({
     mutationFn: async () => invoke<void>("validate_type_graph"),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["type_graph"] });
-      queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
-      queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["type_graph"] });
+      await queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
+      await queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
     },
   });
 };
@@ -957,10 +952,10 @@ export const useValidateCpuProfile = () => {
 
   return useMutation({
     mutationFn: async () => invoke<void>("validate_cpu_profile"),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["cpu_profile"] });
-      queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
-      queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["cpu_profile"] });
+      await queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
+      await queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
     },
   });
 };
@@ -1002,9 +997,9 @@ export const useClearOutputs = () => {
   return useMutation({
     mutationFn: async (cancelRunning: boolean) =>
       invoke<void>("clear_outputs", { cancelRunning }),
-    onSettled: () => {
+    onSettled: async () => {
       // Invalidate all queries to clear out the data
-      queryClient.invalidateQueries();
+      await queryClient.invalidateQueries();
     },
   });
 };
@@ -1022,8 +1017,8 @@ export const useTypeScriptCompilerVariant = () => {
   const mutation = useMutation({
     mutationFn: (variant: TypeScriptCompilerVariant) =>
       invoke<void>("set_typescript_compiler_variant", { variant }),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
     },
     onSuccess: (_, variant) => {
       queryClient.setQueryData(["typescript_compiler_variant"], variant);
@@ -1092,8 +1087,8 @@ export const useAnalyticsConsent = () => {
   const mutation = useMutation({
     mutationFn: ({ eventId, consent }: { eventId: string; consent: boolean }) =>
       invoke<void>("set_analytics_consent", { event: eventId, consent }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["analytics_consent"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["analytics_consent"] });
     },
   });
 
