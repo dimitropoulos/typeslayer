@@ -608,6 +608,11 @@ export const useGenerateAll = () => {
     onMutate: async () => {
       queryClient.invalidateQueries();
     },
+    onSettled: async () => {
+      queryClient.invalidateQueries({
+        'queryKey': ['trace_json']
+      })
+    }
   });
 };
 
