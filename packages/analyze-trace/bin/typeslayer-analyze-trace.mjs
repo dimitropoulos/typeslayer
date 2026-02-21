@@ -3,38 +3,42 @@
 import { statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import process, { exit } from "node:process";
-import { ANALYZE_TRACE_FILENAME, analyzeTrace, defaultOptions } from "../dist/index.mjs";
+import {
+  ANALYZE_TRACE_FILENAME,
+  analyzeTrace,
+  defaultOptions,
+} from "../dist/index.mjs";
 
 const { argv } = process;
 
 const traceDirArg = argv[2];
 
 if (!traceDirArg) {
-	console.error("Gotta give a trace directory, brah.");
-	exit(1);
+  console.error("Gotta give a trace directory, brah.");
+  exit(1);
 }
 
 const traceDir = resolve(traceDirArg);
 
 try {
-	const stat = statSync(traceDir);
-	if (!stat.isDirectory()) {
-		console.error(`Trace directory "${traceDir}" is not a directory.`);
-		exit(1);
-	}
+  const stat = statSync(traceDir);
+  if (!stat.isDirectory()) {
+    console.error(`Trace directory "${traceDir}" is not a directory.`);
+    exit(1);
+  }
 } catch (err) {
-	if (err.code === "ENOENT") {
-		console.error(`Trace directory "${traceDir}" does not exist.`);
-	} else {
-		console.error(
-			`Error checking trace directory "${traceDir}": ${err.message}`,
-		);
-	}
-	exit(1);
+  if (err.code === "ENOENT") {
+    console.error(`Trace directory "${traceDir}" does not exist.`);
+  } else {
+    console.error(
+      `Error checking trace directory "${traceDir}": ${err.message}`,
+    );
+  }
+  exit(1);
 }
 
-analyzeTrace({ traceDir, options: defaultOptions }).then((result) => {
-	const destination = resolve(traceDir, ANALYZE_TRACE_FILENAME);
-	writeFileSync(destination, JSON.stringify(result, null, 2), "utf-8");
-	console.log("Analysis result:", result);
+analyzeTrace({ traceDir, options: defaultOptions }).then(result => {
+  const destination = resolve(traceDir, ANALYZE_TRACE_FILENAME);
+  writeFileSync(destination, JSON.stringify(result, null, 2), "utf-8");
+  console.log("Analysis result:", result);
 });

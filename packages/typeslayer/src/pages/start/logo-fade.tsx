@@ -81,6 +81,7 @@ export const LogoFade = ({ router }: { router: Register["router"] }) => {
       clearTimeout(closingUp);
     };
   }, [
+    router,
     shouldShowLogoFade,
     router.navigate,
     refetchTypeGraphNodesAndLinks,

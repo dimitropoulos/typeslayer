@@ -83,21 +83,21 @@ export const SettingsPage = () => {
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       await relativePaths.set(event.target.checked);
     },
-    [relativePaths.set],
+    [relativePaths],
   );
 
   const handlePreferEditor = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       await preferEditorOpen.set(event.target.checked);
     },
-    [preferEditorOpen.set],
+    [preferEditorOpen],
   );
 
   const handleEditorChange = useCallback(
     async (event: SelectChangeEvent<string>) => {
       await preferredEditor.set(event.target.value);
     },
-    [preferredEditor.set],
+    [preferredEditor],
   );
 
   const pathSeparator = useMemo(detectPlatformSlash, []);

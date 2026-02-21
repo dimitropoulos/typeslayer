@@ -12,6 +12,7 @@ sudo apt-get install -y \
 Why: https://github.com/nashaofu/xcap
 
 Notes:
+
 - These are build-time headers; end-users of the final binary do NOT need the -dev packages.
 - On Wayland sessions, runtime screen capture requires PipeWire and the desktop portal services (commonly preinstalled on modern Ubuntu). On X11 sessions, PipeWire isn’t required for capture.
 - You can verify PipeWire is discoverable by pkg-config with:

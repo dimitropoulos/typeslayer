@@ -1,4 +1,3 @@
-
 <p align="center">
   <img src="https://raw.githubusercontent.com/dimitropoulos/typeslayer/main/packages/typeslayer/src/assets/typeslayer-nightmare.png" alt="TypeSlayer">
 </p>
@@ -48,7 +47,7 @@ in the root package you want to inspect (i.e. colocated to your package.json). T
 
 ## Support
 
-TypeSlayer supports Linux x64 (glibc 2.39+), macOS ARM64 (Apple Silicon), and Windows x64.  Please note that next year is the year of the Linux desktop 📯.
+TypeSlayer supports Linux x64 (glibc 2.39+), macOS ARM64 (Apple Silicon), and Windows x64. Please note that next year is the year of the Linux desktop 📯.
 
 ## Contributing
 
@@ -57,4 +56,4 @@ TypeSlayer supports Linux x64 (glibc 2.39+), macOS ARM64 (Apple Silicon), and Wi
 
 ## Thank You
 
-this app is built with Tauri, TanStack, Vite, Biome, React, MUI, Rust, and of course, TypeScript.
+this app is built with Tauri, TanStack, Vite, oxc, React, MUI, Rust, and of course, TypeScript.

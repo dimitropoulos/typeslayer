@@ -3,12 +3,12 @@ name: Build & Publish TypeSlayer
 on:
   push:
     tags:
-      - 'typeslayer-v*'
+      - "typeslayer-v*"
   workflow_dispatch:
 
 permissions:
-  contents: write   # needed for creating releases
-  id-token: write   # for OIDC (npm provenance optional)
+  contents: write # needed for creating releases
+  id-token: write # for OIDC (npm provenance optional)
 
 jobs:
   build:
@@ -38,8 +38,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
 
       - name: Cache pnpm store
         uses: actions/cache@v4
@@ -147,7 +147,7 @@ jobs:
           cp artifacts/darwin-arm64-binary/typeslayer npm/darwin-arm64/typeslayer
           cp artifacts/win32-x64-binary/typeslayer.exe npm/win32-x64/typeslayer.exe
           chmod +x npm/linux-x64/typeslayer npm/darwin-arm64/typeslayer
-          
+
           # Copy Linux bundles for release
           if [ -d "artifacts/linux-bundles" ]; then
             mkdir -p release-assets/linux
@@ -159,8 +159,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4

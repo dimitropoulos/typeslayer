@@ -234,7 +234,6 @@ const Span = ({
         >
           {hotSpot.children.map((child: CircularHotSpot, index) => (
             <Span
-              // biome-ignore lint/suspicious/noArrayIndexKey: fuck off bro
               key={index}
               hotSpot={child}
               parentDuration={hotSpot.duration}

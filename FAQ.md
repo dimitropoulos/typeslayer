@@ -1,4 +1,5 @@
 <!-- omit from toc -->
+
 # TypeSlayer FAQ
 
 - ["but I just want to see my code"](#but-i-just-want-to-see-my-code)
@@ -76,7 +77,7 @@ but you didn't give them names, did you? no. you didn't.
 in language parlance, that'd qualify them as an "anonymous types" in the same way that the arrow function in
 
 ```typescript
-someArray.map((x) => x + 1);
+someArray.map(x => x + 1);
 ```
 
 is also anonymous.
@@ -255,8 +256,8 @@ I wanted to make it easy for others to put up PRs at their companies all like "I
 
 ## what if it's been going for a long time?
 
-the first question on your mind might be "how long is a while?".  the leaderboard is a tool that can help you understand that!
+the first question on your mind might be "how long is a while?". the leaderboard is a tool that can help you understand that!
 
-in this situation, the very first debugging step is to go to the "Customize Flags" button in the Start module and copy the example script you see there.  then open a terminal (completely outside of TypeSlayer) and run that command (make sure it's from the path shown in TypeSlayer).  this will tell you if it's a TypeSlayer bug - or something upstream at the level of the TypeScript compiler.
+in this situation, the very first debugging step is to go to the "Customize Flags" button in the Start module and copy the example script you see there. then open a terminal (completely outside of TypeSlayer) and run that command (make sure it's from the path shown in TypeSlayer). this will tell you if it's a TypeSlayer bug - or something upstream at the level of the TypeScript compiler.
 
-failing that - please submit a bug report!  you can generate one with the little bug icon guy in the bottom left of the app.
+failing that - please submit a bug report! you can generate one with the little bug icon guy in the bottom left of the app.

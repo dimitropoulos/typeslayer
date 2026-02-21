@@ -8,7 +8,8 @@ set -e
 
 n auto
 pnpm install
-pnpm biome:check
+pnpm lint:fix
+pnpm format
 pnpm --filter @typeslayer/internal  gen:rust-types
 pnpm --filter @typeslayer/common    build
 pnpm --filter @typeslayer/analytics build

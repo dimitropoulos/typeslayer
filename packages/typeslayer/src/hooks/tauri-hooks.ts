@@ -121,7 +121,7 @@ export const useGetRecursiveResolvedTypes = (typeId: TypeId | undefined) => {
         queryClient.setQueryData(["resolved_type", Number(id)], resolvedType);
       });
     }
-  }, [query.isSuccess, query.data, queryClient.setQueryData]);
+  }, [query.isSuccess, query.data, queryClient.setQueryData, queryClient]);
 
   return {
     data: query.data,
@@ -145,7 +145,13 @@ export const useGetResolvedTypeById = (typeId: TypeId | undefined) => {
     if (!query.isSuccess && query.data) {
       queryClient.setQueryData(["resolved_type", typeId], query.data);
     }
-  }, [query.isSuccess, query.data, queryClient.setQueryData, typeId]);
+  }, [
+    query.isSuccess,
+    query.data,
+    queryClient.setQueryData,
+    typeId,
+    queryClient,
+  ]);
 
   return {
     data: query.data,
@@ -178,7 +184,7 @@ export const useGetResolvedTypesByIds = (typeIds: TypeId[]) => {
         }
       });
     }
-  }, [query.isSuccess, query.data, queryClient.setQueryData]);
+  }, [query.isSuccess, query.data, queryClient.setQueryData, queryClient]);
 
   return {
     data: query.data,
@@ -252,7 +258,9 @@ export function useApplyTscProjectFlag() {
     mutationFn: (value: boolean) =>
       invoke<void>("set_apply_tsc_project_flag", { value }),
     onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["get_tsc_example_call"],
+      });
     },
     onSuccess: (_, value) => {
       queryClient.setQueryData(["apply_tsc_project_flag"], value);
@@ -313,7 +321,9 @@ export function useExtraTscFlags() {
     mutationFn: (flags: string) =>
       invoke<void>("set_extra_tsc_flags", { flags }),
     onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["get_tsc_example_call"],
+      });
     },
     onSuccess: (_, flags) => {
       queryClient.setQueryData(["extra_tsc_flags"], flags);
@@ -354,7 +364,9 @@ export function useProjectRoot() {
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: ["tsconfig_paths"] });
       await queryClient.invalidateQueries({ queryKey: ["selected_tsconfig"] });
-      await queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["get_tsc_example_call"],
+      });
     },
     onSuccess: (_, projectRoot) => {
       queryClient.setQueryData(["project_root"], projectRoot);
@@ -607,7 +619,7 @@ export const useGenerateAll = () => {
     mutationFn: () => invoke<void>("generate_all"),
     onSettled: async () => {
       await queryClient.invalidateQueries();
-    }
+    },
   });
 };
 
@@ -634,7 +646,9 @@ export function useSelectedTsconfig() {
     mutationFn: (tsconfigPath: string) =>
       invoke<void>("set_selected_tsconfig", { tsconfigPath }),
     onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["get_tsc_example_call"],
+      });
     },
     onSuccess: (_, tsconfigPath) => {
       queryClient.setQueryData(["selected_tsconfig"], tsconfigPath || null);
@@ -803,7 +817,9 @@ export const useMaxOldSpaceSize = () => {
     mutationFn: (size: number | null) =>
       invoke<void>("set_max_old_space_size", { size }),
     onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["get_tsc_example_call"],
+      });
     },
     onSuccess: (_, size) => {
       queryClient.setQueryData(["max_old_space_size"], size);
@@ -887,7 +903,9 @@ export const useMaxStackSize = () => {
     mutationFn: (size: number | null) =>
       invoke<void>("set_max_stack_size", { size }),
     onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["get_tsc_example_call"],
+      });
     },
     onSuccess: (_, size) => {
       queryClient.setQueryData(["max_stack_size"], size);
@@ -910,7 +928,9 @@ export const useValidateAnalyzeTrace = () => {
     mutationFn: async () => invoke<void>("validate_analyze_trace"),
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: ["analyze_trace"] });
-      await queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["get_output_file_sizes"],
+      });
       await queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
     },
   });
@@ -941,7 +961,9 @@ export const useValidateTypeGraph = () => {
     mutationFn: async () => invoke<void>("validate_type_graph"),
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: ["type_graph"] });
-      await queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["get_output_file_sizes"],
+      });
       await queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
     },
   });
@@ -954,7 +976,9 @@ export const useValidateCpuProfile = () => {
     mutationFn: async () => invoke<void>("validate_cpu_profile"),
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: ["cpu_profile"] });
-      await queryClient.invalidateQueries({ queryKey: ["get_output_file_sizes"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["get_output_file_sizes"],
+      });
       await queryClient.invalidateQueries({ queryKey: ["bug_report_files"] });
     },
   });
@@ -1018,7 +1042,9 @@ export const useTypeScriptCompilerVariant = () => {
     mutationFn: (variant: TypeScriptCompilerVariant) =>
       invoke<void>("set_typescript_compiler_variant", { variant }),
     onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["get_tsc_example_call"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["get_tsc_example_call"],
+      });
     },
     onSuccess: (_, variant) => {
       queryClient.setQueryData(["typescript_compiler_variant"], variant);

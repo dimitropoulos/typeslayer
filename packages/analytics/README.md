@@ -11,16 +11,19 @@ This Cloudflare Worker ingests analytics events and stores them in a D1 database
 Returns aggregated leaderboard statistics across all collected events.
 
 **Caching:**
+
 - Results are cached at the Cloudflare edge using the Cache API for **1 hour**
 - First request computes the data (slow), subsequent requests are served from cache (fast)
 - Cache can be manually invalidated via the `/invalidate` endpoint
 
 **Response Headers:**
+
 - `X-Cache: hit` - Data served from Cloudflare cache (fast)
 - `X-Cache: miss` - Fresh data computed from database (slow)
 - `Cache-Control: public, max-age=3600` - CDN/browser can cache for 1 hour
 
 **Performance:**
+
 - Cached responses: ~10-50ms (served from edge)
 - Uncached responses: ~500-2000ms (database queries executed)
 
@@ -31,11 +34,13 @@ Manually invalidates the leaderboard cache by deleting it from Cloudflare's Cach
 **No authentication required** - Publicly accessible for easy cache busting.
 
 **Example:**
+
 ```bash
 curl https://analytics.typeslayer.dev/invalidate
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -88,12 +93,12 @@ Open `wrangler.jsonc` and replace `REPLACE_WITH_D1_DATABASE_ID` with your UUID:
     {
       "binding": "DB",
       "database_name": "typeslayer",
-      "database_id": "12345678-abcd-1234-abcd-123456789abc"  // <- Your UUID here
-    }
+      "database_id": "12345678-abcd-1234-abcd-123456789abc", // <- Your UUID here
+    },
   ],
   "vars": {
-    "REQUIRE_INGESTION_SECRET": "0"  // Set to "1" if you want to require auth
-  }
+    "REQUIRE_INGESTION_SECRET": "0", // Set to "1" if you want to require auth
+  },
 }
 ```
 
@@ -102,11 +107,13 @@ Open `wrangler.jsonc` and replace `REPLACE_WITH_D1_DATABASE_ID` with your UUID:
 The migrations create the `events` table with proper indexes.
 
 **For local development:**
+
 ```bash
 pnpm migrate:local
 ```
 
 **For production (remote):**
+
 ```bash
 pnpm migrate:apply
 ```
@@ -210,6 +217,7 @@ curl -X POST http://localhost:8787/collect \
 Your `wrangler.jsonc` specifies `analytics.typeslayer.dev/collect` as the route.
 
 **Requirements:**
+
 - `typeslayer.dev` must be a zone in your Cloudflare account
 - DNS can be a CNAME or A/AAAA record (Cloudflare will route based on the worker route config)
 
@@ -306,19 +314,23 @@ pnpm wrangler deployments list
 ## Troubleshooting
 
 ### "Database not found"
+
 - Verify `database_id` in `wrangler.jsonc` matches output from `pnpm wrangler d1 list`
 - Ensure you've run `pnpm migrate:apply` for remote database
 
 ### "Unauthorized" on POST
+
 - If `REQUIRE_INGESTION_SECRET` is "1", ensure you've set the secret: `pnpm wrangler secret put INGESTION_SECRET`
 - Include `X-Typeslayer-Analytics-Key` header in requests
 
 ### Route not working
+
 - Ensure `typeslayer.dev` is in your Cloudflare account
 - Check Workers & Pages → your worker → Settings → Triggers → Routes
 - DNS record must exist (can be a placeholder A record with orange cloud)
 
 ### "DB error" response
+
 - Check migrations were applied: `pnpm migrate:apply`
 - View logs: `pnpm wrangler tail`
 - Verify table exists: `pnpm wrangler d1 execute typeslayer --remote --command="SELECT name FROM sqlite_master"`
@@ -340,6 +352,7 @@ The Worker accepts POST requests to `/collect` with this schema:
 ```
 
 It also supports:
+
 - Batch uploads (array of events)
 - NDJSON format (newline-delimited JSON)
 - CORS for browser testing
@@ -348,6 +361,7 @@ It also supports:
 ## Next Steps
 
 Once deployed, you'll want to:
+
 1. Update the Rust analytics sender to use `https://analytics.typeslayer.dev/collect`
 2. Add the ingestion secret header (if enabled)
 3. Set up a dashboard to query/visualize the D1 data

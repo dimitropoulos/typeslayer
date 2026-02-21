@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "unicorn"],
+  "rules": {
+    "unicorn/no-array-for-each": "off",
+    "no-confusing-void-expression": "off",
+    "react/rules-of-hooks": "error",
+    "curly": "error",
+    "no-accumulating-spread": "off"
+  },
+  "ignorePatterns": [
+    "**/public",
+    "**/dist",
+    "node_modules",
+    "**/gen",
+    "**/rust-types"
+  ]
+}

@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/suspicious/noArrayIndexKey: because daddy said so */
 import {
   Button,
   Dialog,
@@ -126,9 +125,7 @@ function TargetsTabs({ linksToTypeId }: { linksToTypeId: LinksToType }) {
             <MenuItem key={kind} value={kind}>
               <Stack>
                 <Typography
-                  sx={{
-                    ...(selectedTab === kind ? { fontWeight: "bold" } : {}),
-                  }}
+                  sx={selectedTab === kind ? { fontWeight: "bold" } : {}}
                 >
                   {typeRelationInfo[kind].target.title}
                 </Typography>

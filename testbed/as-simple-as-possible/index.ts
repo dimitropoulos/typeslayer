@@ -1,5 +1,3 @@
-// biome-ignore-all lint: this file is for demonstrating bad things
-
 export type Bit = "0" | "1";
 export type BitArray = Bit[];
 export type BitMatrix = BitArray[];

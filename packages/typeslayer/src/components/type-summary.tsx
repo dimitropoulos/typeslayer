@@ -146,7 +146,6 @@ export function TypeSummarySkeleton({
       {showFlags
         ? Array.from({ length: randBetween(1, 2) }).map((_, i) => (
             <Skeleton
-              // biome-ignore lint/suspicious/noArrayIndexKey: I literally don't care
               key={i}
               width={randBetween(30, 130)}
               sx={{ backgroundColor: t => `${t.palette.primary.dark}40` }}

@@ -154,25 +154,22 @@ export const DisplayRecursiveType: FC<{
                   ))
                   .reduce(
                     (acc, visitor, index) => [
-                      ...[
-                        index === 0
-                          ? []
-                          : [
-                              acc,
-                              <DoubleArrow
-                                fontSize="small"
-                                // biome-ignore lint/suspicious/noArrayIndexKey: the sort order is stable
-                                key={index}
-                                sx={{
-                                  width: 27,
-                                  px: 1,
-                                  flexShrink: 0,
-                                  height: "100%",
-                                  alignSelf: "center",
-                                }}
-                              />,
-                            ],
-                      ],
+                      index === 0
+                        ? []
+                        : [
+                            acc,
+                            <DoubleArrow
+                              fontSize="small"
+                              key={index}
+                              sx={{
+                                width: 27,
+                                px: 1,
+                                flexShrink: 0,
+                                height: "100%",
+                                alignSelf: "center",
+                              }}
+                            />,
+                          ],
                       visitor,
                     ],
                     [] as ReactNode[],
@@ -360,10 +357,7 @@ export const DisplayRecursiveType: FC<{
                 <ShowMoreChildren incrementsOf={50}>
                   {value.map((v, i) => (
                     <DisplayRecursiveType
-                      key={`${reactKey}:${
-                        // biome-ignore lint/suspicious/noArrayIndexKey: the sort order is stable and we don't have any other information to use since you can do `string | string | string`, for example.
-                        i
-                      }`}
+                      key={`${reactKey}:${i}`}
                       id={v as number}
                       depth={depth + 1}
                       visitors={[...visitors, id]}

@@ -264,10 +264,11 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
     try {
       await validate.mutateAsync();
       showToast({ message: "Verified: OK", severity: "success" });
-    } catch (_e) {
+    } catch (error) {
       showToast({ message: "Validate failed", severity: "error" });
+      console.error(error);
     }
-  }, [validate.mutateAsync, showToast]);
+  }, [validate, showToast]);
 
   const fileSize = fileSizes ? fileSizes[filename] : null;
 

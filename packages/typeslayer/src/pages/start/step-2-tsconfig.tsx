@@ -24,7 +24,7 @@ export const Step2Tsconfig = () => {
       const newTsconfigPath = event.target.value;
       await selectedTsconfig.set(newTsconfigPath);
     },
-    [selectedTsconfig.set],
+    [selectedTsconfig],
   );
 
   const platformSlash = detectPlatformSlash();

@@ -228,10 +228,7 @@ const ShowMaybeMany = ({
   if (Array.isArray(content)) {
     return content.map((typeId, index) => (
       <ResolveTypeSummary
-        key={`type-summary-${typeId}-${
-          // biome-ignore lint/suspicious/noArrayIndexKey: it's stable
-          index
-        }`}
+        key={`type-summary-${typeId}-${index}`}
         typeId={typeId}
         sx={{ ml: 2, mb: 1 }}
       />

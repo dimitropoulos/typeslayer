@@ -1,0 +1,16 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "useTabs": false,
+  "tabWidth": 2,
+  "arrowParens": "avoid",
+  "printWidth": 80,
+  "experimentalSortPackageJson": false,
+  "ignorePatterns": [
+    "**/public",
+    "**/dist",
+    "node_modules",
+    "**/gen",
+    "**/rust-types",
+    "pnpm-lock.yaml"
+  ]
+}

@@ -127,7 +127,7 @@ export function PlatformPercentages({
   const BarWithColor = (props: BarProps) => {
     const {
       color: barColor,
-      id,
+      id: _id,
       dataIndex: _dataIndex,
       xOrigin: _xOrigin,
       yOrigin: _yOrigin,

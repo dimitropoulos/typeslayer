@@ -28,7 +28,7 @@ export const Step1PackageJson = () => {
         console.error("Failed to set project root:", error);
       }
     },
-    [projectRoot.set],
+    [projectRoot],
   );
 
   const onChange = useCallback(

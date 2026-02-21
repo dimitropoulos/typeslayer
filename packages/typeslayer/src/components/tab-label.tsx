@@ -47,6 +47,7 @@ export function VerticalTab({
 } & TabProps) {
   return (
     <Tab
+      key={value}
       {...props}
       sx={{
         flexShrink: 0,
@@ -98,7 +99,6 @@ export function VerticalTab({
           )}
         </Stack>
       }
-      key={value}
       value={value}
     />
   );

@@ -100,7 +100,6 @@ export function App() {
         >
           {NAVIGATION.map((item, index) => (
             <RenderNavItem
-              // biome-ignore lint/suspicious/noArrayIndexKey: the order never changes
               key={index}
               item={item}
               index={index}

@@ -213,7 +213,9 @@ export const Treemap = () => {
               <br />
               <br />
               very often, the problematic type is deeper, and this file is just
-              the starting point...but at least this gives you <em>some</em>{" "}
+              the starting point...but at least this gives you <em>
+                some
+              </em>{" "}
               specific place to start.
               <br />
               <br />

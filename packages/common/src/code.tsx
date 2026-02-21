@@ -43,7 +43,8 @@ export const Code = ({
         if (!cancelled) {
           setHtml(rendered);
         }
-      } catch (_error) {
+      } catch (error) {
+        console.error(error);
         if (!cancelled) {
           setHtml(null);
         }
@@ -115,8 +116,9 @@ export const Code = ({
                   await navigator.clipboard.writeText(copyThisInstead ?? value);
                   setCopied(true);
                   setTimeout(() => setCopied(false), 1200);
-                } catch (_error) {
+                } catch (error) {
                   setCopied(false);
+                  console.error(error);
                 }
               }}
             >
@@ -133,7 +135,6 @@ export const Code = ({
           <Box
             component="div"
             sx={{ m: 0 }}
-            // biome-ignore lint/security/noDangerouslySetInnerHtml: rendered HTML from Shiki
             dangerouslySetInnerHTML={{ __html: html }}
           />
         ) : (

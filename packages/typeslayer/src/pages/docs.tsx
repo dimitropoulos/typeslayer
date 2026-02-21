@@ -765,11 +765,11 @@ export const DocsPage = () => {
             <ListItemText>
               <Typography
                 variant="h6"
-                sx={{
-                  ...(activeIndex === index
+                sx={
+                  activeIndex === index
                     ? { fontWeight: "bold", letterSpacing: "-0.033em" }
-                    : { fontWeight: "normal" }),
-                }}
+                    : { fontWeight: "normal" }
+                }
               >
                 {title}
               </Typography>

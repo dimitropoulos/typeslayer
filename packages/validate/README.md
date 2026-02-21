@@ -7,23 +7,23 @@ Validation schemas and utilities for TypeScript compiler trace analysis. This pa
 ### Trace JSON Validation
 
 ```ts
-import { traceJsonSchema, type TraceEvent } from '@typeslayer/validate';
+import { traceJsonSchema, type TraceEvent } from "@typeslayer/validate";
 
 // Validate trace.json output from TypeScript compiler
 const events: TraceEvent[] = traceJsonSchema.parse(jsonData);
 
 // Or use with Node.js streams
-import { createReadStream } from 'fs';
-import { validateTraceJson } from '@typeslayer/validate/node';
+import { createReadStream } from "fs";
+import { validateTraceJson } from "@typeslayer/validate/node";
 
-const stream = createReadStream('trace.json');
+const stream = createReadStream("trace.json");
 const events = await validateTraceJson(stream);
 ```
 
 ### Types JSON Validation
 
 ```ts
-import { typesJsonSchema, type TypesJsonSchema } from '@typeslayer/validate';
+import { typesJsonSchema, type TypesJsonSchema } from "@typeslayer/validate";
 
 const types: TypesJsonSchema = typesJsonSchema.parse(jsonData);
 ```
@@ -31,7 +31,7 @@ const types: TypesJsonSchema = typesJsonSchema.parse(jsonData);
 ### CPU Profile Validation
 
 ```ts
-import { tscCpuProfileSchema } from '@typeslayer/validate';
+import { tscCpuProfileSchema } from "@typeslayer/validate";
 
 const profile = tscCpuProfileSchema.parse(jsonData);
 ```
@@ -42,7 +42,6 @@ const profile = tscCpuProfileSchema.parse(jsonData);
   - `traceJsonSchema` - Validates TypeScript trace events
   - `typesJsonSchema` - Validates type information
   - `tscCpuProfileSchema` - Validates CPU profile data
-  
 - **Node export (`@typeslayer/validate/node`)**: Node.js-specific utilities
   - `validateTraceJson()` - Stream-based trace validation
   - `readTraceJson()` - Read and parse trace.json files
@@ -52,13 +51,13 @@ const profile = tscCpuProfileSchema.parse(jsonData);
 Full TypeScript support with type inference from schemas:
 
 ```ts
-import type { TraceEvent } from '@typeslayer/validate';
+import type { TraceEvent } from "@typeslayer/validate";
 
 // Type-safe event handling
 function processEvent(event: TraceEvent) {
   switch (event.name) {
-    case 'createSourceFile':
-      console.log('Creating source file:', event.args.path);
+    case "createSourceFile":
+      console.log("Creating source file:", event.args.path);
       break;
     // ... other event types
   }

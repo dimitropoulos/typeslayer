@@ -39,6 +39,7 @@ import {
   graphLinkIndex,
   type LinkKind,
 } from "../types/type-graph";
+import type { RefObject } from "react";
 
 type EdgeConfig = {
   id: LinkKind;
@@ -661,12 +662,12 @@ const TypeGraphUtilityPanel = ({
   graphReady: boolean;
   selectedIndex: number | null;
   selectedId: number | null;
-  graphRef: React.RefObject<Graph | null>;
-  containerRef: React.RefObject<HTMLDivElement | null>;
-  linkPairsRef: React.RefObject<Float32Array | null>;
-  kindsBufferRef: React.RefObject<LinkKind[]>;
-  allLinksRef: React.RefObject<Record<LinkKind, GraphLink[]>>;
-  hiddenIndicesRef: React.RefObject<Set<number>>;
+  graphRef: RefObject<Graph | null>;
+  containerRef: RefObject<HTMLDivElement | null>;
+  linkPairsRef: RefObject<Float32Array | null>;
+  kindsBufferRef: RefObject<LinkKind[]>;
+  allLinksRef: RefObject<Record<LinkKind, GraphLink[]>>;
+  hiddenIndicesRef: RefObject<Set<number>>;
   applySelectionVisuals: (index: number | null) => void;
   setFilteredStats: (
     stats: { filteredNodeCount: number; filteredLinkCount: number } | null,
@@ -674,7 +675,7 @@ const TypeGraphUtilityPanel = ({
   selectedTypeId: string | undefined;
   setSimulationPaused: (nextPaused: boolean) => void;
   paused: boolean;
-  pausedRef: React.RefObject<boolean>;
+  pausedRef: RefObject<boolean>;
   filteredStats: {
     filteredNodeCount: number;
     filteredLinkCount: number;
@@ -699,7 +700,8 @@ const TypeGraphUtilityPanel = ({
       return;
     }
     graph.zoomToPointByIndex(selectedIndex, 1.5);
-  }, [selectedIndex, graphReady, containerRef.current, graphRef.current]);
+    // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps -- https://github.com/oxc-project/oxc/issues/19606
+  }, [selectedIndex, graphReady, graphRef.current, containerRef.current]);
 
   const applyFilters = useCallback(
     (filters: Set<LinkKind>, showFreeTypesOverride?: boolean) => {
@@ -847,9 +849,8 @@ const TypeGraphUtilityPanel = ({
 
       // no-op for removed debug view info
     },
+    // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps -- https://github.com/oxc-project/oxc/issues/19606
     [
-      allLinksRef.current,
-      graphRef.current,
       kindsBufferRef,
       showFreeTypes,
       setFilteredStats,
