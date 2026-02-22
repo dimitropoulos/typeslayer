@@ -4,6 +4,15 @@ Validation schemas and utilities for TypeScript compiler trace analysis. This pa
 
 ## Usage
 
+### CLI
+
+Validate compiler output files directly:
+
+```bash
+npx @typeslayer/validate --trace ./trace.json
+npx @typeslayer/validate --types ./types.json
+```
+
 ### Trace JSON Validation
 
 ```ts

@@ -9,7 +9,7 @@ export type TypeId = z.infer<typeof typeId>;
 export const position = z.object({
   line: typeId,
   character: z.number(),
-});
+}).strict();
 
 export const absolutePath = z.string();
 
@@ -17,4 +17,4 @@ export const location = z.object({
   path: absolutePath,
   start: position,
   end: position,
-});
+}).strict();

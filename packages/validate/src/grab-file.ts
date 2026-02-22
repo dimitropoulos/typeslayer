@@ -1,16 +1,14 @@
 import { readFile } from "node:fs/promises";
-import type { z } from "zod/v4";
+import { type z, prettifyError } from "zod/v4";
 
 export const grabFile = async <V extends z.ZodType>(
   filePath: string,
   validator: V,
 ) => {
-  console.log("grabFile:", filePath);
   const json = await readSmallJson(filePath, "utf8");
   const parsed = await validator.safeParseAsync(json);
   if (!parsed.success) {
-    console.error("Error parsing file", { filePath, parsed });
-    throw new Error(`Error parsing file ${filePath}`);
+    throw new Error(`Error parsing file ${filePath}\n${prettifyError(parsed.error)}`);
   }
   return parsed.data;
 };

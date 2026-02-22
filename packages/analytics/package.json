@@ -15,6 +15,7 @@
   "scripts": {
     "dev": "pnpm wrangler dev --local",
     "build": "tsdown",
+    "build:watch": "tsdown --watch",
     "predeploy": "pnpm build",
     "deploy": "pnpm wrangler deploy",
     "migrate:apply": "pnpm wrangler d1 migrations apply typeslayer --remote",

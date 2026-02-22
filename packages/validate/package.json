@@ -29,6 +29,9 @@
       "import": "./dist/node.mjs"
     }
   },
+  "bin": {
+    "typeslayer-validate": "./bin/typeslayer-validate.mjs"
+  },
   "main": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
   "scripts": {
