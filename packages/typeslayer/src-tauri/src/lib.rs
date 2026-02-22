@@ -115,6 +115,7 @@ pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
             commands::treemap::get_treemap_data,
             commands::trivia::get_app_stats,
             commands::trivia::get_available_editors,
+            commands::trivia::get_compilation_files,
             commands::trivia::get_link_kind_data_by_kind,
             commands::trivia::get_output_file_sizes,
             commands::trivia::get_tsc_example_call,

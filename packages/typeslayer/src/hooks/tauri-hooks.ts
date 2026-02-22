@@ -477,6 +477,7 @@ const refreshGenerateTraceInvalidations = new Set([
   "get_app_stats",
   "get_links_to_type_id",
   "get_output_file_sizes",
+  "get_compilation_files",
   "get_trace_json_preview",
   "get_type_graph_preview",
   "get_types_json_preview",
@@ -754,6 +755,15 @@ export const useOutputFileSizes = () => {
   return useQuery({
     queryKey: ["get_output_file_sizes"],
     queryFn: () => invoke<Record<string, number>>("get_output_file_sizes"),
+    staleTime: 5000,
+    refetchInterval: 10000,
+  });
+};
+
+export const useCompilationFiles = () => {
+  return useQuery({
+    queryKey: ["get_compilation_files"],
+    queryFn: () => invoke<string[]>("get_compilation_files"),
     staleTime: 5000,
     refetchInterval: 10000,
   });

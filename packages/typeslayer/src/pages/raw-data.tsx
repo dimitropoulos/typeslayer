@@ -10,6 +10,7 @@ import {
   Box,
   Button,
   List,
+  ListItem,
   ListItemButton,
   ListItemIcon,
   ListItemText,
@@ -40,6 +41,7 @@ import {
 } from "../components/utils";
 import { type ToastData, useToast } from "../contexts/toast-context";
 import {
+  useCompilationFiles,
   useDataDir,
   useGenerateAnalyzeTrace,
   useGenerateCpuProfile,
@@ -62,14 +64,16 @@ import {
   useValidateTypesJson,
 } from "../hooks/tauri-hooks";
 import { TYPE_GRAPH_FILENAME } from "../types/type-graph";
+import { FormatListNumbered, SvgIconComponent } from "@mui/icons-material";
+import { OpenablePath } from "../components/openable-path";
 
-type RawKey = "analyze" | "trace" | "types" | "cpu" | "graph";
+type RawFileKey = "analyze" | "trace" | "types" | "cpu" | "graph";
 
 const RAW_ITEMS: Record<
-  RawKey,
+  RawFileKey,
   {
     route: string;
-    filename: string;
+    label: string;
     description: string;
     usePreview: () => UseQueryResult<string, Error>;
     useValidate: () => UseMutationResult<void, Error, void, unknown>;
@@ -79,7 +83,7 @@ const RAW_ITEMS: Record<
 > = {
   analyze: {
     route: "analyze-trace",
-    filename: ANALYZE_TRACE_FILENAME,
+    label: ANALYZE_TRACE_FILENAME,
     description:
       "Summary insights extracted from trace.json, including hotspots and duplicate packages.",
     usePreview: useGetAnalyzeTracePreview,
@@ -90,7 +94,7 @@ const RAW_ITEMS: Record<
 
   trace: {
     route: "trace-json",
-    filename: TRACE_JSON_FILENAME,
+    label: TRACE_JSON_FILENAME,
     description:
       "Raw event trace emitted by the TypeScript compiler during type checking.",
     usePreview: useGetTraceJsonPreview,
@@ -101,7 +105,7 @@ const RAW_ITEMS: Record<
 
   types: {
     route: "types-json",
-    filename: TYPES_JSON_FILENAME,
+    label: TYPES_JSON_FILENAME,
     description: "Resolved types catalog containing metadata for each type id.",
     usePreview: useGetTypesJsonPreview,
     useValidate: useValidateTypesJson,
@@ -111,7 +115,7 @@ const RAW_ITEMS: Record<
 
   cpu: {
     route: "tsc-cpuprofile",
-    filename: CPU_PROFILE_FILENAME,
+    label: CPU_PROFILE_FILENAME,
     description:
       "V8 CPU profile generated during the TypeScript compilation run.",
     usePreview: useGetCpuProfilePreview,
@@ -122,7 +126,7 @@ const RAW_ITEMS: Record<
 
   graph: {
     route: "type-graph",
-    filename: TYPE_GRAPH_FILENAME,
+    label: TYPE_GRAPH_FILENAME,
     description:
       "Type graph representing relationships between types in the TypeScript project.",
     usePreview: useGetTypeGraphPreview,
@@ -132,20 +136,74 @@ const RAW_ITEMS: Record<
   },
 };
 
+type CompilationStatsKey = "compilationFiles";
+
+const COMPILATION_STATS_ITEMS = {
+  compilationFiles: {
+    route: "compilation-files",
+    label: "Source Files",
+    description:
+      "List of source files included in the compilation, in the order TypeScript parsed them.",
+  },
+};
+
+type PathKey = RawFileKey | CompilationStatsKey;
+
+const NavItem = ({
+  label,
+  route,
+  value,
+  selected,
+  icon: Icon,
+}: {
+  label: string;
+  route: string;
+  value: string | undefined;
+  selected: boolean;
+  icon: SvgIconComponent;
+}) => {
+  const navigate = useNavigate();
+  const setActive = useCallback(
+    (route: string) => {
+      navigate({ to: `/raw-data/${route}` });
+    },
+    [navigate],
+  );
+
+  return (
+    <ListItemButton selected={selected} onClick={() => setActive(route)}>
+      <ListItemIcon sx={{ minWidth: 38 }}>
+        <Icon />
+      </ListItemIcon>
+      <ListItemText primary={label} />
+      <Box
+        sx={{
+          marginLeft: 4,
+          fontSize: 13,
+          color: t => t.palette.secondary.main,
+          fontWeight: "bold",
+          fontFamily: "monospace",
+        }}
+      >
+        {value ?? "\u00A0".repeat(5)}
+      </Box>
+    </ListItemButton>
+  );
+};
+
 export const RawData = () => {
   const params = useParams({ strict: false });
-  const navigate = useNavigate();
   const child = (params.fileId as string | undefined) ?? "analyze-trace";
   const { data: fileSizes } = useOutputFileSizes();
+  const { data: compilationFiles } = useCompilationFiles();
 
-  const currentKey: RawKey = useMemo(() => {
-    const entry = Object.entries(RAW_ITEMS).find(([, v]) => v.route === child);
-    return (entry?.[0] as RawKey) ?? "analyze";
+  const selectedId: PathKey = useMemo(() => {
+    const entry = Object.entries({
+      ...RAW_ITEMS,
+      ...COMPILATION_STATS_ITEMS,
+    }).find(([, v]) => v.route === child);
+    return (entry?.[0] as PathKey) ?? "analyze";
   }, [child]);
-
-  const setActive = (key: RawKey) => {
-    navigate({ to: `/raw-data/${RAW_ITEMS[key].route}` });
-  };
 
   return (
     <Stack direction="row" sx={{ height: "100%" }}>
@@ -157,40 +215,53 @@ export const RawData = () => {
         }}
       >
         <ListSubheader>Raw Data Files</ListSubheader>
-        {(Object.keys(RAW_ITEMS) as RawKey[]).map(key => (
-          <ListItemButton
-            key={key}
-            selected={key === currentKey}
-            onClick={() => setActive(key)}
-          >
-            <ListItemIcon sx={{ minWidth: 38 }}>
-              <Description />
-            </ListItemIcon>
-            <ListItemText primary={RAW_ITEMS[key].filename} />
-            <Box
-              sx={{
-                marginLeft: 4,
-                fontSize: 13,
-                color: t => t.palette.secondary.main,
-                fontWeight: "bold",
-                fontFamily: "monospace",
-              }}
-            >
-              {fileSizes && fileSizes[RAW_ITEMS[key].filename] !== undefined
-                ? formatBytesSize(fileSizes[RAW_ITEMS[key].filename])
-                : "\u00A0".repeat(5)}
-            </Box>
-          </ListItemButton>
+        {(Object.keys(RAW_ITEMS) as RawFileKey[]).map(id => (
+          <NavItem
+            key={id}
+            label={RAW_ITEMS[id].label}
+            route={RAW_ITEMS[id].route}
+            selected={selectedId === id}
+            icon={Description}
+            value={
+              fileSizes
+                ? formatBytesSize(fileSizes?.[RAW_ITEMS[id].label])
+                : undefined
+            }
+          />
         ))}
+
+        <ListSubheader>Compilation Stats</ListSubheader>
+
+        {(Object.keys(COMPILATION_STATS_ITEMS) as CompilationStatsKey[]).map(
+          id => (
+            <NavItem
+              key={id}
+              label={COMPILATION_STATS_ITEMS[id].label}
+              route={COMPILATION_STATS_ITEMS[id].route}
+              selected={selectedId === id}
+              icon={FormatListNumbered}
+              value={
+                compilationFiles
+                  ? compilationFiles.length.toLocaleString()
+                  : undefined
+              }
+            />
+          ),
+        )}
       </List>
-      <RawDataPane key={currentKey} itemKey={currentKey} />
+
+      {Object.keys(RAW_ITEMS).includes(selectedId) ? (
+        <RawDataPane key={selectedId} itemKey={selectedId as RawFileKey} />
+      ) : null}
+
+      {selectedId === "compilationFiles" ? <CompilationFilesPane /> : null}
     </Stack>
   );
 };
 
-const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
+const RawDataPane = ({ itemKey }: { itemKey: RawFileKey }) => {
   const {
-    filename,
+    label: filename,
     description,
     useValidate,
     useRegenerate,
@@ -408,6 +479,67 @@ const RawDataPane = ({ itemKey }: { itemKey: RawKey }) => {
       ) : (
         <Alert severity="error">File not found.</Alert>
       )}
+    </Stack>
+  );
+};
+
+const CompilationFilesPane = () => {
+  const { data: compilationFiles } = useCompilationFiles();
+  const count = compilationFiles?.length;
+
+  const { label, description } = COMPILATION_STATS_ITEMS.compilationFiles;
+
+  return (
+    <Stack
+      sx={{
+        gap: 2,
+        flexGrow: 1,
+        p: 3,
+        overflow: "auto",
+      }}
+    >
+      <Stack gap={1}>
+        <Stack sx={{ flexDirection: "row", alignItems: "baseline", gap: 1 }}>
+          <Typography variant="h4">{label}</Typography>
+          {count ? (
+            <Typography color="textSecondary">
+              {count.toLocaleString()} files
+            </Typography>
+          ) : null}
+        </Stack>
+        <Typography>{description}</Typography>
+      </Stack>
+
+      <Stack>
+        <List sx={{ background: "transparent" }}>
+          {compilationFiles
+            ? compilationFiles.map((path, index) => (
+                <ListItem key={path} dense>
+                  <Stack sx={{ gap: 2, flexDirection: "row", alignItems: 'baseline' }}>
+                    <ListItemText>
+                      <InlineCode>
+                        {"\u00A0".repeat(
+                          count
+                            ? String(count).length - String(index + 1).length
+                            : 0,
+                        )}
+                        {index + 1}
+                      </InlineCode>
+                    </ListItemText>
+                    <OpenablePath
+                      absolutePath={path}
+                      propertyTextStyle={{
+                        fontFamily: "monospace",
+                        fontSize: "1rem",
+                        color: 'primary'
+                      }}
+                    />
+                  </Stack>
+                </ListItem>
+              ))
+            : null}
+        </List>
+      </Stack>
     </Stack>
   );
 };

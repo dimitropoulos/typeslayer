@@ -4,6 +4,7 @@ use crate::{
     app_data::AppData,
     type_graph::{LinkKind, TYPE_GRAPH_FILENAME},
     utils::AVAILABLE_EDITORS,
+    validate::trace_json::TraceEvent,
     validate::{
         trace_json::TRACE_JSON_FILENAME,
         types_json::{Flag, TYPES_JSON_FILENAME},
@@ -11,6 +12,7 @@ use crate::{
     },
 };
 use indexmap::IndexMap;
+use indexmap::IndexSet;
 use std::{collections::HashMap, path::Path};
 use tauri::State;
 use tokio::sync::Mutex;
@@ -83,6 +85,22 @@ pub async fn get_output_file_sizes(
     }
 
     Ok(sizes)
+}
+
+#[tauri::command]
+pub async fn get_compilation_files(
+    state: State<'_, &Mutex<AppData>>,
+) -> Result<Vec<String>, String> {
+    let app_data = state.lock().await;
+    let mut files: IndexSet<String> = IndexSet::new();
+
+    for event in &app_data.trace_json {
+        if let TraceEvent::CreateSourceFile { args, .. } = event {
+            files.insert(args.path.clone());
+        }
+    }
+
+    Ok(files.into_iter().collect())
 }
 
 #[tauri::command]
