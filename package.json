@@ -18,16 +18,18 @@
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
     "check": "oxlint && oxfmt --check .",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "dev": "turbo run dev --parallel",
     "rip-and-tear": "echo \"did you?\"",
     "bump": "node scripts/bump.ts",
-    "tag": "node scripts/tag.ts",
-    "watch": "concurrently \"pnpm --filter @typeslayer/admin dev\" \"pnpm --filter @typeslayer/analytics build:watch\" \"pnpm --filter @typeslayer/analyze-trace dev\" \"pnpm --filter @typeslayer/common dev\" \"pnpm --filter @typeslayer/internal dev\"",
-    "typecheck": "pnpm --recursive run typecheck"
+    "tag": "node scripts/tag.ts"
   },
   "devDependencies": {
     "concurrently": "9.2.1",
     "@types/node": "^25.3.0",
     "oxfmt": "0.34.0",
-    "oxlint": "^1.49.0"
+    "oxlint": "^1.49.0",
+    "turbo": "^2.8.10"
   }
 }

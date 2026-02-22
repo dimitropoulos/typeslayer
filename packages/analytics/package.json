@@ -13,7 +13,7 @@
   "main": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
   "scripts": {
-    "dev": "pnpm wrangler dev --local",
+    "worker:dev": "pnpm wrangler dev --local",
     "build": "tsdown",
     "build:watch": "tsdown --watch",
     "predeploy": "pnpm build",

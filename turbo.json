@@ -1,0 +1,26 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "tui",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build", "@typeslayer/internal#gen:rust-types"],
+      "outputs": ["dist/**", "build/**", ".vite/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"],
+      "outputs": []
+    },
+    "gen:rust-types": {
+      "cache": false,
+      "outputs": ["../rust-types/*.ts"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "build:watch": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}
