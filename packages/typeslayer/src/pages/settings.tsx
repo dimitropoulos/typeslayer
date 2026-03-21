@@ -31,6 +31,7 @@ import {
   type AnalyticsConsentResult,
   useAnalyticsConsent,
   useAvailableEditors,
+  useAwardLimit,
   useDataDir,
   useMaxNodes,
   usePreferEditorOpen,
@@ -46,6 +47,15 @@ const limitNodes = [
   { label: "Hurt me plenty", value: 1_500_000 },
   { label: "Ultra-Violence", value: 2_000_000 },
   { label: "Nightmare!", value: 5_000_000 },
+] as const;
+
+const awardLimitOptions = [
+  { label: "I'm on a Chromebook", value: 25 },
+  { label: "Focused but deadly", value: 50 },
+  { label: "Usually this is fine", value: 100 },
+  { label: "I promise not to complain it's slow", value: 250 },
+  { label: "I use Arch, btw", value: 500 },
+  { label: "Completionist", value: 1_000 },
 ] as const;
 
 const Setting = ({
@@ -78,6 +88,7 @@ export const SettingsPage = () => {
   const preferredEditor = usePreferredEditor();
   const dataDir = useDataDir();
   const { data: maxNodes, set: setMaxNodes } = useMaxNodes();
+  const { data: awardLimit, set: setAwardLimit } = useAwardLimit();
 
   const handleRelativePaths = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -257,6 +268,44 @@ export const SettingsPage = () => {
                     color="textSecondary"
                   >
                     <InlineCode>{value.toLocaleString()}</InlineCode> nodes
+                  </Typography>
+                </Stack>
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Setting>
+
+      <Setting title="Award Limit">
+        <Typography variant="body2" color="textSecondary" mb={1}>
+          Controls how many entries are shown per award category on the Award
+          Winners page. A higher value means more results but heavier payloads.
+        </Typography>
+        <FormControl>
+          <InputLabel id="award-limit-label">Award Limit</InputLabel>
+          <Select
+            value={awardLimit?.toString() || ""}
+            onChange={async event => {
+              const value = parseInt(event.target.value, 10);
+              await setAwardLimit(value);
+            }}
+            labelId="award-limit-label"
+            label="Award Limit"
+            disabled={awardLimit === undefined}
+            sx={{
+              width: 250,
+            }}
+          >
+            {awardLimitOptions.map(({ label, value }) => (
+              <MenuItem key={value} value={value.toString()}>
+                <Stack>
+                  <Typography>{label}</Typography>
+                  <Typography
+                    variant="caption"
+                    fontFamily="monospace"
+                    color="textSecondary"
+                  >
+                    <InlineCode>{value.toLocaleString()}</InlineCode> entries
                   </Typography>
                 </Stack>
               </MenuItem>

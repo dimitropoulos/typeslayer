@@ -1099,6 +1099,40 @@ export const useMaxNodes = () => {
   };
 };
 
+export const useAwardLimit = () => {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ["award_limit"],
+    queryFn: () => invoke<number>("get_award_limit"),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  const mutation = useMutation({
+    mutationFn: (awardLimit: number) =>
+      invoke<void>("set_award_limit", { awardLimit }),
+    onSettled: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["type_graph_limited_node_and_link_stats"],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["largest_display_values"],
+      });
+    },
+    onSuccess: (_, awardLimit) => {
+      queryClient.setQueryData(["award_limit"], awardLimit);
+    },
+  });
+
+  return {
+    data: query.data,
+    isLoading: query.isLoading,
+    error: query.error,
+    set: mutation.mutateAsync,
+    isSettingValue: mutation.isPending,
+  };
+};
+
 export type AnalyticsConsent = {
   id: string;
   description: string;

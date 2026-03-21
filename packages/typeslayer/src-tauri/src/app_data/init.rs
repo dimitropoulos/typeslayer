@@ -383,6 +383,7 @@ pub fn init_settings(cake: &mut LayerCake) -> Settings {
         max_stack_size,
         typescript_compiler_variant,
         max_nodes,
+        award_limit: Settings::default().award_limit,
         analytics_consent,
     }
 }

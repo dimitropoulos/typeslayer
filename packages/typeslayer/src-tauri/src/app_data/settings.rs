@@ -57,6 +57,7 @@ pub struct Settings {
     pub max_stack_size: Option<i32>,
     pub typescript_compiler_variant: TypeScriptCompilerVariant,
     pub max_nodes: i32,
+    pub award_limit: usize,
     pub analytics_consent: Vec<String>,
 }
 
@@ -72,6 +73,7 @@ impl Default for Settings {
             max_stack_size: None,
             typescript_compiler_variant: TypeScriptCompilerVariant::default(),
             max_nodes: 1_000_000,
+            award_limit: 100,
             analytics_consent: vec![
                 EventAppStartedFail::event_id().to_string(),
                 EventAppStartedSuccess::event_id().to_string(),

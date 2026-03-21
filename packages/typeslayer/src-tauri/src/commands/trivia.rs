@@ -161,21 +161,21 @@ pub async fn get_largest_display_values(
         return Err("Types data not available".to_string());
     }
 
-    const LIMIT: usize = 100;
+    let limit = app_data.settings.award_limit;
 
     // Min-heap keyed by display_bytes so the smallest of our top-k is always on top.
     // When a new entry is larger than the current minimum, we swap it in — O(n log k).
-    let mut heap: BinaryHeap<Reverse<(usize, usize)>> = BinaryHeap::with_capacity(LIMIT + 1);
+    let mut heap: BinaryHeap<Reverse<(usize, usize)>> = BinaryHeap::with_capacity(limit + 1);
     // Parallel vec to hold the full entry data, indexed by insertion order.
-    let mut pool: Vec<LargestDisplayEntry> = Vec::with_capacity(LIMIT + 1);
+    let mut pool: Vec<LargestDisplayEntry> = Vec::with_capacity(limit + 1);
 
     for t in app_data.types_json.iter().skip(1) {
         if let Some(d) = &t.display {
             let bytes = d.len();
 
-            // Fast path: if we already have LIMIT entries and this one can't
+            // Fast path: if we already have `limit` entries and this one can't
             // beat the current minimum, skip it entirely.
-            if heap.len() >= LIMIT {
+            if heap.len() >= limit {
                 let min_bytes = heap.peek().unwrap().0.0;
                 if bytes <= min_bytes {
                     continue;

@@ -284,6 +284,29 @@ pub async fn set_analytics_consent(
 }
 
 #[tauri::command]
+pub async fn get_award_limit(state: State<'_, &Mutex<AppData>>) -> Result<usize, String> {
+    let app_data = state.lock().await;
+    Ok(app_data.settings.award_limit)
+}
+
+#[tauri::command]
+pub async fn set_award_limit(
+    state: State<'_, &Mutex<AppData>>,
+    award_limit: usize,
+) -> Result<(), String> {
+    if award_limit == 0 {
+        return Err("award_limit must be at least 1".to_string());
+    }
+    if award_limit > 10_000 {
+        return Err("award_limit must not exceed 10,000".to_string());
+    }
+    let mut app_data = state.lock().await;
+    app_data.settings.award_limit = award_limit;
+    app_data.update_typeslayer_config_toml().await;
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn get_version(state: State<'_, &Mutex<AppData>>) -> Result<String, String> {
     let app_data = state.lock().await;
     Ok(app_data.version.clone())

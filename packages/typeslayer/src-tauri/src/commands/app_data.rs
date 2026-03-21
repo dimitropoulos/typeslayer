@@ -262,15 +262,16 @@ pub async fn get_type_graph_limited_node_and_link_stats(
         .as_ref()
         .ok_or_else(|| "type graph unavailable".to_string())?;
 
+    let award_limit = app_data.settings.award_limit;
+
     // go through type_graph.node_data_by_kind and type_graph.link_kind_data_by_kind
-    // and limit to the first 100 entries for each kind
+    // and limit to the first `award_limit` entries for each kind
     let limited_node_stats = type_graph
         .node_data_by_kind
         .clone()
         .into_iter()
         .map(|(kind, mut kind_data)| {
-            // limit kind_data.nodes to first 100 entries
-            kind_data.nodes = kind_data.nodes.into_iter().take(100).collect();
+            kind_data.nodes = kind_data.nodes.into_iter().take(award_limit).collect();
             (kind, kind_data)
         })
         .collect();
@@ -279,12 +280,11 @@ pub async fn get_type_graph_limited_node_and_link_stats(
         .clone()
         .into_iter()
         .map(|(kind, mut kind_data)| {
-            // limit parent_link_data.target_to_sources to first 100 entries
             kind_data.by_target.target_to_sources = kind_data
                 .by_target
                 .target_to_sources
                 .into_iter()
-                .take(100)
+                .take(award_limit)
                 .collect();
             (kind, kind_data)
         })
