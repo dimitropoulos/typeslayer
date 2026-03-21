@@ -24,6 +24,7 @@ export default {
           SELECT name, COUNT(*) as count
           FROM events
           GROUP BY name
+          LIMIT 5000
         `).all<{
           name: string;
           count: number;
@@ -46,8 +47,8 @@ export default {
       const pathMatch = url.pathname.match(/^\/events\/([^/]+)$/);
       if (request.method === "GET" && pathMatch) {
         const eventName = decodeURIComponent(pathMatch[1]);
-        const DEFAULT_LIMIT = 200;
-        const MAX_LIMIT = 500;
+        const DEFAULT_LIMIT = 1000;
+        const MAX_LIMIT = 5000;
         const limitParam = Number(url.searchParams.get("limit"));
         const limit = Number.isFinite(limitParam)
           ? Math.max(1, Math.min(MAX_LIMIT, Math.trunc(limitParam)))

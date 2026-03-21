@@ -2,12 +2,16 @@ import { Apple, HelpOutline, Microsoft } from "@mui/icons-material";
 import {
   ArchLinux,
   CachyOs,
+  EndeavourOS,
   Fedora,
   GuarudaLinux,
   LinuxMint,
   Manjaro,
+  NixOS,
+  Nobora,
   OpenSUSE,
   Ubuntu,
+  Void,
 } from "../assets/icons";
 
 const extractTwoDigitsAfterMatch = (matchString: string, platform: string) => {
@@ -22,9 +26,11 @@ const extractTwoDigitsAfterMatch = (matchString: string, platform: string) => {
 
 const platforms = {
   windows: (platform: string) => {
-    const version = extractTwoDigitsAfterMatch("windows ", platform);
+    const match = "windows ";
+    const version = extractTwoDigitsAfterMatch(match, platform);
     const color = "#087CD6";
     return {
+      match,
       operatingSystem: "Windows",
       version,
       name: `Windows ${version}`,
@@ -33,7 +39,8 @@ const platforms = {
     };
   },
   mac: (platform: string) => {
-    const version = extractTwoDigitsAfterMatch("mac os ", platform);
+    const match = "mac os ";
+    const version = extractTwoDigitsAfterMatch(match, platform);
     const color = "#999999";
     const productName = {
       "11": "Big Sur",
@@ -49,6 +56,7 @@ const platforms = {
     }
 
     return {
+      match,
       operatingSystem: "Mac",
       version,
       name: `MacOS ${productName ?? "Unknown"}`,
@@ -76,6 +84,7 @@ const platforms = {
     }
 
     return {
+      match: "ubuntu 2",
       operatingSystem: "Linux",
       version,
       name: `Ubuntu ${version}`,
@@ -84,27 +93,37 @@ const platforms = {
     };
   },
   archlinux: (_platform: string) => ({
+    match: "arch linux ",
     operatingSystem: "Linux",
     version: "Rolling",
     name: "Arch Linux",
     color: "#1793D1",
     icon: <ArchLinux />,
   }),
-  manjaro: (platform: string) => ({
-    operatingSystem: "Linux", // Arch variant
-    version: extractTwoDigitsAfterMatch("manjaro ", platform),
-    name: "Manjaro",
-    color: "#35BFA4",
-    icon: <Manjaro />,
-  }),
-  fedora: (platform: string) => ({
-    operatingSystem: "Linux",
-    version: extractTwoDigitsAfterMatch("fedora ", platform),
-    name: "Fedora",
-    color: "#3C6EB4",
-    icon: <Fedora />,
-  }),
+  manjaro: (platform: string) => {
+    const match = "manjaro ";
+    return {
+      match,
+      operatingSystem: "Linux", // Arch variant
+      version: extractTwoDigitsAfterMatch(match, platform),
+      name: "Manjaro",
+      color: "#35BFA4",
+      icon: <Manjaro />,
+    };
+  },
+  fedora: (platform: string) => {
+    const match = "fedora ";
+    return {
+      match,
+      operatingSystem: "Linux",
+      version: extractTwoDigitsAfterMatch(match, platform),
+      name: "Fedora",
+      color: "#3C6EB4",
+      icon: <Fedora />,
+    };
+  },
   cachyOs: (_platform: string) => ({
+    match: "cachyos ",
     operatingSystem: "Linux", // Arch variant
     version: "Rolling",
     name: "Cachy OS",
@@ -112,29 +131,68 @@ const platforms = {
     icon: <CachyOs />,
   }),
   garuda: (_platform: string) => ({
+    match: "garuda linux ",
     operatingSystem: "Linux", // Arch variant
     version: "Rolling",
     name: "Garuda Linux",
     color: "#CBA6F7",
     icon: <GuarudaLinux />,
   }),
-  linuxMint: (platform: string) => ({
-    operatingSystem: "Linux",
-    version: extractTwoDigitsAfterMatch("linux mint ", platform),
-    name: "Linux Mint",
-    color: "#87CF5E",
-    icon: <LinuxMint />,
-  }),
+  linuxMint: (platform: string) => {
+    const match = "linux mint ";
+    return {
+      match,
+      operatingSystem: "Linux",
+      version: extractTwoDigitsAfterMatch(match, platform),
+      name: "Linux Mint",
+      color: "#87CF5E",
+      icon: <LinuxMint />,
+    };
+  },
   openSUSE: (_platform: string) => ({
+    match: "opensuse ",
     operatingSystem: "Linux",
     version: "Rolling",
-    name: "openSUSE",
+    name: "OpenSUSE",
     color: "#73BA25",
     icon: <OpenSUSE />,
+  }),
+  endeavourOs: (_platform: string) => ({
+    match: "endeavouros ",
+    operatingSystem: "Linux",
+    version: "Rolling",
+    name: "EndeavourOS",
+    color: "#8345C1",
+    icon: <EndeavourOS />,
+  }),
+  nixOs: (platform: string) => ({
+    match: "nixos ",
+    operatingSystem: "Linux",
+    version: platform.match(/(\d+\.\d+)/)?.[1] ?? "Unknown",
+    name: "NixOS",
+    color: "#5277C3",
+    icon: <NixOS />,
+  }),
+  void: (_platform: string) => ({
+    match: "void linux ",
+    operatingSystem: "Linux",
+    version: "Rolling",
+    name: "Void",
+    color: "#ABC2AB",
+    icon: <Void />,
+  }),
+  nobara: (platform: string) => ({
+    match: "nobara linux ",
+    operatingSystem: "Linux",
+    version: extractTwoDigitsAfterMatch("nobara linux ", platform),
+    name: "Nobara",
+    color: "#7C3AED",
+    icon: <Nobora />,
   }),
   unknown: (_platform: string) => {
     const color = "#CC0000";
     return {
+      match: "",
       operatingSystem: "Unknown",
       version: "Unknown",
       name: "Unknown",
@@ -142,51 +200,25 @@ const platforms = {
       icon: <HelpOutline sx={{ fill: color }} />,
     };
   },
-} satisfies Record<
-  string,
-  (platform: string) => {
-    operatingSystem: string;
-    version: string;
-    name: string;
-    color: string;
-    icon: React.ReactNode;
-  }
->;
+} satisfies Record<string, Platform>;
+
+type Platform = (platform: string) => {
+  match: string;
+  operatingSystem: string;
+  version: string;
+  name: string;
+  color: string;
+  icon: React.ReactNode;
+};
 
 export const detectPlatform = (platform: string) => {
   const lowercased = platform?.toLowerCase() ?? "";
-
-  if (lowercased.includes("windows ")) {
-    return platforms.windows(platform);
+  for (const [key, value] of Object.entries(platforms)) {
+    const p = platforms[key as keyof typeof platforms](platform);
+    if (lowercased.includes(p.match)) {
+      return value(platform);
+    }
   }
-  if (lowercased.includes("mac os ")) {
-    return platforms.mac(platform);
-  }
-  if (lowercased.includes("ubuntu 2")) {
-    return platforms.ubuntu(platform);
-  }
-  if (lowercased.includes("arch linux ")) {
-    return platforms.archlinux(platform);
-  }
-  if (lowercased.includes("manjaro ")) {
-    return platforms.manjaro(platform);
-  }
-  if (lowercased.includes("cachyos ")) {
-    return platforms.cachyOs(platform);
-  }
-  if (lowercased.includes("fedora ")) {
-    return platforms.fedora(platform);
-  }
-  if (lowercased.includes("garuda linux ")) {
-    return platforms.garuda(platform);
-  }
-  if (lowercased.includes("linux mint ")) {
-    return platforms.linuxMint(platform);
-  }
-  if (lowercased.includes("opensuse ")) {
-    return platforms.openSUSE(platform);
-  }
-
   console.log("Unknown platform:", platform);
   return platforms.unknown(platform);
 };

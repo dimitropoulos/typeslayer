@@ -53,7 +53,7 @@ const fetchEvents = async <E extends Event["name"]>(
   eventName: E,
 ): Promise<D1Event<EventByName[E]>[]> => {
   const res = await fetch(
-    `${API_ORIGIN}/events/${encodeURIComponent(eventName)}?limit=200`,
+    `${API_ORIGIN}/events/${encodeURIComponent(eventName)}?limit=2000`,
   );
   if (!res.ok) {
     throw new Error(`Failed to load events: ${res.status}`);

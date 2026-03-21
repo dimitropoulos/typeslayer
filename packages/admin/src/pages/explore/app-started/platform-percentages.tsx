@@ -107,17 +107,32 @@ export function PlatformPercentages({
     versionTotals.set(version, total);
   });
 
-  // Create a series for each version with color
+  // Calculate actual counts for each version across all OSes
+  const versionCounts = new Map<string, number>();
+  Array.from(allVersions).forEach(version => {
+    const count = Object.values(groupedByOSAndVersion || {}).reduce((sum, { data: versions }) => {
+      return sum + (versions[version] || 0);
+    }, 0);
+    versionCounts.set(version, count);
+  });
+
+  // Create a series for each version with color, sorted by count
   const series = Array.from(allVersions)
     .filter(version => version) // Extra safety: filter empty versions
+    .sort((a, b) => {
+      const countA = versionCounts.get(a) || 0;
+      const countB = versionCounts.get(b) || 0;
+      return countB - countA; // Descending order
+    })
     .map(version => {
       const color = versionToColorMap.get(version) || "#999999";
       const total = versionTotals.get(version) || 0;
+      const count = versionCounts.get(version) || 0;
       return {
         id: version,
         dataKey: version,
         stack: "platform",
-        label: `${version} (${Math.round(total)}%)`,
+        label: `${version} (${count} ${Math.round(total)}%)`,
         color,
         valueFormatter: (value: number | null) =>
           value ? `${Math.round(value)}%` : "0%",
@@ -147,7 +162,7 @@ export function PlatformPercentages({
         <rect
           {...other}
           fill={theme.palette.text.primary}
-          opacity={0.05}
+          opacity={0.005}
           stroke={theme.palette.text.primary}
           strokeWidth={4}
           x={other.x}
