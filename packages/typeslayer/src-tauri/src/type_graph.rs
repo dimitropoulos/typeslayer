@@ -232,13 +232,13 @@ pub struct TypeGraph {
 }
 
 impl TypeGraph {
-    pub fn from_types(types: &TypesJsonSchema) -> Self {
+    pub fn from_types(types: &TypesJsonSchema, node_limit: i32) -> Self {
         let mut type_graph = TypeGraph::default();
         type_graph.path_map = TypeGraph::build_path_map(types);
         type_graph.node_count = type_graph.calculate_node_count(types);
         type_graph.link_kind_data_by_kind = type_graph.calculate_link_kind_data_by_kind(types);
         type_graph.link_count = type_graph.calculate_link_count();
-        type_graph.node_data_by_kind = type_graph.calculate_node_data_by_kind(types);
+        type_graph.node_data_by_kind = type_graph.calculate_node_data_by_kind(types, node_limit);
         type_graph.type_kinds = type_graph.calculate_type_kinds(types);
         type_graph
     }
@@ -372,6 +372,7 @@ impl TypeGraph {
     fn calculate_node_data_by_kind(
         &mut self,
         types: &TypesJsonSchema,
+        node_limit: i32,
     ) -> IndexMap<NodeStatKind, NodeStatKindData> {
         // Helper to compute counts per node for a given accessor
         fn collect_counts<F>(types: &TypesJsonSchema, accessor: F) -> Vec<(TypeId, String, usize)>
@@ -395,12 +396,11 @@ impl TypeGraph {
         let intersection_types = collect_counts(types, |t| t.intersection_types.as_ref());
         let alias_type_arguments = collect_counts(types, |t| t.alias_type_arguments.as_ref());
 
-        let limit = 100;
         let build_category = |mut v: Vec<(TypeId, String, usize)>| -> NodeStatKindData {
             let max = v.first().map(|e| e.2).unwrap_or(0);
             let count = v.len();
-            if count > limit {
-                v.truncate(limit);
+            if count > node_limit as usize {
+                v.truncate(node_limit as usize);
             }
             // Attach path info from path_map
             let nodes_with_path = v

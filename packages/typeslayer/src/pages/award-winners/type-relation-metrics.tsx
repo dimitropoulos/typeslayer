@@ -126,6 +126,7 @@ export function RelationAward({
                     <InlineBarGraph
                       label={`${sourceIds.length.toLocaleString()} ${unit}`}
                       width={`${(sourceIds.length / linkStats.byTarget.max) * 100}%`}
+                      rank={index + 1}
                     />
                   </Stack>
                 </Stack>

@@ -57,7 +57,7 @@ pub struct Settings {
     pub max_stack_size: Option<i32>,
     pub typescript_compiler_variant: TypeScriptCompilerVariant,
     pub max_nodes: i32,
-    pub award_limit: usize,
+    pub award_limit: i32,
     pub analytics_consent: Vec<String>,
 }
 

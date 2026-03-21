@@ -290,6 +290,7 @@ const TriviaLargestDisplay = () => {
                 <InlineBarGraph
                   label={formatBytes(entry.displayBytes)}
                   width={`${(entry.displayBytes / maxBytes) * 100}%`}
+                  rank={index + 1}
                 />
               </Stack>
             </Stack>
@@ -325,7 +326,9 @@ const TriviaLargestDisplay = () => {
           title="Largest Display Values"
           subtitle={
             <Typography>
-              types with the largest string representation.  while this isn't always bad, if you see them getting into the kilobytes in size you should prolly take a look.
+              types with the largest string representation. while this isn't
+              always bad, if you see them getting into the kilobytes in size you
+              should prolly take a look.
             </Typography>
           }
           icon={<Expand fontSize="large" />}

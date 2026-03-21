@@ -91,7 +91,7 @@ async fn regenerate_analysis_after_upload(
     if should_generate_graph {
         let types = &app_data.types_json;
 
-        let graph = TypeGraph::from_types(types);
+        let graph = TypeGraph::from_types(types, app_data.settings.award_limit);
 
         // Store in AppData and persist to disk
         app_data.type_graph = Some(graph);

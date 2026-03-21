@@ -130,6 +130,7 @@ export function TypeMetricsAward({ awardId }: { awardId: TypeMetricsAwardId }) {
                   <InlineBarGraph
                     label={`${value.toLocaleString()} ${unit}`}
                     width={`${(value / max) * 100}%`}
+                    rank={index + 1}
                   />
                 </Stack>
               </Stack>

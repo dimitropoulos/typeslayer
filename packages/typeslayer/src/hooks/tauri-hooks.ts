@@ -598,6 +598,7 @@ const refreshTypeGraphInvalidations = new Set([
   "max_nodes",
   "type_kinds",
   "largest_display_values",
+  "type_graph_limited_node_and_link_stats",
 ]);
 
 const refreshTypeGraph = (queryClient: QueryClient) => async () => {
@@ -1099,6 +1100,18 @@ export const useMaxNodes = () => {
   };
 };
 
+const awardLimitInvalidations = [
+  "type_graph_limited_node_and_link_stats",
+  "largest_display_values"
+]
+
+
+const refreshAwardLimit = (queryClient: QueryClient) => async () => {
+  awardLimitInvalidations.forEach(queryKey => {
+    queryClient.invalidateQueries({ queryKey: [queryKey] });
+  });
+};
+
 export const useAwardLimit = () => {
   const queryClient = useQueryClient();
 
@@ -1111,14 +1124,7 @@ export const useAwardLimit = () => {
   const mutation = useMutation({
     mutationFn: (awardLimit: number) =>
       invoke<void>("set_award_limit", { awardLimit }),
-    onSettled: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["type_graph_limited_node_and_link_stats"],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["largest_display_values"],
-      });
-    },
+    onSettled: refreshAwardLimit(queryClient),
     onSuccess: (_, awardLimit) => {
       queryClient.setQueryData(["award_limit"], awardLimit);
     },

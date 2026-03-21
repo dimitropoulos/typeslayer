@@ -373,6 +373,23 @@ pub fn init_settings(cake: &mut LayerCake) -> Settings {
         })
     };
 
+    let award_limit = cake.resolve_number(ResolveNumberArgs {
+        env: "AWARD_LIMIT",
+        flag: "--award-limit",
+        file: "settings.awardLimit",
+        default: || Settings::default().award_limit,
+        validate: |n| {
+            if *n < 1 {
+                return Err("awardLimit must be greater or equal to 1".to_string());
+            }
+            if *n > 10_000 {
+                return Err("awardLimit must not be greater than 10,000".to_string());
+            }
+
+            Ok(*n)
+        },
+    });
+
     Settings {
         relative_paths,
         prefer_editor_open,
@@ -383,7 +400,7 @@ pub fn init_settings(cake: &mut LayerCake) -> Settings {
         max_stack_size,
         typescript_compiler_variant,
         max_nodes,
-        award_limit: Settings::default().award_limit,
+        award_limit,
         analytics_consent,
     }
 }

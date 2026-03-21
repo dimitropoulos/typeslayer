@@ -91,6 +91,7 @@ const ShowHotSpots = () => {
                 <InlineBarGraph
                   label={`${duration.toLocaleString()}ms`}
                   width={`${relativeTime * 100}%`}
+                  rank={index + 1}
                 />
               </Stack>
             </ListItemText>

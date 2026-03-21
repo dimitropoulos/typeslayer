@@ -53,7 +53,7 @@ const awardLimitOptions = [
   { label: "I'm on a Chromebook", value: 25 },
   { label: "Focused but deadly", value: 50 },
   { label: "Usually this is fine", value: 100 },
-  { label: "I promise not to complain it's slow", value: 250 },
+  { label: "I promise not to complain it's slowww", value: 250 },
   { label: "I use Arch, btw", value: 500 },
   { label: "Completionist", value: 1_000 },
 ] as const;
@@ -255,7 +255,7 @@ export const SettingsPage = () => {
             label="Max Nodes"
             disabled={maxNodes === undefined}
             sx={{
-              width: 250,
+              width: 300,
             }}
           >
             {limitNodes.map(({ label, value }) => (
@@ -293,7 +293,7 @@ export const SettingsPage = () => {
             label="Award Limit"
             disabled={awardLimit === undefined}
             sx={{
-              width: 250,
+              width: 300,
             }}
           >
             {awardLimitOptions.map(({ label, value }) => (

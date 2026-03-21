@@ -9,6 +9,7 @@ use crate::{
         event_type_graph_fail::EventTypeGraphFail, event_type_graph_success::EventTypeGraphSuccess,
     },
     app_data::{AppData, settings::TypeScriptCompilerVariant},
+    type_graph::{TYPE_GRAPH_FILENAME, TypeGraph},
     utils::{AVAILABLE_EDITORS, default_extra_tsc_flags},
 };
 use serde::Serialize;
@@ -284,7 +285,7 @@ pub async fn set_analytics_consent(
 }
 
 #[tauri::command]
-pub async fn get_award_limit(state: State<'_, &Mutex<AppData>>) -> Result<usize, String> {
+pub async fn get_award_limit(state: State<'_, &Mutex<AppData>>) -> Result<i32, String> {
     let app_data = state.lock().await;
     Ok(app_data.settings.award_limit)
 }
@@ -292,9 +293,9 @@ pub async fn get_award_limit(state: State<'_, &Mutex<AppData>>) -> Result<usize,
 #[tauri::command]
 pub async fn set_award_limit(
     state: State<'_, &Mutex<AppData>>,
-    award_limit: usize,
+    award_limit: i32,
 ) -> Result<(), String> {
-    if award_limit == 0 {
+    if award_limit < 1 {
         return Err("award_limit must be at least 1".to_string());
     }
     if award_limit > 10_000 {
@@ -303,6 +304,19 @@ pub async fn set_award_limit(
     let mut app_data = state.lock().await;
     app_data.settings.award_limit = award_limit;
     app_data.update_typeslayer_config_toml().await;
+
+    // Regenerate the type graph with the new limit so node data is correctly truncated
+    if !app_data.types_json.is_empty() {
+        let graph = TypeGraph::from_types(&app_data.types_json, award_limit);
+        let outputs_dir = app_data.outputs_dir();
+        let path = outputs_dir.join(TYPE_GRAPH_FILENAME);
+        if let Ok(json) = serde_json::to_string_pretty(&graph) {
+            let _ = std::fs::create_dir_all(&outputs_dir);
+            let _ = std::fs::write(&path, json);
+        }
+        app_data.type_graph = Some(graph);
+    }
+
     Ok(())
 }
 

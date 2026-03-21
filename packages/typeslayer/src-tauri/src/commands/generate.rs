@@ -303,7 +303,7 @@ pub async fn generate_type_graph(
         &app_data.types_json
     };
 
-    let graph = TypeGraph::from_types(types);
+    let graph = TypeGraph::from_types(types, app_data.settings.award_limit);
     let duration = start_time.elapsed().as_millis() as u64;
 
     app_data.type_graph = Some(graph);

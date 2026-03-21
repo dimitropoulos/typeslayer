@@ -165,9 +165,10 @@ pub async fn get_largest_display_values(
 
     // Min-heap keyed by display_bytes so the smallest of our top-k is always on top.
     // When a new entry is larger than the current minimum, we swap it in — O(n log k).
-    let mut heap: BinaryHeap<Reverse<(usize, usize)>> = BinaryHeap::with_capacity(limit + 1);
+    let mut heap: BinaryHeap<Reverse<(usize, usize)>> =
+        BinaryHeap::with_capacity(limit as usize + 1);
     // Parallel vec to hold the full entry data, indexed by insertion order.
-    let mut pool: Vec<LargestDisplayEntry> = Vec::with_capacity(limit + 1);
+    let mut pool: Vec<LargestDisplayEntry> = Vec::with_capacity(limit as usize + 1);
 
     for t in app_data.types_json.iter().skip(1) {
         if let Some(d) = &t.display {
@@ -175,7 +176,7 @@ pub async fn get_largest_display_values(
 
             // Fast path: if we already have `limit` entries and this one can't
             // beat the current minimum, skip it entirely.
-            if heap.len() >= limit {
+            if heap.len() >= limit as usize {
                 let min_bytes = heap.peek().unwrap().0.0;
                 if bytes <= min_bytes {
                     continue;

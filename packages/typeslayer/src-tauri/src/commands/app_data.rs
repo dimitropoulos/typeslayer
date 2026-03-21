@@ -271,7 +271,11 @@ pub async fn get_type_graph_limited_node_and_link_stats(
         .clone()
         .into_iter()
         .map(|(kind, mut kind_data)| {
-            kind_data.nodes = kind_data.nodes.into_iter().take(award_limit).collect();
+            kind_data.nodes = kind_data
+                .nodes
+                .into_iter()
+                .take(award_limit as usize)
+                .collect();
             (kind, kind_data)
         })
         .collect();
@@ -284,7 +288,7 @@ pub async fn get_type_graph_limited_node_and_link_stats(
                 .by_target
                 .target_to_sources
                 .into_iter()
-                .take(award_limit)
+                .take(award_limit as usize)
                 .collect();
             (kind, kind_data)
         })
