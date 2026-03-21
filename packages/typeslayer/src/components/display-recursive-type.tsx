@@ -63,6 +63,34 @@ const wrapperSx = {
   },
 };
 
+const FormattedDisplay: FC<{ display: string }> = ({ display }) => (
+  <Box
+    sx={{
+      background: t => t.palette.grey[900],
+      borderRadius: 1,
+      px: 1,
+      py: 0.5,
+      border: t => `1px solid ${t.palette.divider}`,
+      alignSelf: "flex-start",
+      overflow: "auto",
+      maxWidth: "100%",
+    }}
+  >
+    <pre
+      style={{
+        margin: 0,
+        fontFamily: "monospace",
+        fontSize: "0.85em",
+        whiteSpace: "pre-wrap",
+        tabSize: 2,
+        wordBreak: "break-all",
+      }}
+    >
+      {display}
+    </pre>
+  </Box>
+);
+
 export const DisplayRecursiveType: FC<{
   id: TypeId;
   depth?: number; // for recursion
@@ -231,25 +259,7 @@ export const DisplayRecursiveType: FC<{
             return null;
           }
 
-          return (
-            <Box
-              sx={{
-                background: t => t.palette.grey[900],
-                borderRadius: 1,
-                px: 1,
-                py: 0.5,
-                border: t => `1px solid ${t.palette.divider}`,
-                alignSelf: "flex-start",
-              }}
-              key={reactKey}
-            >
-              <code>
-                {typeof value === "string"
-                  ? value.split("\\").join("")
-                  : String(value)}
-              </code>
-            </Box>
-          );
+          return <FormattedDisplay key={reactKey} display={value} />;
         }
 
         //

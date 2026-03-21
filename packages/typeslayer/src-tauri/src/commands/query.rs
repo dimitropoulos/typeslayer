@@ -3,6 +3,10 @@ use crate::{
     type_graph::LinkKind,
     validate::{trace_json::TraceEvent, types_json::ResolvedType, utils::TypeId},
 };
+use biome_formatter::{IndentStyle, IndentWidth, LineWidth};
+use biome_js_formatter::{context::JsFormatOptions, format_node};
+use biome_js_parser::parse;
+use biome_js_syntax::JsFileSource;
 use std::collections::HashMap;
 use tauri::State;
 use tokio::sync::Mutex;
@@ -52,7 +56,11 @@ pub async fn get_resolved_type_by_id(
     if let Some(id) = type_id {
         let app_data = state.lock().await;
         if let Some(t) = app_data.types_json.get(id) {
-            Ok(Some(t.clone()))
+            let mut resolved = t.clone();
+            if let Some(display) = &resolved.display {
+                resolved.display = Some(format_type_display(display));
+            }
+            Ok(Some(resolved))
         } else {
             Err(format!("Type with id {id} not found"))
         }
@@ -70,7 +78,12 @@ pub async fn get_resolved_types_by_ids(
     let app_data = state.lock().await;
     if let Some(ids) = type_ids {
         for id in ids {
-            let entry = app_data.types_json.get(id).cloned();
+            let entry = app_data.types_json.get(id).cloned().map(|mut resolved| {
+                if let Some(display) = &resolved.display {
+                    resolved.display = Some(format_type_display(display));
+                }
+                resolved
+            });
             result.insert(id, entry);
         }
     }
@@ -108,6 +121,13 @@ pub async fn get_recursive_resolved_types(
 
     let types: &[ResolvedType] = &app_data.types_json;
     collect_types(type_id.unwrap(), &mut result, types);
+
+    for resolved in result.values_mut() {
+        if let Some(display) = &resolved.display {
+            resolved.display = Some(format_type_display(display));
+        }
+    }
+
     Ok(result)
 }
 
@@ -153,4 +173,33 @@ pub async fn get_traces_related_to_typeid(
         .cloned()
         .collect();
     Ok(events)
+}
+
+fn format_type_display(display: &str) -> String {
+    let wrapped = format!("type t = {display}");
+    let source = JsFileSource::ts();
+    let parsed = parse(&wrapped, source, Default::default());
+
+    if parsed.has_errors() {
+        return display.to_string();
+    }
+
+    let options = JsFormatOptions::new(source)
+        .with_indent_style(IndentStyle::Tab)
+        .with_indent_width(IndentWidth::default())
+        .with_line_width(LineWidth::try_from(80).unwrap());
+
+    let Ok(formatted) = format_node(options, &parsed.syntax()) else {
+        return display.to_string();
+    };
+    let Ok(output) = formatted.print() else {
+        return display.to_string();
+    };
+    let code = output.as_code();
+
+    // Strip the "type t = " prefix and trailing ";\n"
+    let stripped = code.strip_prefix("type t = ").unwrap_or(code);
+    let stripped = stripped.trim_end();
+    let stripped = stripped.strip_suffix(';').unwrap_or(stripped);
+    stripped.to_string()
 }

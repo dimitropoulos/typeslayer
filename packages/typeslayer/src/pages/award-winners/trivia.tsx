@@ -1,8 +1,11 @@
-import { Flag } from "@mui/icons-material";
+import { Expand, Flag } from "@mui/icons-material";
 import {
   Box,
   Chip,
   CircularProgress,
+  List,
+  ListItemButton,
+  ListItemText,
   ListSubheader,
   Stack,
   Table,
@@ -13,16 +16,47 @@ import {
   Typography,
 } from "@mui/material";
 import { InlineCode, LinkKindTable, panelBackground } from "@typeslayer/common";
-import { useLinkKindDataByKind, useTypeKinds } from "../../hooks/tauri-hooks";
+import type { TypeId } from "@typeslayer/validate";
+import { useCallback, useState } from "react";
+import { CenterLoader } from "../../components/center-loader";
+import { DisplayRecursiveType } from "../../components/display-recursive-type";
+import { NoData } from "../../components/no-data";
+import { TypeSummary } from "../../components/type-summary";
+import {
+  useLargestDisplayValues,
+  useLinkKindDataByKind,
+  useTypeKinds,
+} from "../../hooks/tauri-hooks";
 import { AwardNavItem } from "./award-nav-item";
-import type { AwardId } from "./awards";
+import {
+  AWARD_SELECTOR_COLUMN_WIDTH,
+  type AwardId,
+  MaybePathCaption,
+} from "./awards";
+import { InlineBarGraph } from "./inline-bar-graph";
 import { TitleSubtitle } from "./title-subtitle";
 
-const trivia = ["trivia_typeKinds", "trivia_relations"] satisfies AwardId[];
+const trivia = [
+  "trivia_typeKinds",
+  "trivia_relations",
+  "trivia_largestDisplay",
+] satisfies AwardId[];
 type TriviaAwardId = (typeof trivia)[number];
 
 export const TriviaNavItems = () => {
   const { data: typeKinds } = useTypeKinds();
+  const { data: largestDisplay } = useLargestDisplayValues();
+
+  const getValue = (awardId: TriviaAwardId): number => {
+    switch (awardId) {
+      case "trivia_typeKinds":
+        return typeKinds?.length ?? 0;
+      case "trivia_relations":
+        return typeKinds?.length ?? 0;
+      case "trivia_largestDisplay":
+        return largestDisplay?.[0]?.displayBytes ?? 0;
+    }
+  };
 
   return (
     <>
@@ -31,7 +65,7 @@ export const TriviaNavItems = () => {
         <AwardNavItem
           key={awardId}
           awardId={awardId}
-          value={typeKinds?.length ?? 0}
+          value={getValue(awardId)}
         />
       ))}
     </>
@@ -45,6 +79,9 @@ export const TriviaAwardPage = ({ awardId }: { awardId: TriviaAwardId }) => {
 
     case "trivia_relations":
       return <TriviaRelations />;
+
+    case "trivia_largestDisplay":
+      return <TriviaLargestDisplay />;
 
     default:
       awardId satisfies never;
@@ -198,6 +235,126 @@ const TriviaRelations = () => {
       >
         <LinkKindTable linkKindDataByKind={data} />
       </Stack>
+    </Stack>
+  );
+};
+
+const formatBytes = (bytes: number): string => {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  const kib = bytes / 1024;
+  if (kib < 1024) {
+    return `${kib.toFixed(1)} KiB`;
+  }
+  const mib = kib / 1024;
+  return `${mib.toFixed(1)} MiB`;
+};
+
+const TriviaLargestDisplay = () => {
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const { data: entries, isLoading } = useLargestDisplayValues();
+
+  const hasData = entries !== undefined;
+  const hasItems = (entries?.length ?? 0) > 0;
+  const maxBytes = entries?.[0]?.displayBytes ?? 0;
+
+  const handleListItemClick = useCallback(
+    (_event: React.MouseEvent<HTMLDivElement, MouseEvent>, index: number) => {
+      setSelectedIndex(index);
+    },
+    [],
+  );
+
+  const selectedNode: TypeId | undefined = entries?.[selectedIndex]?.typeId;
+
+  const items = (
+    <List>
+      {entries?.map((entry, index) => (
+        <ListItemButton
+          key={entry.typeId}
+          selected={index === selectedIndex}
+          onClick={event => handleListItemClick(event, index)}
+        >
+          <ListItemText>
+            <Stack sx={{ flexGrow: 1 }} gap={0}>
+              <TypeSummary
+                typeId={entry.typeId}
+                name={entry.name}
+                flags={[]}
+                showFlags={false}
+                suppressActions
+              />
+              <Stack gap={0.5}>
+                <MaybePathCaption maybePath={entry.path} />
+                <InlineBarGraph
+                  label={formatBytes(entry.displayBytes)}
+                  width={`${(entry.displayBytes / maxBytes) * 100}%`}
+                />
+              </Stack>
+            </Stack>
+          </ListItemText>
+        </ListItemButton>
+      ))}
+    </List>
+  );
+
+  return (
+    <Stack
+      sx={{
+        flexDirection: "row",
+        alignItems: "flex-start",
+        height: "100%",
+      }}
+    >
+      <Stack
+        sx={{
+          width: AWARD_SELECTOR_COLUMN_WIDTH,
+          background: hasItems ? "#000000" : "transparent",
+          flexShrink: 0,
+          p: 1,
+          pt: 2,
+          overflowY: "auto",
+          maxHeight: "100%",
+          minHeight: "100%",
+          borderRight: 1,
+          borderColor: hasItems ? "divider" : "transparent",
+        }}
+      >
+        <TitleSubtitle
+          title="Largest Display Values"
+          subtitle={
+            <Typography>
+              types with the largest string representation.  while this isn't always bad, if you see them getting into the kilobytes in size you should prolly take a look.
+            </Typography>
+          }
+          icon={<Expand fontSize="large" />}
+        />
+
+        {isLoading ? (
+          <CenterLoader />
+        ) : hasData ? (
+          hasItems ? (
+            items
+          ) : (
+            <NoData />
+          )
+        ) : (
+          <NoData />
+        )}
+      </Stack>
+
+      <Box
+        sx={{
+          p: 3,
+          overflowY: "auto",
+          maxHeight: "100%",
+          width: "100%",
+          height: "100%",
+        }}
+      >
+        {selectedNode ? <DisplayRecursiveType id={selectedNode} /> : null}
+      </Box>
     </Stack>
   );
 };

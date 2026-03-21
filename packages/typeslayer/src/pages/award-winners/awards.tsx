@@ -1,4 +1,5 @@
 import Diversity2 from "@mui/icons-material/Diversity2";
+import Expand from "@mui/icons-material/Expand";
 import Flag from "@mui/icons-material/Flag";
 import { Box, Typography } from "@mui/material";
 import { analyzeTraceInfo } from "@typeslayer/analyze-trace/browser";
@@ -374,6 +375,11 @@ export const awards = {
     title: "Type Relations",
     icon: Diversity2,
     route: `trivia-relations`,
+  },
+  trivia_largestDisplay: {
+    title: "Largest Display Values",
+    icon: Expand,
+    route: `trivia-largest-display`,
   },
 } as const;
 

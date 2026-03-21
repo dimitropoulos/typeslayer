@@ -597,6 +597,7 @@ const refreshTypeGraphInvalidations = new Set([
   "bug_report_files",
   "max_nodes",
   "type_kinds",
+  "largest_display_values",
 ]);
 
 const refreshTypeGraph = (queryClient: QueryClient) => async () => {
@@ -1152,6 +1153,22 @@ export const useLinkKindDataByKind = () => {
       invoke<Partial<Record<LinkKind, StrippedLinkKindData>>>(
         "get_link_kind_data_by_kind",
       ),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+};
+
+export interface LargestDisplayEntry {
+  typeId: number;
+  displayBytes: number;
+  name: string;
+  path: string | null;
+}
+
+export const useLargestDisplayValues = () => {
+  return useQuery({
+    queryKey: ["largest_display_values"],
+    queryFn: () =>
+      invoke<LargestDisplayEntry[]>("get_largest_display_values"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 };

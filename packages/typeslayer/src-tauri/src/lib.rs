@@ -120,6 +120,7 @@ pub async fn run_tauri_app(app_data: &'static Mutex<app_data::AppData>) {
             commands::trivia::get_output_file_sizes,
             commands::trivia::get_tsc_example_call,
             commands::trivia::get_type_kinds,
+            commands::trivia::get_largest_display_values,
             commands::upload::upload_analyze_trace,
             commands::upload::upload_cpu_profile,
             commands::upload::upload_trace_json,

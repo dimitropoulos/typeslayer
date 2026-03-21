@@ -75,6 +75,7 @@ export const RenderPlayground = () => {
 
     case "trivia_typeKinds":
     case "trivia_relations":
+    case "trivia_largestDisplay":
       return <TriviaAwardPage key={activeAward} awardId={activeAward} />;
 
     default:

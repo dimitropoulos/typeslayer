@@ -13,7 +13,7 @@ use crate::{
 };
 use indexmap::IndexMap;
 use indexmap::IndexSet;
-use std::{collections::HashMap, path::Path};
+use std::{cmp::Reverse, collections::BinaryHeap, collections::HashMap, path::Path};
 use tauri::State;
 use tokio::sync::Mutex;
 
@@ -141,4 +141,76 @@ pub async fn get_link_kind_data_by_kind(
     } else {
         Err("Type graph not available".to_string())
     }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LargestDisplayEntry {
+    pub type_id: usize,
+    pub display_bytes: usize,
+    pub name: String,
+    pub path: Option<String>,
+}
+
+#[tauri::command]
+pub async fn get_largest_display_values(
+    state: State<'_, &Mutex<AppData>>,
+) -> Result<Vec<LargestDisplayEntry>, String> {
+    let app_data = state.lock().await;
+    if app_data.types_json.is_empty() {
+        return Err("Types data not available".to_string());
+    }
+
+    const LIMIT: usize = 100;
+
+    // Min-heap keyed by display_bytes so the smallest of our top-k is always on top.
+    // When a new entry is larger than the current minimum, we swap it in — O(n log k).
+    let mut heap: BinaryHeap<Reverse<(usize, usize)>> = BinaryHeap::with_capacity(LIMIT + 1);
+    // Parallel vec to hold the full entry data, indexed by insertion order.
+    let mut pool: Vec<LargestDisplayEntry> = Vec::with_capacity(LIMIT + 1);
+
+    for t in app_data.types_json.iter().skip(1) {
+        if let Some(d) = &t.display {
+            let bytes = d.len();
+
+            // Fast path: if we already have LIMIT entries and this one can't
+            // beat the current minimum, skip it entirely.
+            if heap.len() >= LIMIT {
+                let min_bytes = heap.peek().unwrap().0.0;
+                if bytes <= min_bytes {
+                    continue;
+                }
+                heap.pop(); // evict the smallest
+            }
+
+            let idx = pool.len();
+            pool.push(LargestDisplayEntry {
+                type_id: t.id,
+                display_bytes: bytes,
+                name: t.human_readable_name(),
+                path: t.get_path(),
+            });
+            heap.push(Reverse((bytes, idx)));
+        }
+    }
+
+    // Drain the heap and collect the surviving entries, then sort descending.
+    let mut result: Vec<LargestDisplayEntry> = heap
+        .into_iter()
+        .map(|Reverse((_, idx))| {
+            // Take ownership without cloning by swapping with a dummy.
+            std::mem::replace(
+                &mut pool[idx],
+                LargestDisplayEntry {
+                    type_id: 0,
+                    display_bytes: 0,
+                    name: String::new(),
+                    path: None,
+                },
+            )
+        })
+        .collect();
+    result.sort_by(|a, b| b.display_bytes.cmp(&a.display_bytes));
+
+    Ok(result)
 }

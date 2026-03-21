@@ -71,7 +71,7 @@ impl Default for Settings {
             max_old_space_size: None,
             max_stack_size: None,
             typescript_compiler_variant: TypeScriptCompilerVariant::default(),
-            max_nodes: 3_000_000,
+            max_nodes: 1_000_000,
             analytics_consent: vec![
                 EventAppStartedFail::event_id().to_string(),
                 EventAppStartedSuccess::event_id().to_string(),
