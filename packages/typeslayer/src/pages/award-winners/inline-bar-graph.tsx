@@ -2,9 +2,10 @@ import { Box, Stack, Typography } from "@mui/material";
 
 const toOrdinal = (n: number) => {
   const _n = n % 100;
-  const suffix = _n > 3 && _n < 21 ? 'th' : ['th', 'st', 'nd', 'rd'][_n % 10] || 'th';
+  const suffix =
+    _n > 3 && _n < 21 ? "th" : ["th", "st", "nd", "rd"][_n % 10] || "th";
   return `${n}${suffix}`;
-}
+};
 
 export const InlineBarGraph = ({
   width,
@@ -33,7 +34,8 @@ export const InlineBarGraph = ({
           fontSize: "0.8rem",
         }}
       >
-        {label}{rank ? `\u00A0\u00A0·\u00A0\u00A0${toOrdinal(rank)}` : ''}
+        {label}
+        {rank ? `\u00A0\u00A0·\u00A0\u00A0${toOrdinal(rank)}` : ""}
       </Typography>
     </Stack>
   );

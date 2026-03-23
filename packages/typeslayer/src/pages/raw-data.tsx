@@ -515,7 +515,13 @@ const CompilationFilesPane = () => {
           {compilationFiles
             ? compilationFiles.map((path, index) => (
                 <ListItem key={path} dense>
-                  <Stack sx={{ gap: 2, flexDirection: "row", alignItems: 'baseline' }}>
+                  <Stack
+                    sx={{
+                      gap: 2,
+                      flexDirection: "row",
+                      alignItems: "baseline",
+                    }}
+                  >
                     <ListItemText>
                       <InlineCode>
                         {"\u00A0".repeat(
@@ -531,7 +537,7 @@ const CompilationFilesPane = () => {
                       propertyTextStyle={{
                         fontFamily: "monospace",
                         fontSize: "1rem",
-                        color: 'primary'
+                        color: "primary",
                       }}
                     />
                   </Stack>

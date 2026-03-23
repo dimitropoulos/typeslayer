@@ -1102,9 +1102,8 @@ export const useMaxNodes = () => {
 
 const awardLimitInvalidations = [
   "type_graph_limited_node_and_link_stats",
-  "largest_display_values"
-]
-
+  "largest_display_values",
+];
 
 const refreshAwardLimit = (queryClient: QueryClient) => async () => {
   awardLimitInvalidations.forEach(queryKey => {
@@ -1207,8 +1206,7 @@ export interface LargestDisplayEntry {
 export const useLargestDisplayValues = () => {
   return useQuery({
     queryKey: ["largest_display_values"],
-    queryFn: () =>
-      invoke<LargestDisplayEntry[]>("get_largest_display_values"),
+    queryFn: () => invoke<LargestDisplayEntry[]>("get_largest_display_values"),
     staleTime: Number.POSITIVE_INFINITY,
   });
 };

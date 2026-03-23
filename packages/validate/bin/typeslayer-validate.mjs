@@ -70,7 +70,7 @@ const main = async () => {
     return;
   }
 
-  if ((parsed.tracePath && parsed.typesPath)) {
+  if (parsed.tracePath && parsed.typesPath) {
     console.error("you can't use --trace and --types at the same time");
     usage();
     exit(1);

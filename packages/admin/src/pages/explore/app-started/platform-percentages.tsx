@@ -110,9 +110,12 @@ export function PlatformPercentages({
   // Calculate actual counts for each version across all OSes
   const versionCounts = new Map<string, number>();
   Array.from(allVersions).forEach(version => {
-    const count = Object.values(groupedByOSAndVersion || {}).reduce((sum, { data: versions }) => {
-      return sum + (versions[version] || 0);
-    }, 0);
+    const count = Object.values(groupedByOSAndVersion || {}).reduce(
+      (sum, { data: versions }) => {
+        return sum + (versions[version] || 0);
+      },
+      0,
+    );
     versionCounts.set(version, count);
   });
 

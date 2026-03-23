@@ -3,9 +3,10 @@ import FiberManualRecord from "@mui/icons-material/FiberManualRecord";
 import KeyboardArrowDown from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowRight from "@mui/icons-material/KeyboardArrowRight";
 import { Alert, AlertTitle, Box, Stack, Typography } from "@mui/material";
-import { InlineCode } from "@typeslayer/common";
+import { InlineCode, shikiTheme } from "@typeslayer/common";
 import type { ResolvedType, TypeId } from "@typeslayer/validate";
-import { type FC, type ReactNode, useState } from "react";
+import { type FC, type ReactNode, useEffect, useState } from "react";
+import { codeToHtml } from "shiki";
 import { useGetRecursiveResolvedTypes } from "../hooks/tauri-hooks";
 import { OpenablePath, propertyTextStyle } from "./openable-path";
 import { ShowMoreChildren } from "./show-more-children";
@@ -63,33 +64,74 @@ const wrapperSx = {
   },
 };
 
-const FormattedDisplay: FC<{ display: string }> = ({ display }) => (
-  <Box
-    sx={{
-      background: t => t.palette.grey[900],
-      borderRadius: 1,
-      px: 1,
-      py: 0.5,
-      border: t => `1px solid ${t.palette.divider}`,
-      alignSelf: "flex-start",
-      overflow: "auto",
-      maxWidth: "100%",
-    }}
-  >
-    <pre
-      style={{
-        margin: 0,
-        fontFamily: "monospace",
-        fontSize: "0.85em",
-        whiteSpace: "pre-wrap",
-        tabSize: 2,
-        wordBreak: "break-all",
+const FormattedDisplay: FC<{ display: string }> = ({ display }) => {
+  const [html, setHtml] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void codeToHtml(display, {
+      lang: "typescript",
+      theme: shikiTheme,
+      rootStyle: "background-color: transparent; margin: 0;",
+    })
+      .then(rendered => {
+        if (!cancelled) {
+          setHtml(rendered);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setHtml(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [display]);
+
+  return (
+    <Box
+      sx={{
+        background: t => t.palette.grey[900],
+        borderRadius: 1,
+        px: 1,
+        py: 0.5,
+        border: t => `1px solid ${t.palette.divider}`,
+        alignSelf: "flex-start",
+        overflow: "auto",
+        maxWidth: "100%",
       }}
     >
-      {display}
-    </pre>
-  </Box>
-);
+      {html ? (
+        <Box
+          component="div"
+          sx={{
+            fontSize: "0.85em",
+            "& pre": {
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-all",
+              tabSize: 2,
+            },
+          }}
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      ) : (
+        <pre
+          style={{
+            margin: 0,
+            fontFamily: "monospace",
+            fontSize: "0.85em",
+            whiteSpace: "pre-wrap",
+            tabSize: 2,
+            wordBreak: "break-all",
+          }}
+        >
+          {display}
+        </pre>
+      )}
+    </Box>
+  );
+};
 
 export const DisplayRecursiveType: FC<{
   id: TypeId;

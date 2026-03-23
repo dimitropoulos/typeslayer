@@ -100,9 +100,10 @@ export const EventPage = <E extends Event["name"]>({
           </ListItemButton>
 
           <ListSubheader>
-            <Stack sx={{ flexDirection: 'row' }}>
+            <Stack sx={{ flexDirection: "row" }}>
               Raw Events
-              <span style={{ display: "flex", flexGrow: 1 }} />{events.length}
+              <span style={{ display: "flex", flexGrow: 1 }} />
+              {events.length}
             </Stack>
           </ListSubheader>
           {events.map((event, index) => (
